@@ -1,0 +1,37 @@
+name: Lint OpenAPI Specs
+
+on:
+  pull_request:
+    paths:
+      - 'specs/control-plane.yml'
+      - 'specs/mgmt-plane.yml'
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  lint-specs:
+    name: Lint specs
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bullseye-slim
+    # only run the scheduled event on main; still run on all PRs
+    if: ${{ github.event_name != 'schedule' || github.ref == 'refs/heads/main' }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Prepare shell & install deps
+        run: |
+          ln -sf /bin/bash /bin/sh
+          apt-get update && \
+          apt-get install -y --no-install-recommends ca-certificates curl sudo unzip && \
+          rm -rf /var/lib/apt/lists/*
+
+      - name: Install Speakeasy CLI
+        run: curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
+
+      - name: Lint OpenAPI specs
+        run: speakeasy lint openapi \
+          -s specs/control-plane.yml \
+          -s specs/mgmt-plane.yml
