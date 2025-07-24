@@ -4,7 +4,7 @@ servers:
 info:
   title: Cribl API Reference
   description: This API Reference lists available REST endpoints, along with their supported operations for accessing, creating, updating, or deleting resources. See our complementary product documentation at [docs.cribl.io](http://docs.cribl.io).
-  version: 4.14.0-alpha.1753295778758-ebd92ad1
+  version: 4.14.0-alpha.1753368616875-0eefebeb
   contact:
     name: Support
     email: support@cribl.io
@@ -36198,6 +36198,136 @@ components:
             $ref: "#/components/schemas/CriblEvent"
       required:
         - events
+    RoutesRoute:
+      type: object
+      additionalProperties: true
+      required:
+        - pipeline
+        - name
+      properties:
+        id:
+          type: string
+          title: Route ID
+          readOnly: true
+        name:
+          type: string
+          title: Route name
+        disabled:
+          type: boolean
+          title: Disabled
+          description: Disable this routing rule
+        filter:
+          type: string
+          title: Filter
+          description: JavaScript expression to select data to route
+          default: "true"
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to send the matching data to
+        enableOutputExpression:
+          type: boolean
+          title: Enable expression
+          description: Enable to use a JavaScript expression that evaluates to the name of the Description below
+          default: false
+        output: {}
+        outputExpression: {}
+        description:
+          type: string
+          title: Description
+        final:
+          title: Final
+          description: Flag to control whether the event gets consumed by this Route (Final), or cloned into it
+          type: boolean
+          default: true
+    Routes:
+      type: object
+      additionalProperties: false
+      required:
+        - routes
+      properties:
+        id:
+          type: string
+          title: ID
+          description: Routes ID
+        routes:
+          type: array
+          title: Route
+          description: Pipeline routing rules
+          items:
+            $ref: "#/components/schemas/RoutesRoute"
+        groups:
+          type: object
+          additionalProperties:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+                title: Group Name
+              description:
+                type: string
+                title: Description
+                description: Short description of this group
+              disabled:
+                type: boolean
+                title: Disabled
+                description: Whether this group is disabled
+        comments:
+          type: array
+          title: Comments
+          description: Comments
+          items:
+            type: object
+            properties:
+              comment:
+                type: string
+                title: Comment
+                description: Optional, short description of this Route's purpose
+            additionalProperties: true
+    RouteCloneConf:
+      type: object
+    RouteConf:
+      type: object
+      properties:
+        clones:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouteCloneConf"
+        context:
+          type: string
+        description:
+          type: string
+        disabled:
+          type: boolean
+        enableOutputExpression:
+          type: boolean
+        filter:
+          type: string
+        final:
+          type: boolean
+        groupId:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        output:
+          type: string
+        outputExpression:
+          type: string
+        pipeline:
+          type: string
+      required:
+        - final
+        - id
+        - name
+        - pipeline
+    RouteDefinitions:
+      type: array
+      items:
+        $ref: "#/components/schemas/RouteConf"
     LoginInfo:
       type: object
       required:
@@ -37054,6 +37184,161 @@ paths:
           schema:
             type: string
           description: Output Id
+  /routes:
+    get:
+      operationId: listRoutes
+      tags:
+        - routes
+      summary: Get a list of Routes objects
+      description: Get a list of Routes objects
+      responses:
+        "200":
+          description: a list of Routes objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Routes"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  "/routes/{id}":
+    get:
+      tags:
+        - routes
+      responses:
+        "200":
+          description: a list of Routes objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Routes"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      operationId: getRoutesById
+      summary: Get Routes by ID
+      description: Get Routes by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique ID to GET
+    patch:
+      tags:
+        - routes
+      responses:
+        "200":
+          description: a list of Routes objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Routes"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      operationId: updateRoutesById
+      summary: Update Routes
+      description: Update Routes
+      parameters:
+        - schema:
+            type: string
+          name: id
+          in: path
+          required: true
+          description: Unique ID to PATCH
+      requestBody:
+        description: Routes object to be updated
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Routes"
+  "/routes/{id}/append":
+    post:
+      operationId: createRoutesAppendById
+      tags:
+        - routes
+      summary: Appends routes to the end of the routing table
+      description: Appends routes to the end of the routing table
+      responses:
+        "200":
+          description: a list of any objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        description: RouteDefinitions object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RouteDefinitions"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: the route table to be appended to - currently default is the only supported value
   /auth/login:
     post:
       operationId: login
