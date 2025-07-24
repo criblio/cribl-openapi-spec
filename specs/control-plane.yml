@@ -4,7 +4,7 @@ servers:
 info:
   title: Cribl API Reference
   description: This API Reference lists available REST endpoints, along with their supported operations for accessing, creating, updating, or deleting resources. See our complementary product documentation at [docs.cribl.io](http://docs.cribl.io).
-  version: 4.14.0-alpha.1753368616875-0eefebeb
+  version: 4.14.0-alpha.1753373454403-2652afc6
   contact:
     name: Support
     email: support@cribl.io
@@ -36198,6 +36198,100 @@ components:
             $ref: "#/components/schemas/CriblEvent"
       required:
         - events
+    PipelineFunctionConf:
+      type: object
+      required:
+        - id
+        - conf
+      additionalProperties: false
+      properties:
+        filter:
+          title: Filter
+          description: Filter that selects data to be fed through this Function
+          type: string
+          default: "true"
+        id:
+          title: ID
+          description: Function ID
+          type: string
+        description:
+          title: Description
+          description: Simple description of this step
+          type: string
+        disabled:
+          title: Disabled
+          description: If true, data will not be pushed through this function
+          type: boolean
+        final:
+          title: Final
+          description: If enabled, stops the results of this Function from being passed to the downstream Functions
+          type: boolean
+        conf:
+          type: object
+          title: Function-specific configs
+        groupId:
+          title: Group ID
+          description: Group ID
+          type: string
+    Pipeline:
+      title: Pipeline Settings
+      type: object
+      required:
+        - conf
+        - id
+      properties:
+        id:
+          title: ID
+          type: string
+        conf:
+          type: object
+          additionalProperties: false
+          properties:
+            asyncFuncTimeout:
+              type: integer
+              title: Async function timeout (ms)
+              description: Time (in ms) to wait for an async function to complete processing of a data item
+              minimum: 0
+              maximum: 10000
+            output:
+              type: string
+              title: Output event destination
+              description: The output destination for events processed by this Pipeline
+              default: default
+            description:
+              title: Description
+              type: string
+            streamtags:
+              type: array
+              title: Tags
+              description: Tags for filtering and grouping in @{product}
+              default: []
+              items:
+                type: string
+            functions:
+              title: Functions
+              description: List of Functions to pass data through
+              type: array
+              items:
+                $ref: "#/components/schemas/PipelineFunctionConf"
+            groups:
+              type: object
+              additionalProperties:
+                type: object
+                required:
+                  - name
+                properties:
+                  name:
+                    type: string
+                    title: Group Name
+                  description:
+                    type: string
+                    title: Description
+                    description: Short description of this group
+                  disabled:
+                    type: boolean
+                    title: Disabled
+                    description: Whether this group is disabled
     RoutesRoute:
       type: object
       additionalProperties: true
@@ -37184,6 +37278,188 @@ paths:
           schema:
             type: string
           description: Output Id
+  /pipelines:
+    get:
+      operationId: listPipeline
+      tags:
+        - pipelines
+      summary: Get a list of Pipeline objects
+      description: Get a list of Pipeline objects
+      responses:
+        "200":
+          description: a list of Pipeline objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Pipeline"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - pipelines
+      responses:
+        "200":
+          description: a list of Pipeline objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Pipeline"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      operationId: createPipeline
+      summary: Create Pipeline
+      description: Create Pipeline
+      requestBody:
+        description: New Pipeline object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Pipeline"
+  "/pipelines/{id}":
+    get:
+      tags:
+        - pipelines
+      responses:
+        "200":
+          description: a list of Pipeline objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Pipeline"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      operationId: getPipelineById
+      summary: Get Pipeline by ID
+      description: Get Pipeline by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique ID to GET
+    patch:
+      tags:
+        - pipelines
+      responses:
+        "200":
+          description: a list of Pipeline objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Pipeline"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      operationId: updatePipelineById
+      summary: Update Pipeline
+      description: Update Pipeline
+      parameters:
+        - schema:
+            type: string
+          name: id
+          in: path
+          required: true
+          description: Unique ID to PATCH
+      requestBody:
+        description: Pipeline object to be updated
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Pipeline"
+    delete:
+      tags:
+        - pipelines
+      responses:
+        "200":
+          description: a list of Pipeline objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Pipeline"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      operationId: deletePipelineById
+      summary: Delete Pipeline
+      description: Delete Pipeline
+      parameters:
+        - schema:
+            type: string
+          name: id
+          in: path
+          required: true
+          description: Unique ID to DELETE
   /routes:
     get:
       operationId: listRoutes
