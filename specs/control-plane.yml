@@ -4,7 +4,7 @@ servers:
 info:
   title: Cribl API Reference
   description: This API Reference lists available REST endpoints, along with their supported operations for accessing, creating, updating, or deleting resources. See our complementary product documentation at [docs.cribl.io](http://docs.cribl.io).
-  version: 4.14.0-alpha.1753474119310-0fc52c1b
+  version: 4.14.0-alpha.1753735749224-0a5d0b46
   contact:
     name: Support
     email: support@cribl.io
@@ -27,6 +27,8 @@ components:
         message:
           type: string
           description: Error message
+    object:
+      type: string
     InputCollection:
       required:
         - id
@@ -35549,6 +35551,61 @@ components:
             - standby
         startTime:
           type: number
+    GitCommitSummary:
+      type: object
+      properties:
+        author:
+          type: object
+          properties:
+            email:
+              type: string
+            name:
+              type: string
+          required:
+            - email
+            - name
+        branch:
+          type: string
+        commit:
+          type: string
+        files:
+          type: object
+          properties:
+            created:
+              type: array
+              items:
+                type: string
+            deleted:
+              type: array
+              items:
+                type: string
+            modified:
+              type: array
+              items:
+                type: string
+            renamed:
+              type: array
+              items:
+                type: string
+        summary:
+          type: object
+          properties:
+            changes:
+              type: number
+            deletions:
+              type: number
+            insertions:
+              type: number
+          required:
+            - changes
+            - deletions
+            - insertions
+      required:
+        - author
+        - branch
+        - commit
+        - files
+        - summary
     GitFile:
       type: object
       properties:
@@ -35562,6 +35619,174 @@ components:
           type: string
       required:
         - name
+    GitFilesResponse:
+      type: object
+      properties:
+        commitMessage:
+          type: object
+          additionalProperties: true
+        count:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GitFile"
+      required:
+        - commitMessage
+        - count
+        - items
+    GitRevertResult:
+      type: object
+      properties:
+        audit:
+          type: object
+          properties:
+            files:
+              type: object
+              properties:
+                created:
+                  type: array
+                  items:
+                    type: string
+                deleted:
+                  type: array
+                  items:
+                    type: string
+                modified:
+                  type: array
+                  items:
+                    type: string
+                renamed:
+                  type: array
+                  items:
+                    type: string
+            group:
+              type: string
+            id:
+              type: string
+          required:
+            - files
+            - group
+            - id
+        reverted:
+          type: boolean
+      required:
+        - audit
+        - reverted
+    GitCommitParams:
+      type: object
+      properties:
+        effective:
+          type: boolean
+        files:
+          type: array
+          items:
+            type: string
+        group:
+          type: string
+        message:
+          type: string
+      required:
+        - message
+    GitInfo:
+      type: object
+      properties:
+        remote:
+          oneOf:
+            - type: string
+            - type: boolean
+        versioning:
+          type: boolean
+      required:
+        - remote
+        - versioning
+    GitRevertParams:
+      type: object
+      properties:
+        commit:
+          type: string
+        force:
+          type: boolean
+        message:
+          type: string
+      required:
+        - commit
+        - message
+    GitStatusResult:
+      type: object
+      properties:
+        ahead:
+          type: number
+        behind:
+          type: number
+        conflicted:
+          type: array
+          items:
+            type: string
+        created:
+          type: array
+          items:
+            type: string
+        current:
+          type: string
+        deleted:
+          type: array
+          items:
+            type: string
+        files:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: string
+              path:
+                type: string
+              working_dir:
+                type: string
+            required:
+              - index
+              - path
+              - working_dir
+        modified:
+          type: array
+          items:
+            type: string
+        not_added:
+          type: array
+          items:
+            type: string
+        renamed:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+            required:
+              - from
+              - to
+        staged:
+          type: array
+          items:
+            type: string
+        tracking:
+          type: string
+      required:
+        - ahead
+        - behind
+        - conflicted
+        - created
+        - current
+        - deleted
+        - files
+        - modified
+        - not_added
+        - renamed
+        - staged
+        - tracking
 security:
   - bearerAuth: []
   - clientOauth: []
@@ -36779,3 +37004,511 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /version/branch:
+    get:
+      operationId: getVersionBranch
+      tags:
+        - versioning
+      summary: get the list of branches
+      description: get the list of branches
+      responses:
+        "200":
+          description: a list of any objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /version/commit:
+    post:
+      operationId: createVersionCommit
+      tags:
+        - versioning
+      summary: create a new commit containing the current configs the given log message describing the changes.
+      description: create a new commit containing the current configs the given log message describing the changes.
+      responses:
+        "200":
+          description: a list of GitCommitSummary objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GitCommitSummary"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        description: GitCommitParams object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GitCommitParams"
+  /version/count:
+    get:
+      operationId: getVersionCount
+      tags:
+        - versioning
+      summary: get the count of files of changed
+      description: get the count of files of changed
+      responses:
+        "200":
+          description: a list of any objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Group ID
+        - name: ID
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Commit ID
+  /version/current-branch:
+    get:
+      operationId: getVersionCurrentBranch
+      tags:
+        - versioning
+      summary: returns git branch that the config is checked out to, if any
+      description: returns git branch that the config is checked out to, if any
+      responses:
+        "200":
+          description: a list of any objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /version/diff:
+    get:
+      operationId: getVersionDiff
+      tags:
+        - versioning
+      summary: get the textual diff for given commit
+      description: get the textual diff for given commit
+      responses:
+        "200":
+          description: a list of any objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: commit
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Commit hash (default is HEAD)
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Group ID
+        - name: filename
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filename
+        - name: diffLineLimit
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Limit maximum lines in the diff
+  /version/files:
+    get:
+      operationId: getVersionFiles
+      tags:
+        - versioning
+      summary: get the files changed
+      description: get the files changed
+      responses:
+        "200":
+          description: a list of GitFilesResponse objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GitFilesResponse"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Group ID
+        - name: ID
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Commit ID
+  /version/info:
+    get:
+      operationId: getVersionInfo
+      tags:
+        - versioning
+      summary: Get info about versioning availability
+      description: Get info about versioning availability
+      responses:
+        "200":
+          description: a list of GitInfo objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GitInfo"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /version/push:
+    post:
+      operationId: createVersionPush
+      tags:
+        - versioning
+      summary: push the current configs to the remote repository.
+      description: push the current configs to the remote repository.
+      responses:
+        "200":
+          description: a list of any objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /version/revert:
+    post:
+      operationId: createVersionRevert
+      tags:
+        - versioning
+      summary: revert a commit
+      description: revert a commit
+      responses:
+        "200":
+          description: a list of GitRevertResult objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GitRevertResult"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        description: GitRevertParams object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GitRevertParams"
+      parameters:
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Group ID
+  /version/show:
+    get:
+      operationId: getVersionShow
+      tags:
+        - versioning
+      summary: get the log message and textual diff for given commit
+      description: get the log message and textual diff for given commit
+      responses:
+        "200":
+          description: a list of any objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: commit
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Commit hash (default is HEAD)
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Group ID
+        - name: filename
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filename
+        - name: diffLineLimit
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Limit maximum lines in the diff
+  /version/status:
+    get:
+      operationId: getVersionStatus
+      tags:
+        - versioning
+      summary: get the the working tree status
+      description: get the the working tree status
+      responses:
+        "200":
+          description: a list of GitStatusResult objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GitStatusResult"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Group ID
+  /version/sync:
+    post:
+      operationId: createVersionSync
+      tags:
+        - versioning
+      summary: syncs with remote repo via POST requests
+      description: syncs with remote repo via POST requests
+      responses:
+        "200":
+          description: a list of any objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /version/undo:
+    post:
+      operationId: createVersionUndo
+      tags:
+        - versioning
+      summary: undo the last commit
+      description: undo the last commit
+      responses:
+        "200":
+          description: a list of object objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/object"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Group ID
