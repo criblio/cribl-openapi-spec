@@ -4,7 +4,7 @@ servers:
 info:
   title: Cribl API Reference
   description: This API Reference lists available REST endpoints, along with their supported operations for accessing, creating, updating, or deleting resources. See our complementary product documentation at [docs.cribl.io](http://docs.cribl.io).
-  version: 4.14.0-alpha.1753735749224-0a5d0b41
+  version: 4.14.0-alpha.1755764858399-d5c9979b
   contact:
     name: Support
     email: support@cribl.io
@@ -19,6 +19,10 @@ components:
       flows:
         clientCredentials:
           tokenUrl: https://login.cribl.cloud/oauth/token
+          x-speakeasy-token-endpoint-additional-properties:
+            audience:
+              type: string
+              example: "https://api.cribl.cloud"
           scopes: {}
   schemas:
     Error:
@@ -27,12 +31,319 @@ components:
         message:
           type: string
           description: Error message
+    CloudProvider:
+      type: string
+      nullable: true
+      enum:
+        - aws
+        - azure
+    ConfigGroupCloud:
+      type: object
+      properties:
+        provider:
+          $ref: "#/components/schemas/CloudProvider"
+        region:
+          type: string
+      required:
+        - provider
+        - region
+    Commit:
+      type: object
+      properties:
+        author_email:
+          type: string
+        author_name:
+          type: string
+        date:
+          type: string
+        hash:
+          type: string
+        message:
+          type: string
+        short:
+          type: string
+      required:
+        - date
+        - hash
+        - message
+        - short
+    ConfigGroupLookups:
+      type: object
+      properties:
+        context:
+          type: string
+        lookups:
+          type: array
+          items:
+            type: object
+            properties:
+              deployedVersion:
+                type: string
+              file:
+                type: string
+              version:
+                type: string
+            required:
+              - file
+      required:
+        - context
+        - lookups
+    ConfigGroup:
+      type: object
+      properties:
+        cloud:
+          $ref: "#/components/schemas/ConfigGroupCloud"
+        configVersion:
+          type: string
+        deployingWorkerCount:
+          type: number
+        description:
+          type: string
+        estimatedIngestRate:
+          type: number
+        git:
+          type: object
+          properties:
+            commit:
+              type: string
+            localChanges:
+              type: number
+            log:
+              type: array
+              items:
+                $ref: "#/components/schemas/Commit"
+        id:
+          type: string
+        incompatibleWorkerCount:
+          type: number
+        inherits:
+          type: string
+        isFleet:
+          type: boolean
+        isSearch:
+          type: boolean
+        lookupDeployments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGroupLookups"
+        maxWorkerAge:
+          type: string
+        name:
+          type: string
+        onPrem:
+          type: boolean
+        provisioned:
+          type: boolean
+        streamtags:
+          type: array
+          items:
+            type: string
+        tags:
+          type: string
+        type:
+          type: string
+          enum:
+            - lake_access
+        upgradeVersion:
+          type: string
+        workerCount:
+          type: number
+        workerRemoteAccess:
+          type: boolean
+      required:
+        - configVersion
+        - id
+    RbacResource:
+      type: string
+      enum:
+        - groups
+        - datasets
+        - dataset-providers
+        - projects
+        - dashboards
+        - macros
+        - notebooks
+    ResourcePolicy:
+      type: object
+      properties:
+        gid:
+          type: string
+        id:
+          type: string
+        policy:
+          type: string
+        type:
+          $ref: "#/components/schemas/RbacResource"
+      required:
+        - gid
+        - policy
+        - type
+    UserAccessControlList:
+      type: object
+      properties:
+        perms:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourcePolicy"
+        user:
+          type: string
+      required:
+        - perms
+        - user
+    DeployRequestLookups:
+      type: object
+      properties:
+        context:
+          type: string
+        lookups:
+          type: array
+          items:
+            type: object
+            properties:
+              file:
+                type: string
+              version:
+                type: string
+            required:
+              - file
+              - version
+      required:
+        - context
+        - lookups
+    DeployRequest:
+      type: object
+      properties:
+        lookups:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeployRequestLookups"
+        version:
+          type: string
+      required:
+        - version
+    ProductsCore:
+      type: string
+      enum:
+        - stream
+        - edge
+    CacheConnectionBackfillStatus:
+      type: string
+      enum:
+        - scheduled
+        - pending
+        - started
+        - finished
+        - incomplete
+    LakehouseConnectionType:
+      type: string
+      enum:
+        - cache
+        - zeroPoint
+    CacheConnection:
+      type: object
+      properties:
+        acceleratedFields:
+          type: array
+          items:
+            type: string
+        backfillStatus:
+          $ref: "#/components/schemas/CacheConnectionBackfillStatus"
+        cacheRef:
+          type: string
+        createdAt:
+          type: number
+        lakehouseConnectionType:
+          $ref: "#/components/schemas/LakehouseConnectionType"
+        migrationQueryId:
+          type: string
+        retentionInDays:
+          type: number
+      required:
+        - cacheRef
+        - createdAt
+        - retentionInDays
+    DatasetMetadataRunInfo:
+      type: object
+      properties:
+        earliestScannedTime:
+          type: number
+        finishedAt:
+          type: number
+        latestScannedTime:
+          type: number
+        objectCount:
+          type: number
+    DatasetMetadata:
+      type: object
+      properties:
+        earliest:
+          type: string
+        enableAcceleration:
+          type: boolean
+        fieldList:
+          type: array
+          items:
+            type: string
+        latestRunInfo:
+          $ref: "#/components/schemas/DatasetMetadataRunInfo"
+        scanMode:
+          type: string
+          enum:
+            - detailed
+            - quick
+      required:
+        - earliest
+        - enableAcceleration
+        - fieldList
+        - scanMode
+    LakeDatasetSearchConfig:
+      type: object
+      properties:
+        datatypes:
+          type: array
+          items:
+            type: string
+        metadata:
+          $ref: "#/components/schemas/DatasetMetadata"
+    CriblLakeDataset:
+      type: object
+      properties:
+        acceleratedFields:
+          type: array
+          items:
+            type: string
+        bucketName:
+          type: string
+        cacheConnection:
+          $ref: "#/components/schemas/CacheConnection"
+        deletionStartedAt:
+          type: number
+        description:
+          type: string
+        format:
+          type: string
+          enum:
+            - json
+            - ddss
+            - parquet
+        httpDAUsed:
+          type: boolean
+        id:
+          type: string
+        retentionPeriodInDays:
+          type: number
+        searchConfig:
+          $ref: "#/components/schemas/LakeDatasetSearchConfig"
+        storageLocationId:
+          type: string
+        viewName:
+          type: string
+      required:
+        - id
     object:
       type: string
     InputCollection:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -53,9 +364,9 @@ components:
           description: Pipeline to process results
         sendToRoutes:
           type: boolean
-          default: true
           title: Send to Routes
           description: Send events to normal routing and event processing. Disable to select a specific Pipeline/Destination combination.
+          default: true
         environment:
           type: string
           title: Environment
@@ -194,9 +505,12 @@ components:
           type: string
           title: Destination
           description: Destination to send results to
-      type: object
-    InputKafka:
       required:
+        - type
+    InputKafka:
+      type: object
+      required:
+        - type
         - brokers
         - topics
       properties:
@@ -341,6 +655,14 @@ components:
               title: Schema Registry URL
               description: "URL for accessing the Confluent Schema Registry. Example: http://localhost:8081. To connect over TLS, use https instead of http."
               default: http://localhost:8081
+            schemaType:
+              type: string
+              default: avro
+              enum:
+                - avro
+                - json
+              title: Schema type
+              description: The schema format used to encode and decode event data
             connectionTimeout:
               type: number
               title: Connection timeout (ms)
@@ -647,9 +969,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputMsk:
+      type: object
       required:
+        - type
         - brokers
         - topics
         - region
@@ -845,6 +1168,14 @@ components:
               title: Schema Registry URL
               description: "URL for accessing the Confluent Schema Registry. Example: http://localhost:8081. To connect over TLS, use https instead of http."
               default: http://localhost:8081
+            schemaType:
+              type: string
+              default: avro
+              enum:
+                - avro
+                - json
+              title: Schema type
+              description: The schema format used to encode and decode event data
             connectionTimeout:
               type: number
               title: Connection timeout (ms)
@@ -1149,9 +1480,10 @@ components:
           type: string
           title: Secret key pair
           description: Select or create a stored secret that references your access key and secret key
-      type: object
     InputHttp:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -1458,9 +1790,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputSplunk:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -1739,9 +2072,10 @@ components:
             - disabled
             - auto
             - always
-      type: object
     InputSplunkSearch:
+      type: object
       required:
+        - type
         - searchHead
         - search
         - cronSchedule
@@ -2168,9 +2502,10 @@ components:
                 type: string
                 title: Value
                 description: OAuth header value
-      type: object
     InputSplunkHec:
+      type: object
       required:
+        - type
         - host
         - port
         - splunkHecAPI
@@ -2529,11 +2864,11 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputAzureBlob:
+      type: object
       required:
-        - queueName
         - type
+        - queueName
       properties:
         id:
           type: string
@@ -2773,9 +3108,10 @@ components:
               type: string
               title: Certificate
               description: The certificate you registered as credentials for your app in the Azure portal
-      type: object
     InputElastic:
+      type: object
       required:
+        - type
         - host
         - port
         - elasticAPI
@@ -3143,9 +3479,10 @@ components:
                 },
                 "tagline": "You Know, for Search"
             }
-      type: object
     InputConfluentCloud:
+      type: object
       required:
+        - type
         - brokers
         - topics
       properties:
@@ -3345,6 +3682,14 @@ components:
               title: Schema Registry URL
               description: "URL for accessing the Confluent Schema Registry. Example: http://localhost:8081. To connect over TLS, use https instead of http."
               default: http://localhost:8081
+            schemaType:
+              type: string
+              default: avro
+              enum:
+                - avro
+                - json
+              title: Schema type
+              description: The schema format used to encode and decode event data
             connectionTimeout:
               type: number
               title: Connection timeout (ms)
@@ -3596,9 +3941,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputGrafana:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -3836,6 +4182,11 @@ components:
           description: "Absolute path on which to listen for Loki logs requests. Defaults to /loki/api/v1/push, which will (in this example) expand as: 'http://<your‑upstream‑URL>:<your‑port>/loki/api/v1/push'. Either this field or 'Remote Write API endpoint' must be configured."
           default: /loki/api/v1/push
           pattern: ^/
+        extractStructuredMetadata:
+          type: boolean
+          title: Enable structured metadata
+          description: Extract structured metadata from the Loki 3.5.3+ format and place it in the __structuredMetadata field. When disabled, uses legacy Loki parsing for backward compatibility.
+          default: false
         prometheusAuth:
           type: object
           properties:
@@ -4052,14 +4403,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
-      anyOf:
-        - required:
-            - prometheusAPI
-        - required:
-            - lokiAPI
     InputLoki:
+      type: object
       required:
+        - type
         - host
         - port
         - lokiAPI
@@ -4292,6 +4639,11 @@ components:
           description: "Absolute path on which to listen for Loki logs requests. Defaults to /loki/api/v1/push, which will (in this example) expand as: 'http://<your‑upstream‑URL>:<your‑port>/loki/api/v1/push'."
           default: /loki/api/v1/push
           pattern: ^/
+        extractStructuredMetadata:
+          type: boolean
+          title: Enable structured metadata
+          description: Extract structured metadata from the Loki 3.5.3+ format and place it in the __structuredMetadata field. When disabled, uses legacy Loki parsing for backward compatibility.
+          default: false
         authType:
           type: string
           title: Authentication type
@@ -4407,9 +4759,10 @@ components:
                 type: string
                 title: Value
                 description: OAuth header value
-      type: object
     InputPrometheusRw:
+      type: object
       required:
+        - type
         - host
         - port
         - prometheusAPI
@@ -4757,9 +5110,10 @@ components:
                 type: string
                 title: Value
                 description: OAuth header value
-      type: object
     InputPrometheus:
+      type: object
       required:
+        - type
         - interval
         - logLevel
       properties:
@@ -5102,9 +5456,10 @@ components:
           type: string
           title: Credentials secret
           description: Select or create a secret that references your credentials
-      type: object
     InputEdgePrometheus:
+      type: object
       required:
+        - type
         - interval
         - discoveryType
       properties:
@@ -5515,9 +5870,10 @@ components:
           type: string
           title: Credentials secret
           description: Select or create a secret that references your credentials
-      type: object
     InputOffice365Mgmt:
+      type: object
       required:
+        - type
         - tenantId
         - appId
         - planType
@@ -5842,9 +6198,10 @@ components:
           type: string
           title: Client secret (text secret)
           description: Select or create a stored text secret
-      type: object
     InputOffice365Service:
+      type: object
       required:
+        - type
         - tenantId
         - appId
       properties:
@@ -6142,9 +6499,10 @@ components:
           type: string
           title: Client secret (text secret)
           description: Select or create a stored text secret
-      type: object
     InputOffice365MsgTrace:
+      type: object
       required:
+        - type
         - url
         - interval
       properties:
@@ -6488,9 +6846,10 @@ components:
               type: string
               title: Certificate path
               description: Path to the certificate to use. Certificate should be in PEM format. Can reference $ENV_VARS.
-      type: object
     InputEventhub:
+      type: object
       required:
+        - type
         - brokers
         - topics
       properties:
@@ -6798,11 +7157,11 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputExec:
+      type: object
       required:
-        - command
         - type
+        - command
       properties:
         id:
           type: string
@@ -6964,9 +7323,10 @@ components:
           title: Schedule
           description: Cron schedule to execute the command on.
           default: "* * * * *"
-      type: object
     InputFirehose:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -7218,11 +7578,12 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputGooglePubsub:
+      type: object
       required:
-        - topicName
+        - type
         - subscriptionName
+        - topicName
       properties:
         id:
           type: string
@@ -7326,11 +7687,17 @@ components:
         topicName:
           type: string
           title: Topic ID
-          description: ID of the topic to receive events from
+          description: ID of the topic to receive events from. When Monitor subscription is enabled, any value may be entered.
+          default: cribl
         subscriptionName:
           type: string
           title: Subscription ID
-          description: ID of the subscription to use when receiving events
+          description: "ID of the subscription to use when receiving events. When Monitor subscription is enabled, the fully qualified subscription name must be entered. Example: projects/myProject/subscriptions/mySubscription"
+        monitorSubscription:
+          type: boolean
+          title: Monitor subscription for new messages
+          description: Use when the subscription is not created by this Source and topic is not known
+          default: false
         createTopic:
           type: boolean
           title: Create topic
@@ -7406,11 +7773,8 @@ components:
           title: Ordered delivery
           description: Receive events in the order they were added to the queue. The process sending events must have ordering enabled.
           default: false
-      type: object
     InputCribl:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -7533,9 +7897,12 @@ components:
         description:
           type: string
           title: Description
-      type: object
-    InputCriblTcp:
       required:
+        - type
+    InputCriblTcp:
+      type: object
+      required:
+        - type
         - host
         - port
       properties:
@@ -7753,9 +8120,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputCriblHttp:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -8007,9 +8375,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputCriblLakeHttp:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -8241,6 +8610,28 @@ components:
           title: IP denylist regex
           description: Messages from matched IP addresses will be ignored. This takes precedence over the allowlist.
           default: /^$/
+        criblAPI:
+          type: string
+          title: Cribl HTTP event API
+          description: Absolute path on which to listen for the Cribl HTTP API requests. Only _bulk (default /cribl/_bulk) is available. Use empty string to disable.
+          default: /cribl
+          pattern: ^/|^$
+        elasticAPI:
+          type: string
+          title: Elasticsearch API endpoint (Bulk API)
+          description: Absolute path on which to listen for the Elasticsearch API requests. Only _bulk (default /elastic/_bulk) is available. Use empty string to disable.
+          default: /elastic
+          pattern: ^/|^$
+        splunkHecAPI:
+          type: string
+          title: Splunk HEC endpoint
+          description: Absolute path on which listen for the Splunk HTTP Event Collector API requests. Use empty string to disable.
+          default: /services/collector
+          pattern: ^/|^$
+        splunkHecAcks:
+          type: boolean
+          title: Enable Splunk HEC acknowledgements
+          default: false
         metadata:
           type: array
           title: Fields
@@ -8258,12 +8649,46 @@ components:
                 type: string
                 title: Value
                 description: JavaScript expression to compute field's value, enclosed in quotes or backticks. (Can evaluate to a constant.)
+        authTokensExt:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          items:
+            type: object
+            required:
+              - token
+            properties:
+              token:
+                type: string
+                title: Token
+                description: "Shared secret to be provided by any client (Authorization: <token>)"
+              description:
+                type: string
+                title: Description
+              metadata:
+                type: array
+                title: Fields
+                description: Fields to add to events referencing this token
+                items:
+                  type: object
+                  required:
+                    - name
+                    - value
+                  properties:
+                    name:
+                      type: string
+                      title: Field Name
+                    value:
+                      type: string
+                      title: Value
+                      description: JavaScript expression to compute field's value, enclosed in quotes or backticks. (Can evaluate to a constant.)
         description:
           type: string
           title: Description
-      type: object
     InputTcpjson:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -8503,11 +8928,8 @@ components:
           type: string
           title: Auth token (text secret)
           description: Select or create a stored text secret
-      type: object
     InputSystemMetrics:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -8901,11 +9323,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
-    InputSystemState:
       required:
-        - id
         - type
+    InputSystemState:
+      type: object
       properties:
         id:
           type: string
@@ -9176,11 +9597,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
-    InputKubeMetrics:
       required:
-        - id
         - type
+    InputKubeMetrics:
+      type: object
       properties:
         id:
           type: string
@@ -9365,11 +9785,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
-    InputKubeLogs:
       required:
-        - id
         - type
+    InputKubeLogs:
+      type: object
       properties:
         id:
           type: string
@@ -9573,11 +9992,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
-    InputKubeEvents:
       required:
-        - id
         - type
+    InputKubeEvents:
+      type: object
       properties:
         id:
           type: string
@@ -9716,11 +10134,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
-    InputWindowsMetrics:
       required:
-        - id
         - type
+    InputWindowsMetrics:
+      type: object
       properties:
         id:
           type: string
@@ -10050,11 +10467,13 @@ components:
         description:
           type: string
           title: Description
-      type: object
-    InputCrowdstrike:
       required:
-        - queueName
         - type
+    InputCrowdstrike:
+      type: object
+      required:
+        - type
+        - queueName
       properties:
         id:
           type: string
@@ -10252,6 +10671,11 @@ components:
           title: Skip file on error
           description: Skip files that trigger a processing error. Disabled by default, which allows retries after processing errors.
           default: false
+        includeSqsMetadata:
+          type: boolean
+          title: Include notification metadata
+          description: Include metadata from SQS notifications on outgoing events
+          default: false
         enableAssumeRole:
           type: boolean
           title: Enable for Amazon S3
@@ -10365,9 +10789,10 @@ components:
           type: string
           title: Tag value
           description: The value for the S3 object tag applied after processing. This field accepts an expression for dynamic generation.
-      type: object
     InputDatadogAgent:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -10633,11 +11058,11 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputDatagen:
+      type: object
       required:
-        - samples
         - type
+        - samples
       properties:
         id:
           type: string
@@ -10777,9 +11202,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputHttpRaw:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -11095,9 +11521,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputKinesis:
+      type: object
       required:
+        - type
         - streamName
         - region
       properties:
@@ -11352,11 +11779,8 @@ components:
           type: string
           title: Secret key pair
           description: Select or create a stored secret that references your access key and secret key
-      type: object
     InputCriblmetrics:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -11487,11 +11911,13 @@ components:
         description:
           type: string
           title: Description
-      type: object
-    InputMetrics:
       required:
-        - host
         - type
+    InputMetrics:
+      type: object
+      required:
+        - type
+        - host
       properties:
         id:
           type: string
@@ -11700,11 +12126,11 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputS3:
+      type: object
       required:
-        - queueName
         - type
+        - queueName
       properties:
         id:
           type: string
@@ -11902,6 +12328,11 @@ components:
           title: Skip file on error
           description: Skip files that trigger a processing error. Disabled by default, which allows retries after processing errors.
           default: false
+        includeSqsMetadata:
+          type: boolean
+          title: Include notification metadata
+          description: Include metadata from SQS notifications on outgoing events
+          default: false
         enableAssumeRole:
           type: boolean
           title: Enable for Amazon S3
@@ -12030,11 +12461,11 @@ components:
           type: string
           title: Tag value
           description: The value for the S3 object tag applied after processing. This field accepts an expression for dynamic generation.
-      type: object
     InputS3Inventory:
+      type: object
       required:
-        - queueName
         - type
+        - queueName
       properties:
         id:
           type: string
@@ -12232,6 +12663,11 @@ components:
           title: Skip file on error
           description: Skip files that trigger a processing error. Disabled by default, which allows retries after processing errors.
           default: false
+        includeSqsMetadata:
+          type: boolean
+          title: Include notification metadata
+          description: Include metadata from SQS notifications on outgoing events
+          default: false
         enableAssumeRole:
           type: boolean
           title: Enable for Amazon S3
@@ -12371,9 +12807,10 @@ components:
           type: string
           title: Tag value
           description: The value for the S3 object tag applied after processing. This field accepts an expression for dynamic generation.
-      type: object
     InputSnmp:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -12580,9 +13017,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputOpenTelemetry:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -12948,9 +13386,10 @@ components:
           title: Extract logs
           description: Enable to extract each incoming log record to a separate event
           default: false
-      type: object
     InputModelDrivenTelemetry:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -13143,9 +13582,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputSqs:
+      type: object
       required:
+        - type
         - queueName
         - queueType
       properties:
@@ -13384,11 +13824,11 @@ components:
           default: 3
           minimum: 1
           maximum: 100
-      type: object
     InputSyslog:
+      type: object
       required:
-        - host
         - type
+        - host
       properties:
         id:
           type: string
@@ -13667,18 +14107,8 @@ components:
           type: boolean
           title: Enable enhanced TLS handshake for proxy protocol
           description: When enabled, parses PROXY protocol headers during the TLS handshake. Disable if compatibility issues arise.
-      type: object
-      anyOf:
-        - required:
-            - host
-            - udpPort
-        - required:
-            - host
-            - tcpPort
     InputFile:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -13887,9 +14317,12 @@ components:
           default: false
           title: Enable binary files
           description: Stream binary files as Base64-encoded chunks.
-      type: object
-    InputTcp:
       required:
+        - type
+    InputTcp:
+      type: object
+      required:
+        - type
         - host
         - port
       properties:
@@ -14152,10 +14585,9 @@ components:
             - secret
           default: manual
           description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
-      type: object
     InputAppscope:
+      type: object
       required:
-        - id
         - type
       properties:
         id:
@@ -14482,9 +14914,10 @@ components:
           type: string
           title: Auth token (text secret)
           description: Select or create a stored text secret
-      type: object
     InputWef:
+      type: object
       required:
+        - type
         - host
         - port
         - subscriptions
@@ -14869,11 +15302,11 @@ components:
           title: Log CA fingerprint mismatch warning
           description: Log a warning if the client certificate authority (CA) fingerprint does not match the expected value. A mismatch prevents Cribl from receiving events from the Windows Event Forwarder.
           default: false
-      type: object
     InputWinEventLogs:
+      type: object
       required:
-        - logNames
         - type
+        - logNames
       properties:
         id:
           type: string
@@ -15045,9 +15478,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputRawUdp:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -15207,9 +15641,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputJournalFiles:
+      type: object
       required:
+        - type
         - path
         - journals
       properties:
@@ -15378,9 +15813,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputWiz:
+      type: object
       required:
+        - type
         - endpoint
         - authUrl
         - clientId
@@ -16093,9 +16529,10 @@ components:
           type: string
           title: Client Secret (text secret)
           description: Select or create a stored text secret
-      type: object
     InputNetflow:
+      type: object
       required:
+        - type
         - host
         - port
       properties:
@@ -16272,11 +16709,11 @@ components:
         description:
           type: string
           title: Description
-      type: object
     InputSecurityLake:
+      type: object
       required:
-        - queueName
         - type
+        - queueName
       properties:
         id:
           type: string
@@ -16474,6 +16911,11 @@ components:
           title: Skip file on error
           description: Skip files that trigger a processing error. Disabled by default, which allows retries after processing errors.
           default: false
+        includeSqsMetadata:
+          type: boolean
+          title: Include notification metadata
+          description: Include metadata from SQS notifications on outgoing events
+          default: false
         enableAssumeRole:
           type: boolean
           title: Enable for Amazon S3
@@ -16601,9 +17043,10 @@ components:
           type: string
           title: Tag value
           description: The value for the S3 object tag applied after processing. This field accepts an expression for dynamic generation.
-      type: object
     InputZscalerHec:
+      type: object
       required:
+        - type
         - host
         - port
         - hecAPI
@@ -16933,7 +17376,6 @@ components:
         description:
           type: string
           title: Description
-      type: object
     Input:
       oneOf:
         - $ref: "#/components/schemas/InputCollection"
@@ -16994,6 +17436,67 @@ components:
         - $ref: "#/components/schemas/InputNetflow"
         - $ref: "#/components/schemas/InputSecurityLake"
         - $ref: "#/components/schemas/InputZscalerHec"
+      discriminator:
+        propertyName: type
+        mapping:
+          collection: "#/components/schemas/InputCollection"
+          kafka: "#/components/schemas/InputKafka"
+          msk: "#/components/schemas/InputMsk"
+          http: "#/components/schemas/InputHttp"
+          splunk: "#/components/schemas/InputSplunk"
+          splunk_search: "#/components/schemas/InputSplunkSearch"
+          splunk_hec: "#/components/schemas/InputSplunkHec"
+          azure_blob: "#/components/schemas/InputAzureBlob"
+          elastic: "#/components/schemas/InputElastic"
+          confluent_cloud: "#/components/schemas/InputConfluentCloud"
+          grafana: "#/components/schemas/InputGrafana"
+          loki: "#/components/schemas/InputLoki"
+          prometheus_rw: "#/components/schemas/InputPrometheusRw"
+          prometheus: "#/components/schemas/InputPrometheus"
+          edge_prometheus: "#/components/schemas/InputEdgePrometheus"
+          office365_mgmt: "#/components/schemas/InputOffice365Mgmt"
+          office365_service: "#/components/schemas/InputOffice365Service"
+          office365_msg_trace: "#/components/schemas/InputOffice365MsgTrace"
+          eventhub: "#/components/schemas/InputEventhub"
+          exec: "#/components/schemas/InputExec"
+          firehose: "#/components/schemas/InputFirehose"
+          google_pubsub: "#/components/schemas/InputGooglePubsub"
+          cribl: "#/components/schemas/InputCribl"
+          cribl_tcp: "#/components/schemas/InputCriblTcp"
+          cribl_http: "#/components/schemas/InputCriblHttp"
+          cribl_lake_http: "#/components/schemas/InputCriblLakeHttp"
+          tcpjson: "#/components/schemas/InputTcpjson"
+          system_metrics: "#/components/schemas/InputSystemMetrics"
+          system_state: "#/components/schemas/InputSystemState"
+          kube_metrics: "#/components/schemas/InputKubeMetrics"
+          kube_logs: "#/components/schemas/InputKubeLogs"
+          kube_events: "#/components/schemas/InputKubeEvents"
+          windows_metrics: "#/components/schemas/InputWindowsMetrics"
+          crowdstrike: "#/components/schemas/InputCrowdstrike"
+          datadog_agent: "#/components/schemas/InputDatadogAgent"
+          datagen: "#/components/schemas/InputDatagen"
+          http_raw: "#/components/schemas/InputHttpRaw"
+          kinesis: "#/components/schemas/InputKinesis"
+          criblmetrics: "#/components/schemas/InputCriblmetrics"
+          metrics: "#/components/schemas/InputMetrics"
+          s3: "#/components/schemas/InputS3"
+          s3_inventory: "#/components/schemas/InputS3Inventory"
+          snmp: "#/components/schemas/InputSnmp"
+          open_telemetry: "#/components/schemas/InputOpenTelemetry"
+          model_driven_telemetry: "#/components/schemas/InputModelDrivenTelemetry"
+          sqs: "#/components/schemas/InputSqs"
+          syslog: "#/components/schemas/InputSyslog"
+          file: "#/components/schemas/InputFile"
+          tcp: "#/components/schemas/InputTcp"
+          appscope: "#/components/schemas/InputAppscope"
+          wef: "#/components/schemas/InputWef"
+          win_event_logs: "#/components/schemas/InputWinEventLogs"
+          raw_udp: "#/components/schemas/InputRawUdp"
+          journal_files: "#/components/schemas/InputJournalFiles"
+          wiz: "#/components/schemas/InputWiz"
+          netflow: "#/components/schemas/InputNetflow"
+          security_lake: "#/components/schemas/InputSecurityLake"
+          zscaler_hec: "#/components/schemas/InputZscalerHec"
     AddHecTokenRequest:
       type: object
       properties:
@@ -17037,9 +17540,10 @@ components:
               - name
               - value
     OutputDefault:
+      type: object
       required:
-        - defaultId
         - type
+        - defaultId
       properties:
         id:
           type: string
@@ -17076,10 +17580,9 @@ components:
           type: string
           title: Default Output ID
           description: ID of the default output. This will be used whenever a nonexistent/deleted output is referenced.
-      type: object
     OutputWebhook:
+      type: object
       required:
-        - id
         - type
       properties:
         id:
@@ -17580,9 +18083,10 @@ components:
           minimum: 10
           title: Load balance stats period (seconds)
           description: How far back in time to keep traffic stats for load balancing purposes
-      type: object
     OutputSentinel:
+      type: object
       required:
+        - type
         - endpointURLConfiguration
         - loginUrl
         - secret
@@ -17929,11 +18433,8 @@ components:
           type: string
           title: Stream name
           description: The name of the stream (Sentinel table) in which to store the events
-      type: object
     OutputDevnull:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -17966,11 +18467,10 @@ components:
           default: []
           items:
             type: string
-      type: object
-    OutputSyslog:
       required:
-        - id
         - type
+    OutputSyslog:
+      type: object
       properties:
         id:
           type: string
@@ -18238,9 +18738,12 @@ components:
             - always
         pqControls:
           type: object
-      type: object
-    OutputSplunk:
       required:
+        - type
+    OutputSplunk:
+      type: object
+      required:
+        - type
         - host
         - port
       properties:
@@ -18475,11 +18978,11 @@ components:
           type: string
           title: Auth token (text secret)
           description: Select or create a stored text secret
-      type: object
     OutputSplunkLb:
+      type: object
       required:
-        - hosts
         - type
+        - hosts
       properties:
         id:
           type: string
@@ -18840,11 +19343,8 @@ components:
           type: string
           title: Auth token (text secret)
           description: Select or create a stored text secret
-      type: object
     OutputSplunkHec:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -19167,11 +19667,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
-    OutputTcpjson:
       required:
-        - id
         - type
+    OutputTcpjson:
+      type: object
       properties:
         id:
           type: string
@@ -19449,11 +19948,13 @@ components:
           type: string
           title: Auth token (text secret)
           description: Select or create a stored text secret
-      type: object
-    OutputWavefront:
       required:
-        - domain
         - type
+    OutputWavefront:
+      type: object
+      required:
+        - type
+        - domain
       properties:
         id:
           type: string
@@ -19716,11 +20217,11 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputSignalfx:
+      type: object
       required:
-        - realm
         - type
+        - realm
       properties:
         id:
           type: string
@@ -19983,11 +20484,11 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputFilesystem:
+      type: object
       required:
-        - destPath
         - type
+        - destPath
       properties:
         id:
           type: string
@@ -20232,9 +20733,10 @@ components:
           description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
           default: 20
           minimum: 1
-      type: object
     OutputS3:
+      type: object
       required:
+        - type
         - bucket
         - stagePath
       properties:
@@ -20347,7 +20849,7 @@ components:
         destPath:
           type: string
           title: Key prefix
-          description: "Prefix to append to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+          description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
           default: ""
         objectACL:
           type: string
@@ -20611,9 +21113,10 @@ components:
           description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
           default: 20
           minimum: 1
-      type: object
     OutputAzureBlob:
+      type: object
       required:
+        - type
         - containerName
         - stagePath
       properties:
@@ -20937,9 +21440,10 @@ components:
               type: string
               title: Certificate
               description: The certificate you registered as credentials for your app in the Azure portal
-      type: object
     OutputAzureDataExplorer:
+      type: object
       required:
+        - type
         - clusterUrl
         - database
         - table
@@ -21412,11 +21916,11 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputAzureLogs:
+      type: object
       required:
-        - logType
         - type
+        - logType
       properties:
         id:
           type: string
@@ -21691,9 +22195,10 @@ components:
           type: string
           title: Secret key pair
           description: Select or create a stored secret that references your access key and secret key
-      type: object
     OutputKinesis:
+      type: object
       required:
+        - type
         - streamName
         - region
       properties:
@@ -21892,11 +22397,11 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputHoneycomb:
+      type: object
       required:
-        - dataset
         - type
+        - dataset
       properties:
         id:
           type: string
@@ -22158,9 +22663,10 @@ components:
           type: string
           title: API key (text secret)
           description: Select or create a stored text secret
-      type: object
     OutputAzureEventhub:
+      type: object
       required:
+        - type
         - brokers
         - topic
       properties:
@@ -22387,11 +22893,11 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputGoogleChronicle:
+      type: object
       required:
-        - logFormatType
         - type
+        - logFormatType
       properties:
         id:
           type: string
@@ -22737,9 +23243,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputGoogleCloudStorage:
+      type: object
       required:
+        - type
         - bucket
         - endpoint
         - region
@@ -22813,7 +23320,7 @@ components:
         destPath:
           type: string
           title: Key prefix
-          description: "Prefix to append to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+          description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
           default: ""
         verifyPermissions:
           type: boolean
@@ -23067,9 +23574,10 @@ components:
           type: string
           title: Secret key pair
           description: Select or create a stored secret that references your access key and secret key
-      type: object
     OutputGoogleCloudLogging:
+      type: object
       required:
+        - type
         - logLocationType
         - logLocationExpression
         - logNameExpression
@@ -23413,11 +23921,11 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputGooglePubsub:
+      type: object
       required:
-        - topicName
         - type
+        - topicName
       properties:
         id:
           type: string
@@ -23586,9 +24094,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputExabeam:
+      type: object
       required:
+        - type
         - bucket
         - region
         - endpoint
@@ -23791,9 +24300,10 @@ components:
           description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
           default: 20
           minimum: 1
-      type: object
     OutputKafka:
+      type: object
       required:
+        - type
         - brokers
         - topic
       properties:
@@ -23901,6 +24411,14 @@ components:
               title: Schema Registry URL
               description: "URL for accessing the Confluent Schema Registry. Example: http://localhost:8081. To connect over TLS, use https instead of http."
               default: http://localhost:8081
+            schemaType:
+              type: string
+              default: avro
+              enum:
+                - avro
+                - json
+              title: Schema type
+              description: The schema format used to encode and decode event data
             connectionTimeout:
               type: number
               title: Connection timeout (ms)
@@ -24190,9 +24708,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputConfluentCloud:
+      type: object
       required:
+        - type
         - brokers
         - topic
       properties:
@@ -24355,6 +24874,14 @@ components:
               title: Schema Registry URL
               description: "URL for accessing the Confluent Schema Registry. Example: http://localhost:8081. To connect over TLS, use https instead of http."
               default: http://localhost:8081
+            schemaType:
+              type: string
+              default: avro
+              enum:
+                - avro
+                - json
+              title: Schema type
+              description: The schema format used to encode and decode event data
             connectionTimeout:
               type: number
               title: Connection timeout (ms)
@@ -24589,9 +25116,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputMsk:
+      type: object
       required:
+        - type
         - brokers
         - topic
         - region
@@ -24701,6 +25229,14 @@ components:
               title: Schema Registry URL
               description: "URL for accessing the Confluent Schema Registry. Example: http://localhost:8081. To connect over TLS, use https instead of http."
               default: http://localhost:8081
+            schemaType:
+              type: string
+              default: avro
+              enum:
+                - avro
+                - json
+              title: Schema type
+              description: The schema format used to encode and decode event data
             connectionTimeout:
               type: number
               title: Connection timeout (ms)
@@ -25037,11 +25573,11 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputElastic:
+      type: object
       required:
-        - index
         - type
+        - index
       properties:
         id:
           type: string
@@ -25405,9 +25941,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputElasticCloud:
+      type: object
       required:
+        - type
         - url
         - index
       properties:
@@ -25701,11 +26238,8 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputNewrelic:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -26013,11 +26547,10 @@ components:
           type: string
           title: API key (text secret)
           description: Select or create a stored text secret
-      type: object
-    OutputNewrelicEvents:
       required:
-        - accountId
-        - eventType
+        - type
+    OutputNewrelicEvents:
+      type: object
       properties:
         id:
           type: string
@@ -26295,11 +26828,15 @@ components:
           type: string
           title: API key (text secret)
           description: Select or create a stored text secret
-      type: object
-    OutputInfluxdb:
       required:
-        - url
         - type
+        - accountId
+        - eventType
+    OutputInfluxdb:
+      type: object
+      required:
+        - type
+        - url
       properties:
         id:
           type: string
@@ -26680,9 +27217,10 @@ components:
                 type: string
                 title: Value
                 description: OAuth header value
-      type: object
     OutputCloudwatch:
+      type: object
       required:
+        - type
         - logGroupName
         - logStreamName
         - region
@@ -26860,9 +27398,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputMinio:
+      type: object
       required:
+        - type
         - bucket
         - stagePath
         - endpoint
@@ -27201,9 +27740,10 @@ components:
           description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
           default: 20
           minimum: 1
-      type: object
     OutputStatsd:
+      type: object
       required:
+        - type
         - protocol
         - host
         - port
@@ -27349,9 +27889,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputStatsdExt:
+      type: object
       required:
+        - type
         - protocol
         - host
         - port
@@ -27497,9 +28038,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputGraphite:
+      type: object
       required:
+        - type
         - protocol
         - host
         - port
@@ -27645,11 +28187,11 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputRouter:
+      type: object
       required:
-        - rules
         - type
+        - rules
       properties:
         id:
           type: string
@@ -27713,9 +28255,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     OutputSns:
+      type: object
       required:
+        - type
         - topicArn
         - messageGroupId
       properties:
@@ -27885,9 +28428,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputSqs:
+      type: object
       required:
+        - type
         - queueName
         - queueType
       properties:
@@ -28096,11 +28640,11 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputSnmp:
+      type: object
       required:
-        - hosts
         - type
+        - hosts
       properties:
         id:
           type: string
@@ -28164,11 +28708,11 @@ components:
         description:
           type: string
           title: Description
-      type: object
     OutputSumoLogic:
+      type: object
       required:
-        - url
         - type
+        - url
       properties:
         id:
           type: string
@@ -28436,11 +28980,8 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputDatadog:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -28777,11 +29318,10 @@ components:
           type: string
           title: API key (text secret)
           description: Select or create a stored text secret
-      type: object
-    OutputGrafanaCloud:
       required:
-        - id
         - type
+    OutputGrafanaCloud:
+      type: object
       properties:
         id:
           type: string
@@ -29001,6 +29541,11 @@ components:
           default: []
           items:
             type: string
+        sendStructuredMetadata:
+          type: boolean
+          title: Send structured metadata
+          description: Add structured metadata fields from __structuredMetadata to each log. Key-value pairs must be strings.
+          default: false
         responseRetrySettings:
           type: array
           title: Settings for failed HTTP requests
@@ -29134,16 +29679,13 @@ components:
             - always
         pqControls:
           type: object
-      type: object
-      anyOf:
-        - required:
-            - lokiUrl
-        - required:
-            - prometheusUrl
-    OutputLoki:
       required:
-        - url
         - type
+    OutputLoki:
+      type: object
+      required:
+        - type
+        - url
       properties:
         id:
           type: string
@@ -29369,6 +29911,16 @@ components:
           title: Honor Retry-After header
           description: Honor any Retry-After header that specifies a delay (in seconds) no longer than 180 seconds after the retry request. @{product} limits the delay to 180 seconds, even if the Retry-After header specifies a longer delay. When enabled, takes precedence over user-configured retry options. When disabled, all Retry-After headers are ignored.
           default: false
+        enableDynamicHeaders:
+          type: boolean
+          title: Enable dynamic headers
+          description: Add per-event HTTP headers from the __headers field to outgoing requests. Events with different headers are batched and sent separately.
+          default: false
+        sendStructuredMetadata:
+          type: boolean
+          title: Send structured metadata
+          description: Add structured metadata fields from __structuredMetadata to each log. Key-value pairs must be strings.
+          default: false
         onBackpressure:
           type: string
           title: Backpressure behavior
@@ -29455,11 +30007,11 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputPrometheus:
+      type: object
       required:
-        - url
         - type
+        - url
       properties:
         id:
           type: string
@@ -29812,11 +30364,8 @@ components:
                 type: string
                 title: Value
                 description: OAuth header value
-      type: object
     OutputRing:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -29895,11 +30444,13 @@ components:
         description:
           type: string
           title: Description
-      type: object
-    OutputOpenTelemetry:
       required:
-        - endpoint
         - type
+    OutputOpenTelemetry:
+      type: object
+      required:
+        - type
+        - endpoint
       properties:
         id:
           type: string
@@ -30358,9 +30909,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputServiceNow:
+      type: object
       required:
+        - type
         - endpoint
         - protocol
         - otlpVersion
@@ -30736,11 +31288,8 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputDataset:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -31055,11 +31604,10 @@ components:
           type: string
           title: API key (text secret)
           description: Select or create a stored text secret
-      type: object
-    OutputCriblTcp:
       required:
-        - id
         - type
+    OutputCriblTcp:
+      type: object
       properties:
         id:
           type: string
@@ -31327,11 +31875,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
-    OutputCriblHttp:
       required:
-        - id
         - type
+    OutputCriblHttp:
+      type: object
       properties:
         id:
           type: string
@@ -31696,9 +32243,12 @@ components:
             - always
         pqControls:
           type: object
-      type: object
-    OutputHumioHec:
       required:
+        - type
+    OutputHumioHec:
+      type: object
+      required:
+        - type
         - format
         - url
       properties:
@@ -31972,9 +32522,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputCrowdstrikeNextGenSiem:
+      type: object
       required:
+        - type
         - format
         - url
       properties:
@@ -32248,9 +32799,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputDlS3:
+      type: object
       required:
+        - type
         - bucket
         - stagePath
       properties:
@@ -32363,7 +32915,7 @@ components:
         destPath:
           type: string
           title: Key prefix
-          description: "Prefix to append to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+          description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
           default: ""
         objectACL:
           type: string
@@ -32629,9 +33181,10 @@ components:
           description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
           default: 20
           minimum: 1
-      type: object
     OutputSecurityLake:
+      type: object
       required:
+        - type
         - bucket
         - stagePath
         - region
@@ -32655,8 +33208,7 @@ components:
           type: array
           title: System fields
           description: Fields to automatically add to events, such as cribl_pipe. Supports wildcards. These fields are added as dimensions and labels to generated metrics and logs, respectively.
-          default:
-            - cribl_pipe
+          default: []
           items:
             type: string
         environment:
@@ -32983,11 +33535,8 @@ components:
           description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
           default: 20
           minimum: 1
-      type: object
     OutputCriblLake:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -33255,11 +33804,10 @@ components:
           description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
           default: 20
           minimum: 1
-      type: object
-    OutputDiskSpool:
       required:
-        - id
         - type
+    OutputDiskSpool:
+      type: object
       properties:
         id:
           type: string
@@ -33324,9 +33872,12 @@ components:
         description:
           type: string
           title: Description
-      type: object
-    OutputClickHouse:
       required:
+        - type
+    OutputClickHouse:
+      type: object
+      required:
+        - type
         - database
         - tableName
         - url
@@ -33793,11 +34344,8 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputXsiam:
-      required:
-        - id
-        - type
+      type: object
       properties:
         id:
           type: string
@@ -34106,11 +34654,13 @@ components:
             - always
         pqControls:
           type: object
-      type: object
-    OutputNetflow:
       required:
-        - hosts
         - type
+    OutputNetflow:
+      type: object
+      required:
+        - type
+        - hosts
       properties:
         id:
           type: string
@@ -34174,9 +34724,10 @@ components:
         description:
           type: string
           title: Description
-      type: object
     OutputDynatraceHttp:
+      type: object
       required:
+        - type
         - format
         - endpoint
         - telemetryType
@@ -34492,9 +35043,10 @@ components:
           type: string
           description: URL to send events to. Can be overwritten by an event's __url field.
           pattern: ^https?://.*
-      type: object
     OutputDynatraceOtlp:
+      type: object
       required:
+        - type
         - endpoint
         - endpointType
         - protocol
@@ -34827,9 +35379,10 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     OutputSentinelOneAiSiem:
+      type: object
       required:
+        - type
         - region
         - endpoint
       properties:
@@ -35181,7 +35734,6 @@ components:
             - always
         pqControls:
           type: object
-      type: object
     Output:
       oneOf:
         - $ref: "#/components/schemas/OutputDefault"
@@ -35248,6 +35800,73 @@ components:
         - $ref: "#/components/schemas/OutputDynatraceHttp"
         - $ref: "#/components/schemas/OutputDynatraceOtlp"
         - $ref: "#/components/schemas/OutputSentinelOneAiSiem"
+      discriminator:
+        propertyName: type
+        mapping:
+          default: "#/components/schemas/OutputDefault"
+          webhook: "#/components/schemas/OutputWebhook"
+          sentinel: "#/components/schemas/OutputSentinel"
+          devnull: "#/components/schemas/OutputDevnull"
+          syslog: "#/components/schemas/OutputSyslog"
+          splunk: "#/components/schemas/OutputSplunk"
+          splunk_lb: "#/components/schemas/OutputSplunkLb"
+          splunk_hec: "#/components/schemas/OutputSplunkHec"
+          tcpjson: "#/components/schemas/OutputTcpjson"
+          wavefront: "#/components/schemas/OutputWavefront"
+          signalfx: "#/components/schemas/OutputSignalfx"
+          filesystem: "#/components/schemas/OutputFilesystem"
+          s3: "#/components/schemas/OutputS3"
+          azure_blob: "#/components/schemas/OutputAzureBlob"
+          azure_data_explorer: "#/components/schemas/OutputAzureDataExplorer"
+          azure_logs: "#/components/schemas/OutputAzureLogs"
+          kinesis: "#/components/schemas/OutputKinesis"
+          honeycomb: "#/components/schemas/OutputHoneycomb"
+          azure_eventhub: "#/components/schemas/OutputAzureEventhub"
+          google_chronicle: "#/components/schemas/OutputGoogleChronicle"
+          google_cloud_storage: "#/components/schemas/OutputGoogleCloudStorage"
+          google_cloud_logging: "#/components/schemas/OutputGoogleCloudLogging"
+          google_pubsub: "#/components/schemas/OutputGooglePubsub"
+          exabeam: "#/components/schemas/OutputExabeam"
+          kafka: "#/components/schemas/OutputKafka"
+          confluent_cloud: "#/components/schemas/OutputConfluentCloud"
+          msk: "#/components/schemas/OutputMsk"
+          elastic: "#/components/schemas/OutputElastic"
+          elastic_cloud: "#/components/schemas/OutputElasticCloud"
+          newrelic: "#/components/schemas/OutputNewrelic"
+          newrelic_events: "#/components/schemas/OutputNewrelicEvents"
+          influxdb: "#/components/schemas/OutputInfluxdb"
+          cloudwatch: "#/components/schemas/OutputCloudwatch"
+          minio: "#/components/schemas/OutputMinio"
+          statsd: "#/components/schemas/OutputStatsd"
+          statsd_ext: "#/components/schemas/OutputStatsdExt"
+          graphite: "#/components/schemas/OutputGraphite"
+          router: "#/components/schemas/OutputRouter"
+          sns: "#/components/schemas/OutputSns"
+          sqs: "#/components/schemas/OutputSqs"
+          snmp: "#/components/schemas/OutputSnmp"
+          sumo_logic: "#/components/schemas/OutputSumoLogic"
+          datadog: "#/components/schemas/OutputDatadog"
+          grafana_cloud: "#/components/schemas/OutputGrafanaCloud"
+          loki: "#/components/schemas/OutputLoki"
+          prometheus: "#/components/schemas/OutputPrometheus"
+          ring: "#/components/schemas/OutputRing"
+          open_telemetry: "#/components/schemas/OutputOpenTelemetry"
+          service_now: "#/components/schemas/OutputServiceNow"
+          dataset: "#/components/schemas/OutputDataset"
+          cribl_tcp: "#/components/schemas/OutputCriblTcp"
+          cribl_http: "#/components/schemas/OutputCriblHttp"
+          humio_hec: "#/components/schemas/OutputHumioHec"
+          crowdstrike_next_gen_siem: "#/components/schemas/OutputCrowdstrikeNextGenSiem"
+          dl_s3: "#/components/schemas/OutputDlS3"
+          security_lake: "#/components/schemas/OutputSecurityLake"
+          cribl_lake: "#/components/schemas/OutputCriblLake"
+          disk_spool: "#/components/schemas/OutputDiskSpool"
+          click_house: "#/components/schemas/OutputClickHouse"
+          xsiam: "#/components/schemas/OutputXsiam"
+          netflow: "#/components/schemas/OutputNetflow"
+          dynatrace_http: "#/components/schemas/OutputDynatraceHttp"
+          dynatrace_otlp: "#/components/schemas/OutputDynatraceOtlp"
+          sentinel_one_ai_siem: "#/components/schemas/OutputSentinelOneAiSiem"
     OutputSamplesResponse:
       type: object
       properties:
@@ -35395,7 +36014,6 @@ components:
         id:
           type: string
           title: Route ID
-          readOnly: true
         name:
           type: string
           title: Route name
@@ -35532,6 +36150,61 @@ components:
       properties:
         token:
           type: string
+    WorkerTypes:
+      type: string
+      enum:
+        - worker
+        - managed-edge
+    DistributedSummary:
+      type: object
+      properties:
+        groups:
+          type: object
+          properties:
+            count:
+              type: number
+            destinations:
+              type: number
+            pipelines:
+              type: number
+            routes:
+              type: number
+            sources:
+              type: number
+          required:
+            - count
+            - destinations
+            - pipelines
+            - routes
+            - sources
+        workers:
+          type: object
+          properties:
+            alive:
+              type: number
+            confVersions:
+              type: number
+            count:
+              type: number
+            disconnectedCount:
+              type: number
+            groups:
+              type: number
+            softwareVersions:
+              type: number
+            unhealthy:
+              type: number
+          required:
+            - alive
+            - confVersions
+            - count
+            - disconnectedCount
+            - groups
+            - softwareVersions
+            - unhealthy
+      required:
+        - groups
+        - workers
     HealthStatus:
       type: object
       required:
@@ -35551,6 +36224,186 @@ components:
             - standby
         startTime:
           type: number
+    InstallWarnings: {}
+    PackInstallInfo:
+      type: object
+      properties:
+        author:
+          type: string
+        description:
+          type: string
+        displayName:
+          type: string
+        exports:
+          type: array
+          items:
+            type: string
+        id:
+          type: string
+        inputs:
+          type: number
+        isDisabled:
+          type: boolean
+        minLogStreamVersion:
+          type: string
+        outputs:
+          type: number
+        settings:
+          type: object
+          additionalProperties: true
+        source:
+          type: string
+        spec:
+          type: string
+        tags:
+          type: object
+          properties:
+            dataType:
+              type: array
+              items:
+                type: string
+            domain:
+              type: array
+              items:
+                type: string
+            streamtags:
+              type: array
+              items:
+                type: string
+            technology:
+              type: array
+              items:
+                type: string
+          required:
+            - dataType
+            - domain
+            - streamtags
+            - technology
+        version:
+          type: string
+        warnings:
+          $ref: "#/components/schemas/InstallWarnings"
+      required:
+        - id
+        - source
+        - warnings
+    PackRequestBody:
+      type: object
+      properties:
+        allowCustomFunctions:
+          type: boolean
+        author:
+          type: string
+        description:
+          type: string
+        displayName:
+          type: string
+        exports:
+          type: array
+          items:
+            type: string
+        force:
+          type: boolean
+        id:
+          type: string
+        inputs:
+          type: number
+        minLogStreamVersion:
+          type: string
+        outputs:
+          type: number
+        source:
+          type: string
+        spec:
+          type: string
+        tags:
+          type: object
+          properties:
+            dataType:
+              type: array
+              items:
+                type: string
+            domain:
+              type: array
+              items:
+                type: string
+            streamtags:
+              type: array
+              items:
+                type: string
+            technology:
+              type: array
+              items:
+                type: string
+          required:
+            - dataType
+            - domain
+            - streamtags
+            - technology
+        version:
+          type: string
+      required:
+        - id
+        - source
+    PackInfo:
+      type: object
+      properties:
+        author:
+          type: string
+        description:
+          type: string
+        displayName:
+          type: string
+        exports:
+          type: array
+          items:
+            type: string
+        id:
+          type: string
+        inputs:
+          type: number
+        isDisabled:
+          type: boolean
+        minLogStreamVersion:
+          type: string
+        outputs:
+          type: number
+        settings:
+          type: object
+          additionalProperties: true
+        source:
+          type: string
+        spec:
+          type: string
+        tags:
+          type: object
+          properties:
+            dataType:
+              type: array
+              items:
+                type: string
+            domain:
+              type: array
+              items:
+                type: string
+            streamtags:
+              type: array
+              items:
+                type: string
+            technology:
+              type: array
+              items:
+                type: string
+          required:
+            - dataType
+            - domain
+            - streamtags
+            - technology
+        version:
+          type: string
+      required:
+        - id
+        - source
     GitCommitSummary:
       type: object
       properties:
@@ -35601,7 +36454,6 @@ components:
             - deletions
             - insertions
       required:
-        - author
         - branch
         - commit
         - files
@@ -35632,7 +36484,6 @@ components:
           items:
             $ref: "#/components/schemas/GitFile"
       required:
-        - commitMessage
         - count
         - items
     GitRevertResult:
@@ -35665,14 +36516,21 @@ components:
             id:
               type: string
           required:
-            - files
-            - group
             - id
         reverted:
           type: boolean
       required:
         - audit
         - reverted
+    AppMode:
+      type: string
+      enum:
+        - single
+        - master
+        - worker
+        - edge
+        - managed-edge
+        - outpost
     GitCommitParams:
       type: object
       properties:
@@ -35688,6 +36546,13 @@ components:
           type: string
       required:
         - message
+    CurrentBranchResult:
+      type: object
+      properties:
+        branch:
+          type: string
+      required:
+        - branch
     GitInfo:
       type: object
       properties:
@@ -35700,6 +36565,23 @@ components:
       required:
         - remote
         - versioning
+    GitLogResult:
+      type: object
+      properties:
+        author_email:
+          type: string
+        author_name:
+          type: string
+        body:
+          type: string
+        date:
+          type: string
+        hash:
+          type: string
+        message:
+          type: string
+        refs:
+          type: string
     GitRevertParams:
       type: object
       properties:
@@ -35772,8 +36654,6 @@ components:
           type: array
           items:
             type: string
-        tracking:
-          type: string
       required:
         - ahead
         - behind
@@ -35786,7 +36666,391 @@ components:
         - not_added
         - renamed
         - staged
-        - tracking
+    LookupVersions:
+      type: object
+    HBLeaderInfo:
+      type: object
+      properties:
+        host:
+          type: string
+        port:
+          type: number
+        servername:
+          type: string
+        tls:
+          type: boolean
+      required:
+        - host
+        - port
+    HBCriblInfo:
+      type: object
+      properties:
+        config:
+          type: object
+          properties:
+            featuresRev:
+              type: string
+            hbPeriodSeconds:
+              type: number
+            logStreamEnv:
+              type: string
+            policyRev:
+              type: string
+            version:
+              type: string
+        deploymentId:
+          type: string
+        distMode:
+          $ref: "#/components/schemas/AppMode"
+        edgeNodes:
+          type: number
+        group:
+          type: string
+        guid:
+          type: string
+        installType:
+          type: string
+        lookupVersions:
+          $ref: "#/components/schemas/LookupVersions"
+        master:
+          $ref: "#/components/schemas/HBLeaderInfo"
+        pid:
+          type: number
+        startTime:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+        version:
+          type: string
+      required:
+        - config
+        - distMode
+        - group
+        - guid
+        - startTime
+        - tags
+    HeartbeatMetadata:
+      type: object
+      properties:
+        aws:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            region:
+              type: string
+            tags:
+              type: object
+            type:
+              type: string
+            zone:
+              type: string
+          required:
+            - enabled
+            - region
+            - type
+            - zone
+        hostOs:
+          type: object
+          properties:
+            addresses:
+              type: array
+              items:
+                type: string
+            enabled:
+              type: boolean
+            id:
+              type: string
+            version:
+              type: string
+          required:
+            - addresses
+            - enabled
+            - id
+            - version
+        kube:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            namespace:
+              type: string
+            node:
+              type: string
+            owner:
+              type: object
+              properties:
+                kind:
+                  type: string
+                name:
+                  type: string
+              required:
+                - kind
+                - name
+            pod:
+              type: string
+            source:
+              type: string
+          required:
+            - enabled
+            - namespace
+            - node
+            - pod
+            - source
+        os:
+          type: object
+          properties:
+            addresses:
+              type: array
+              items:
+                type: string
+            enabled:
+              type: boolean
+            id:
+              type: string
+            version:
+              type: string
+          required:
+            - addresses
+            - enabled
+            - id
+            - version
+    NodeProvidedInfo:
+      type: object
+      properties:
+        architecture:
+          type: string
+        aws:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            region:
+              type: string
+            tags:
+              type: object
+            type:
+              type: string
+            zone:
+              type: string
+          required:
+            - enabled
+            - region
+            - type
+            - zone
+        conn_ip:
+          type: string
+        cpus:
+          type: number
+        cribl:
+          $ref: "#/components/schemas/HBCriblInfo"
+        freeDiskSpace:
+          type: number
+        hostOs:
+          type: object
+          properties:
+            addresses:
+              type: array
+              items:
+                type: string
+            enabled:
+              type: boolean
+            id:
+              type: string
+            version:
+              type: string
+          required:
+            - addresses
+            - enabled
+            - id
+            - version
+        hostname:
+          type: string
+        isSaasWorker:
+          type: boolean
+        kube:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            namespace:
+              type: string
+            node:
+              type: string
+            owner:
+              type: object
+              properties:
+                kind:
+                  type: string
+                name:
+                  type: string
+              required:
+                - kind
+                - name
+            pod:
+              type: string
+            source:
+              type: string
+          required:
+            - enabled
+            - namespace
+            - node
+            - pod
+            - source
+        localTime:
+          type: number
+        metadata:
+          $ref: "#/components/schemas/HeartbeatMetadata"
+        node:
+          type: string
+        os:
+          oneOf:
+            - type: object
+              properties:
+                addresses:
+                  type: array
+                  items:
+                    type: string
+                enabled:
+                  type: boolean
+                id:
+                  type: string
+                version:
+                  type: string
+              required:
+                - addresses
+                - enabled
+                - id
+                - version
+            - type: object
+              properties:
+                addresses:
+                  type: array
+                  items:
+                    type: string
+              required:
+                - addresses
+        platform:
+          type: string
+        release:
+          type: string
+        totalDiskSpace:
+          type: number
+        totalmem:
+          type: number
+      required:
+        - architecture
+        - cpus
+        - cribl
+        - freeDiskSpace
+        - hostname
+        - node
+        - platform
+        - release
+        - totalDiskSpace
+        - totalmem
+    NodeActiveUpgradeStatus:
+      type: integer
+      enum:
+        - 0
+        - 1
+        - 2
+    NodeFailedUpgradeStatus:
+      type: integer
+      enum:
+        - 0
+        - 1
+    NodeSkippedUpgradeStatus:
+      type: integer
+      enum:
+        - 0
+        - 1
+        - 2
+        - 3
+    NodeUpgradeState:
+      type: integer
+      enum:
+        - 0
+        - 1
+        - 2
+        - 3
+    NodeUpgradeStatus:
+      type: object
+      properties:
+        active:
+          $ref: "#/components/schemas/NodeActiveUpgradeStatus"
+        failed:
+          $ref: "#/components/schemas/NodeFailedUpgradeStatus"
+        skipped:
+          $ref: "#/components/schemas/NodeSkippedUpgradeStatus"
+        state:
+          $ref: "#/components/schemas/NodeUpgradeState"
+        timestamp:
+          type: number
+      required:
+        - state
+        - timestamp
+    MasterWorkerEntry:
+      type: object
+      properties:
+        deployable:
+          type: boolean
+        disconnected:
+          type: boolean
+        firstMsgTime:
+          type: number
+        group:
+          type: string
+        id:
+          type: string
+        info:
+          $ref: "#/components/schemas/NodeProvidedInfo"
+        lastMetrics:
+          type: object
+        lastMsgTime:
+          type: number
+        metadata:
+          $ref: "#/components/schemas/HeartbeatMetadata"
+        nodeUpgradeStatus:
+          $ref: "#/components/schemas/NodeUpgradeStatus"
+        status:
+          type: string
+        type:
+          type: string
+          enum:
+            - info
+            - req
+            - resp
+        workerProcesses:
+          type: number
+        workers:
+          type: object
+          properties:
+            count:
+              type: number
+          required:
+            - count
+      required:
+        - firstMsgTime
+        - group
+        - id
+        - info
+        - lastMsgTime
+        - workerProcesses
+    TeamAccessControlList:
+      type: object
+      properties:
+        perms:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourcePolicy"
+        team:
+          type: string
+      required:
+        - perms
+        - team
 security:
   - bearerAuth: []
   - clientOauth: []
@@ -35823,6 +37087,8 @@ tags:
     description: Actions related to Database Connections
   - name: datasets
     description: Actions related to Datasets
+  - name: datatypes
+    description: Actions related to Datatypes
   - name: destinations
     description: Actions related to Destinations
   - name: diag
@@ -35891,12 +37157,16 @@ tags:
     description: Actions related to messages
   - name: metrics
     description: Actions related to metrics
+  - name: notebooks
+    description: Actions related to Notebooks
   - name: notification-targets
     description: Actions related to Notification Targets
   - name: notifications
     description: Actions related to Notifications
   - name: onlyOnPrem
     description: Actions only available for onprem deployments and do not apply to Cribl.Cloud deployments
+  - name: outpost
+    description: Actions related to Outpost
   - name: packs
     description: Actions related to Packs
   - name: parquetschemas
@@ -35937,6 +37207,8 @@ tags:
     description: Actions related to scripts
   - name: sds-rules
     description: Actions related to Sds Rules
+  - name: sds-rulesets
+    description: Actions related to Sds Rulesets
   - name: search
     description: Actions related to Search
   - name: secrets
@@ -35964,15 +37236,239 @@ tags:
   - name: workers
     description: Actions related to Workers
 paths:
+  /products/lake/lakes/{lakeId}/datasets:
+    post:
+      operationId: createCriblLakeDatasetByLakeId
+      tags:
+        - lake
+      x-speakeasy-group: lakeDatasets
+      x-speakeasy-name-override: create
+      summary: Create a Lake Dataset
+      description: Create a new Lake Dataset in the specified Lake.
+      responses:
+        "200":
+          description: a list of CriblLakeDataset objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CriblLakeDataset"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        description: CriblLakeDataset object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CriblLakeDataset"
+      parameters:
+        - name: lakeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Lake to create the Lake Dataset in.
+    get:
+      operationId: getCriblLakeDatasetByLakeId
+      tags:
+        - lake
+      x-speakeasy-group: lakeDatasets
+      x-speakeasy-name-override: list
+      summary: List all Lake Datasets
+      description: Get a list of all Lake Datasets in the specified Lake.
+      responses:
+        "200":
+          description: a list of CriblLakeDataset objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CriblLakeDataset"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: lakeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Lake that contains the Lake Datasets to list.
+  /products/lake/lakes/{lakeId}/datasets/{id}:
+    delete:
+      operationId: deleteCriblLakeDatasetByLakeIdAndId
+      tags:
+        - lake
+      x-speakeasy-group: lakeDatasets
+      x-speakeasy-name-override: delete
+      summary: Delete a Lake Dataset
+      description: Delete the specified Lake Dataset in the specified Lake
+      responses:
+        "200":
+          description: a list of CriblLakeDataset objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CriblLakeDataset"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: lakeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Lake that contains the Lake Dataset to delete.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Lake Dataset to delete.
+    get:
+      operationId: getCriblLakeDatasetByLakeIdAndId
+      tags:
+        - lake
+      x-speakeasy-group: lakeDatasets
+      x-speakeasy-name-override: get
+      summary: Get a Lake Dataset
+      description: Get the specified Lake Dataset in the specified Lake.
+      responses:
+        "200":
+          description: a list of CriblLakeDataset objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CriblLakeDataset"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: lakeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Lake that contains the Lake Dataset to get.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Lake Dataset to get.
+    patch:
+      operationId: updateCriblLakeDatasetByLakeIdAndId
+      tags:
+        - lake
+      x-speakeasy-group: lakeDatasets
+      x-speakeasy-name-override: update
+      summary: Update a Lake Dataset
+      description: Update the specified Lake Dataset in the specified Lake.
+      responses:
+        "200":
+          description: a list of CriblLakeDataset objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CriblLakeDataset"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        description: CriblLakeDataset object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CriblLakeDataset"
+      parameters:
+        - name: lakeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Lake that contains the Lake Dataset to update.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Lake Dataset to update.
   /system/inputs:
     get:
       operationId: listInput
-      x-speakeasy-group: Sources
-      x-speakeasy-name-override: listSource
+      x-speakeasy-group: sources
+      x-speakeasy-name-override: list
       tags:
         - sources
-      summary: Get a list of Source objects
-      description: Get a list of Source objects
+      summary: List all Sources
+      description: Get a list of all Sources.
       responses:
         "200":
           description: a list of Source objects
@@ -35997,38 +37493,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     post:
+      operationId: createInput
+      x-speakeasy-group: sources
+      x-speakeasy-name-override: create
       tags:
         - sources
-      responses:
-        "200":
-          description: a list of Source objects
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Input"
-        "401":
-          description: Unauthorized
-        "500":
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      operationId: createInput
-      x-speakeasy-group: Sources
-      x-speakeasy-name-override: createSource
-      summary: Create Source
-      description: Create Source
+      summary: Create a Source
+      description: Create a new Source.
       requestBody:
-        description: New Source object
+        description: Input object
         required: true
         content:
           application/json:
@@ -36038,10 +37511,7 @@ paths:
                 - type: object
                   required:
                     - id
-  "/system/inputs/{id}":
-    get:
-      tags:
-        - sources
+              $ref: "#/components/schemas/Input"
       responses:
         "200":
           description: a list of Source objects
@@ -36065,21 +37535,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /system/inputs/{id}:
+    get:
       operationId: getInputById
-      x-speakeasy-group: Sources
-      x-speakeasy-name-override: getSourceById
-      summary: Get Source by ID
-      description: Get Source by ID
+      x-speakeasy-group: sources
+      x-speakeasy-name-override: get
+      tags:
+        - sources
+      summary: Get a Source
+      description: Get the specified Source.
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: string
-          description: Unique ID to GET
-    patch:
-      tags:
-        - sources
+          description: The <code>id</code> of the Source to get.
       responses:
         "200":
           description: a list of Source objects
@@ -36103,28 +37574,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    patch:
       operationId: updateInputById
-      x-speakeasy-group: Sources
-      x-speakeasy-name-override: updateSourceById
-      summary: Update Source
-      description: Update Source
+      x-speakeasy-group: sources
+      x-speakeasy-name-override: update
+      tags:
+        - sources
+      summary: Update a Source
+      description: Update the specified Source.</br></br>Provide a complete representation of the Source that you want to update in the request body. This endpoint does not support partial updates. Cribl removes any omitted fields when updating the Source.</br></br>Confirm that the configuration in your request body is correct before sending the request. If the configuration is incorrect, the updated Source might not function as expected.
       parameters:
-        - schema:
-            type: string
-          name: id
+        - name: id
           in: path
           required: true
-          description: Unique ID to PATCH
+          schema:
+            type: string
+          description: The <code>id</code> of the Source to update.
       requestBody:
-        description: Source object to be updated
+        description: Input object
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/Input"
-    delete:
-      tags:
-        - sources
       responses:
         "200":
           description: a list of Source objects
@@ -36148,27 +37619,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    delete:
       operationId: deleteInputById
-      x-speakeasy-group: Sources
-      x-speakeasy-name-override: deleteSourceById
-      summary: Delete Source
-      description: Delete Source
+      x-speakeasy-group: sources
+      x-speakeasy-name-override: delete
+      tags:
+        - sources
+      summary: Delete a Source
+      description: Delete the specified Source.
       parameters:
-        - schema:
-            type: string
-          name: id
+        - name: id
           in: path
           required: true
-          description: Unique ID to DELETE
-  "/system/inputs/{id}/hectoken":
+          schema:
+            type: string
+          description: The <code>id</code> of the Source to delete.
+      responses:
+        "200":
+          description: a list of Source objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Input"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /system/inputs/{id}/hectoken:
     post:
       operationId: createInputHecTokenById
       tags:
         - sources
-      x-speakeasy-group: Sources
-      summary: Add token and optional metadata to an existing HEC Source
-      x-speakeasy-name-override: createSourceHecTokenById
-      description: Add token and optional metadata to an existing HEC Source
+      x-speakeasy-group: sources.hecTokens
+      x-speakeasy-name-override: create
+      summary: Add an HEC token and optional metadata to a Splunk HEC Source
+      description: Add an HEC token and optional metadata to the specified Splunk HEC Source.
       responses:
         "200":
           description: a list of any objects
@@ -36206,16 +37703,16 @@ paths:
           required: true
           schema:
             type: string
-          description: HEC Source id
-  "/system/inputs/{id}/hectoken/{token}":
+          description: The <code>id</code> of the Splunk HEC Source.
+  /system/inputs/{id}/hectoken/{token}:
     patch:
       operationId: updateInputHecTokenByIdAndToken
       tags:
         - sources
-      x-speakeasy-group: Sources
-      summary: Update token metadata on existing HEC Source
-      x-speakeasy-name-override: updateSourceHecTokenByIdAndToken
-      description: Update token metadata on existing HEC Source
+      x-speakeasy-group: sources.hecTokens
+      x-speakeasy-name-override: update
+      summary: Update metadata for an HEC token for a Splunk HEC Source
+      description: Update the metadata for the specified HEC token for the specified Splunk HEC Source.
       responses:
         "200":
           description: a list of any objects
@@ -36253,22 +37750,22 @@ paths:
           required: true
           schema:
             type: string
-          description: HEC Source id
+          description: The <code>id</code> of the Splunk HEC Source.
         - name: token
           in: path
           required: true
           schema:
             type: string
-          description: token to update
+          description: The <code>id</code> of the HEC token to update.
   /system/outputs:
     get:
       operationId: listOutput
-      x-speakeasy-group: Destinations
-      x-speakeasy-name-override: listDestination
+      x-speakeasy-group: destinations
+      x-speakeasy-name-override: list
       tags:
         - destinations
-      summary: Get a list of Destination objects
-      description: Get a list of Destination objects
+      summary: List all Destinations
+      description: Get a list of all Destinations.
       responses:
         "200":
           description: a list of Destination objects
@@ -36293,38 +37790,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     post:
+      operationId: createOutput
+      x-speakeasy-group: destinations
+      x-speakeasy-name-override: create
       tags:
         - destinations
-      responses:
-        "200":
-          description: a list of Destination objects
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Output"
-        "401":
-          description: Unauthorized
-        "500":
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      operationId: createOutput
-      x-speakeasy-group: Destinations
-      x-speakeasy-name-override: createDestination
-      summary: Create Destination
-      description: Create Destination
+      summary: Create a Destination
+      description: Create a new Destination.
       requestBody:
-        description: New Destination object
+        description: Output object
         required: true
         content:
           application/json:
@@ -36334,10 +37808,7 @@ paths:
                 - type: object
                   required:
                     - id
-  "/system/outputs/{id}":
-    get:
-      tags:
-        - destinations
+              $ref: "#/components/schemas/Output"
       responses:
         "200":
           description: a list of Destination objects
@@ -36361,21 +37832,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /system/outputs/{id}:
+    get:
       operationId: getOutputById
-      x-speakeasy-group: Destinations
-      x-speakeasy-name-override: getDestinationById
-      summary: Get Destination by ID
-      description: Get Destination by ID
+      x-speakeasy-group: destinations
+      x-speakeasy-name-override: get
+      tags:
+        - destinations
+      summary: Get a Destination
+      description: Get the specified Destination.
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: string
-          description: Unique ID to GET
-    patch:
-      tags:
-        - destinations
+          description: The <code>id</code> of the Destination to get.
       responses:
         "200":
           description: a list of Destination objects
@@ -36399,28 +37871,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    patch:
       operationId: updateOutputById
-      x-speakeasy-group: Destinations
-      x-speakeasy-name-override: updateDestinationById
-      summary: Update Destination
-      description: Update Destination
+      x-speakeasy-group: destinations
+      x-speakeasy-name-override: update
+      tags:
+        - destinations
+      summary: Update a Destination
+      description: Update the specified Destination.</br></br>Provide a complete representation of the Destination that you want to update in the request body. This endpoint does not support partial updates. Cribl removes any omitted fields when updating the Destination.</br></br>Confirm that the configuration in your request body is correct before sending the request. If the configuration is incorrect, the updated Destination might not function as expected.
       parameters:
-        - schema:
-            type: string
-          name: id
+        - name: id
           in: path
           required: true
-          description: Unique ID to PATCH
+          schema:
+            type: string
+          description: The <code>id</code> of the Destination to update.
       requestBody:
-        description: Destination object to be updated
+        description: Output object
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/Output"
-    delete:
-      tags:
-        - destinations
       responses:
         "200":
           description: a list of Destination objects
@@ -36444,27 +37916,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    delete:
       operationId: deleteOutputById
-      x-speakeasy-group: Destinations
-      x-speakeasy-name-override: deleteDestinationById
-      summary: Delete Destination
-      description: Delete Destination
+      x-speakeasy-group: destinations
+      x-speakeasy-name-override: delete
+      tags:
+        - destinations
+      summary: Delete a Destination
+      description: Delete the specified Destination.
       parameters:
-        - schema:
-            type: string
-          name: id
+        - name: id
           in: path
           required: true
-          description: Unique ID to DELETE
-  "/system/outputs/{id}/pq":
+          schema:
+            type: string
+          description: The <code>id</code> of the Destination to delete.
+      responses:
+        "200":
+          description: a list of Destination objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Output"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /system/outputs/{id}/pq:
     delete:
       operationId: deleteOutputPqById
       tags:
         - destinations
-      x-speakeasy-group: Destinations
-      summary: Clears destination persistent queue
-      x-speakeasy-name-override: deleteDestinationPqById
-      description: Clears destination persistent queue
+      x-speakeasy-group: destinations.pq
+      x-speakeasy-name-override: clear
+      summary: Clear the persistent queue for a Destination
+      description: Clear the persistent queue (PQ) for the specified Destination.
       responses:
         "200":
           description: a list of any objects
@@ -36495,15 +37993,15 @@ paths:
           required: true
           schema:
             type: string
-          description: Destination Id
+          description: The <code>id</code> of the Destination to clear the PQ for.
     get:
       operationId: getOutputPqById
       tags:
         - destinations
-      x-speakeasy-group: Destinations
-      summary: Retrieves status of latest clear PQ job for a destination
-      x-speakeasy-name-override: getDestinationPqById
-      description: Retrieves status of latest clear PQ job for a destination
+      x-speakeasy-group: destinations.pq
+      x-speakeasy-name-override: get
+      summary: Get information about the latest job to clear the persistent queue for a Destination
+      description: Get information about the latest job to clear the persistent queue (PQ) for the specified Destination.
       responses:
         "200":
           description: a list of any objects
@@ -36534,16 +38032,16 @@ paths:
           required: true
           schema:
             type: string
-          description: Destination Id
-  "/system/outputs/{id}/samples":
+          description: The <code>id</code> of the Destination to get PQ job information for.
+  /system/outputs/{id}/samples:
     get:
       operationId: getOutputSamplesById
       tags:
         - destinations
-      x-speakeasy-group: Destinations
-      summary: Retrieve samples data for the specified destination. Used to get sample data for the test action.
-      x-speakeasy-name-override: getDestinationSamplesById
-      description: Retrieve samples data for the specified destination. Used to get sample data for the test action.
+      x-speakeasy-group: destinations.samples
+      x-speakeasy-name-override: get
+      summary: Get sample event data for a Destination
+      description: Get sample event data for the specified Destination to validate the configuration or test connectivity.
       responses:
         "200":
           description: a list of OutputSamplesResponse objects
@@ -36573,16 +38071,16 @@ paths:
           required: true
           schema:
             type: string
-          description: Destination Id
-  "/system/outputs/{id}/test":
+          description: The <code>id</code> of the Destination to get sample event data for.
+  /system/outputs/{id}/test:
     post:
       operationId: createOutputTestById
       tags:
         - destinations
-      x-speakeasy-group: Destinations
-      summary: Send sample data to a destination to validate configuration or test connectivity
-      x-speakeasy-name-override: createDestinationTestById
-      description: Send sample data to a destination to validate configuration or test connectivity
+      x-speakeasy-group: destinations.samples
+      x-speakeasy-name-override: create
+      summary: Send sample event data to a Destination
+      description: Send sample event data to the specified Destination to validate the configuration or test connectivity.
       responses:
         "200":
           description: a list of OutputTestResponse objects
@@ -36619,14 +38117,16 @@ paths:
           required: true
           schema:
             type: string
-          description: Destination Id
+          description: The <code>id</code> of the Destination to send sample event data to.
   /pipelines:
     get:
       operationId: listPipeline
+      x-speakeasy-group: pipelines
+      x-speakeasy-name-override: list
       tags:
         - pipelines
-      summary: Get a list of Pipeline objects
-      description: Get a list of Pipeline objects
+      summary: List all Pipelines
+      description: List all Pipelines
       responses:
         "200":
           description: a list of Pipeline objects
@@ -36651,48 +38151,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     post:
+      operationId: createPipeline
+      x-speakeasy-group: pipelines
+      x-speakeasy-name-override: create
       tags:
         - pipelines
-      responses:
-        "200":
-          description: a list of Pipeline objects
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Pipeline"
-        "401":
-          description: Unauthorized
-        "500":
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      operationId: createPipeline
-      summary: Create Pipeline
-      description: Create Pipeline
+      summary: Create a Pipeline
+      description: Create a Pipeline
       requestBody:
-        description: New Pipeline object
+        description: Pipeline object
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/Pipeline"
-  "/pipelines/{id}":
-    get:
-      tags:
-        - pipelines
       responses:
         "200":
-          description: a list of Pipeline objects
+          description: a list of Pipelines objects
           content:
             application/json:
               schema:
@@ -36713,9 +38188,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /pipelines/{id}:
+    get:
       operationId: getPipelineById
-      summary: Get Pipeline by ID
-      description: Get Pipeline by ID
+      x-speakeasy-group: pipelines
+      x-speakeasy-name-override: get
+      tags:
+        - pipelines
+      summary: Retrieve a Pipeline
+      description: Retrieve a Pipeline
       parameters:
         - name: id
           in: path
@@ -36723,9 +38204,6 @@ paths:
           schema:
             type: string
           description: Unique ID to GET
-    patch:
-      tags:
-        - pipelines
       responses:
         "200":
           description: a list of Pipeline objects
@@ -36749,15 +38227,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    patch:
       operationId: updatePipelineById
-      summary: Update Pipeline
-      description: Update Pipeline
+      x-speakeasy-group: pipelines
+      x-speakeasy-name-override: update
+      tags:
+        - pipelines
+      summary: Update a Pipeline
+      description: Update a Pipeline
       parameters:
-        - schema:
-            type: string
-          name: id
+        - name: id
           in: path
           required: true
+          schema:
+            type: string
           description: Unique ID to PATCH
       requestBody:
         description: Pipeline object to be updated
@@ -36766,9 +38249,46 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/Pipeline"
+      responses:
+        "200":
+          description: a list of any objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Pipeline"
+                      type: object
+                      additionalProperties: true
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     delete:
+      operationId: deletePipelineById
+      x-speakeasy-group: pipelines
+      x-speakeasy-name-override: delete
       tags:
         - pipelines
+      summary: Delete a Pipeline
+      description: Delete a Pipeline
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique ID to DELETE
       responses:
         "200":
           description: a list of Pipeline objects
@@ -36792,19 +38312,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      operationId: deletePipelineById
-      summary: Delete Pipeline
-      description: Delete Pipeline
-      parameters:
-        - schema:
-            type: string
-          name: id
-          in: path
-          required: true
-          description: Unique ID to DELETE
   /routes:
     get:
       operationId: listRoutes
+      x-speakeasy-group: routes
+      x-speakeasy-name-override: list
       tags:
         - routes
       summary: Get a list of Routes objects
@@ -36832,34 +38344,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-  "/routes/{id}":
+  /routes/{id}:
     get:
+      operationId: getRoutesById
+      x-speakeasy-group: routes
+      x-speakeasy-name-override: get
       tags:
         - routes
-      responses:
-        "200":
-          description: a list of Routes objects
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Routes"
-        "401":
-          description: Unauthorized
-        "500":
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      operationId: getRoutesById
       summary: Get Routes by ID
       description: Get Routes by ID
       parameters:
@@ -36869,9 +38360,6 @@ paths:
           schema:
             type: string
           description: Unique ID to GET
-    patch:
-      tags:
-        - routes
       responses:
         "200":
           description: a list of Routes objects
@@ -36895,33 +38383,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    patch:
       operationId: updateRoutesById
+      x-speakeasy-group: routes
+      x-speakeasy-name-override: update
+      tags:
+        - routes
       summary: Update Routes
       description: Update Routes
       parameters:
-        - schema:
-            type: string
-          name: id
+        - name: id
           in: path
           required: true
+          schema:
+            type: string
           description: Unique ID to PATCH
       requestBody:
-        description: Routes object to be updated
+        description: Routes object
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/Routes"
-  "/routes/{id}/append":
-    post:
-      operationId: createRoutesAppendById
-      tags:
-        - routes
-      summary: Appends routes to the end of the routing table
-      description: Appends routes to the end of the routing table
       responses:
         "200":
-          description: a list of any objects
+          description: a list of Routes objects
           content:
             application/json:
               schema:
@@ -36933,8 +38419,39 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: true
+                      $ref: "#/components/schemas/Routes"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /routes/{id}/append:
+    post:
+      operationId: createRoutesAppendById
+      tags:
+        - routes
+      x-speakeasy-group: routes
+      x-speakeasy-name-override: append
+      summary: Append Routes to the end of the Routing table
+      description: Appends routes to the end of the routing table
+      responses:
+        "200":
+          description: a list of Routes objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Routes"
         "401":
           description: Unauthorized
         "500":
@@ -36960,7 +38477,9 @@ paths:
   /auth/login:
     post:
       operationId: login
-      summary: Log in and obtain Auth token
+      summary: Log in and fetch an authentication token
+      x-speakeasy-group: auth.tokens
+      x-speakeasy-name-override: get
       description: This endpoint is unavailable on Cribl.Cloud. Instead, follow the instructions at https://docs.cribl.io/stream/api-tutorials/#criblcloud to get an Auth token for Cribl.Cloud.
       tags:
         - auth
@@ -36984,10 +38503,51 @@ paths:
           description: Access denied
         "429":
           description: Rate limit exceeded
+  /master/summary:
+    get:
+      operationId: getSummary
+      tags:
+        - distributed
+      x-speakeasy-group: nodes.summaries
+      x-speakeasy-name-override: get
+      summary: Get a summary of the Distributed deployment
+      description: Get a summary of the Distributed deployment. The response includes counts of Worker Groups, Edge Fleets, Pipelines, Routes, Sources, Destinations, and Worker and Edge Nodes, as well as statistics for the Worker and Edge Nodes.
+      responses:
+        "200":
+          description: a list of DistributedSummary objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DistributedSummary"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: mode
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/WorkerTypes"
+          description: "Filter for limiting the response by Cribl product: Cribl Stream (<code>worker</code>) or Cribl Edge (<code>managed-edge</code>)."
   /health:
     get:
       operationId: getHealthInfo
-      summary: Provides health info for REST server
+      summary: Retrieve health status of the server
+      x-speakeasy-group: health
+      x-speakeasy-name-override: get
       security: []
       tags:
         - health
@@ -37004,13 +38564,187 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /packs:
+    post:
+      operationId: createPacks
+      tags:
+        - packs
+      x-speakeasy-group: packs
+      x-speakeasy-name-override: install
+      summary: Install a Pack
+      description: Install a Pack.
+      responses:
+        "200":
+          description: a list of PackInstallInfo objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PackInstallInfo"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        description: PackRequestBody object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackRequestBody"
+    get:
+      operationId: getPacks
+      tags:
+        - packs
+      x-speakeasy-group: packs
+      x-speakeasy-name-override: list
+      summary: List all Packs
+      description: Get a list of all Packs.
+      responses:
+        "200":
+          description: a list of PackInfo objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PackInfo"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: with
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of additional properties to include in the response. When set, the response includes a count of the specified properties in the Pack. Available values are <code>inputs</code> and <code>outputs</code>.
+  /packs/{id}:
+    delete:
+      operationId: deletePacksById
+      tags:
+        - packs
+      x-speakeasy-group: packs
+      x-speakeasy-name-override: delete
+      summary: Uninstall a Pack
+      description: Uninstall the specified Pack.
+      responses:
+        "200":
+          description: a list of PackInstallInfo objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PackInstallInfo"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Pack to uninstall.
+    patch:
+      operationId: updatePacksById
+      tags:
+        - packs
+      x-speakeasy-group: packs
+      x-speakeasy-name-override: update
+      summary: Upgrade a Pack
+      description: Upgrade the specified Pack.</br></br>If the Pack includes any user–modified versions of default Cribl Knowledge resources such as lookups, copy the modified files locally for safekeeping before upgrading the Pack. Copy the modified files back to the upgraded Pack after you install it with <code>POST /packs</code> to overwrite the default versions in the Pack.</br></br>After you upgrade the Pack, update any Routes, Pipelines, Sources, and Destinations that use the previous Pack version so that they reference the upgraded Pack.
+      responses:
+        "200":
+          description: a list of PackInfo objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PackInfo"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Pack to upgrade.
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+          description: body string required Pack source
+        - name: minor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: body boolean optional Only upgrade to minor/patch versions
+        - name: spec
+          in: query
+          required: false
+          schema:
+            type: string
+          description: body string optional Specify a branch, tag or a semver spec
   /version/branch:
     get:
       operationId: getVersionBranch
       tags:
         - versioning
-      summary: get the list of branches
-      description: get the list of branches
+      x-speakeasy-group: versions.branches
+      x-speakeasy-name-override: list
+      summary: List all branches in the Git repository used for Cribl configuration
+      description: Get a list of all branches in the Git repository used for Cribl configuration.
       responses:
         "200":
           description: a list of any objects
@@ -37040,8 +38774,10 @@ paths:
       operationId: createVersionCommit
       tags:
         - versioning
-      summary: create a new commit containing the current configs the given log message describing the changes.
-      description: create a new commit containing the current configs the given log message describing the changes.
+      x-speakeasy-group: versions.commits
+      x-speakeasy-name-override: create
+      summary: Create a new commit for pending changes to the Cribl configuration
+      description: Create a new commit for pending changes to the Cribl configuration. Any merge conflicts indicated in the response must be resolved using Git.</br></br>To commit only a subset of configuration changes, specify the files to include in the commit in the <code>files</code> array.
       responses:
         "200":
           description: a list of GitCommitSummary objects
@@ -37077,8 +38813,10 @@ paths:
       operationId: getVersionCount
       tags:
         - versioning
-      summary: get the count of files of changed
-      description: get the count of files of changed
+      x-speakeasy-group: versions.commits.files
+      x-speakeasy-name-override: count
+      summary: Get a count of files that changed since a commit
+      description: Get a count of the files that changed since a commit. Default is the latest commit (HEAD).
       responses:
         "200":
           description: a list of any objects
@@ -37109,36 +38847,29 @@ paths:
           required: false
           schema:
             type: string
-          description: Group ID
+          description: The <code>id</code> of the Worker Group or Edge Fleet to get the count for.
         - name: ID
           in: query
           required: false
           schema:
             type: string
-          description: Commit ID
+          description: The Git commit hash to use as the starting point for the count.
   /version/current-branch:
     get:
       operationId: getVersionCurrentBranch
       tags:
         - versioning
-      summary: returns git branch that the config is checked out to, if any
-      description: returns git branch that the config is checked out to, if any
+      x-speakeasy-group: versions.branches
+      x-speakeasy-name-override: get
+      summary: Get the name of the Git branch that the Cribl configuration is checked out to
+      description: Get the name of the Git branch that the Cribl configuration is checked out to. Useful for verifying the active configuration branch.
       responses:
         "200":
-          description: a list of any objects
+          description: CurrentBranchResult object
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      type: object
-                      additionalProperties: true
+                $ref: "#/components/schemas/CurrentBranchResult"
         "401":
           description: Unauthorized
         "500":
@@ -37152,8 +38883,10 @@ paths:
       operationId: getVersionDiff
       tags:
         - versioning
-      summary: get the textual diff for given commit
-      description: get the textual diff for given commit
+      x-speakeasy-group: versions.commits
+      x-speakeasy-name-override: diff
+      summary: Get the diff for a commit
+      description: Get the diff for a commit. Default is the latest commit (HEAD).
       responses:
         "200":
           description: a list of any objects
@@ -37184,32 +38917,34 @@ paths:
           required: false
           schema:
             type: string
-          description: Commit hash (default is HEAD)
+          description: The Git commit hash to get the diff for.
         - name: group
           in: query
           required: false
           schema:
             type: string
-          description: Group ID
+          description: The <code>id</code> of the Worker Group or Edge Fleet to get the diff for.
         - name: filename
           in: query
           required: false
           schema:
             type: string
-          description: Filename
+          description: The relative path of the file to get the diff for.
         - name: diffLineLimit
           in: query
           required: false
           schema:
             type: number
-          description: Limit maximum lines in the diff
+          description: Number of lines of the diff to return. Default is 1000. Set to <code>0</code> to return the full diff, regardless of the number of lines.
   /version/files:
     get:
       operationId: getVersionFiles
       tags:
         - versioning
-      summary: get the files changed
-      description: get the files changed
+      x-speakeasy-group: versions.commits.files
+      x-speakeasy-name-override: list
+      summary: Get the names and statuses of files that changed since a commit
+      description: Get the names and statuses of files that changed since a commit. Default is the latest commit (HEAD).
       responses:
         "200":
           description: a list of GitFilesResponse objects
@@ -37239,20 +38974,22 @@ paths:
           required: false
           schema:
             type: string
-          description: Group ID
+          description: The <code>id</code> of the Worker Group or Edge Fleet to get file names and status for.
         - name: ID
           in: query
           required: false
           schema:
             type: string
-          description: Commit ID
+          description: The Git commit hash to use as the starting point for the request.
   /version/info:
     get:
       operationId: getVersionInfo
       tags:
         - versioning
-      summary: Get info about versioning availability
-      description: Get info about versioning availability
+      x-speakeasy-group: versions.configs
+      x-speakeasy-name-override: get
+      summary: Get the configuration and status for the Git integration
+      description: Get the configuration and versioning status for the Git integration for the Cribl configuration.
       responses:
         "200":
           description: a list of GitInfo objects
@@ -37276,13 +39013,60 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /version:
+    get:
+      operationId: getVersion
+      tags:
+        - versioning
+      x-speakeasy-group: versions.commits
+      x-speakeasy-name-override: list
+      summary: List the commit history
+      description: List the commit history.</br></br>Analogous to <code>git log</code> for the Cribl configuration, allowing you to audit and review changes over time.
+      responses:
+        "200":
+          description: a list of GitLogResult objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GitLogResult"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+          description: The <code>id</code> of the Worker Group or Edge Fleet to get the commit history for.
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Maximum number of commits to return in the response for this request.
   /version/push:
     post:
       operationId: createVersionPush
       tags:
         - versioning
-      summary: push the current configs to the remote repository.
-      description: push the current configs to the remote repository.
+      x-speakeasy-group: versions.commits
+      x-speakeasy-name-override: push
+      summary: Push local commits to the remote repository
+      description: Push all local commits from the local repository to the remote repository.
       responses:
         "200":
           description: a list of any objects
@@ -37312,8 +39096,10 @@ paths:
       operationId: createVersionRevert
       tags:
         - versioning
-      summary: revert a commit
-      description: revert a commit
+      x-speakeasy-group: versions.commits
+      x-speakeasy-name-override: revert
+      summary: Revert a commit in the local repository
+      description: Revert a commit in the local repository.
       responses:
         "200":
           description: a list of GitRevertResult objects
@@ -37356,8 +39142,10 @@ paths:
       operationId: getVersionShow
       tags:
         - versioning
-      summary: get the log message and textual diff for given commit
-      description: get the log message and textual diff for given commit
+      x-speakeasy-group: versions.commits
+      x-speakeasy-name-override: get
+      summary: Get the diff and log message for a commit
+      description: Get the diff and log message for a commit. Default is the latest commit (HEAD).
       responses:
         "200":
           description: a list of any objects
@@ -37388,32 +39176,34 @@ paths:
           required: false
           schema:
             type: string
-          description: Commit hash (default is HEAD)
+          description: The Git commit hash to retrieve the diff and log message for.
         - name: group
           in: query
           required: false
           schema:
             type: string
-          description: Group ID
+          description: The <code>id</code> of the Worker Group or Edge Fleet to get the diff and log message for.
         - name: filename
           in: query
           required: false
           schema:
             type: string
-          description: Filename
+          description: The relative path of the file to get the diff and log message for.
         - name: diffLineLimit
           in: query
           required: false
           schema:
             type: number
-          description: Limit maximum lines in the diff
+          description: Number of lines of the diff to return. Default is 1000. Set to <code>0</code> to return the full diff, regardless of the number of lines.
   /version/status:
     get:
       operationId: getVersionStatus
       tags:
         - versioning
-      summary: get the the working tree status
-      description: get the the working tree status
+      x-speakeasy-group: versions.statuses
+      x-speakeasy-name-override: get
+      summary: Get the status of the current working tree
+      description: Get the status of the current working tree of the Git repository used for Cribl configuration. The response includes details about modified, staged, untracked, and conflicted files, as well as branch and remote tracking information.
       responses:
         "200":
           description: a list of GitStatusResult objects
@@ -37443,45 +39233,16 @@ paths:
           required: false
           schema:
             type: string
-          description: Group ID
-  /version/sync:
-    post:
-      operationId: createVersionSync
-      tags:
-        - versioning
-      summary: syncs with remote repo via POST requests
-      description: syncs with remote repo via POST requests
-      responses:
-        "200":
-          description: a list of any objects
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      type: object
-                      additionalProperties: true
-        "401":
-          description: Unauthorized
-        "500":
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+          description: The <code>id</code> of the Worker Group or Edge Fleet to get the status for.
   /version/undo:
     post:
       operationId: createVersionUndo
       tags:
         - versioning
-      summary: undo the last commit
-      description: undo the last commit
+      x-speakeasy-group: versions.commits
+      x-speakeasy-name-override: undo
+      summary: Discard uncommitted (staged) changes
+      description: Discard all uncommitted (staged) configuration changes, resetting the working directory to the last committed state. Use only if you are certain that you do not need to preserve your local changes.
       responses:
         "200":
           description: a list of object objects
@@ -37511,4 +39272,550 @@ paths:
           required: false
           schema:
             type: string
-          description: Group ID
+          description: The <code>id</code> of the Worker Group or Edge Fleet to undo the uncommited changes for.
+  /master/workers:
+    get:
+      operationId: listMasterWorkerEntry
+      tags:
+        - workers
+      summary: Get detailed metadata for Worker and Edge Nodes
+      description: Get detailed metadata for Worker and Edge Nodes.
+      responses:
+        "200":
+          description: a list of MasterWorkerEntry objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MasterWorkerEntry"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-speakeasy-group: nodes
+      x-speakeasy-name-override: list
+      parameters:
+        - name: filterExp
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter expression to evaluate against Nodes for inclusion in the response.
+        - name: sortExp
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Sorting expression to evaluate against Nodes to specify the sort order for the response.
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+          description: JSON-stringified filter object to evaluate against Nodes for inclusion in the response.
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+          description: JSON-stringified sorting object to evaluate against Nodes to specify the sort order for the response.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of Nodes to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches.
+  /master/summary/workers:
+    get:
+      operationId: getMasterWorkerEntry
+      tags:
+        - workers
+      x-speakeasy-group: nodes
+      x-speakeasy-name-override: count
+      summary: Get a count of Worker and Edge Nodes
+      description: Get a count of all Worker and Edge Nodes.
+      responses:
+        "200":
+          description: a list of number objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      type: number
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: filterExp
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter expression to evaluate against Nodes for inclusion in the response.
+  /products/{product}/groups:
+    get:
+      operationId: listConfigGroupByProduct
+      tags:
+        - groups
+      summary: List all Worker Groups or Edge Fleets for the specified Cribl product
+      description: Get a list of all Worker Groups or Edge Fleets for the specified Cribl product.
+      responses:
+        "200":
+          description: a list of ConfigGroup objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConfigGroup"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-speakeasy-group: groups
+      x-speakeasy-name-override: list
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of additional properties to include in the response. Available values are <code>git.commit</code>, <code>git.localChanges</code>, and <code>git.log</code>.
+        - name: product
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProductsCore"
+          description: Name of the Cribl product to get the Worker Groups or Edge Fleets for.
+    post:
+      operationId: createConfigGroupByProduct
+      tags:
+        - groups
+      summary: Create a Worker Group or Edge Fleet for the specified Cribl product
+      description: Create a new Worker Group or Edge Fleet for the specified Cribl product.
+      requestBody:
+        description: ConfigGroup object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigGroup"
+      responses:
+        "200":
+          description: a list of ConfigGroup objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConfigGroup"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-speakeasy-group: groups
+      x-speakeasy-name-override: create
+      parameters:
+        - name: product
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProductsCore"
+          description: Name of the Cribl product to add the Worker Group or Edge Fleet to.
+  /products/{product}/groups/{id}:
+    get:
+      operationId: getConfigGroupByProductAndId
+      tags:
+        - groups
+      summary: Get a Worker Group or Edge Fleet
+      description: Get the specified Worker Group or Edge Fleet.
+      parameters:
+        - name: product
+          in: path
+          required: true
+          schema:
+            type: string
+            $ref: "#/components/schemas/ProductsCore"
+          description: Name of the Cribl product to get the Worker Groups or Edge Fleets for.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Worker Group or Edge Fleet to get.
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of additional properties to include in the response. Available values are <code>git.commit</code>, <code>git.localChanges</code>, and <code>git.log</code>.
+      responses:
+        "200":
+          description: a list of ConfigGroup objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConfigGroup"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-speakeasy-group: groups
+      x-speakeasy-name-override: get
+    patch:
+      operationId: updateConfigGroupByProductAndId
+      tags:
+        - groups
+      summary: Update a Worker Group or Edge Fleet
+      description: Update the specified Worker Group or Edge Fleet.
+      parameters:
+        - name: product
+          in: path
+          required: true
+          schema:
+            type: string
+            $ref: "#/components/schemas/ProductsCore"
+          description: Name of the Cribl product to get the Worker Groups or Edge Fleets for.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Worker Group or Edge Fleet to update.
+      requestBody:
+        description: ConfigGroup object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigGroup"
+      responses:
+        "200":
+          description: a list of ConfigGroup objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConfigGroup"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-speakeasy-group: groups
+      x-speakeasy-name-override: update
+    delete:
+      operationId: deleteConfigGroupByProductAndId
+      tags:
+        - groups
+      summary: Delete a Worker Group or Edge Fleet
+      description: Delete the specified Worker Group or Edge Fleet.
+      parameters:
+        - name: product
+          in: path
+          required: true
+          schema:
+            type: string
+            $ref: "#/components/schemas/ProductsCore"
+          description: Name of the Cribl product to get the Worker Groups or Edge Fleets for.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Worker Group or Edge Fleet to delete.
+      responses:
+        "200":
+          description: a list of ConfigGroup objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConfigGroup"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-speakeasy-group: groups
+      x-speakeasy-name-override: delete
+  /products/{product}/groups/{id}/configVersion:
+    get:
+      operationId: getConfigGroupConfigVersionByProductAndId
+      tags:
+        - groups
+      x-speakeasy-group: groups.configs.versions
+      x-speakeasy-name-override: get
+      summary: Get the configuration version for a Worker Group or Edge Fleet
+      description: Get the configuration version for the specified Worker Group or Edge Fleet.
+      responses:
+        "200":
+          description: a list of string objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      type: string
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: product
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProductsCore"
+          description: Name of the Cribl product to get the Worker Groups or Edge Fleets for.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Worker Group or Edge Fleet to get the configuration version for.
+  /products/{product}/groups/{id}/deploy:
+    patch:
+      operationId: updateConfigGroupDeployByProductAndId
+      tags:
+        - groups
+      x-speakeasy-group: groups
+      x-speakeasy-name-override: deploy
+      summary: Deploy commits to a Worker Group or Edge Fleet
+      description: Deploy commits to the specified Worker Group or Edge Fleet.
+      responses:
+        "200":
+          description: a list of ConfigGroup objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConfigGroup"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        description: DeployRequest object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeployRequest"
+      parameters:
+        - name: product
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProductsCore"
+          description: Name of the Cribl product to get the Worker Groups or Edge Fleets for.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the target Worker Group or Edge Fleet for commit deployment.
+  /products/{product}/groups/{id}/acl/teams:
+    get:
+      operationId: getConfigGroupAclTeamsByProductAndId
+      tags:
+        - teams
+      x-speakeasy-group: groups.acl.teams
+      x-speakeasy-name-override: get
+      summary: Get the Access Control List for teams with permissions on a Worker Group or Edge Fleet for the specified Cribl product
+      description: Get the Access Control List (ACL) for teams that have permissions on a Worker Group or Edge Fleet for the specified Cribl product.
+      responses:
+        "200":
+          description: a list of TeamAccessControlList objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TeamAccessControlList"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: product
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProductsCore"
+          description: Name of the Cribl product that contains the Worker Group or Edge Fleet.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Worker Group or Edge Fleet to get the team ACL for.
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/RbacResource"
+          description: Filter for limiting the response to ACL entries for the specified RBAC resource type.
+  /products/{product}/groups/{id}/acl:
+    get:
+      operationId: getConfigGroupAclByProductAndId
+      tags:
+        - groups
+      x-speakeasy-group: groups.acl
+      x-speakeasy-name-override: get
+      summary: Get the Access Control List for a Worker Group or Edge Fleet
+      description: Get the Access Control List (ACL) for the specified Worker Group or Edge Fleet.
+      responses:
+        "200":
+          description: a list of UserAccessControlList objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserAccessControlList"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: product
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProductsCore"
+          description: Name of the Cribl product to get the Worker Groups or Edge Fleets for.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Worker Group or Edge Fleet to get the ACL for.
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/RbacResource"
+          description: Filter for limiting the response to ACL entries for the specified RBAC resource type.
