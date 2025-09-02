@@ -4,7 +4,7 @@ servers:
 info:
   title: Cribl API Reference
   description: This API Reference lists available REST endpoints, along with their supported operations for accessing, creating, updating, or deleting resources. See our complementary product documentation at [docs.cribl.io](http://docs.cribl.io).
-  version: 4.14.0-alpha.1756162180994-cbf74949
+  version: 4.14.0-alpha.1756792403653-bbef94f6
   contact:
     name: Support
     email: support@cribl.io
@@ -151,7 +151,6 @@ components:
         workerRemoteAccess:
           type: boolean
       required:
-        - configVersion
         - id
     RbacResource:
       type: string
@@ -226,6 +225,15 @@ components:
       enum:
         - stream
         - edge
+    AppMode:
+      type: string
+      enum:
+        - single
+        - master
+        - worker
+        - edge
+        - managed-edge
+        - outpost
     CacheConnectionBackfillStatus:
       type: string
       enum:
@@ -8657,7 +8665,6 @@ components:
         authTokensExt:
           type: array
           title: Auth tokens
-          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
           items:
             type: object
             required:
@@ -8666,10 +8673,8 @@ components:
               token:
                 type: string
                 title: Token
-                description: "Shared secret to be provided by any client (Authorization: <token>)"
               description:
                 type: string
-                title: Description
               metadata:
                 type: array
                 title: Fields
@@ -8687,6 +8692,9 @@ components:
                       type: string
                       title: Value
                       description: JavaScript expression to compute field's value, enclosed in quotes or backticks. (Can evaluate to a constant.)
+              enableSplunkHec:
+                type: boolean
+                default: false
         description:
           type: string
           title: Description
@@ -17770,6 +17778,68 @@ components:
         - $ref: "#/components/schemas/InputNetflow"
         - $ref: "#/components/schemas/InputSecurityLake"
         - $ref: "#/components/schemas/InputZscalerHec"
+      discriminator:
+        propertyName: type
+        mapping:
+          collection: "#/components/schemas/InputCollection"
+          kafka: "#/components/schemas/InputKafka"
+          msk: "#/components/schemas/InputMsk"
+          http: "#/components/schemas/InputHttp"
+          splunk: "#/components/schemas/InputSplunk"
+          splunk_search: "#/components/schemas/InputSplunkSearch"
+          splunk_hec: "#/components/schemas/InputSplunkHec"
+          azure_blob: "#/components/schemas/InputAzureBlob"
+          elastic: "#/components/schemas/InputElastic"
+          confluent_cloud: "#/components/schemas/InputConfluentCloud"
+          grafana: "#/components/schemas/InputGrafana"
+          loki: "#/components/schemas/InputLoki"
+          prometheus_rw: "#/components/schemas/InputPrometheusRw"
+          prometheus: "#/components/schemas/InputPrometheus"
+          edge_prometheus: "#/components/schemas/InputEdgePrometheus"
+          office365_mgmt: "#/components/schemas/InputOffice365Mgmt"
+          office365_service: "#/components/schemas/InputOffice365Service"
+          office365_msg_trace: "#/components/schemas/InputOffice365MsgTrace"
+          eventhub: "#/components/schemas/InputEventhub"
+          exec: "#/components/schemas/InputExec"
+          firehose: "#/components/schemas/InputFirehose"
+          google_pubsub: "#/components/schemas/InputGooglePubsub"
+          cribl: "#/components/schemas/InputCribl"
+          cribl_tcp: "#/components/schemas/InputCriblTcp"
+          cribl_http: "#/components/schemas/InputCriblHttp"
+          cribl_lake_http: "#/components/schemas/InputCriblLakeHttp"
+          tcpjson: "#/components/schemas/InputTcpjson"
+          system_metrics: "#/components/schemas/InputSystemMetrics"
+          system_state: "#/components/schemas/InputSystemState"
+          kube_metrics: "#/components/schemas/InputKubeMetrics"
+          kube_logs: "#/components/schemas/InputKubeLogs"
+          kube_events: "#/components/schemas/InputKubeEvents"
+          windows_metrics: "#/components/schemas/InputWindowsMetrics"
+          crowdstrike: "#/components/schemas/InputCrowdstrike"
+          datadog_agent: "#/components/schemas/InputDatadogAgent"
+          datagen: "#/components/schemas/InputDatagen"
+          http_raw: "#/components/schemas/InputHttpRaw"
+          kinesis: "#/components/schemas/InputKinesis"
+          criblmetrics: "#/components/schemas/InputCriblmetrics"
+          metrics: "#/components/schemas/InputMetrics"
+          s3: "#/components/schemas/InputS3"
+          s3_inventory: "#/components/schemas/InputS3Inventory"
+          snmp: "#/components/schemas/InputSnmp"
+          open_telemetry: "#/components/schemas/InputOpenTelemetry"
+          model_driven_telemetry: "#/components/schemas/InputModelDrivenTelemetry"
+          sqs: "#/components/schemas/InputSqs"
+          syslog: "#/components/schemas/InputSyslog"
+          file: "#/components/schemas/InputFile"
+          tcp: "#/components/schemas/InputTcp"
+          appscope: "#/components/schemas/InputAppscope"
+          wef: "#/components/schemas/InputWef"
+          win_event_logs: "#/components/schemas/InputWinEventLogs"
+          raw_udp: "#/components/schemas/InputRawUdp"
+          journal_files: "#/components/schemas/InputJournalFiles"
+          wiz: "#/components/schemas/InputWiz"
+          wiz_webhook: "#/components/schemas/InputWizWebhook"
+          netflow: "#/components/schemas/InputNetflow"
+          security_lake: "#/components/schemas/InputSecurityLake"
+          zscaler_hec: "#/components/schemas/InputZscalerHec"
     AddHecTokenRequest:
       type: object
       properties:
@@ -24293,17 +24363,11 @@ components:
           default: 256
           minimum: 1
           maximum: 256
-        flushPeriodSec:
+        flushPeriod:
           title: Flush period (sec)
-          description: Maximum time to wait before sending a batch (when batch size limit is not reached).
-          type: object
-          properties:
-            type:
-              type: string
-              enum:
-                - number
-            default:
-              type: number
+          description: Maximum time to wait before sending a batch (when batch size limit is not reached)
+          type: number
+          default: 1
         maxInProgress:
           type: number
           title: Concurrent request limit
@@ -35709,13 +35773,13 @@ components:
             - AU
             - Custom
         endpoint:
-          title: AI SIEM endpoint Path
+          title: AI SIEM endpoint path
           type: string
           default: /services/collector/event
           enum:
             - /services/collector/event
             - /services/collector/raw
-          description: Regional endpoint used to send events to, such as /services/collector/event or /services/collector/raw
+          description: Endpoint to send events to. Use /services/collector/event for structured JSON payloads with standard HEC top-level fields. Use /services/collector/raw for unstructured log lines (plain text).
         concurrency:
           type: number
           title: Request concurrency
@@ -36078,6 +36142,932 @@ components:
         - $ref: "#/components/schemas/OutputDynatraceHttp"
         - $ref: "#/components/schemas/OutputDynatraceOtlp"
         - $ref: "#/components/schemas/OutputSentinelOneAiSiem"
+      discriminator:
+        propertyName: type
+        mapping:
+          default: "#/components/schemas/OutputDefault"
+          webhook: "#/components/schemas/OutputWebhook"
+          sentinel: "#/components/schemas/OutputSentinel"
+          devnull: "#/components/schemas/OutputDevnull"
+          syslog: "#/components/schemas/OutputSyslog"
+          splunk: "#/components/schemas/OutputSplunk"
+          splunk_lb: "#/components/schemas/OutputSplunkLb"
+          splunk_hec: "#/components/schemas/OutputSplunkHec"
+          tcpjson: "#/components/schemas/OutputTcpjson"
+          wavefront: "#/components/schemas/OutputWavefront"
+          signalfx: "#/components/schemas/OutputSignalfx"
+          filesystem: "#/components/schemas/OutputFilesystem"
+          s3: "#/components/schemas/OutputS3"
+          azure_blob: "#/components/schemas/OutputAzureBlob"
+          azure_data_explorer: "#/components/schemas/OutputAzureDataExplorer"
+          azure_logs: "#/components/schemas/OutputAzureLogs"
+          kinesis: "#/components/schemas/OutputKinesis"
+          honeycomb: "#/components/schemas/OutputHoneycomb"
+          azure_eventhub: "#/components/schemas/OutputAzureEventhub"
+          google_chronicle: "#/components/schemas/OutputGoogleChronicle"
+          google_cloud_storage: "#/components/schemas/OutputGoogleCloudStorage"
+          google_cloud_logging: "#/components/schemas/OutputGoogleCloudLogging"
+          google_pubsub: "#/components/schemas/OutputGooglePubsub"
+          exabeam: "#/components/schemas/OutputExabeam"
+          kafka: "#/components/schemas/OutputKafka"
+          confluent_cloud: "#/components/schemas/OutputConfluentCloud"
+          msk: "#/components/schemas/OutputMsk"
+          elastic: "#/components/schemas/OutputElastic"
+          elastic_cloud: "#/components/schemas/OutputElasticCloud"
+          newrelic: "#/components/schemas/OutputNewrelic"
+          newrelic_events: "#/components/schemas/OutputNewrelicEvents"
+          influxdb: "#/components/schemas/OutputInfluxdb"
+          cloudwatch: "#/components/schemas/OutputCloudwatch"
+          minio: "#/components/schemas/OutputMinio"
+          statsd: "#/components/schemas/OutputStatsd"
+          statsd_ext: "#/components/schemas/OutputStatsdExt"
+          graphite: "#/components/schemas/OutputGraphite"
+          router: "#/components/schemas/OutputRouter"
+          sns: "#/components/schemas/OutputSns"
+          sqs: "#/components/schemas/OutputSqs"
+          snmp: "#/components/schemas/OutputSnmp"
+          sumo_logic: "#/components/schemas/OutputSumoLogic"
+          datadog: "#/components/schemas/OutputDatadog"
+          grafana_cloud: "#/components/schemas/OutputGrafanaCloud"
+          loki: "#/components/schemas/OutputLoki"
+          prometheus: "#/components/schemas/OutputPrometheus"
+          ring: "#/components/schemas/OutputRing"
+          open_telemetry: "#/components/schemas/OutputOpenTelemetry"
+          service_now: "#/components/schemas/OutputServiceNow"
+          dataset: "#/components/schemas/OutputDataset"
+          cribl_tcp: "#/components/schemas/OutputCriblTcp"
+          cribl_http: "#/components/schemas/OutputCriblHttp"
+          humio_hec: "#/components/schemas/OutputHumioHec"
+          crowdstrike_next_gen_siem: "#/components/schemas/OutputCrowdstrikeNextGenSiem"
+          dl_s3: "#/components/schemas/OutputDlS3"
+          security_lake: "#/components/schemas/OutputSecurityLake"
+          cribl_lake: "#/components/schemas/OutputCriblLake"
+          disk_spool: "#/components/schemas/OutputDiskSpool"
+          click_house: "#/components/schemas/OutputClickHouse"
+          xsiam: "#/components/schemas/OutputXsiam"
+          netflow: "#/components/schemas/OutputNetflow"
+          dynatrace_http: "#/components/schemas/OutputDynatraceHttp"
+          dynatrace_otlp: "#/components/schemas/OutputDynatraceOtlp"
+          sentinel_one_ai_siem: "#/components/schemas/OutputSentinelOneAiSiem"
+    RunnableJobCollection:
+      required:
+        - collector
+        - run
+      properties:
+        id:
+          type: string
+          title: Job ID
+          pattern: ^[a-zA-Z0-9_-]+$
+          description: Unique ID for this Job
+        description:
+          type: string
+          title: Description
+        type:
+          type: string
+          title: Job type
+          enum:
+            - collection
+            - executor
+            - scheduledSearch
+        ttl:
+          type: string
+          title: Time to live
+          description: Time to keep the job's artifacts on disk after job completion. This also affects how long a job is listed in the Job Inspector.
+          pattern: \d+[smh]$
+          default: 4h
+        ignoreGroupJobsLimit:
+          type: boolean
+          title: Ignore Worker Group job limits
+          description: When enabled, this job's artifacts are not counted toward the Worker Group's finished job artifacts limit. Artifacts will be removed only after the Collector's configured time to live.
+          default: false
+        removeFields:
+          type: array
+          title: Remove Discover fields
+          description: List of fields to remove from Discover results. Wildcards (for example, aws*) are allowed. This is useful when discovery returns sensitive fields that should not be exposed in the Jobs user interface.
+          default: []
+          items:
+            type: string
+            title: Items
+            description: List of fields to remove from Discover results
+        resumeOnBoot:
+          type: boolean
+          title: Resume job on boot
+          description: Resume the ad hoc job if a failure condition causes Stream to restart during job execution
+          default: false
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+        schedule:
+          type: object
+          title: Schedule
+          description: Configuration for a scheduled job
+          properties:
+            enabled:
+              type: boolean
+              title: Enabled
+              description: Enable to configure scheduling for this Collector
+            cronSchedule:
+              type: string
+              title: Cron schedule
+              description: A cron schedule on which to run this job
+              default: "*/5 * * * *"
+            maxConcurrentRuns:
+              type: number
+              title: Concurrent run limit
+              description: The maximum number of instances of this scheduled job that may be running at any time
+              default: 1
+              minimum: 1
+            skippable:
+              type: boolean
+              title: Skippable
+              description: Skippable jobs can be delayed, up to their next run time, if the system is hitting concurrency limits
+              default: true
+            resumeMissed: {}
+            run:
+              type: object
+              title: Run settings
+              properties:
+                type:
+                  enum:
+                    - collection
+                rescheduleDroppedTasks:
+                  type: boolean
+                  title: Reschedule tasks
+                  description: Reschedule tasks that failed with non-fatal errors
+                  default: true
+                maxTaskReschedule:
+                  type: number
+                  title: Task reschedule limit
+                  description: Maximum number of times a task can be rescheduled
+                  default: 1
+                  minimum: 1
+                logLevel:
+                  type: string
+                  title: Log level
+                  description: Level at which to set task logging
+                  enum:
+                    - error
+                    - warn
+                    - info
+                    - debug
+                    - silly
+                  default: info
+                jobTimeout:
+                  title: Job timeout
+                  type: string
+                  description: "Maximum time the job is allowed to run. Time unit defaults to seconds if not specified (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+                  pattern: \d+[sm]?$
+                  default: "0"
+                mode:
+                  type: string
+                  title: Mode
+                  description: Job run mode. Preview will either return up to N matching results, or will run until capture time T is reached. Discovery will gather the list of files to turn into streaming tasks, without running the data collection job. Full Run will run the collection job.
+                  default: list
+                timeRangeType:
+                  type: string
+                  title: Time range
+                  default: relative
+                earliest:
+                  type: number
+                  title: Earliest
+                  description: Earliest time to collect data for the selected timezone
+                latest:
+                  type: number
+                  title: Latest
+                  description: Latest time to collect data for the selected timezone
+                timestampTimezone: {}
+                timeWarning:
+                  type: object
+                expression:
+                  type: string
+                  title: Filter
+                  description: A filter for tokens in the provided collect path and/or the events being collected
+                  default: "true"
+                minTaskSize:
+                  type: string
+                  title: Lower task bundle size
+                  description: |-
+                    Limits the bundle size for small tasks. For example,
+
+
+
+
+
+
+
+
+
+
+                            if your lower bundle size is 1MB, you can bundle up to five 200KB files into one task.
+                  default: 1MB
+                  pattern: ^((\d*\.?\d+)((KB|MB|GB|TB|PB|EB|ZB|YB|kb|mb|gb|tb|pb|eb|zb|yb){1}))$
+                maxTaskSize:
+                  type: string
+                  title: Upper task bundle size
+                  description: |-
+                    Limits the bundle size for files above the lower task bundle size. For example, if your upper bundle size is 10MB,
+
+
+
+
+
+
+
+
+
+
+                            you can bundle up to five 2MB files into one task. Files greater than this size will be assigned to individual tasks.
+                  default: 10MB
+                  pattern: ^((\d*\.?\d+)((KB|MB|GB|TB|PB|EB|ZB|YB|kb|mb|gb|tb|pb|eb|zb|yb){1}))$
+        streamtags:
+          type: array
+          title: Tags
+          description: Tags for filtering and grouping in @{product}
+          default: []
+          items:
+            type: string
+        workerAffinity:
+          type: boolean
+          title: Worker affinity
+          description: If enabled, tasks are created and run by the same Worker Node
+          default: false
+        collector:
+          type: object
+          required:
+            - type
+            - conf
+          properties:
+            type:
+              type: string
+              title: Collector type
+              description: The type of collector to run
+            conf:
+              type: object
+              title: Collector-specific settings
+            destructive:
+              type: boolean
+              title: Destructive
+              description: Delete any files collected (where applicable)
+              default: false
+            encoding:
+              type: string
+              title: Encoding
+              description: Character encoding to use when parsing ingested data. When not set, @{product} will default to UTF-8 but may incorrectly interpret multi-byte characters.
+        input:
+          type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - collection
+              default: collection
+            breakerRulesets:
+              type: array
+              title: Event Breaker rulesets
+              description: A list of event-breaking rulesets that will be applied, in order, to the input data stream
+              items:
+                type: string
+            staleChannelFlushMs:
+              type: number
+              title: Event Breaker buffer timeout (ms)
+              description: How long (in milliseconds) the Event Breaker will wait for new data to be sent to a specific channel before flushing the data stream out, as is, to the Pipelines
+              default: 10000
+              minimum: 10
+              maximum: 43200000
+            sendToRoutes:
+              type: boolean
+              title: Send to Routes
+              description: Send events to normal routing and event processing. Disable to select a specific Pipeline/Destination combination.
+              default: true
+            preprocess:
+              type: object
+              required:
+                - disabled
+              properties:
+                disabled:
+                  type: boolean
+                  title: Disabled
+                  default: true
+                command:
+                  type: string
+                  title: Command
+                  description: Command to feed the data through (via stdin) and process its output (stdout)
+                args:
+                  type: array
+                  title: Arguments
+                  description: Arguments to be added to the custom command
+                  items:
+                    type: string
+            throttleRatePerSec:
+              type: string
+              title: Throttling
+              description: "Rate (in bytes per second) to throttle while writing to an output. Accepts values with multiple-byte units, such as KB, MB, and GB. (Example: 42 MB) Default value of 0 specifies no throttling."
+              pattern: ^[\d.]+(\s[KMGTPEZYkmgtpezy][Bb])?$
+              default: "0"
+            metadata:
+              type: array
+              title: Fields
+              description: Fields to add to events from this input
+              items:
+                type: object
+                required:
+                  - name
+                  - value
+                properties:
+                  name:
+                    type: string
+                    title: Field Name
+                  value:
+                    type: string
+                    title: Value
+                    description: JavaScript expression to compute field's value, enclosed in quotes or backticks. (Can evaluate to a constant.)
+            pipeline:
+              type: string
+              title: Pipeline
+              description: Pipeline to process results
+            output:
+              type: string
+              title: Destination
+              description: Destination to send results to
+        run:
+          type: object
+          required:
+            - mode
+          properties:
+            rescheduleDroppedTasks:
+              type: boolean
+              title: Reschedule tasks
+              description: Reschedule tasks that failed with non-fatal errors
+              default: true
+            maxTaskReschedule:
+              type: number
+              title: Task reschedule limit
+              description: Maximum number of times a task can be rescheduled
+              default: 1
+              minimum: 1
+            logLevel:
+              type: string
+              title: Log level
+              description: Level at which to set task logging
+              enum:
+                - error
+                - warn
+                - info
+                - debug
+                - silly
+              default: info
+            jobTimeout:
+              title: Job timeout
+              type: string
+              description: "Maximum time the job is allowed to run. Time unit defaults to seconds if not specified (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+              pattern: \d+[sm]?$
+              default: "0"
+            mode:
+              type: string
+              title: Mode
+              description: Job run mode. Preview will either return up to N matching results, or will run until capture time T is reached. Discovery will gather the list of files to turn into streaming tasks, without running the data collection job. Full Run will run the collection job.
+              default: list
+              enum:
+                - list
+                - preview
+                - run
+            timeRangeType:
+              type: string
+              title: Time range
+              default: relative
+              enum:
+                - absolute
+                - relative
+            earliest:
+              type: number
+              title: Earliest
+              description: Earliest time to collect data for the selected timezone
+            latest:
+              type: number
+              title: Latest
+              description: Latest time to collect data for the selected timezone
+            timestampTimezone:
+              type: string
+              title: Range timezone
+              description: Timezone to use for Earliest and Latest times
+              default: UTC
+            timeWarning:
+              type: object
+            expression:
+              type: string
+              title: Filter
+              description: A filter for tokens in the provided collect path and/or the events being collected
+              default: "true"
+            minTaskSize:
+              type: string
+              title: Lower task bundle size
+              description: |-
+                Limits the bundle size for small tasks. For example,
+
+
+
+
+
+
+
+
+
+                        if your lower bundle size is 1MB, you can bundle up to five 200KB files into one task.
+              default: 1MB
+              pattern: ^((\d*\.?\d+)((KB|MB|GB|TB|PB|EB|ZB|YB|kb|mb|gb|tb|pb|eb|zb|yb){1}))$
+            maxTaskSize:
+              type: string
+              title: Upper task bundle size
+              description: |-
+                Limits the bundle size for files above the lower task bundle size. For example, if your upper bundle size is 10MB,
+
+
+
+
+
+
+
+
+
+                        you can bundle up to five 2MB files into one task. Files greater than this size will be assigned to individual tasks.
+              default: 10MB
+              pattern: ^((\d*\.?\d+)((KB|MB|GB|TB|PB|EB|ZB|YB|kb|mb|gb|tb|pb|eb|zb|yb){1}))$
+            discoverToRoutes:
+              type: boolean
+              title: Send to Routes
+              description: Send discover results to Routes
+              default: false
+            capture:
+              type: object
+              title: Capture Settings
+              properties:
+                duration:
+                  type: number
+                  title: Capture time (sec)
+                  description: Amount of time to keep capture open, in seconds
+                  minimum: 1
+                  default: 60
+                maxEvents:
+                  type: number
+                  title: Capture up to N events
+                  description: Maximum number of events to capture
+                  default: 100
+                  minimum: 1
+                  maximum: 10000
+                level:
+                  type: integer
+                  title: Where to capture
+                  enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                  default: 0
+      type: object
+    RunnableJobExecutor:
+      required:
+        - executor
+        - run
+      properties:
+        id:
+          type: string
+          title: Job ID
+          pattern: ^[a-zA-Z0-9_-]+$
+          description: Unique ID for this Job
+        description:
+          type: string
+          title: Description
+        type:
+          type: string
+          title: Job type
+          enum:
+            - collection
+            - executor
+            - scheduledSearch
+        ttl:
+          type: string
+          title: Time to live
+          description: Time to keep the job's artifacts on disk after job completion. This also affects how long a job is listed in the Job Inspector.
+          pattern: \d+[smh]$
+          default: 4h
+        ignoreGroupJobsLimit:
+          type: boolean
+          title: Ignore Worker Group job limits
+          description: When enabled, this job's artifacts are not counted toward the Worker Group's finished job artifacts limit. Artifacts will be removed only after the Collector's configured time to live.
+          default: false
+        removeFields:
+          type: array
+          title: Remove Discover fields
+          description: List of fields to remove from Discover results. Wildcards (for example, aws*) are allowed. This is useful when discovery returns sensitive fields that should not be exposed in the Jobs user interface.
+          default: []
+          items:
+            type: string
+            title: Items
+            description: List of fields to remove from Discover results
+        resumeOnBoot:
+          type: boolean
+          title: Resume job on boot
+          description: Resume the ad hoc job if a failure condition causes Stream to restart during job execution
+          default: false
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+        schedule:
+          type: object
+          title: Schedule
+          description: Configuration for a scheduled job
+          properties:
+            enabled:
+              type: boolean
+              title: Enabled
+              description: Enable to configure scheduling for this Collector
+            cronSchedule:
+              type: string
+              title: Cron schedule
+              description: A cron schedule on which to run this job
+              default: "*/5 * * * *"
+            maxConcurrentRuns:
+              type: number
+              title: Concurrent run limit
+              description: The maximum number of instances of this scheduled job that may be running at any time
+              default: 1
+              minimum: 1
+            skippable:
+              type: boolean
+              title: Skippable
+              description: Skippable jobs can be delayed, up to their next run time, if the system is hitting concurrency limits
+              default: true
+            resumeMissed: {}
+            run:
+              type: object
+              title: Run settings
+              properties:
+                type:
+                  enum:
+                    - collection
+                rescheduleDroppedTasks:
+                  type: boolean
+                  title: Reschedule tasks
+                  description: Reschedule tasks that failed with non-fatal errors
+                  default: true
+                maxTaskReschedule:
+                  type: number
+                  title: Task reschedule limit
+                  description: Maximum number of times a task can be rescheduled
+                  default: 1
+                  minimum: 1
+                logLevel:
+                  type: string
+                  title: Log level
+                  description: Level at which to set task logging
+                  enum:
+                    - error
+                    - warn
+                    - info
+                    - debug
+                    - silly
+                  default: info
+                jobTimeout:
+                  title: Job timeout
+                  type: string
+                  description: "Maximum time the job is allowed to run. Time unit defaults to seconds if not specified (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+                  pattern: \d+[sm]?$
+                  default: "0"
+                mode:
+                  type: string
+                  title: Mode
+                  description: Job run mode. Preview will either return up to N matching results, or will run until capture time T is reached. Discovery will gather the list of files to turn into streaming tasks, without running the data collection job. Full Run will run the collection job.
+                  default: list
+                timeRangeType:
+                  type: string
+                  title: Time range
+                  default: relative
+                earliest:
+                  type: number
+                  title: Earliest
+                  description: Earliest time to collect data for the selected timezone
+                latest:
+                  type: number
+                  title: Latest
+                  description: Latest time to collect data for the selected timezone
+                timestampTimezone: {}
+                timeWarning:
+                  type: object
+                expression:
+                  type: string
+                  title: Filter
+                  description: A filter for tokens in the provided collect path and/or the events being collected
+                  default: "true"
+                minTaskSize:
+                  type: string
+                  title: Lower task bundle size
+                  description: |-
+                    Limits the bundle size for small tasks. For example,
+
+
+
+
+
+
+
+
+
+
+                            if your lower bundle size is 1MB, you can bundle up to five 200KB files into one task.
+                  default: 1MB
+                  pattern: ^((\d*\.?\d+)((KB|MB|GB|TB|PB|EB|ZB|YB|kb|mb|gb|tb|pb|eb|zb|yb){1}))$
+                maxTaskSize:
+                  type: string
+                  title: Upper task bundle size
+                  description: |-
+                    Limits the bundle size for files above the lower task bundle size. For example, if your upper bundle size is 10MB,
+
+
+
+
+
+
+
+
+
+
+                            you can bundle up to five 2MB files into one task. Files greater than this size will be assigned to individual tasks.
+                  default: 10MB
+                  pattern: ^((\d*\.?\d+)((KB|MB|GB|TB|PB|EB|ZB|YB|kb|mb|gb|tb|pb|eb|zb|yb){1}))$
+        streamtags:
+          type: array
+          title: Tags
+          description: Tags for filtering and grouping in @{product}
+          default: []
+          items:
+            type: string
+        executor:
+          type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              title: Executor type
+              description: The type of executor to run
+            storeTaskResults:
+              type: boolean
+              title: Store task results
+              description: Determines whether or not to write task results to disk
+              default: true
+            conf:
+              type: object
+              title: Executor-specific settings
+        run:
+          type: object
+          properties:
+            rescheduleDroppedTasks:
+              type: boolean
+              title: Reschedule tasks
+              description: Reschedule tasks that failed with non-fatal errors
+              default: true
+            maxTaskReschedule:
+              type: number
+              title: Task reschedule limit
+              description: Maximum number of times a task can be rescheduled
+              default: 1
+              minimum: 1
+            logLevel:
+              type: string
+              title: Log level
+              description: Level at which to set task logging
+              enum:
+                - error
+                - warn
+                - info
+                - debug
+                - silly
+              default: info
+            jobTimeout:
+              title: Job timeout
+              type: string
+              description: "Maximum time the job is allowed to run. Time unit defaults to seconds if not specified (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+              pattern: \d+[sm]?$
+              default: "0"
+      type: object
+    RunnableJobScheduledSearch:
+      required:
+        - savedQueryId
+        - type
+      properties:
+        id:
+          type: string
+          title: Job ID
+          pattern: ^[a-zA-Z0-9_-]+$
+          description: Unique ID for this Job
+        description:
+          type: string
+          title: Description
+        type:
+          type: string
+          title: Job type
+          enum:
+            - collection
+            - executor
+            - scheduledSearch
+        ttl:
+          type: string
+          title: Time to live
+          description: Time to keep the job's artifacts on disk after job completion. This also affects how long a job is listed in the Job Inspector.
+          pattern: \d+[smh]$
+          default: 4h
+        ignoreGroupJobsLimit:
+          type: boolean
+          title: Ignore Worker Group job limits
+          description: When enabled, this job's artifacts are not counted toward the Worker Group's finished job artifacts limit. Artifacts will be removed only after the Collector's configured time to live.
+          default: false
+        removeFields:
+          type: array
+          title: Remove Discover fields
+          description: List of fields to remove from Discover results. Wildcards (for example, aws*) are allowed. This is useful when discovery returns sensitive fields that should not be exposed in the Jobs user interface.
+          default: []
+          items:
+            type: string
+            title: Items
+            description: List of fields to remove from Discover results
+        resumeOnBoot:
+          type: boolean
+          title: Resume job on boot
+          description: Resume the ad hoc job if a failure condition causes Stream to restart during job execution
+          default: false
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+        schedule:
+          type: object
+          title: Schedule
+          description: Configuration for a scheduled job
+          properties:
+            enabled:
+              type: boolean
+              title: Enabled
+              description: Enable to configure scheduling for this Collector
+            cronSchedule:
+              type: string
+              title: Cron schedule
+              description: A cron schedule on which to run this job
+              default: "*/5 * * * *"
+            maxConcurrentRuns:
+              type: number
+              title: Concurrent run limit
+              description: The maximum number of instances of this scheduled job that may be running at any time
+              default: 1
+              minimum: 1
+            skippable:
+              type: boolean
+              title: Skippable
+              description: Skippable jobs can be delayed, up to their next run time, if the system is hitting concurrency limits
+              default: true
+            resumeMissed: {}
+            run:
+              type: object
+              title: Run settings
+              properties:
+                type:
+                  enum:
+                    - collection
+                rescheduleDroppedTasks:
+                  type: boolean
+                  title: Reschedule tasks
+                  description: Reschedule tasks that failed with non-fatal errors
+                  default: true
+                maxTaskReschedule:
+                  type: number
+                  title: Task reschedule limit
+                  description: Maximum number of times a task can be rescheduled
+                  default: 1
+                  minimum: 1
+                logLevel:
+                  type: string
+                  title: Log level
+                  description: Level at which to set task logging
+                  enum:
+                    - error
+                    - warn
+                    - info
+                    - debug
+                    - silly
+                  default: info
+                jobTimeout:
+                  title: Job timeout
+                  type: string
+                  description: "Maximum time the job is allowed to run. Time unit defaults to seconds if not specified (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+                  pattern: \d+[sm]?$
+                  default: "0"
+                mode:
+                  type: string
+                  title: Mode
+                  description: Job run mode. Preview will either return up to N matching results, or will run until capture time T is reached. Discovery will gather the list of files to turn into streaming tasks, without running the data collection job. Full Run will run the collection job.
+                  default: list
+                timeRangeType:
+                  type: string
+                  title: Time range
+                  default: relative
+                earliest:
+                  type: number
+                  title: Earliest
+                  description: Earliest time to collect data for the selected timezone
+                latest:
+                  type: number
+                  title: Latest
+                  description: Latest time to collect data for the selected timezone
+                timestampTimezone: {}
+                timeWarning:
+                  type: object
+                expression:
+                  type: string
+                  title: Filter
+                  description: A filter for tokens in the provided collect path and/or the events being collected
+                  default: "true"
+                minTaskSize:
+                  type: string
+                  title: Lower task bundle size
+                  description: |-
+                    Limits the bundle size for small tasks. For example,
+
+
+
+
+
+
+
+
+
+
+                            if your lower bundle size is 1MB, you can bundle up to five 200KB files into one task.
+                  default: 1MB
+                  pattern: ^((\d*\.?\d+)((KB|MB|GB|TB|PB|EB|ZB|YB|kb|mb|gb|tb|pb|eb|zb|yb){1}))$
+                maxTaskSize:
+                  type: string
+                  title: Upper task bundle size
+                  description: |-
+                    Limits the bundle size for files above the lower task bundle size. For example, if your upper bundle size is 10MB,
+
+
+
+
+
+
+
+
+
+
+                            you can bundle up to five 2MB files into one task. Files greater than this size will be assigned to individual tasks.
+                  default: 10MB
+                  pattern: ^((\d*\.?\d+)((KB|MB|GB|TB|PB|EB|ZB|YB|kb|mb|gb|tb|pb|eb|zb|yb){1}))$
+        streamtags:
+          type: array
+          title: Tags
+          description: Tags for filtering and grouping in @{product}
+          default: []
+          items:
+            type: string
+        savedQueryId:
+          type: string
+          title: ID of the SavedQuery
+          description: Identifies which search query to run
+      type: object
+    RunnableJob:
+      oneOf:
+        - $ref: "#/components/schemas/RunnableJobCollection"
+        - $ref: "#/components/schemas/RunnableJobExecutor"
+        - $ref: "#/components/schemas/RunnableJobScheduledSearch"
+    State:
+      type: object
+      additionalProperties: true
+    JobStatus:
+      type: object
+      properties:
+        reason:
+          type: object
+          additionalProperties: true
+        state:
+          $ref: "#/components/schemas/State"
+      required:
+        - state
+    JobInfo:
+      type: object
+      properties:
+        args:
+          $ref: "#/components/schemas/RunnableJob"
+        id:
+          type: string
+        keep:
+          type: boolean
+        status:
+          $ref: "#/components/schemas/JobStatus"
+      required:
+        - args
+        - id
+        - status
     OutputSamplesResponse:
       type: object
       properties:
@@ -36743,15 +37733,13 @@ components:
           type: string
       required:
         - commit
-    AppMode:
-      type: string
-      enum:
-        - single
-        - master
-        - worker
-        - edge
-        - managed-edge
-        - outpost
+    BranchInfo:
+      type: object
+      properties:
+        id:
+          type: string
+      required:
+        - id
     GitCommitParams:
       type: object
       properties:
@@ -36767,6 +37755,13 @@ components:
           type: string
       required:
         - message
+    GitCountResult:
+      type: object
+      properties:
+        count:
+          type: number
+      required:
+        - count
     CurrentBranchResult:
       type: object
       properties:
@@ -36774,6 +37769,131 @@ components:
           type: string
       required:
         - branch
+    DiffFiles:
+      type: array
+      items:
+        type: object
+        properties:
+          addedLines:
+            type: number
+          blocks:
+            type: array
+            items:
+              type: object
+              properties:
+                header:
+                  type: string
+                lines:
+                  type: array
+                  items:
+                    oneOf:
+                      - type: object
+                        properties:
+                          content:
+                            type: string
+                          oldNumber:
+                            type: number
+                        required:
+                          - content
+                          - oldNumber
+                      - type: object
+                        properties:
+                          content:
+                            type: string
+                          newNumber:
+                            type: number
+                        required:
+                          - content
+                          - newNumber
+                      - type: object
+                        properties:
+                          content:
+                            type: string
+                          newNumber:
+                            type: number
+                          oldNumber:
+                            type: number
+                        required:
+                          - content
+                          - newNumber
+                          - oldNumber
+                newStartLine:
+                  type: number
+                oldStartLine:
+                  type: number
+                oldStartLine2:
+                  type: number
+              required:
+                - header
+                - lines
+                - newStartLine
+                - oldStartLine
+          changedPercentage:
+            type: number
+          checksumAfter:
+            type: string
+          checksumBefore:
+            oneOf:
+              - type: string
+              - type: array
+                items:
+                  type: string
+          deletedFileMode:
+            type: string
+          deletedLines:
+            type: number
+          isBinary:
+            type: boolean
+          isCombined:
+            type: boolean
+          isCopy:
+            type: boolean
+          isDeleted:
+            type: boolean
+          isGitDiff:
+            type: boolean
+          isNew:
+            type: boolean
+          isRename:
+            type: boolean
+          isTooBig:
+            type: boolean
+          language:
+            type: string
+          mode:
+            type: string
+          newFileMode:
+            type: string
+          newMode:
+            type: string
+          newName:
+            type: string
+          oldMode:
+            oneOf:
+              - type: string
+              - type: array
+                items:
+                  type: string
+          oldName:
+            type: string
+          unchangedPercentage:
+            type: number
+        required:
+          - addedLines
+          - blocks
+          - deletedLines
+          - isCombined
+          - isGitDiff
+          - language
+          - newName
+          - oldName
+    GitDiffResult:
+      type: object
+      properties:
+        diffJson:
+          $ref: "#/components/schemas/DiffFiles"
+      required:
+        - diffJson
     GitInfo:
       type: object
       properties:
@@ -38173,8 +39293,8 @@ paths:
       summary: Clear the persistent queue for a Destination
       description: Clear the persistent queue (PQ) for the specified Destination.
       responses:
-        "200":
-          description: a list of any objects
+        "201":
+          description: a list of string objects
           content:
             application/json:
               schema:
@@ -38186,8 +39306,7 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: true
+                      type: string
         "401":
           description: Unauthorized
         "500":
@@ -38213,7 +39332,7 @@ paths:
       description: Get information about the latest job to clear the persistent queue (PQ) for the specified Destination.
       responses:
         "200":
-          description: a list of any objects
+          description: a list of JobInfo objects
           content:
             application/json:
               schema:
@@ -38225,8 +39344,7 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: true
+                      $ref: "#/components/schemas/JobInfo"
         "401":
           description: Unauthorized
         "500":
@@ -38983,7 +40101,7 @@ paths:
       description: Get a list of all branches in the Git repository used for Cribl configuration.
       responses:
         "200":
-          description: a list of any objects
+          description: a list of BranchInfo objects
           content:
             application/json:
               schema:
@@ -38995,8 +40113,7 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: true
+                      $ref: "#/components/schemas/BranchInfo"
         "401":
           description: Unauthorized
         "500":
@@ -39062,7 +40179,7 @@ paths:
       description: Get a count of the files that changed since a commit. Default is the latest commit (HEAD).
       responses:
         "200":
-          description: a list of any objects
+          description: a list of GitCountResult objects
           content:
             application/json:
               schema:
@@ -39074,8 +40191,7 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: true
+                      $ref: "#/components/schemas/GitCountResult"
         "401":
           description: Unauthorized
         "500":
@@ -39132,7 +40248,7 @@ paths:
       description: Get the diff for a commit. Default is the latest commit (HEAD).
       responses:
         "200":
-          description: a list of any objects
+          description: a list of GitDiffResult objects
           content:
             application/json:
               schema:
@@ -39144,8 +40260,7 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: true
+                      $ref: "#/components/schemas/GitDiffResult"
         "401":
           description: Unauthorized
         "500":
@@ -39519,6 +40634,8 @@ paths:
   /master/workers:
     get:
       operationId: listMasterWorkerEntry
+      x-speakeasy-name-override: list
+      x-speakeasy-group: nodes
       tags:
         - workers
       summary: Get detailed metadata for Worker and Edge Nodes
@@ -39546,8 +40663,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      x-speakeasy-group: nodes
-      x-speakeasy-name-override: list
       parameters:
         - name: filterExp
           in: query
@@ -39627,6 +40742,8 @@ paths:
   /products/{product}/groups:
     get:
       operationId: listConfigGroupByProduct
+      x-speakeasy-name-override: list
+      x-speakeasy-group: groups
       tags:
         - groups
       summary: List all Worker Groups or Edge Fleets for the specified Cribl product
@@ -39654,8 +40771,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      x-speakeasy-group: groups
-      x-speakeasy-name-override: list
       parameters:
         - name: fields
           in: query
@@ -39671,6 +40786,8 @@ paths:
           description: Name of the Cribl product to get the Worker Groups or Edge Fleets for.
     post:
       operationId: createConfigGroupByProduct
+      x-speakeasy-name-override: create
+      x-speakeasy-group: groups
       tags:
         - groups
       summary: Create a Worker Group or Edge Fleet for the specified Cribl product
@@ -39705,8 +40822,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      x-speakeasy-group: groups
-      x-speakeasy-name-override: create
       parameters:
         - name: product
           in: path
@@ -39717,6 +40832,8 @@ paths:
   /products/{product}/groups/{id}:
     get:
       operationId: getConfigGroupByProductAndId
+      x-speakeasy-name-override: get
+      x-speakeasy-group: groups
       tags:
         - groups
       summary: Get a Worker Group or Edge Fleet
@@ -39764,10 +40881,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      x-speakeasy-group: groups
-      x-speakeasy-name-override: get
     patch:
       operationId: updateConfigGroupByProductAndId
+      x-speakeasy-name-override: update
+      x-speakeasy-group: groups
       tags:
         - groups
       summary: Update a Worker Group or Edge Fleet
@@ -39816,10 +40933,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      x-speakeasy-group: groups
-      x-speakeasy-name-override: update
     delete:
       operationId: deleteConfigGroupByProductAndId
+      x-speakeasy-name-override: delete
+      x-speakeasy-group: groups
       tags:
         - groups
       summary: Delete a Worker Group or Edge Fleet
@@ -39861,8 +40978,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      x-speakeasy-group: groups
-      x-speakeasy-name-override: delete
   /products/{product}/groups/{id}/configVersion:
     get:
       operationId: getConfigGroupConfigVersionByProductAndId
