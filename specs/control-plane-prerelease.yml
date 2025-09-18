@@ -4,10 +4,10 @@ servers:
 info:
   title: Cribl API Reference
   description: This API Reference lists available REST endpoints, along with their supported operations for accessing, creating, updating, or deleting resources. See our complementary product documentation at [docs.cribl.io](http://docs.cribl.io).
-  version: 4.14.0-alpha.1757595696230-1a9eb130
+  version: 4.14.1-alpha.1758213318893-e6b53d3f
   contact:
     name: Support
-    email: support@cribl.io
+    url: https://portal.support.cribl.io
 components:
   securitySchemes:
     bearerAuth:
@@ -229,6 +229,93 @@ components:
         - stream
         - edge
       x-speakeasy-unknown-values: allow
+    Notification:
+      type: object
+      required:
+        - id
+        - condition
+      properties:
+        id:
+          type: string
+          title: ID
+          pattern: ^[a-zA-Z0-9_-]+$
+        disabled:
+          type: boolean
+          title: Disabled
+          default: false
+        condition:
+          type: string
+          title: Condition
+        targets:
+          type: array
+          title: Notification targets
+          description: Targets to send any Notifications to
+          items:
+            type: string
+          default: []
+        targetConfigs:
+          type: array
+          title: Target configuration
+          items:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                title: Notification target ID
+                pattern: ^[a-zA-Z0-9_-]+$
+            anyOf:
+              - properties:
+                  conf:
+                    type: object
+                    title: Notification config for SMTP target
+                    properties:
+                      subject:
+                        type: string
+                        title: Subject
+                        description: Email subject
+                      body:
+                        type: string
+                        title: Message
+                        description: Email body
+                      emailRecipient:
+                        type: object
+                        required:
+                          - to
+                        properties:
+                          to:
+                            type: string
+                            title: To
+                            description: Recipients' email addresses
+                          cc:
+                            type: string
+                            title: Cc
+                            description: "Cc: Recipients' email addresses"
+                          bcc:
+                            type: string
+                            title: Bcc
+                            description: "Bcc: Recipients' email addresses"
+        conf:
+          type: object
+          title: Condition-specific configs
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            type: object
+            required:
+              - name
+              - value
+            properties:
+              name:
+                type: string
+                title: Field Name
+              value:
+                type: string
+                title: Value
+                description: JavaScript expression to compute field's value, enclosed in quotes or backticks. (Can evaluate to a constant.)
     AppMode:
       type: string
       enum:
@@ -357,6 +444,380 @@ components:
           type: string
       required:
         - id
+    ElementConfigType: {}
+    SavesSearchRunMode:
+      type: string
+      enum:
+        - newSearch
+        - lastRun
+      x-speakeasy-unknown-values: allow
+    ExpectedOutputType:
+      type: string
+      enum:
+        - range
+        - instant
+      x-speakeasy-unknown-values: allow
+    PanelQueryDefinition:
+      type: object
+      properties:
+        alias:
+          type: string
+        localId:
+          type: string
+        query:
+          type: string
+      required:
+        - localId
+        - query
+    SearchQuery:
+      oneOf:
+        - type: object
+          properties:
+            query:
+              type: string
+            queryId:
+              type: string
+            runMode:
+              $ref: "#/components/schemas/SavesSearchRunMode"
+            type:
+              type: string
+              enum:
+                - saved
+              x-speakeasy-unknown-values: allow
+          required:
+            - queryId
+            - type
+        - type: object
+          properties:
+            earliest:
+              oneOf:
+                - type: string
+                - type: number
+            expectedOutputType:
+              $ref: "#/components/schemas/ExpectedOutputType"
+            latest:
+              oneOf:
+                - type: string
+                - type: number
+            parentSearchId:
+              type: string
+            query:
+              type: string
+            sampleRate:
+              type: number
+            timezone:
+              type: string
+            type:
+              type: string
+              enum:
+                - inline
+              x-speakeasy-unknown-values: allow
+          required:
+            - earliest
+            - latest
+            - query
+            - type
+        - type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - values
+              x-speakeasy-unknown-values: allow
+            values:
+              type: array
+              items:
+                type: string
+          required:
+            - type
+            - values
+        - type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - empty
+              x-speakeasy-unknown-values: allow
+          required:
+            - type
+        - type: object
+          properties:
+            earliest:
+              oneOf:
+                - type: string
+                - type: number
+            expectedOutputType:
+              $ref: "#/components/schemas/ExpectedOutputType"
+            latest:
+              oneOf:
+                - type: string
+                - type: number
+            queries:
+              type: array
+              items:
+                $ref: "#/components/schemas/PanelQueryDefinition"
+            timezone:
+              type: string
+            type:
+              type: string
+              enum:
+                - metric
+              x-speakeasy-unknown-values: allow
+          required:
+            - earliest
+            - latest
+            - queries
+            - type
+    TitleAction:
+      type: object
+      properties:
+        label:
+          type: string
+        openInNewTab:
+          type: boolean
+        url:
+          type: string
+      required:
+        - label
+        - url
+    VisualizationElementType:
+      oneOf:
+        - type: string
+          enum:
+            - chart.area
+            - chart.column
+            - chart.funnel
+            - chart.gauge
+            - chart.horizontalBar
+            - chart.line
+            - chart.map
+            - chart.pie
+            - chart.scatter
+            - counter.single
+          x-speakeasy-unknown-values: allow
+        - type: string
+          enum:
+            - list.events
+            - list.table
+          x-speakeasy-unknown-values: allow
+        - type: string
+          enum:
+            - custom.throughputMetrics
+            - custom.flowMatrix
+          x-speakeasy-unknown-values: allow
+    InputElementType:
+      type: string
+      enum:
+        - input.timerange
+        - input.dropdown
+        - input.text
+        - input.number
+      x-speakeasy-unknown-values: allow
+    MarkdownElementConfig:
+      type: object
+      properties:
+        markdown:
+          type: string
+      required:
+        - markdown
+    MarkdownElementType:
+      type: string
+      enum:
+        - markdown.copilot
+        - markdown.default
+      x-speakeasy-unknown-values: allow
+    DashboardElement:
+      oneOf:
+        - type: object
+          properties:
+            config:
+              $ref: "#/components/schemas/ElementConfigType"
+            description:
+              type: string
+            empty:
+              type: boolean
+            group:
+              type: string
+            hidePanel:
+              type: boolean
+            horizontalChart:
+              type: boolean
+            id:
+              type: string
+            index:
+              type: number
+            search:
+              $ref: "#/components/schemas/SearchQuery"
+            title:
+              type: string
+            titleAction:
+              $ref: "#/components/schemas/TitleAction"
+            type:
+              $ref: "#/components/schemas/VisualizationElementType"
+            variant:
+              type: string
+              enum:
+                - visualization
+              x-speakeasy-unknown-values: allow
+          required:
+            - id
+            - search
+            - type
+        - type: object
+          properties:
+            description:
+              type: string
+            empty:
+              type: boolean
+            group:
+              type: string
+            hidePanel:
+              type: boolean
+            horizontalChart:
+              type: boolean
+            id:
+              type: string
+            index:
+              type: number
+            inputId:
+              type: string
+            search:
+              $ref: "#/components/schemas/SearchQuery"
+            title:
+              type: string
+            titleAction:
+              $ref: "#/components/schemas/TitleAction"
+            type:
+              $ref: "#/components/schemas/InputElementType"
+            value:
+              type: object
+              additionalProperties: true
+            variant:
+              type: string
+              enum:
+                - input
+              x-speakeasy-unknown-values: allow
+          required:
+            - id
+            - inputId
+            - type
+            - variant
+        - type: object
+          properties:
+            config:
+              $ref: "#/components/schemas/MarkdownElementConfig"
+            description:
+              type: string
+            empty:
+              type: boolean
+            group:
+              type: string
+            hidePanel:
+              type: boolean
+            horizontalChart:
+              type: boolean
+            id:
+              type: string
+            index:
+              type: number
+            title:
+              type: string
+            titleAction:
+              $ref: "#/components/schemas/TitleAction"
+            type:
+              $ref: "#/components/schemas/MarkdownElementType"
+            variant:
+              type: string
+              enum:
+                - markdown
+              x-speakeasy-unknown-values: allow
+          required:
+            - id
+            - type
+            - variant
+    DashboardElements:
+      type: array
+      items:
+        $ref: "#/components/schemas/DashboardElement"
+    DashboardGroups: {}
+    SavedQuerySchedule:
+      type: object
+      properties:
+        cronSchedule:
+          type: string
+        enabled:
+          type: boolean
+        keepLastN:
+          type: number
+        notifications:
+          type: object
+          properties:
+            disabled:
+              type: boolean
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Notification"
+          required:
+            - disabled
+        resumeMissed:
+          type: boolean
+        resumeOnBoot:
+          type: boolean
+        tz:
+          type: string
+      required:
+        - cronSchedule
+        - enabled
+        - keepLastN
+        - notifications
+        - tz
+    SearchDashboard:
+      type: object
+      properties:
+        cacheTTLSeconds:
+          type: number
+        category:
+          type: string
+        created:
+          type: number
+        createdBy:
+          type: string
+        description:
+          type: string
+        displayCreatedBy:
+          type: string
+        displayModifiedBy:
+          type: string
+        elements:
+          $ref: "#/components/schemas/DashboardElements"
+        groups:
+          $ref: "#/components/schemas/DashboardGroups"
+        id:
+          type: string
+        modified:
+          type: number
+        modifiedBy:
+          type: string
+        name:
+          type: string
+        packId:
+          type: string
+        refreshRate:
+          type: number
+        resolvedDatasetIds:
+          type: array
+          items:
+            type: string
+        schedule:
+          $ref: "#/components/schemas/SavedQuerySchedule"
+      required:
+        - created
+        - createdBy
+        - elements
+        - id
+        - modified
+        - name
     object:
       type: string
     InputCollection:
@@ -13860,6 +14321,10 @@ components:
               type: string
               title: Private key path
               description: Path on server containing the private key to use. PEM format. Can reference $ENV_VARS.
+            passphrase:
+              type: string
+              title: Passphrase
+              description: Passphrase to use to decrypt private key
             certPath:
               type: string
               title: Certificate path
@@ -38909,6 +39374,8 @@ components:
               type: string
         deploymentId:
           type: string
+        disableSNIRouting:
+          type: boolean
         distMode:
           $ref: "#/components/schemas/AppMode"
         edgeNodes:
@@ -39676,6 +40143,422 @@ paths:
           schema:
             type: string
           description: The <code>id</code> of the Lake Dataset to update.
+  /search/dashboards:
+    get:
+      operationId: listSearchDashboard
+      x-speakeasy-group: search.dashboards
+      x-speakeasy-name-override: list
+      tags:
+        - dashboards
+      summary: Get a list of SearchDashboard objects
+      description: Get a list of SearchDashboard objects
+      responses:
+        "200":
+          description: a list of SearchDashboard objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SearchDashboard"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: createSearchDashboard
+      x-speakeasy-group: search.dashboards
+      x-speakeasy-name-override: create
+      tags:
+        - dashboards
+      summary: Create SearchDashboard
+      description: Create SearchDashboard
+      requestBody:
+        description: New SearchDashboard object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchDashboard"
+      responses:
+        "200":
+          description: a list of SearchDashboard objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SearchDashboard"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /search/dashboards/{id}:
+    get:
+      operationId: getSearchDashboardById
+      x-speakeasy-group: search.dashboards
+      x-speakeasy-name-override: get
+      tags:
+        - dashboards
+      summary: Get SearchDashboard by ID
+      description: Get SearchDashboard by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique ID to GET
+      responses:
+        "200":
+          description: a list of SearchDashboard objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SearchDashboard"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateSearchDashboardById
+      x-speakeasy-group: search.dashboards
+      x-speakeasy-name-override: update
+      tags:
+        - dashboards
+      summary: Update SearchDashboard
+      description: Update SearchDashboard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique ID to PATCH
+      requestBody:
+        description: SearchDashboard object to be updated
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchDashboard"
+      responses:
+        "200":
+          description: a list of SearchDashboard objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SearchDashboard"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteSearchDashboardById
+      x-speakeasy-group: search.dashboards
+      x-speakeasy-name-override: delete
+      tags:
+        - dashboards
+      summary: Delete SearchDashboard
+      description: Delete SearchDashboard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique ID to DELETE
+      responses:
+        "200":
+          description: a list of SearchDashboard objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SearchDashboard"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /p/{pack}/search/dashboards:
+    get:
+      operationId: getSearchDashboardSearchByPack
+      x-speakeasy-group: packs.search.dashboards
+      x-speakeasy-name-override: list
+      tags:
+        - dashboards
+      summary: Get a list of SearchDashboard objects within a Pack
+      description: Get a list of SearchDashboard objects within a Pack
+      responses:
+        "200":
+          description: a list of SearchDashboard objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SearchDashboard"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: pack
+          in: path
+          required: true
+          schema:
+            type: string
+          description: pack ID to GET
+    post:
+      operationId: createSearchDashboardSearchByPack
+      x-speakeasy-group: packs.search.dashboards
+      x-speakeasy-name-override: create
+      tags:
+        - dashboards
+      summary: Create SearchDashboard within a Pack
+      description: Create SearchDashboard within a Pack
+      requestBody:
+        description: New SearchDashboard object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchDashboard"
+      responses:
+        "200":
+          description: a list of SearchDashboard objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SearchDashboard"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: pack
+          in: path
+          required: true
+          schema:
+            type: string
+          description: pack ID to POST
+  /p/{pack}/search/dashboards/{id}:
+    get:
+      operationId: getSearchDashboardSearchByPackAndId
+      x-speakeasy-group: packs.search.dashboards
+      x-speakeasy-name-override: get
+      tags:
+        - dashboards
+      summary: Get SearchDashboard by ID within a Pack
+      description: Get SearchDashboard by ID within a Pack
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique ID to GET
+        - name: pack
+          in: path
+          required: true
+          schema:
+            type: string
+          description: pack ID to GET
+      responses:
+        "200":
+          description: a list of SearchDashboard objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SearchDashboard"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateSearchDashboardSearchByPackAndId
+      x-speakeasy-group: packs.search.dashboards
+      x-speakeasy-name-override: update
+      tags:
+        - dashboards
+      summary: Update SearchDashboard within a Pack
+      description: Update SearchDashboard within a Pack
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique ID to PATCH
+        - name: pack
+          in: path
+          required: true
+          schema:
+            type: string
+          description: pack ID to PATCH
+      requestBody:
+        description: SearchDashboard object to be updated
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchDashboard"
+      responses:
+        "200":
+          description: a list of SearchDashboard objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SearchDashboard"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteSearchDashboardSearchByPackAndId
+      x-speakeasy-group: packs.search.dashboards
+      x-speakeasy-name-override: delete
+      tags:
+        - dashboards
+      summary: Delete SearchDashboard within a Pack
+      description: Delete SearchDashboard within a Pack
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique ID to DELETE
+        - name: pack
+          in: path
+          required: true
+          schema:
+            type: string
+          description: pack ID to DELETE
+      responses:
+        "200":
+          description: a list of SearchDashboard objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: number of items present in the items array
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SearchDashboard"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /system/inputs:
     get:
       operationId: listInput
