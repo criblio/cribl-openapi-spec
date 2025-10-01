@@ -4,7 +4,7 @@ servers:
 info:
   title: Cribl API Reference
   description: This API Reference lists available REST endpoints, along with their supported operations for accessing, creating, updating, or deleting resources. See our complementary product documentation at [docs.cribl.io](http://docs.cribl.io).
-  version: 4.15.0-alpha.1758566860656-1c3a24b3
+  version: 4.14.1-alpha.1759328534491-00ee21bd
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -229,6 +229,16 @@ components:
         - stream
         - edge
       x-speakeasy-unknown-values: allow
+    AppMode:
+      type: string
+      enum:
+        - single
+        - master
+        - worker
+        - edge
+        - managed-edge
+        - outpost
+      x-speakeasy-unknown-values: allow
     CacheConnectionBackfillStatus:
       type: string
       enum:
@@ -347,8 +357,100 @@ components:
           type: string
       required:
         - id
-    object:
-      type: string
+    PipelineFunctionConf:
+      type: object
+      required:
+        - id
+        - conf
+      additionalProperties: false
+      properties:
+        filter:
+          title: Filter
+          description: Filter that selects data to be fed through this Function
+          type: string
+          default: "true"
+        id:
+          title: ID
+          description: Function ID
+          type: string
+        description:
+          title: Description
+          description: Simple description of this step
+          type: string
+        disabled:
+          title: Disabled
+          description: If true, data will not be pushed through this function
+          type: boolean
+        final:
+          title: Final
+          description: If enabled, stops the results of this Function from being passed to the downstream Functions
+          type: boolean
+        conf:
+          type: object
+          title: Function-specific configs
+        groupId:
+          title: Group ID
+          description: Group ID
+          type: string
+    Pipeline:
+      title: Pipeline Settings
+      type: object
+      required:
+        - conf
+        - id
+      properties:
+        id:
+          title: ID
+          type: string
+        conf:
+          type: object
+          additionalProperties: false
+          properties:
+            asyncFuncTimeout:
+              type: integer
+              title: Async function timeout (ms)
+              description: Time (in ms) to wait for an async function to complete processing of a data item
+              minimum: 0
+              maximum: 10000
+            output:
+              type: string
+              title: Output event destination
+              description: The output destination for events processed by this Pipeline
+              default: default
+            description:
+              title: Description
+              type: string
+            streamtags:
+              type: array
+              title: Tags
+              description: Tags for filtering and grouping in @{product}
+              default: []
+              items:
+                type: string
+            functions:
+              title: Functions
+              description: List of Functions to pass data through
+              type: array
+              items:
+                $ref: "#/components/schemas/PipelineFunctionConf"
+            groups:
+              type: object
+              additionalProperties:
+                type: object
+                required:
+                  - name
+                properties:
+                  name:
+                    type: string
+                    title: Group Name
+                  description:
+                    type: string
+                    title: Description
+                    description: Short description of this group
+                  disabled:
+                    type: boolean
+                    title: Disabled
+                    description: Whether this group is disabled
     InputCollection:
       type: object
       properties:
@@ -8886,10 +8988,12 @@ components:
                 properties:
                   enabled:
                     type: boolean
+                    title: Splunk HEC
               elasticsearchMetadata:
                 type: object
                 properties:
                   enabled:
+                    title: Elasticsearch
                     type: boolean
         description:
           type: string
@@ -24551,7 +24655,11 @@ components:
         logNameExpression:
           type: string
           title: Log name expression
-          description: JavaScript expression to compute the value of the log name.
+          description: JavaScript expression to compute the value of the log name. If Validate and correct log name is enabled, invalid characters (characters other than alphanumerics, forward-slashes, underscores, hyphens, and periods) will be replaced with an underscore.
+        sanitizeLogNames:
+          type: boolean
+          title: Validate and correct log name
+          default: false
         payloadFormat:
           type: string
           title: Payload format
@@ -24801,7 +24909,7 @@ components:
           title: Description
         logLocationExpression:
           title: Folder ID expression
-          description: JavaScript expression to compute the value of the folder ID with which log entries should be associated.
+          description: JavaScript expression to compute the value of the folder ID with which log entries should be associated. If Validate and correct log name is enabled, invalid characters (characters other than alphanumerics, forward-slashes, underscores, hyphens, and periods) will be replaced with an underscore.
           type: string
         payloadExpression:
           title: Payload object expression
@@ -37931,11 +38039,16 @@ components:
           type: string
         keep:
           type: boolean
+        stats:
+          type: object
+          additionalProperties:
+            type: number
         status:
           $ref: "#/components/schemas/JobStatus"
       required:
         - args
         - id
+        - stats
         - status
     OutputSamplesResponse:
       type: object
@@ -37980,100 +38093,6 @@ components:
             $ref: "#/components/schemas/CriblEvent"
       required:
         - events
-    PipelineFunctionConf:
-      type: object
-      required:
-        - id
-        - conf
-      additionalProperties: false
-      properties:
-        filter:
-          title: Filter
-          description: Filter that selects data to be fed through this Function
-          type: string
-          default: "true"
-        id:
-          title: ID
-          description: Function ID
-          type: string
-        description:
-          title: Description
-          description: Simple description of this step
-          type: string
-        disabled:
-          title: Disabled
-          description: If true, data will not be pushed through this function
-          type: boolean
-        final:
-          title: Final
-          description: If enabled, stops the results of this Function from being passed to the downstream Functions
-          type: boolean
-        conf:
-          type: object
-          title: Function-specific configs
-        groupId:
-          title: Group ID
-          description: Group ID
-          type: string
-    Pipeline:
-      title: Pipeline Settings
-      type: object
-      required:
-        - conf
-        - id
-      properties:
-        id:
-          title: ID
-          type: string
-        conf:
-          type: object
-          additionalProperties: false
-          properties:
-            asyncFuncTimeout:
-              type: integer
-              title: Async function timeout (ms)
-              description: Time (in ms) to wait for an async function to complete processing of a data item
-              minimum: 0
-              maximum: 10000
-            output:
-              type: string
-              title: Output event destination
-              description: The output destination for events processed by this Pipeline
-              default: default
-            description:
-              title: Description
-              type: string
-            streamtags:
-              type: array
-              title: Tags
-              description: Tags for filtering and grouping in @{product}
-              default: []
-              items:
-                type: string
-            functions:
-              title: Functions
-              description: List of Functions to pass data through
-              type: array
-              items:
-                $ref: "#/components/schemas/PipelineFunctionConf"
-            groups:
-              type: object
-              additionalProperties:
-                type: object
-                required:
-                  - name
-                properties:
-                  name:
-                    type: string
-                    title: Group Name
-                  description:
-                    type: string
-                    title: Description
-                    description: Short description of this group
-                  disabled:
-                    type: boolean
-                    title: Disabled
-                    description: Whether this group is disabled
     RoutesRoute:
       type: object
       additionalProperties: true
@@ -38163,11 +38182,6 @@ components:
             additionalProperties: true
     RouteCloneConf:
       type: object
-      title: Fields
-      description: Key value pairs to set/overwrite in the clone
-      additionalProperties:
-        type: string
-        title: Clone fields
     RouteConf:
       type: object
       properties:
@@ -38311,6 +38325,10 @@ components:
       properties:
         author:
           type: string
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
         description:
           type: string
         displayName:
@@ -38418,6 +38436,10 @@ components:
       properties:
         author:
           type: string
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
         description:
           type: string
         displayName:
@@ -38779,7 +38801,9 @@ components:
         remote:
           oneOf:
             - type: string
-            - type: boolean
+            - enum:
+                - false
+              x-speakeasy-unknown-values: allow
         versioning:
           type: boolean
       required:
@@ -38802,6 +38826,16 @@ components:
           type: string
         refs:
           type: string
+    GitShowResult:
+      type: object
+      properties:
+        commitMessage:
+          type: string
+        diffJson:
+          $ref: "#/components/schemas/DiffFiles"
+      required:
+        - commitMessage
+        - diffJson
     GitStatusResult:
       type: object
       properties:
@@ -38911,16 +38945,7 @@ components:
         disableSNIRouting:
           type: boolean
         distMode:
-          type: string
-          enum:
-            - edge
-            - worker
-            - single
-            - master
-            - managed-edge
-            - outpost
-            - search-supervisor
-          x-speakeasy-unknown-values: allow
+          $ref: "#/components/schemas/AppMode"
         edgeNodes:
           type: number
         group:
@@ -38935,6 +38960,8 @@ components:
           $ref: "#/components/schemas/HBLeaderInfo"
         pid:
           type: number
+        socksEnabled:
+          type: boolean
         startTime:
           type: number
         tags:
@@ -38958,8 +38985,6 @@ components:
           properties:
             enabled:
               type: boolean
-            instanceId:
-              type: string
             region:
               type: string
             tags:
@@ -38970,7 +38995,6 @@ components:
               type: string
           required:
             - enabled
-            - instanceId
             - region
             - type
             - zone
@@ -39049,8 +39073,6 @@ components:
           properties:
             enabled:
               type: boolean
-            instanceId:
-              type: string
             region:
               type: string
             tags:
@@ -39061,7 +39083,6 @@ components:
               type: string
           required:
             - enabled
-            - instanceId
             - region
             - type
             - zone
@@ -39071,6 +39092,10 @@ components:
           type: number
         cribl:
           $ref: "#/components/schemas/HBCriblInfo"
+        env:
+          type: object
+          additionalProperties:
+            type: string
         freeDiskSpace:
           type: number
         hostOs:
@@ -39169,6 +39194,7 @@ components:
         - architecture
         - cpus
         - cribl
+        - env
         - freeDiskSpace
         - hostname
         - node
@@ -39900,7 +39926,7 @@ paths:
       description: Add an HEC token and optional metadata to the specified Splunk HEC Source.
       responses:
         "200":
-          description: a list of any objects
+          description: a list of InputSplunkHec objects
           content:
             application/json:
               schema:
@@ -39912,8 +39938,7 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: true
+                      $ref: "#/components/schemas/InputSplunkHec"
         "401":
           description: Unauthorized
         "500":
@@ -39947,7 +39972,7 @@ paths:
       description: Update the metadata for the specified HEC token for the specified Splunk HEC Source.
       responses:
         "200":
-          description: a list of any objects
+          description: a list of InputSplunkHec objects
           content:
             application/json:
               schema:
@@ -39959,8 +39984,7 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: true
+                      $ref: "#/components/schemas/InputSplunkHec"
         "401":
           description: Unauthorized
         "500":
@@ -40780,6 +40804,12 @@ paths:
       tags:
         - health
       responses:
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "200":
           description: Healthy status
           content:
@@ -41328,7 +41358,7 @@ paths:
       description: Push all local commits from the local repository to the remote repository.
       responses:
         "200":
-          description: a list of any objects
+          description: a list of string objects
           content:
             application/json:
               schema:
@@ -41340,8 +41370,7 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: true
+                      type: string
         "401":
           description: Unauthorized
         "500":
@@ -41407,7 +41436,7 @@ paths:
       description: Get the diff and log message for a commit. Default is the latest commit (HEAD).
       responses:
         "200":
-          description: a list of any objects
+          description: a list of GitShowResult objects
           content:
             application/json:
               schema:
@@ -41419,8 +41448,7 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: true
+                      $ref: "#/components/schemas/GitShowResult"
         "401":
           description: Unauthorized
         "500":
@@ -41516,7 +41544,8 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: "#/components/schemas/object"
+                      type: object
+                      additionalProperties: true
         "401":
           description: Unauthorized
         "500":
