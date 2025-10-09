@@ -53,3 +53,19 @@ jobs:
 
       - name: Lint management plane spec (prerelease)
         run: speakeasy lint openapi -r criblSDK -s specs/mgmt-plane-prerelease.yml --non-interactive
+
+  auto-merge:
+    name: Auto-merge PR
+    needs: lint-specs
+    runs-on: ubuntu-latest
+    # Only run on pull requests from criblio-ci
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login == 'criblio-ci' && github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Auto-merge PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch --repo ${{ github.repository }}
