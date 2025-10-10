@@ -1,0 +1,58 @@
+name: Check Version Format
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'specs/control-plane.yml'
+      - '.github/workflows/*.yml'
+
+jobs:
+  check-version-format:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      
+    - name: Install yq
+      run: |
+        wget -qO yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+        echo "$HOME/yq" >> $GITHUB_PATH
+        
+    - name: Check version format in control-plane.yml
+      run: |
+        echo "Checking version format in control-plane.yml..."
+        
+        # Extract version using yq (YAML processor)
+        VERSION=$(yq eval '.info.version' specs/control-plane.yml)
+        
+        if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+          echo "❌ Error: No version found in control-plane.yml"
+          exit 1
+        fi
+        
+        echo "Found version: $VERSION"
+        
+        # Check if version matches official format: X.Y.Z-<commit-hash>
+        # Official format: 4.14.0-837595d5
+        # Wrong format: 4.15.0-alpha.1759484970204-f93a1e61
+        if echo "$VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-[a-f0-9]{8}$' > /dev/null; then
+          echo "✅ Version format is correct (official format): $VERSION"
+        elif echo "$VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-alpha\.[0-9]+-[a-f0-9]{8}$' > /dev/null; then
+          echo "❌ Version format is incorrect (alpha format detected): $VERSION"
+          echo "Expected format: X.Y.Z-<8-character-commit-hash>"
+          echo "Example: 4.14.0-837595d5"
+          exit 1
+        else
+          echo "❌ Version format is unrecognized: $VERSION"
+          echo "Expected format: X.Y.Z-<8-character-commit-hash>"
+          echo "Example: 4.14.0-837595d5"
+          exit 1
+        fi
+        
+    - name: Display version info
+      if: success()
+      run: |
+        VERSION=$(yq eval '.info.version' specs/control-plane.yml)
+        echo "✅ Version check passed: $VERSION"
