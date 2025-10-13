@@ -10,25 +10,23 @@ on:
       - 'specs/control-plane-dev.yml'
       - 'specs/mgmt-plane-prerelease.yml'
       - 'specs/mgmt-plane.yml'
+      - 'overlay/*.yaml'
       - '.github/workflows/*.yml'
 
 jobs:
   lint-specs:
     name: Lint specs
     runs-on: ubuntu-latest
-    container:
-      image: debian:bullseye-slim
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
-
-      - name: Prepare shell & install deps
-        run: |
-          ln -sf /bin/bash /bin/sh
-          apt-get update && \
-          apt-get install -y --no-install-recommends ca-certificates curl sudo unzip && \
-          rm -rf /var/lib/apt/lists/*
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref }}
 
       - name: Install Speakeasy CLI
         run: curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
@@ -50,6 +48,67 @@ jobs:
 
       - name: Lint management plane spec (prerelease)
         run: speakeasy lint openapi -r criblSDK -s specs/mgmt-plane-prerelease.yml --non-interactive
+
+      - name: Validate overlay files
+        run: |
+          for overlay in overlay/*.yaml; do
+            if [ -f "$overlay" ]; then
+              echo "Validating $overlay..."
+              speakeasy overlay validate -o "$overlay"
+            fi
+          done
+
+      - name: Apply overlays to specs
+        run: |
+          for overlay in overlay/*.yaml; do
+            if [ -f "$overlay" ]; then
+              overlay_name=$(basename "$overlay")
+              prefix=$(echo "$overlay_name" | sed 's/-PLAT-[0-9]*\.yaml$//')
+
+              echo "Processing overlay: $overlay_name with prefix: $prefix"
+
+              for spec in specs/${prefix}*.yml; do
+                if [ -f "$spec" ]; then
+                  echo "Applying $overlay to $spec..."
+                  speakeasy overlay apply -o "$overlay" -s "$spec" > "${spec}.tmp"
+                  mv "${spec}.tmp" "$spec"
+                fi
+              done
+            fi
+          done
+
+      - name: Commit and push changes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          # Commit and push if there are changes
+          if [[ -n $(git status --porcelain) ]]; then
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git config user.name "github-actions[bot]"
+            git add specs/*.yml
+
+            echo "Committing overlay changes..."
+            git commit -m "Apply overlays to specs [automated]"
+            git pull --rebase origin "${{ github.head_ref }}" || true
+            git push origin HEAD:"${{ github.head_ref }}"
+
+            # Post PR comment using GitHub REST API
+            OVERLAYS=$(ls overlay/*.yaml 2>/dev/null | xargs -n1 basename | tr '\n' ', ' | sed 's/, $//')
+            if [ -n "$OVERLAYS" ]; then
+              COMMENT_BODY=$(jq -rn --arg b "Applied overlays to specs: ${OVERLAYS}" '{body:$b}')
+              curl -sS \
+                -H "Authorization: Bearer ${GH_TOKEN}" \
+                -H "Accept: application/vnd.github+json" \
+                -X POST \
+                -d "$COMMENT_BODY" \
+                "https://api.github.com/repos/${REPO}/issues/${PR_NUMBER}/comments" >/dev/null
+            fi
+          else
+            echo "No changes to commit"
+          fi
 
   auto-merge:
     name: Auto-merge PR
