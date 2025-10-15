@@ -31,6 +31,35 @@ jobs:
       - name: Install Speakeasy CLI
         run: curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
 
+      - name: Validate overlay files
+        run: |
+          for overlay in overlay/*.yaml; do
+            if [ -f "$overlay" ]; then
+              echo "Validating $overlay..."
+              speakeasy overlay validate -o "$overlay"
+            fi
+          done
+
+      - name: Apply overlays to specs
+        run: |
+          for overlay in overlay/*.yaml; do
+            if [ -f "$overlay" ]; then
+              overlay_name=$(basename "$overlay")
+              # Extract prefix from overlay file name (e.g., control-plane-overlay.yaml -> control-plane)
+              prefix=$(echo "$overlay_name" | sed 's/-overlay\.yaml$//')
+
+              echo "Processing overlay: $overlay_name with prefix: $prefix"
+
+              for spec in specs/${prefix}*.yml; do
+                if [ -f "$spec" ]; then
+                  echo "Applying $overlay to $spec..."
+                  speakeasy overlay apply -s "$spec" -o "$overlay" --out "${spec}-temp.yml"
+                  mv "${spec}-temp.yml" "$spec"
+                fi
+              done
+            fi
+          done
+
       - name: Lint control plane spec (prod)
         run: speakeasy lint openapi -r criblSDK -s specs/control-plane.yml --non-interactive
 
@@ -48,34 +77,6 @@ jobs:
 
       - name: Lint management plane spec (prerelease)
         run: speakeasy lint openapi -r criblSDK -s specs/mgmt-plane-prerelease.yml --non-interactive
-
-      - name: Validate overlay files
-        run: |
-          for overlay in overlay/*.yaml; do
-            if [ -f "$overlay" ]; then
-              echo "Validating $overlay..."
-              speakeasy overlay validate -o "$overlay"
-            fi
-          done
-
-      - name: Apply overlays to specs
-        run: |
-          for overlay in overlay/*.yaml; do
-            if [ -f "$overlay" ]; then
-              overlay_name=$(basename "$overlay")
-              prefix=$(echo "$overlay_name" | sed 's/-PLAT-[0-9]*\.yaml$//')
-
-              echo "Processing overlay: $overlay_name with prefix: $prefix"
-
-              for spec in specs/${prefix}*.yml; do
-                if [ -f "$spec" ]; then
-                  echo "Applying $overlay to $spec..."
-                  speakeasy overlay apply -o "$overlay" -s "$spec" > "${spec}.tmp"
-                  mv "${spec}.tmp" "$spec"
-                fi
-              done
-            fi
-          done
 
       - name: Commit and push changes
         env:
