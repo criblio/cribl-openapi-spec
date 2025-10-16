@@ -28,8 +28,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.head_ref }}
 
-      - name: Install Speakeasy CLI
-        run: curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
+      - name: Install Speakeasy CLI and yq
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
+          mkdir -p $HOME/bin
+          wget -qO $HOME/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          chmod +x $HOME/bin/yq
+          echo "$HOME/bin" >> $GITHUB_PATH
 
       - name: Validate overlay files
         run: |
@@ -59,6 +64,37 @@ jobs:
               done
             fi
           done
+
+      - name: Check version format in control-plane.yml
+        run: |
+          echo "Checking version format in control-plane.yml..."
+          
+          # Extract version using yq (YAML processor)
+          VERSION=$(yq eval '.info.version' specs/control-plane.yml)
+          
+          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "❌ Error: No version found in control-plane.yml"
+            exit 1
+          fi
+          
+          echo "Found version: $VERSION"
+          
+          # Check if version matches official format: X.Y.Z-<commit-hash>
+          # Official format: 4.14.0-837595d5
+          # Wrong format: 4.15.0-alpha.1759484970204-f93a1e61
+          if echo "$VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-[a-f0-9]{8}$' > /dev/null; then
+            echo "✅ Version format is correct (official format): $VERSION"
+          elif echo "$VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-alpha\.[0-9]+-[a-f0-9]{8}$' > /dev/null; then
+            echo "❌ Version format is incorrect (alpha format detected): $VERSION"
+            echo "Expected format: X.Y.Z-<8-character-commit-hash>"
+            echo "Example: 4.14.0-837595d5"
+            exit 1
+          else
+            echo "❌ Version format is unrecognized: $VERSION"
+            echo "Expected format: X.Y.Z-<8-character-commit-hash>"
+            echo "Example: 4.14.0-837595d5"
+            exit 1
+          fi
 
       - name: Lint control plane spec (prod)
         run: speakeasy lint openapi -r criblSDK -s specs/control-plane.yml --non-interactive
