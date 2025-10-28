@@ -4,7 +4,7 @@ servers:
 info:
   title: Cribl API Reference
   description: This API Reference lists available REST endpoints, along with their supported operations for accessing, creating, updating, or deleting resources. See our complementary product documentation at [docs.cribl.io](http://docs.cribl.io).
-  version: 4.15.0-alpha.1761420802292-a60a4283
+  version: 4.15.0-alpha.1761606328595-4d5d0f38
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -224,6 +224,103 @@ components:
       required:
         - perms
         - user
+    GroupCreateRequest:
+      type: object
+      properties:
+        cloud:
+          $ref: "#/components/schemas/ConfigGroupCloud"
+        deployingWorkerCount:
+          type: number
+        description:
+          type: string
+        estimatedIngestRate:
+          type: integer
+          description: Maximum expected volume of data ingested by the @{group}. (This setting is available only on @{group}s consisting of Cribl-managed Cribl.Cloud @{node}s.)
+          enum:
+            - 1024
+            - 2048
+            - 3072
+            - 4096
+            - 5120
+            - 7168
+            - 10240
+            - 13312
+            - 15360
+          x-speakeasy-enum-descriptions:
+            - 12 MB/sec
+            - 24 MB/sec
+            - 36 MB/sec
+            - 48 MB/sec
+            - 60 MB/sec
+            - 84 MB/sec
+            - 120 MB/sec
+            - 156 MB/sec
+            - 180 MB/sec
+          x-speakeasy-enums:
+            - Rate12MBPerSec
+            - Rate24MBPerSec
+            - Rate36MBPerSec
+            - Rate48MBPerSec
+            - Rate60MBPerSec
+            - Rate84MBPerSec
+            - Rate120MBPerSec
+            - Rate156MBPerSec
+            - Rate180MBPerSec
+          x-speakeasy-unknown-values: allow
+        git:
+          type: object
+          properties:
+            commit:
+              type: string
+            localChanges:
+              type: number
+            log:
+              type: array
+              items:
+                $ref: "#/components/schemas/Commit"
+        id:
+          type: string
+        incompatibleWorkerCount:
+          type: number
+        inherits:
+          type: string
+        isFleet:
+          type: boolean
+        isSearch:
+          type: boolean
+        lookupDeployments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGroupLookups"
+        maxWorkerAge:
+          type: string
+        name:
+          type: string
+        onPrem:
+          type: boolean
+        provisioned:
+          type: boolean
+        sourceGroupId:
+          type: string
+        streamtags:
+          type: array
+          items:
+            type: string
+        tags:
+          type: string
+        type:
+          type: string
+          enum:
+            - lake_access
+          x-speakeasy-unknown-values: allow
+        upgradeVersion:
+          type: string
+        workerCount:
+          type: number
+        workerRemoteAccess:
+          type: boolean
+      required:
+        - id
     DeployRequestLookups:
       type: object
       properties:
@@ -41044,25 +41141,26 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/RouteConf"
-    LoginInfo:
-      type: object
-      required:
-        - username
-        - password
-      properties:
-        username:
-          type: string
-        password:
-          type: string
     AuthToken:
       type: object
-      required:
-        - token
       properties:
-        token:
-          type: string
         forcePasswordChange:
           type: boolean
+        token:
+          type: string
+      required:
+        - forcePasswordChange
+        - token
+    LoginInfo:
+      type: object
+      properties:
+        password:
+          type: string
+        username:
+          type: string
+      required:
+        - password
+        - username
     DistributedSummary:
       type: object
       properties:
@@ -41125,27 +41223,27 @@ components:
         - worker
         - managed-edge
       x-speakeasy-unknown-values: allow
-    HealthStatus:
+    HealthServerStatus:
       type: object
-      required:
-        - status
-        - startTime
       properties:
         role:
           type: string
           enum:
+            - standby
             - primary
-            - standby
-          x-speakeasy-unknown-values: allow
-        status:
-          type: string
-          enum:
-            - healthy
-            - shutting down
-            - standby
           x-speakeasy-unknown-values: allow
         startTime:
           type: number
+        status:
+          type: string
+          enum:
+            - shutting down
+            - healthy
+            - standby
+          x-speakeasy-unknown-values: allow
+      required:
+        - startTime
+        - status
     InstallWarnings:
       type: array
       items:
@@ -42153,83 +42251,6 @@ components:
         - info
         - lastMsgTime
         - workerProcesses
-    RulesetId:
-      type: object
-      properties:
-        id:
-          type: string
-      required:
-        - id
-    MappingRuleset:
-      type: object
-      additionalProperties: false
-      required:
-        - id
-      properties:
-        id:
-          type: string
-          title: ID
-        conf:
-          type: object
-          properties:
-            functions:
-              title: Functions
-              description: List of functions to pass data through
-              type: array
-              items:
-                type: object
-                required:
-                  - id
-                  - filter
-                  - final
-                  - conf
-                properties:
-                  id:
-                    type: string
-                    enum:
-                      - eval
-                    description: Unique function identifier. Must always be 'eval'.
-                    x-speakeasy-unknown-values: allow
-                  filter:
-                    type: string
-                    description: Filter expression controlling when this function runs
-                    example: "!cribl.group"
-                  description:
-                    type: string
-                    description: Optional function description
-                    example: Default Mappings
-                  disabled:
-                    type: boolean
-                    description: Indicates whether the function is disabled
-                    example: false
-                  final:
-                    type: boolean
-                    enum:
-                      - true
-                    description: Marks whether this function is final in the chain. Must always be true.
-                    x-speakeasy-unknown-values: allow
-                  conf:
-                    type: object
-                    required:
-                      - add
-                    properties:
-                      add:
-                        type: array
-                        description: Fields to add in this eval function
-                        items:
-                          type: object
-                          required:
-                            - name
-                            - value
-                          properties:
-                            name:
-                              type: string
-                              example: groupId
-                            value:
-                              type: string
-                              example: "'default'"
-        active:
-          type: boolean
     TeamAccessControlList:
       type: object
       properties:
@@ -42278,272 +42299,6 @@ components:
       summary: Upgrade Pack from URL
       value:
         source: https://github.com/criblpacks/cribl-palo-alto-networks/releases/download/1.1.4/cribl-palo-alto-networks-a3e5a19d-1.1.4.crbl
-    MappingRulesetActivateExamplesActivate:
-      summary: Activate the default Mapping Ruleset
-      value:
-        id: default
-    MappingRulesetCreateExamplesOSBasedMapping:
-      summary: Map Edge Nodes based on their Operating System (Linux, Win32, macOS)
-      value:
-        id: os-based-mapping
-        conf:
-          functions:
-            - filter: platform === "linux"
-              id: eval
-              description: Map Linux Edge Nodes
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'linux_fleet'"
-            - filter: platform === "win32"
-              id: eval
-              description: Map Windows Edge Nodes
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'windows_fleet'"
-            - filter: platform === "darwin"
-              id: eval
-              description: Map macOS Edge Nodes
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'macos_fleet'"
-            - filter: "!cribl.group"
-              id: eval
-              description: Default mapping for unmapped nodes
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'default_fleet'"
-    MappingRulesetCreateExamplesTagBasedMapping:
-      summary: Map Edge Nodes using cribl.tags
-      value:
-        id: tag-based-mapping
-        conf:
-          functions:
-            - filter: cribl.tags.includes("WinLaptop")
-              id: eval
-              description: Map Windows Laptop Edge Nodes
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'laptop_fleet'"
-            - filter: cribl.tags.includes("Production")
-              id: eval
-              description: Map Production Edge Nodes
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'production_fleet'"
-            - filter: "!cribl.group"
-              id: eval
-              description: Default mapping
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'default_fleet'"
-    MappingRulesetCreateExamplesOutpostBasedMapping:
-      summary: Map Edge Nodes connected to a specific Outpost ID or hostname
-      value:
-        id: outpost-mapping
-        conf:
-          functions:
-            - filter: outpost.host === "5ab6c676be6a"
-              id: eval
-              description: Map Edge Nodes from Outpost A
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'outpost_a_fleet'"
-            - filter: outpost.guid === "550e8400-e29b-41d4-a716-446655440000"
-              id: eval
-              description: Map Edge Nodes from Outpost B by GUID
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'outpost_b_fleet'"
-            - filter: "!cribl.group"
-              id: eval
-              description: Default mapping
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'default_fleet'"
-    MappingRulesetCreateExamplesComplexMapping:
-      summary: Map Edge Nodes using complex filters based on IP, CPU, memory, and environment
-      value:
-        id: complex-mapping
-        conf:
-          functions:
-            - filter: (conn_ip.startsWith("10.10.42.") && cpus > 6) || env.CRIBL_HOME.match("DMZ")
-              id: eval
-              description: Map high-performance nodes in specific network or DMZ
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'high_perf_fleet'"
-            - filter: platform === "linux" && memory > 16000 && cribl.tags.includes("Database")
-              id: eval
-              description: Map Linux nodes with high memory for database workloads
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'database_fleet'"
-            - filter: "!cribl.group"
-              id: eval
-              description: Default mapping
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'default_fleet'"
-    MappingRulesetCreateExamplesAWSEC2InstanceMapping:
-      summary: Map Edge Nodes using AWS EC2 instance tags
-      value:
-        id: aws-ec2-mapping
-        conf:
-          functions:
-            - filter: aws?.tags?.Environment === "Production"
-              id: eval
-              description: Map Production EC2 instances
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'aws_prod_fleet'"
-            - filter: aws?.tags?.Team === "DevOps"
-              id: eval
-              description: Map DevOps team EC2 instances
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'devops_fleet'"
-            - filter: "!cribl.group"
-              id: eval
-              description: Default mapping
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'default_fleet'"
-    MappingRulesetCreateExamplesContainerBasedMapping:
-      summary: Map Edge Nodes running in containers based on host characteristics
-      value:
-        id: container-mapping
-        conf:
-          functions:
-            - filter: hostOs?.platform === "linux" && hostOs?.cpu_count > 4
-              id: eval
-              description: Map containerized nodes on high-CPU Linux hosts
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'container_high_cpu_fleet'"
-            - filter: hostOs?.id
-              id: eval
-              description: Map all containerized Edge Nodes
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'container_fleet'"
-            - filter: "!cribl.group"
-              id: eval
-              description: Default mapping for non-containerized nodes
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'default_fleet'"
-    MappingRulesetCreateExamplesDefaultRuleset:
-      summary: Routes all unmapped Edge Nodes to the default_fleet
-      value:
-        id: simple-default-mappings
-        conf:
-          functions:
-            - filter: "!cribl.group"
-              id: eval
-              description: Simple default Mapping Ruleset
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'default_fleet'"
-    MappingRulesetUpdateExamplesUpdateComplexRule:
-      summary: Modify an existing ruleset with a complex, multi-condition filter
-      value:
-        id: complex-mapping
-        conf:
-          functions:
-            - filter: (conn_ip.startsWith("10.10.42.") && cpus > 6) || env.CRIBL_HOME.match("DMZ")
-              id: eval
-              description: Map high-performance nodes in specific network or DMZ
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'high_perf_fleet'"
-            - filter: "!cribl.group"
-              id: eval
-              description: Default mapping
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'default_fleet'"
-    MappingRulesetUpdateExamplesEnableDisabledRule:
-      summary: Change an existing ruleset flag to enable it
-      value:
-        id: default
-        conf:
-          functions:
-            - filter: "!cribl.group"
-              id: eval
-              description: Default Mappings
-              disabled: false
-              final: true
-              conf:
-                add:
-                  - name: groupId
-                    value: "'default_fleet'"
-        active: true
 security:
   - bearerAuth: []
   - clientOauth: []
@@ -43460,7 +43215,7 @@ paths:
       description: Clear the persistent queue (PQ) for the specified Destination.
       responses:
         "201":
-          description: a list of string objects
+          description: A list of job ids for the background job that clears the persistent queue
           content:
             application/json:
               schema:
@@ -43926,8 +43681,8 @@ paths:
         - routes
       x-speakeasy-group: routes
       x-speakeasy-name-override: append
-      summary: Append a Route to the end of the Routing table
-      description: Append a Route to the end of the specified Routing table.</br></br>Provide a complete representation of the Routing table, including the Route that you want to append, in the request body. Cribl removes any omitted Routes and fields in the Routing table when appending the Route.</br></br>Confirm that the configuration in your request body is correct before sending the request. If the configuration is incorrect, the Routing table might not function as expected.
+      summary: Add a Route to the end of the Routing table
+      description: Add a Route to the end of the specified Routing table.
       responses:
         "200":
           description: a list of Routes objects
@@ -43964,22 +43719,16 @@ paths:
           required: true
           schema:
             type: string
-          description: The <code>id</code> of the Routing table to append the Route to. The supported value is <code>default</code>.
+          description: The <code>id</code> of the Routing table to add the Route to. The supported value is <code>default</code>.
   /auth/login:
     post:
-      operationId: login
-      summary: Log in and fetch an authentication token
-      x-speakeasy-group: auth.tokens
-      x-speakeasy-name-override: get
-      description: This endpoint is unavailable on Cribl.Cloud. Instead, follow the instructions at https://docs.cribl.io/stream/api-tutorials/#criblcloud to get an Auth token for Cribl.Cloud.
+      operationId: createAuthLogin
       tags:
         - auth
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LoginInfo"
+      x-speakeasy-group: auth.tokens
+      x-speakeasy-name-override: get
+      summary: Log in and fetch an authentication token
+      description: This endpoint is unavailable on Cribl.Cloud.Instead, follow the instructions at https://docs.cribl.io/stream/api-tutorials/#criblcloud to get an Auth token for Cribl.Cloud.
       security: []
       responses:
         "200":
@@ -43989,11 +43738,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/AuthToken"
         "401":
-          description: Unauthorized
-        "403":
-          description: Access denied
+          description: Invalid credentials or authentication failed
         "429":
           description: Rate limit exceeded
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        description: LoginInfo object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInfo"
   /master/summary:
     get:
       operationId: getSummary
@@ -44035,32 +43795,33 @@ paths:
           description: "Filter for limiting the response by Cribl product: Cribl Stream (<code>worker</code>) or Cribl Edge (<code>managed-edge</code>)."
   /health:
     get:
-      operationId: getHealthInfo
-      summary: Retrieve health status of the server
-      x-speakeasy-group: health
-      x-speakeasy-name-override: get
-      security: []
+      operationId: getHealth
       tags:
         - health
+      x-speakeasy-group: health
+      x-speakeasy-name-override: get
+      summary: Retrieve health status of the server
+      description: Get the current health status of the server.
+      security: []
       responses:
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
         "200":
           description: Healthy status
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HealthStatus"
+                $ref: "#/components/schemas/HealthServerStatus"
         "420":
-          description: Shutting Down or Standby status
+          description: Server is shutting down or in standby mode
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HealthStatus"
+                $ref: "#/components/schemas/HealthServerStatus"
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /packs:
     post:
       operationId: createPacks
@@ -44960,299 +44721,6 @@ paths:
           schema:
             type: string
           description: Filter expression to evaluate against Nodes for inclusion in the response.
-  /admin/products/{product}/mappings/activate:
-    post:
-      operationId: createAdminProductsMappingsActivateByProduct
-      tags:
-        - mappings
-      x-speakeasy-group: groups.mappings
-      x-speakeasy-name-override: activate
-      summary: Set a Mapping Ruleset as the active configuration for the specified Cribl product
-      description: Set a specific Mapping Ruleset as the currently active configuration for the specified Cribl product.
-      responses:
-        "200":
-          description: The <code>id</code> of the Mapping Ruleset that has been successfully activated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/RulesetId"
-        "401":
-          description: Unauthorized
-        "500":
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      requestBody:
-        description: RulesetId object
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RulesetId"
-            examples:
-              MappingRulesetActivateExamplesActivate:
-                $ref: "#/components/examples/MappingRulesetActivateExamplesActivate"
-      parameters:
-        - name: product
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/ProductsCore"
-          description: Name of the Cribl product to activate the Mapping Ruleset for
-  /admin/products/{product}/mappings:
-    post:
-      operationId: createAdminProductsMappingsByProduct
-      tags:
-        - mappings
-      x-speakeasy-group: groups.mappings
-      x-speakeasy-name-override: create
-      summary: Create a new Mapping Ruleset for the specified Cribl product
-      description: Create and save a new Mapping Ruleset for the specified Cribl product.
-      responses:
-        "200":
-          description: A list containing the newly created Mapping Ruleset objects
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/MappingRuleset"
-        "401":
-          description: Unauthorized
-        "500":
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      requestBody:
-        description: MappingRuleset object
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MappingRuleset"
-            examples:
-              MappingRulesetCreateExamplesOSBasedMapping:
-                $ref: "#/components/examples/MappingRulesetCreateExamplesOSBasedMapping"
-              MappingRulesetCreateExamplesTagBasedMapping:
-                $ref: "#/components/examples/MappingRulesetCreateExamplesTagBasedMapping"
-              MappingRulesetCreateExamplesOutpostBasedMapping:
-                $ref: "#/components/examples/MappingRulesetCreateExamplesOutpostBasedMapping"
-              MappingRulesetCreateExamplesComplexMapping:
-                $ref: "#/components/examples/MappingRulesetCreateExamplesComplexMapping"
-              MappingRulesetCreateExamplesAWSEC2InstanceMapping:
-                $ref: "#/components/examples/MappingRulesetCreateExamplesAWSEC2InstanceMapping"
-              MappingRulesetCreateExamplesContainerBasedMapping:
-                $ref: "#/components/examples/MappingRulesetCreateExamplesContainerBasedMapping"
-              MappingRulesetCreateExamplesDefaultRuleset:
-                $ref: "#/components/examples/MappingRulesetCreateExamplesDefaultRuleset"
-      parameters:
-        - name: product
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/ProductsCore"
-          description: Name of the Cribl product to create the Mapping Ruleset for
-    get:
-      operationId: getAdminProductsMappingsByProduct
-      tags:
-        - mappings
-      x-speakeasy-group: groups.mappings
-      x-speakeasy-name-override: list
-      summary: List all Mapping Rulesets for the specified Cribl product
-      description: Retrieve a list of all existing Mapping Rulesets for the specified Cribl product.
-      responses:
-        "200":
-          description: a list of MappingRuleset objects
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/MappingRuleset"
-        "401":
-          description: Unauthorized
-        "500":
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      parameters:
-        - name: product
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/ProductsCore"
-          description: Name of the Cribl product to list the Mapping Rulesets for
-  /admin/products/{product}/mappings/{id}:
-    delete:
-      operationId: deleteAdminProductsMappingsByProductAndId
-      tags:
-        - mappings
-      x-speakeasy-group: groups.mappings
-      x-speakeasy-name-override: delete
-      summary: Delete the specified Mapping Ruleset from the Worker Group or Edge Fleet
-      description: Permanently remove the specified Mapping Ruleset from the Worker Group or Edge Fleet.
-      responses:
-        "200":
-          description: A list containing the deleted Mapping Ruleset objects
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/MappingRuleset"
-        "401":
-          description: Unauthorized
-        "500":
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      parameters:
-        - name: product
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/ProductsCore"
-          description: Name of the Cribl product to delete the Mapping Ruleset for
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Mapping Ruleset to delete.
-    get:
-      operationId: getAdminProductsMappingsByProductAndId
-      tags:
-        - mappings
-      x-speakeasy-group: groups.mappings
-      x-speakeasy-name-override: get
-      summary: Retrieve a Specific Mapping Ruleset
-      description: Get the details for a single Mapping Ruleset, identified by its id, for a Worker Group or Edge Fleet.
-      responses:
-        "200":
-          description: a list of MappingRuleset objects
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/MappingRuleset"
-        "401":
-          description: Unauthorized
-        "500":
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      parameters:
-        - name: product
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/ProductsCore"
-          description: Name of the Cribl product to get the Mappings for
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Worker Group or Edge Fleet Mapping Ruleset to get
-    patch:
-      operationId: updateAdminProductsMappingsByProductAndId
-      tags:
-        - mappings
-      x-speakeasy-group: groups.mappings
-      x-speakeasy-name-override: update
-      summary: Update an existing Mapping Ruleset for a Worker Group or Edge Fleet
-      description: Modify the configuration of the specified Mapping Ruleset for a Worker Group or Edge Fleet.
-      responses:
-        "200":
-          description: A list containing the updated Mapping Ruleset objects
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    description: number of items present in the items array
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/MappingRuleset"
-        "401":
-          description: Unauthorized
-        "500":
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      requestBody:
-        description: MappingRuleset object
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MappingRuleset"
-            examples:
-              MappingRulesetUpdateExamplesUpdateComplexRule:
-                $ref: "#/components/examples/MappingRulesetUpdateExamplesUpdateComplexRule"
-              MappingRulesetUpdateExamplesEnableDisabledRule:
-                $ref: "#/components/examples/MappingRulesetUpdateExamplesEnableDisabledRule"
-      parameters:
-        - name: product
-          in: path
-          required: true
-          schema:
-            $ref: "#/components/schemas/ProductsCore"
-          description: Name of the Cribl product to update the Mapping Ruleset for
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Mapping Ruleset to update.
   /products/{product}/groups:
     get:
       operationId: listConfigGroupByProduct
@@ -45307,12 +44775,12 @@ paths:
       summary: Create a Worker Group or Edge Fleet for the specified Cribl product
       description: Create a new Worker Group or Edge Fleet for the specified Cribl product.
       requestBody:
-        description: ConfigGroup object
+        description: GroupCreateRequest object
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConfigGroup"
+              $ref: "#/components/schemas/GroupCreateRequest"
       responses:
         "200":
           description: a list of ConfigGroup objects
