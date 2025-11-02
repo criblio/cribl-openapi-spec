@@ -157,7 +157,22 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      - name: Check if control-plane.yml is changed
+        id: check-files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILES=$(gh pr view ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json files --jq '.files[].path')
+          if echo "$FILES" | grep -q "^specs/control-plane.yml$"; then
+            echo "control_plane_changed=true" >> $GITHUB_OUTPUT
+            echo "⚠️  control-plane.yml detected in PR changes - skipping auto-merge"
+          else
+            echo "control_plane_changed=false" >> $GITHUB_OUTPUT
+            echo "✅ control-plane.yml not changed - proceeding with auto-merge"
+          fi
+
       - name: Auto-merge PR
+        if: steps.check-files.outputs.control_plane_changed != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
