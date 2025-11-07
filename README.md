@@ -2,6 +2,7 @@
 
 This repository contains OpenAPI specifications for Cribl, covering both the [control plane and management plane APIs](https://docs.cribl.io/reference-architectures/reference-arch-full-suite/#planes).
 
+## Specifications
 
 - [control-plane.yml](https://github.com/criblio/cribl-openapi-spec/blob/main/specs/control-plane.yml) is used to generate the **control plane SDKs**:
   - [cribl-control-plane-sdk-go](https://github.com/criblio/cribl-control-plane-sdk-go)
@@ -12,3 +13,10 @@ This repository contains OpenAPI specifications for Cribl, covering both the [co
   - [cribl-cloud-management-sdk-go](https://github.com/criblio/cribl-cloud-management-sdk-go)
   - [cribl-cloud-management-sdk-typescript](https://github.com/criblio/cribl-cloud-management-sdk-typescript)
   - [cribl_cloud_management_sdk_python](https://github.com/criblio/cribl_cloud_management_sdk_python)
+
+## Resolved Specifications
+
+Fully expanded YAML versions with all `$ref` pointers resolved:
+
+- `specs/control-plane-resolved.yml`
+- `specs/mgmt-plane-resolved.yml`
