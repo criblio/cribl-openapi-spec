@@ -20,6 +20,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref || github.ref }}
 
       - name: Setup Python
         uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b
@@ -44,6 +47,11 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: update bundled OpenAPI specs [skip ci]"
-            git push
+            # For PRs, push to the PR branch; for direct pushes, push to current branch
+            if [ -n "${{ github.head_ref }}" ]; then
+              git push origin HEAD:${{ github.head_ref }}
+            else
+              git push origin HEAD:${{ github.ref }}
+            fi
           fi
 
