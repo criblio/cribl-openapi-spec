@@ -4,7 +4,7 @@ servers:
 info:
   title: Cribl API Reference
   description: This API Reference lists available REST endpoints, along with their supported operations for accessing, creating, updating, or deleting resources. See our complementary product documentation at [docs.cribl.io](http://docs.cribl.io).
-  version: 4.16.0-alpha.1768518246968-56b63ce7
+  version: 4.17.0-alpha.1768597160174-78a87b6e
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -10303,6 +10303,56 @@ components:
           items:
             type: object
             additionalProperties: true
+    CountedDatabaseConnectionConfig:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: number of items present in the items array
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DatabaseConnectionConfig"
+    DatabaseConnectionType:
+      type: string
+      enum:
+        - mysql
+        - oracle
+        - postgres
+        - sqlserver
+      x-speakeasy-unknown-values: allow
+    DatabaseConnectionConfig:
+      type: object
+      properties:
+        authType:
+          type: string
+        configObj:
+          type: string
+        connectionString:
+          type: string
+        connectionTimeout:
+          type: number
+        credsSecrets:
+          type: string
+        databaseType:
+          $ref: "#/components/schemas/DatabaseConnectionType"
+        description:
+          type: string
+        id:
+          type: string
+        password:
+          type: string
+        requestTimeout:
+          type: number
+        tags:
+          type: string
+        user:
+          type: string
+      required:
+        - authType
+        - databaseType
+        - description
+        - id
     InputCollection:
       type: object
       properties:
@@ -34371,6 +34421,8 @@ components:
           type: string
         pipeline:
           type: string
+        toGroupContext:
+          type: boolean
       required:
         - final
         - id
@@ -40678,6 +40730,8 @@ tags:
     description: Actions related to authentication. Do not use the /auth endpoints in Cribl.Cloud deployments. Instead, follow the instructions at https://docs.cribl.io/stream/api-tutorials/#criblcloud to authenticate for Cribl.Cloud.
   - name: collectors
     description: Actions related to Collectors
+  - name: database-connections
+    description: Actions related to Database Connections
   - name: destinations
     description: Actions related to Destinations
   - name: distributed
@@ -41167,6 +41221,123 @@ paths:
           schema:
             type: string
           description: The <code>id</code> of the Pack that includes the Collector to update.
+  /lib/database-connections:
+    post:
+      operationId: createDatabaseConnectionConfig
+      tags:
+        - database-connections
+      x-speakeasy-group: databaseConnections
+      x-speakeasy-name-override: create
+      summary: Create Database Connection
+      description: Create a new Database Connection.
+      responses:
+        "200":
+          description: a list of DatabaseConnectionConfig objects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountedDatabaseConnectionConfig"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /lib/database-connections/{id}:
+    delete:
+      operationId: deleteDatabaseConnectionConfigById
+      tags:
+        - database-connections
+      x-speakeasy-group: databaseConnections
+      x-speakeasy-name-override: delete
+      summary: Delete a Database Connection
+      description: Delete the specified Database Connection.
+      responses:
+        "200":
+          description: a list of DatabaseConnectionConfig objects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountedDatabaseConnectionConfig"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Database Connection to delete.
+    get:
+      operationId: getDatabaseConnectionConfigById
+      tags:
+        - database-connections
+      x-speakeasy-group: databaseConnections
+      x-speakeasy-name-override: get
+      summary: Get a Database Connection
+      description: Get the specified Database Connection.
+      responses:
+        "200":
+          description: a list of DatabaseConnectionConfig objects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountedDatabaseConnectionConfig"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Database Connection not found
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Database Connection to get.
+    patch:
+      operationId: updateDatabaseConnectionConfigById
+      tags:
+        - database-connections
+      x-speakeasy-group: databaseConnections
+      x-speakeasy-name-override: update
+      summary: Update a Database Connection
+      description: Update the specified Database Connection.</br></br>Provide a complete representation of the Database Connection that you want to update in the request body. This endpoint does not support partial updates. Cribl removes any omitted fields when updating the Database Connection.</br></br>Confirm that the configuration in your request body is correct before sending the request. If the configuration is incorrect, the updated Database Connection might not function as expected.
+      responses:
+        "200":
+          description: a list of DatabaseConnectionConfig objects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountedDatabaseConnectionConfig"
+        "401":
+          description: Unauthorized
+        "500":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Database Connection to update.
   /system/inputs:
     get:
       operationId: listInput
