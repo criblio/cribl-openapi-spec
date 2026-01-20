@@ -26,6 +26,36 @@ paths:
         - health
       x-speakeasy-group: health
       x-speakeasy-name-override: get
+  /v1/organizations/{organizationId}/api-credentials:
+    get:
+      description: Retrieve all API credentials for the specified Organization.
+      operationId: v1.apiCredentials.listApiCredentials
+      parameters:
+        - name: organizationId
+          required: true
+          in: path
+          description: The <code>id</code> of the Organization that owns the API
+            credentials.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The API credentials have been retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiCredentialsListResponseDTO"
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefaultErrorDTO"
+      summary: List API credentials for an Organization
+      tags:
+        - apiCredentials
+      x-speakeasy-group: apiCredentials
+      x-speakeasy-name-override: list
   /v1/organizations/{organizationId}/workspaces:
     post:
       description: Create a new Workspace in the specified Organization.
@@ -200,6 +230,8 @@ info:
     url: https://portal.support.cribl.io
     email: ""
 tags:
+  - name: apiCredentials
+    description: Operations related to API credentials
   - name: workspaces
     description: Operations related to Workspaces
   - name: health
@@ -223,6 +255,172 @@ components:
       bearerFormat: JWT
       type: http
   schemas:
+    OrganizationRole:
+      type: string
+      enum:
+        - owner
+        - admin
+        - user
+      description: Organization-level role
+      x-speakeasy-unknown-values: allow
+    WorkspaceRole:
+      type: string
+      enum:
+        - owner
+        - admin
+        - user
+        - noaccess
+      description: Role in the workspace
+      x-speakeasy-unknown-values: allow
+    ProductName:
+      type: string
+      enum:
+        - edge
+        - search
+        - stream
+        - lake
+      description: Product name
+      x-speakeasy-unknown-values: allow
+    ProductRole:
+      type: string
+      enum:
+        - admin
+        - editor
+        - reader
+        - user
+        - noaccess
+      description: Role for the product
+      x-speakeasy-unknown-values: allow
+    ProductRoleSchema:
+      type: object
+      properties:
+        product:
+          description: Product name
+          example: stream
+          allOf:
+            - $ref: "#/components/schemas/ProductName"
+        role:
+          description: Role for the product
+          example: admin
+          allOf:
+            - $ref: "#/components/schemas/ProductRole"
+      required:
+        - product
+        - role
+    WorkspaceRoleSchema:
+      type: object
+      properties:
+        workspaceId:
+          type: string
+          description: Workspace identifier
+          example: main
+        workspaceRole:
+          description: Role in the workspace
+          example: admin
+          allOf:
+            - $ref: "#/components/schemas/WorkspaceRole"
+        products:
+          description: Product roles in the workspace
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductRoleSchema"
+      required:
+        - workspaceId
+        - workspaceRole
+    ApiCredentialRolesSchema:
+      type: object
+      properties:
+        organizationRole:
+          description: Organization-level role
+          example: admin
+          allOf:
+            - $ref: "#/components/schemas/OrganizationRole"
+        workspaces:
+          description: Workspace roles assigned to this credential
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceRoleSchema"
+      required:
+        - organizationRole
+    ApiCredentialSchema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Human friendly name of the credential
+          example: Default API credential
+        description:
+          type: string
+          description: Description of how or where the credential is used
+          example: Used by automation to manage workspaces
+        enabled:
+          type: boolean
+          description: Whether the credential is enabled
+          example: true
+        workspaceId:
+          type: string
+          description: Workspace identifier
+          example: main
+        organizationId:
+          type: string
+          description: Organization identifier
+          example: org-123
+        clientId:
+          type: string
+          description: Client identifier
+          example: client_ABC123
+        clientSecret:
+          type: string
+          description: Client secret
+          example: super-secret-value
+        roles:
+          description: Role assignments for this credential
+          allOf:
+            - $ref: "#/components/schemas/ApiCredentialRolesSchema"
+        createdBy:
+          type: string
+          description: User who created the credential
+          example: user@example.com
+        createdDate:
+          type: string
+          description: ISO-8601 timestamp when the credential was created
+          example: 2024-08-15T12:34:56.000Z
+        lastUpdatedBy:
+          type: string
+          description: User who last updated the credential
+          example: user@example.com
+        lastUpdatedDate:
+          type: string
+          description: ISO-8601 timestamp when the credential was last updated
+          example: 2024-08-15T12:34:56.000Z
+      required:
+        - name
+        - description
+        - enabled
+        - workspaceId
+        - organizationId
+        - clientId
+        - clientSecret
+        - roles
+        - createdBy
+        - createdDate
+        - lastUpdatedBy
+        - lastUpdatedDate
+    ApiCredentialsListResponseDTO:
+      type: object
+      properties:
+        items:
+          description: List of API credentials
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiCredentialSchema"
+        count:
+          type: number
+          description: Total number of API credentials
+          example: 1
+      required:
+        - items
+        - count
     AWSRegions:
       type: string
       enum:
