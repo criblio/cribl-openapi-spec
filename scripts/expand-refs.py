@@ -9,6 +9,20 @@ import sys
 from copy import deepcopy
 
 
+class CustomLoader(yaml.FullLoader):
+    """Custom YAML loader that handles special tags like 'tag:yaml.org,2002:value'."""
+    pass
+
+
+# Add constructor for 'tag:yaml.org,2002:value' (YAML null value represented as '=')
+def construct_value(loader, node):
+    """Handle YAML value tag (null value, often represented as '=')."""
+    return None
+
+
+CustomLoader.add_constructor('tag:yaml.org,2002:value', construct_value)
+
+
 MAX_DEPTH = 10  # Prevent infinite recursion
 
 
@@ -132,7 +146,15 @@ def process_file(input_path, output_path):
         if input_path.endswith('.json'):
             doc = json.load(f)
         else:
-            doc = yaml.safe_load(f)
+            # Use CustomLoader to handle special YAML tags like 'tag:yaml.org,2002:value'
+            try:
+                doc = yaml.load(f, Loader=CustomLoader)
+            except AttributeError:
+                # Fallback for older PyYAML versions
+                try:
+                    doc = yaml.load(f, Loader=yaml.FullLoader)
+                except AttributeError:
+                    doc = yaml.safe_load(f)
     
     print(f"Expanding all $ref pointers (max depth: {MAX_DEPTH})...")
     expanded = expand_refs(doc, doc)
