@@ -15,7 +15,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.17.1-alpha.1773850125355-cd366ae1
+  version: 4.17.1-alpha.1773875380225-2e0eac96
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -36910,20 +36910,7 @@ components:
         groups:
           type: object
           additionalProperties:
-            type: object
-            properties:
-              description:
-                type: string
-                description: Brief description of the Route Group.
-              index:
-                type: number
-                description: Relative position of the Route Group among all Route Groups. Routes are evaluated in ascending order according to the index value of their Route Group.
-              name:
-                type: string
-                description: Name of the Route Group.
-            required:
-              - index
-              - name
+            $ref: "#/components/schemas/AdditionalPropertiesTypeRoutesGroups"
           description: Information about the Route Groups that the Route is associated with.
         id:
           type: string
@@ -36936,10 +36923,84 @@ components:
       required:
         - id
         - routes
+    RouteConfInput:
+      type: object
+      properties:
+        clones:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouteCloneConf"
+          description: Array of clone configurations, each with a key-value pair to set or overwrite in cloned events. Original events continue to the next Route.
+        context:
+          type: string
+          description: "Context for the Route: <code>group</code> (Worker Group or Edge Fleet) or <code>pack</code>."
+        description:
+          type: string
+          description: Brief description of the Route.
+        disabled:
+          type: boolean
+          description: If <code>true</code>, disable the Route. Otherwise, <code>false</code>.
+        enableOutputExpression:
+          type: boolean
+          description: If <code>true</code>, use the <code>outputExpression</code> for dynamic Destination selection. Otherwise, <code>false</code>.
+        filter:
+          type: string
+          description: JavaScript expression to select events for routing.
+        groupId:
+          type: string
+          description: Unique identifier for the Route Group that the Route is associated with.
+        name:
+          type: string
+          description: Name of the Route.
+        output:
+          type: string
+          description: Destination that the Route sends matching events to after the Pipeline processes the events.
+        outputExpression:
+          type: string
+          description: JavaScript expression to evaluate for dynamic Destination selection. Evaluation occurs when the Route is constructed, not for each event.
+        pipeline:
+          type: string
+          description: Pipeline that the Route sends matching events to.
+        targetContext:
+          $ref: "#/components/schemas/TargetContext"
+          description: "Target context for subsequent event processing after applying the Route: <code>group</code> (Worker Group or Edge Fleet) or <code>pack</code>."
+        final:
+          type: boolean
+          description: If <code>true</code> (default), the Route processes matched events and sends them to the specified Pipeline. Matched events do not continue to the next Route, but non-matched events do continue to the next Route. If <code>false</code>, the Route processes matched events and sends them to the specified Pipeline, and all events (matched and non-matched) continue to the next Route. Must be <code>false</code> to clone events.
+        id:
+          type: string
+          description: Unique identifier for the Route. If omitted, the server generates a deterministic identifier.
+      required:
+        - name
+        - pipeline
+    RoutesInput:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouteComment"
+          description: Array of user-provided comments that describe or annotate Routes.
+        groups:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/AdditionalPropertiesTypeRoutesGroups"
+          description: Information about the Route Groups that the Route is associated with.
+        id:
+          type: string
+          description: Unique identifier for the Routing table. The supported value is <code>default</code>.
+        routes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouteConfInput"
+          description: Array of Route configurations that define how events are processed and routed.
+      required:
+        - id
+        - routes
     RouteDefinitions:
       type: array
       items:
-        $ref: "#/components/schemas/RouteConf"
+        $ref: "#/components/schemas/RouteConfInput"
     CountedInputStatus:
       type: object
       properties:
@@ -40782,6 +40843,21 @@ components:
         - type: object
           additionalProperties:
             type: number
+    AdditionalPropertiesTypeRoutesGroups:
+      type: object
+      properties:
+        description:
+          type: string
+          description: Brief description of the Route Group.
+        index:
+          type: number
+          description: Relative position of the Route Group among all Route Groups. Routes are evaluated in ascending order according to the index value of their Route Group.
+        name:
+          type: string
+          description: Name of the Route Group.
+      required:
+        - index
+        - name
     ErrorTypeStatus:
       type: object
       properties:
@@ -44247,7 +44323,7 @@ components:
                 pretty: false
     RoutesUpdateExamplesBasicRoute:
       summary: Update Routes with a basic Route configuration
-      description: "Update the default Routes table (id: default) with a simple Route that filters access.log events and sends them to the main pipeline"
+      description: "Example request body for updating the default Routes table (<code>id: default</code>) with a simple Route that filters access.log events and sends them to the main Pipeline"
       value:
         id: default
         routes:
@@ -44255,11 +44331,11 @@ components:
             name: my-route
             pipeline: main
             filter: source == "access.log"
-            description: Route access logs to main pipeline
+            description: Route access logs to main Pipeline
             final: true
     RoutesUpdateExamplesMultipleRoutes:
       summary: Update Routes with multiple Routes and a catch-all
-      description: "Update the default Routes table (id: default) with multiple specific Routes evaluated in order, followed by a default catch-all Route"
+      description: "Example request body for updating the default Routes table (<code>id: default</code>) with multiple specific Routes evaluated in order, followed by a default catch-all Route"
       value:
         id: default
         routes:
@@ -44293,7 +44369,7 @@ components:
             final: true
     RoutesUpdateExamplesRouteWithOutputExpression:
       summary: Update Routes with dynamic Destination expression
-      description: "Update the default Routes table (id: default) with a Route that uses a JavaScript expression to dynamically determine the Destination"
+      description: "Example request body for updating the default Routes table (<code>id: default</code>) with a Route that uses a JavaScript expression to dynamically determine the Destination"
       value:
         id: default
         routes:
@@ -44305,6 +44381,16 @@ components:
             filter: source == "dynamic.log"
             description: Route with dynamic Destination based on environment
             final: true
+    RoutesUpdateExamplesRouteWithDefaults:
+      summary: Update the basic Route configuration
+      description: "Example request body for updating the default Routes table (<code>id: default</code>) with a basic Route that omits the <code>id</code> and <code>final</code> fields. The server generates a deterministic <code>id</code> and sets <code>final</code> to <code>true</code> by default."
+      value:
+        id: default
+        routes:
+          - name: my-route
+            pipeline: main
+            filter: source == "access.log"
+            description: Route access logs to main Pipeline
     RoutesAppendExamplesSingleRoute:
       summary: Append a single Route to the Routing table
       description: "Add a single Route to the end of the default Routes table (id: default)"
@@ -44345,6 +44431,14 @@ components:
           filter: source == "dynamic.log"
           description: Route with dynamic Destination based on environment
           final: true
+    RoutesAppendExamplesRouteWithDefaults:
+      summary: Append a Route omitting optional id and final fields
+      description: "Example request body for adding a Route to the end of the default Routes table (<code>id: default</code>) omitting the <code>id</code> and <code>final</code> fields. The server generates a deterministic <code>id</code> and sets <code>final</code> to <code>true</code> by default."
+      value:
+        - name: new-route
+          pipeline: main
+          filter: source == "new.log"
+          description: Route with server-generated id and default final value
     CollectorExamplesRest:
       summary: REST API Collector
       value:
@@ -48258,12 +48352,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       requestBody:
-        description: Routes object
+        description: RoutesInput object
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Routes"
+              $ref: "#/components/schemas/RoutesInput"
             examples:
               RoutesUpdateExamplesBasicRoute:
                 $ref: "#/components/examples/RoutesUpdateExamplesBasicRoute"
@@ -48271,6 +48365,8 @@ paths:
                 $ref: "#/components/examples/RoutesUpdateExamplesMultipleRoutes"
               RoutesUpdateExamplesRouteWithOutputExpression:
                 $ref: "#/components/examples/RoutesUpdateExamplesRouteWithOutputExpression"
+              RoutesUpdateExamplesRouteWithDefaults:
+                $ref: "#/components/examples/RoutesUpdateExamplesRouteWithDefaults"
       parameters:
         - name: id
           in: path
@@ -48344,6 +48440,8 @@ paths:
                 $ref: "#/components/examples/RoutesAppendExamplesMultipleRoutes"
               RoutesAppendExamplesRouteWithOutputExpression:
                 $ref: "#/components/examples/RoutesAppendExamplesRouteWithOutputExpression"
+              RoutesAppendExamplesRouteWithDefaults:
+                $ref: "#/components/examples/RoutesAppendExamplesRouteWithDefaults"
       parameters:
         - name: id
           in: path
@@ -48416,12 +48514,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       requestBody:
-        description: Routes object
+        description: RoutesInput object
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Routes"
+              $ref: "#/components/schemas/RoutesInput"
             examples:
               RoutesUpdateExamplesBasicRoute:
                 $ref: "#/components/examples/RoutesUpdateExamplesBasicRoute"
@@ -48429,6 +48527,8 @@ paths:
                 $ref: "#/components/examples/RoutesUpdateExamplesMultipleRoutes"
               RoutesUpdateExamplesRouteWithOutputExpression:
                 $ref: "#/components/examples/RoutesUpdateExamplesRouteWithOutputExpression"
+              RoutesUpdateExamplesRouteWithDefaults:
+                $ref: "#/components/examples/RoutesUpdateExamplesRouteWithDefaults"
       parameters:
         - name: id
           in: path
@@ -48515,6 +48615,8 @@ paths:
                 $ref: "#/components/examples/RoutesAppendExamplesMultipleRoutes"
               RoutesAppendExamplesRouteWithOutputExpression:
                 $ref: "#/components/examples/RoutesAppendExamplesRouteWithOutputExpression"
+              RoutesAppendExamplesRouteWithDefaults:
+                $ref: "#/components/examples/RoutesAppendExamplesRouteWithDefaults"
       parameters:
         - name: id
           in: path
