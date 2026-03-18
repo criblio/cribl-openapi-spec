@@ -15,7 +15,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.17.1-alpha.1773788943682-ee183fbf
+  version: 4.17.1-alpha.1773850125355-cd366ae1
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -38386,21 +38386,25 @@ components:
         role:
           type: string
           enum:
-            - standby
             - primary
+            - standby
+          description: "Leader Node role: <code>primary</code> or <code>standby</code>."
           x-speakeasy-unknown-values: allow
         startTime:
-          type: number
+          type: integer
+          description: Timestamp (in Unix time) when the Cribl process started.
         status:
           type: string
           enum:
-            - shutting down
             - healthy
+            - shutting down
             - standby
+          description: "Health state: <code>healthy</code>, <code>standby</code>, or <code>shutting down</code>."
           x-speakeasy-unknown-values: allow
       required:
         - startTime
         - status
+      description: Health status of the Leader or Worker Node.
     CountedPackInstallInfo:
       type: object
       properties:
@@ -44685,6 +44689,27 @@ components:
           - guid-12345678-abcd-1234-abcd-123456789abc
           - guid-87654321-dcba-4321-dcba-cba987654321
           - guid-11111111-2222-3333-4444-555555555555
+    HealthExamplesHealthyPrimary:
+      summary: Healthy (primary)
+      description: Example response for a healthy server that is acting as primary.
+      value:
+        status: healthy
+        startTime: 1700000000000
+        role: primary
+    Health420ExamplesShuttingDown:
+      summary: Shutting down (primary)
+      description: Example response for a server that is acting as primary and is in the process of shutting down.
+      value:
+        status: shutting down
+        startTime: 1700000000000
+        role: primary
+    Health420ExamplesStandby:
+      summary: Standby
+      description: Example response for a server that is in standby mode.
+      value:
+        status: standby
+        startTime: 1700000000000
+        role: standby
     PackInstallExamplesPackDispensary:
       summary: Install from the Pack Dispensary
       value:
@@ -50041,8 +50066,8 @@ paths:
       x-speakeasy-name-override: get
       x-cribl-internal: false
       x-cribl-availability: both
-      summary: Retrieve health status of the server
-      description: Get the current health status of the server.
+      summary: Get the health status of the server
+      description: Get the current health status of the server (Leader or Worker Node).
       security: []
       responses:
         "200":
@@ -50051,12 +50076,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthServerStatus"
+              examples:
+                HealthExamplesHealthyPrimary:
+                  $ref: "#/components/examples/HealthExamplesHealthyPrimary"
         "420":
           description: Server is shutting down or in standby mode
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthServerStatus"
+              examples:
+                Health420ExamplesShuttingDown:
+                  $ref: "#/components/examples/Health420ExamplesShuttingDown"
+                Health420ExamplesStandby:
+                  $ref: "#/components/examples/Health420ExamplesStandby"
         "500":
           description: Unexpected error
           content:
