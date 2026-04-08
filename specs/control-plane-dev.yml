@@ -15,7 +15,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.18.0-alpha.1775602990844-b0d7cac1
+  version: 4.18.0-alpha.1775689481765-02ee0d8b
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -38385,6 +38385,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InputStatus"
+    StatusError:
+      type: object
+      properties:
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details.
+        message:
+          type: string
+          description: Human-readable message that describes the error.
+      required:
+        - message
     HealthStringType:
       type: string
       enum:
@@ -38404,6 +38416,51 @@ components:
           type: number
         Unknown:
           type: number
+    AggregatedPQStatus:
+      type: object
+      properties:
+        error:
+          $ref: "#/components/schemas/StatusError"
+          description: Error information for the persistent queue, if applicable.
+        health:
+          $ref: "#/components/schemas/HealthStringType"
+          description: Health status of the persistent queue.
+        healthCounts:
+          $ref: "#/components/schemas/HealthCountType"
+          description: "Counts of persistent queue health statuses for the Source or Destination across all Worker Processes. Includes only statuses with non-zero counts.<br/> <br><code>Green</code> == Healthy: Normal operation<br/> <br><code>Yellow</code> == Degraded: Potential issues<br/> <br><code>Red</code> == Critical: Problem or error that affects operation<br/> <br><code>Unknown</code> == Unknown: Cannot determine health status."
+        timestamp:
+          type: number
+          description: Timestamp (in Unix time) when the persistent queue status was last updated.
+      required:
+        - health
+        - healthCounts
+        - timestamp
+    AggregatedInputOutputStatusBody:
+      type: object
+      properties:
+        error:
+          $ref: "#/components/schemas/StatusError"
+          description: Error information, if applicable.
+        health:
+          $ref: "#/components/schemas/HealthStringType"
+          description: Overall health status of the Source or Destination.
+        healthCounts:
+          $ref: "#/components/schemas/HealthCountType"
+          description: "Counts of health statuses for the Source or Destination across all Worker Processes. Includes only statuses with non-zero counts.<br/> <br><code>Green</code> == Healthy: Normal operation<br/> <br><code>Yellow</code> == Degraded: Potential issues<br/> <br><code>Red</code> == Critical: Problem or error that affects operation<br/> <br><code>Unknown</code> == Unknown: Cannot determine health status."
+        metrics:
+          type: object
+          additionalProperties: true
+          description: Metrics data for the Source or Destination, including base metrics, aggregated across all Worker Processes. For load-balanced Destinations, includes item-level metrics.
+        pq:
+          $ref: "#/components/schemas/AggregatedPQStatus"
+          description: Persistent queue status information (if persistent queue is enabled).
+        timestamp:
+          type: number
+          description: Timestamp (in Unix time) when the status was last updated.
+      required:
+        - health
+        - healthCounts
+        - timestamp
     InputStatus:
       type: object
       properties:
@@ -38411,7 +38468,8 @@ components:
           type: string
           description: Unique identifier of the Source or Destination.
         status:
-          $ref: "#/components/schemas/StatusType"
+          $ref: "#/components/schemas/AggregatedInputOutputStatusBody"
+          description: Status information for the Source or Destination, aggregated across all Worker Processes.
         type:
           type: string
           description: Type of the Source or Destination.
@@ -38436,7 +38494,8 @@ components:
           type: string
           description: Unique identifier of the Source or Destination.
         status:
-          $ref: "#/components/schemas/StatusType"
+          $ref: "#/components/schemas/AggregatedInputOutputStatusBody"
+          description: Status information for the Source or Destination, aggregated across all Worker Processes.
         type:
           type: string
           description: Type of the Source or Destination.
@@ -39316,6 +39375,22 @@ components:
         - enableAcceleration
         - fieldList
         - scanMode
+    ObjectStorageFilter:
+      type: object
+      properties:
+        dataTypeId:
+          type: string
+        filter:
+          type: string
+      required:
+        - dataTypeId
+        - filter
+    SearchVersion:
+      type: string
+      enum:
+        - v1
+        - v2
+      x-speakeasy-unknown-values: allow
     LakeDatasetSearchConfig:
       type: object
       properties:
@@ -39327,6 +39402,12 @@ components:
           type: string
         metadata:
           $ref: "#/components/schemas/DatasetMetadata"
+        pathFilters:
+          type: array
+          items:
+            $ref: "#/components/schemas/ObjectStorageFilter"
+        searchVersion:
+          $ref: "#/components/schemas/SearchVersion"
         tags:
           type: string
     CriblLakeDataset:
@@ -42381,32 +42462,6 @@ components:
       required:
         - index
         - name
-    ErrorTypeStatus:
-      type: object
-      properties:
-        details:
-          type: object
-          additionalProperties: true
-          description: Additional error details, which may include stack traces, request information, and other diagnostic data.
-        message:
-          type: string
-          description: Human-readable message that describes the error.
-      required:
-        - message
-      description: Error information, if applicable.
-    ErrorTypeStatusPq:
-      type: object
-      properties:
-        details:
-          type: object
-          additionalProperties: true
-          description: Additional details for the persistent queue error.
-        message:
-          type: string
-          description: Human-readable message that describes the persistent queue error.
-      required:
-        - message
-      description: Error information for the persistent queue, if applicable.
     EstimatedIngestRateOptionsConfigGroup:
       type: integer
       enum:
@@ -43439,25 +43494,6 @@ components:
           $ref: "#/components/schemas/MinimumTlsVersionOptionsTls"
         maxVersion:
           $ref: "#/components/schemas/MaximumTlsVersionOptionsTls"
-    PqTypeStatus:
-      type: object
-      properties:
-        error:
-          $ref: "#/components/schemas/ErrorTypeStatusPq"
-        health:
-          $ref: "#/components/schemas/HealthStringType"
-          description: Health status of the persistent queue.
-        healthCounts:
-          $ref: "#/components/schemas/HealthCountType"
-          description: "Counts of persistent queue health statuses for the Source or Destination across all Worker Processes. Includes only statuses with non-zero counts.<br/> <br><code>Green</code> == Healthy: Normal operation<br/> <br><code>Yellow</code> == Degraded: Potential issues<br/> <br><code>Red</code> == Critical: Problem or error that affects operation<br/> <br><code>Unknown</code> == Unknown: Cannot determine health status."
-        timestamp:
-          type: number
-          description: Timestamp (in Unix time) when the persistent queue status was last updated.
-      required:
-        - health
-        - healthCounts
-        - timestamp
-      description: Persistent queue status information (if persistent queue is enabled).
     KubeTypeHeartbeatMetadata:
       type: object
       properties:
@@ -43625,31 +43661,6 @@ components:
           type: number
           title: Default value schema ID
           description: Used when __valueSchemaIdOut is not present, to transform _raw, leave blank if value transformation is not required by default.
-    StatusType:
-      type: object
-      properties:
-        error:
-          $ref: "#/components/schemas/ErrorTypeStatus"
-        health:
-          $ref: "#/components/schemas/HealthStringType"
-          description: Overall health status of the Source or Destination.
-        healthCounts:
-          $ref: "#/components/schemas/HealthCountType"
-          description: "Counts of health statuses for the Source or Destination across all Worker Processes. Includes only statuses with non-zero counts.<br/> <br><code>Green</code> == Healthy: Normal operation<br/> <br><code>Yellow</code> == Degraded: Potential issues<br/> <br><code>Red</code> == Critical: Problem or error that affects operation<br/> <br><code>Unknown</code> == Unknown: Cannot determine health status."
-        metrics:
-          type: object
-          additionalProperties: true
-          description: Metrics data for the Source or Destination, including base metrics, aggregated across all Worker Processes. For load-balanced Destinations, includes item-level metrics.
-        pq:
-          $ref: "#/components/schemas/PqTypeStatus"
-        timestamp:
-          type: number
-          description: Timestamp (in Unix time) when the status was last updated.
-      required:
-        - health
-        - healthCounts
-        - timestamp
-      description: Status information for the Source or Destination, aggregated across all Worker Processes.
     RunSettingsTypeSavedJobResponseCollectionSchedule:
       type: object
       title: Run settings
