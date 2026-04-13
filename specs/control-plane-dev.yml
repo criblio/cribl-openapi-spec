@@ -15,7 +15,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.18.0-alpha.1775775798185-aeb634de
+  version: 4.18.0-alpha.1776121479960-eef22371
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -15792,6 +15792,226 @@ components:
         description:
           type: string
           title: Description
+    InputEventhubAmqp:
+      type: object
+      required:
+        - type
+        - consumerGroup
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          enum:
+            - eventhub_amqp
+        disabled:
+          type: boolean
+          title: Disabled
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services block. See [Cribl Docs](https://docs.cribl.io/stream/persistent-queues) for PQ defaults (Cribl-managed Cloud Workers) and configuration options (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Tags for filtering and grouping in @{product}
+          items:
+            type: string
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline or a Pack
+          items:
+            $ref: "#/components/schemas/ItemsTypeConnectionsOptional"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        eventHubName:
+          type: string
+          title: Event Hub name
+          description: The name of the Event Hub to consume from
+          minLength: 1
+        consumerGroup:
+          type: string
+          title: Consumer group
+          description: The consumer group this instance belongs to. Default is '$Default'.
+          minLength: 1
+        auth:
+          type: object
+          required:
+            - authType
+          properties:
+            mechanism:
+              type: string
+              enum:
+                - connection-string
+              x-speakeasy-enum-descriptions:
+                - Connection String
+              title: Authentication mechanism
+              x-speakeasy-unknown-values: allow
+            authType:
+              enum:
+                - manual
+                - secret
+              title: Authentication method
+              type: string
+              description: Enter connection string directly, or select a stored secret
+              x-speakeasy-unknown-values: allow
+            connectionString:
+              type: string
+              title: Connection string
+              description: Event Hubs namespace or Event Hub-level connection string
+            textSecret:
+              type: string
+              title: Connection string (text secret)
+              description: Select or create a stored text secret
+        checkpointing:
+          type: object
+          properties:
+            checkpointStoreType:
+              type: string
+              title: Checkpoint store
+              description: The backing store used to persist consumer checkpoints. Select "None" to disable checkpointing (consumers will restart from the configured start position).
+              enum:
+                - none
+                - azureBlob
+              x-speakeasy-enum-descriptions:
+                - None
+                - Azure Blob Storage
+              x-speakeasy-unknown-values: allow
+            blobStore:
+              type: object
+              title: Azure Blob Storage
+              required:
+                - containerName
+              properties:
+                containerName:
+                  type: string
+                  title: Container name
+                  description: Azure Blob Storage container used to store checkpoints. Must be 3–63 lowercase alphanumeric characters or hyphens.
+                  minLength: 3
+                  maxLength: 63
+                  pattern: ^[a-z0-9](-?[a-z0-9])*$
+                authType:
+                  $ref: "#/components/schemas/AuthenticationMethodOptions"
+                connectionString:
+                  type: string
+                  title: Connection string
+                  description: Enter your Azure Storage account connection string. If left blank, Stream will fall back to env.AZURE_STORAGE_CONNECTION_STRING.
+                textSecret:
+                  type: string
+                  title: Connection string (text secret)
+                  description: Select or create a stored text secret
+                storageAccountName:
+                  type: string
+                  title: Storage account name
+                  description: The name of your Azure storage account
+                tenantId:
+                  type: string
+                  title: Tenant ID
+                  description: The service principal's tenant ID
+                clientId:
+                  type: string
+                  title: Client ID
+                  description: The service principal's client ID
+                azureCloud:
+                  type: string
+                  title: Azure Cloud
+                  description: The Azure cloud to use. Defaults to Azure Public Cloud.
+                endpointSuffix:
+                  type: string
+                  title: Endpoint suffix
+                  description: Endpoint suffix for the service URL. Takes precedence over the Azure Cloud setting. Defaults to core.windows.net.
+                clientTextSecret:
+                  type: string
+                  title: Client secret (text secret)
+                  description: Select or create a stored text secret
+                certificate:
+                  $ref: "#/components/schemas/CertificateTypeAzureBlobAuthTypeClientCert"
+                __template_connectionString:
+                  type: string
+                  description: Binds 'connectionString' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'connectionString' at runtime.
+                __template_tenantId:
+                  type: string
+                  description: Binds 'tenantId' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'tenantId' at runtime.
+                __template_clientId:
+                  type: string
+                  description: Binds 'clientId' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'clientId' at runtime.
+        fromBeginning:
+          type: boolean
+          title: From beginning
+          description: Start reading from earliest available data; relevant only during initial subscription
+        maxBatchSize:
+          type: integer
+          minimum: 1
+          title: Max batch size
+          description: Maximum number of events in each batch delivered to the consumer
+        maxWaitTimeInSeconds:
+          type: integer
+          minimum: 1
+          title: Max wait time (secs)
+          description: Maximum time to wait for a batch of events before delivering a partial batch
+        prefetchCount:
+          type: integer
+          minimum: 1
+          title: Prefetch count
+          description: Number of events to prefetch from the service for processing
+        maxRetries:
+          type: integer
+          minimum: 0
+          title: Retry limit
+          description: Maximum number of retries per operation
+        initialBackoff:
+          type: integer
+          minimum: 300
+          title: Initial retry interval (ms)
+          description: Initial delay before the first retry, in milliseconds
+        maxBackoff:
+          type: integer
+          minimum: 30000
+          title: Backoff limit (ms)
+          description: Maximum delay between retries, in milliseconds
+        timeoutInMs:
+          type: integer
+          minimum: 1000
+          title: Request timeout (ms)
+          description: Maximum time to wait for a request to complete
+        connectionInitialBackoff:
+          type: integer
+          minimum: 1
+          title: Connection initial retry interval (ms)
+          description: Initial delay before the first reconnection attempt, in milliseconds
+        connectionMaxBackoff:
+          type: integer
+          minimum: 1
+          title: Connection backoff limit (ms)
+          description: Maximum delay between reconnection attempts, in milliseconds
+        connectionTimeoutInMs:
+          type: integer
+          minimum: 1000
+          title: Connection timeout (ms)
+          description: Maximum time to wait for a connection to complete
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/ItemsTypeMetadata"
+        description:
+          type: string
+          title: Description
     InputExec:
       type: object
       required:
@@ -21044,16 +21264,7 @@ components:
                 description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m). Units default to seconds if not specified. Enter 0 for unlimited time."
                 pattern: ^\d+[sm]?$
               logLevel:
-                type: string
-                title: Log level
-                enum:
-                  - error
-                  - warn
-                  - info
-                  - debug
-                  - silly
-                description: Collector runtime log level
-                x-speakeasy-unknown-values: allow
+                $ref: "#/components/schemas/LogLevelOptionsContentConfigItemsDebugError"
               maxPages:
                 type: number
                 title: Page limit
@@ -21090,6 +21301,18 @@ components:
           description: Fields to add to events from this input
           items:
             $ref: "#/components/schemas/ItemsTypeMetadata"
+        breakerRulesets:
+          type: array
+          title: Event Breaker rulesets
+          description: A list of event-breaking rulesets that will be applied, in order, to the input data stream
+          items:
+            type: string
+        staleChannelFlushMs:
+          type: number
+          title: Event Breaker buffer timeout (ms)
+          description: How long (in milliseconds) the Event Breaker will wait for new data to be sent to a specific channel before flushing the data stream out, as is, to the Pipelines
+          minimum: 10
+          maximum: 4.32e+07
         retryRules:
           $ref: "#/components/schemas/RetryRulesType"
         authType:
@@ -21902,24 +22125,39 @@ components:
           description: Field names to return from the Table API (sysparm_fields). Leave empty to return all fields.
           items:
             type: string
-        displayValue:
+        orderByField:
           type: string
-          title: Display value
-          description: ServiceNow reference field display mode. Allows raw values, display values, or both (sysparm_display_value).
+          title: Sort by field
+          description: Optional. Sort results by this field (for example sys_created_on or parent.name). Leave empty to use the server default order.
+        orderByDirection:
+          type: string
+          title: Sort direction
+          description: Used only when Sort by field is set.
           enum:
-            - "false"
-            - "true"
-            - all
+            - asc
+            - desc
           x-speakeasy-enum-descriptions:
-            - Raw
-            - Display
-            - All
+            - Ascending
+            - Descending
           x-speakeasy-unknown-values: allow
+        query:
+          type: string
+          title: Filter query (advanced)
+          description: Optional ServiceNow encoded query for sysparm_query (for example active=true or sys_updated_onRELATIVEGT@hour@ago@1). Enter a literal or a Cribl expression. When combined with Sort by field, the filter and sort are joined with ^. See ServiceNow Table API documentation for encoded query syntax.
+        useRawValues:
+          type: boolean
+          title: Use raw values
+          description: When enabled, request raw values from ServiceNow (`sysparm_display_value=false`). When disabled, request display values (`sysparm_display_value=true`).
         pageSize:
           type: integer
           title: Page size
           description: Maximum records per Table API page request (sysparm_limit). Setting a higher value may increase the risk of timeouts.
           minimum: 1
+        maxPages:
+          type: integer
+          title: Page limit
+          description: Maximum number of pages to retrieve per collection task. Set to 0 to retrieve all pages.
+          minimum: 0
         rejectUnauthorized:
           type: boolean
           title: Reject unauthorized certificates
@@ -21930,16 +22168,12 @@ components:
           description: ServiceNow Table API authentication method
           enum:
             - none
-            - basic
             - basicSecret
-            - oauth
             - oauthSecret
           x-speakeasy-enum-descriptions:
             - None
             - Basic
-            - Basic (credentials secret)
             - OAuth
-            - OAuth (text secret)
           x-speakeasy-unknown-values: allow
         cronSchedule:
           type: string
@@ -22006,12 +22240,6 @@ components:
         description:
           type: string
           title: Description
-        username:
-          type: string
-          title: Username
-        password:
-          type: string
-          title: Password
         credentialsSecret:
           type: string
           title: Credentials secret
@@ -22025,10 +22253,10 @@ components:
           type: string
           title: OAuth Secret parameter name
           description: Secret parameter name to pass in request body
-        secret:
+        textSecret:
           type: string
-          title: OAuth secret
-          description: Secret parameter value to pass in request body
+          title: OAuth secret (text secret)
+          description: Select or create a stored text secret for the OAuth client secret parameter value
         tokenAttributeName:
           type: string
           title: Token attribute name
@@ -22055,27 +22283,28 @@ components:
           description: Additional headers to send in the OAuth login request. @{product} will automatically add the content-type header 'application/x-www-form-urlencoded' when sending this request.
           items:
             $ref: "#/components/schemas/ItemsTypeOauthHeaders"
-        textSecret:
-          type: string
-          title: OAuth secret (text secret)
-          description: Select or create a stored text secret for the OAuth client secret parameter value
         stateUpdateExpression:
           type: string
           title: State update expression
-          description: JavaScript expression that defines how to update the state from an event. Use the event's data and the current state to compute the new state. See [Understanding State Expression Fields](https://docs.cribl.io/stream/collectors-rest#state-tracking-expression-fields) for more information.
+          description: JavaScript expression that defines how to update the state from an event. This source defaults to checking that `_time` is a finite number (not only `__timestampExtracted`), so state still advances when the event breaker assigns a fallback time. See [Understanding State Expression Fields](https://docs.cribl.io/stream/collectors-rest#state-tracking-expression-fields).
         stateMergeExpression:
           type: string
           title: State merge expression
           description: JavaScript expression that defines which state to keep when merging a task's newly reported state with previously saved state. Evaluates `prevState` and `newState` variables, resolving to the state to keep.
+        manageState:
+          type: object
         __template_instance:
           type: string
           description: Binds 'instance' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'instance' at runtime.
+        __template_orderByField:
+          type: string
+          description: Binds 'orderByField' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'orderByField' at runtime.
+        __template_query:
+          type: string
+          description: Binds 'query' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'query' at runtime.
         __template_loginUrl:
           type: string
           description: Binds 'loginUrl' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'loginUrl' at runtime.
-        __template_secret:
-          type: string
-          description: Binds 'secret' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'secret' at runtime.
     InputZscalerHec:
       type: object
       required:
@@ -22522,6 +22751,184 @@ components:
         __template_port:
           type: string
           description: Binds 'port' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'port' at runtime.
+    InputOpenaiComplianceLogs:
+      type: object
+      required:
+        - type
+        - textSecret
+        - accountType
+        - cronSchedule
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          enum:
+            - openai_compliance_logs
+        disabled:
+          type: boolean
+          title: Disabled
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services block. See [Cribl Docs](https://docs.cribl.io/stream/persistent-queues) for PQ defaults (Cribl-managed Cloud Workers) and configuration options (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Tags for filtering and grouping in @{product}
+          items:
+            type: string
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline or a Pack
+          items:
+            $ref: "#/components/schemas/ItemsTypeConnectionsOptional"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        apiKey:
+          type: string
+          title: API key
+        textSecret:
+          type: string
+          title: API key (text secret)
+          description: Select or create a stored text secret
+        accountType:
+          type: string
+          title: Account type
+          enum:
+            - workspace
+            - organization
+          x-speakeasy-enum-descriptions:
+            - Workspace
+            - Organization
+          x-speakeasy-unknown-values: allow
+        cronSchedule:
+          type: string
+          title: Cron schedule
+        earliest:
+          type: string
+          title: Earliest time
+          description: "Relative to the current time. Format: [+|-]<time_integer><time_unit>"
+        latest:
+          type: string
+          title: Latest time
+          description: "Relative to the current time. Format: [+|-]<time_integer><time_unit>"
+        jobTimeout:
+          title: Job timeout
+          type: string
+          description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+          pattern: ^\d+[sm]?$
+        logLevel:
+          $ref: "#/components/schemas/LogLevelOptionsContentConfigItemsDebugError"
+        maxPages:
+          type: number
+          title: Page limit
+          description: Maximum number of log file listing pages to retrieve per run. Set to 0 to retrieve all pages.
+          minimum: 0
+        stateTracking:
+          type: boolean
+          title: State tracking
+          description: Track collection progress between consecutive scheduled executions
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: HTTP request inactivity timeout. Use 0 to disable.
+          minimum: 0
+          maximum: 2400
+        keepAliveTime:
+          type: number
+          title: Keep alive time (seconds)
+          description: How often workers should check in with the scheduler to keep job subscription alive
+          minimum: 10
+        maxMissedKeepAlives:
+          type: number
+          title: Worker timeout (periods)
+          description: The number of Keep Alive Time periods before an inactive worker will have its job subscription revoked.
+          minimum: 2
+        ttl:
+          type: string
+          title: Time to live
+          description: Time to keep the job's artifacts on disk after job completion. This also affects how long a job is listed in the Job Inspector.
+          pattern: \d+[smh]$
+        ignoreGroupJobsLimit:
+          type: boolean
+          title: Ignore Worker Group job limits
+          description: When enabled, this job's artifacts are not counted toward the Worker Group's finished job artifacts limit. Artifacts will be removed only after the Collector's configured time to live.
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/ItemsTypeMetadata"
+        breakerRulesets:
+          type: array
+          title: Event Breaker rulesets
+          description: A list of event-breaking rulesets that will be applied, in order, to the input data stream
+          items:
+            type: string
+        staleChannelFlushMs:
+          type: number
+          title: Event Breaker buffer timeout (ms)
+          description: How long (in milliseconds) the Event Breaker will wait for new data to be sent to a specific channel before flushing the data stream out, as is, to the Pipelines
+          minimum: 10
+          maximum: 4.32e+07
+        retryRules:
+          $ref: "#/components/schemas/RetryRulesType"
+        description:
+          type: string
+          title: Description
+        workspaceId:
+          type: string
+          title: Workspace ID
+          description: The ID of the ChatGPT workspace to collect logs from (UUID format)
+        workspaceEventTypes:
+          type: array
+          title: Event types
+          description: One or more compliance log categories to collect
+          items:
+            type: string
+          uniqueItems: true
+        organizationId:
+          type: string
+          title: Organization ID
+          description: "The ID of the OpenAI API Platform Organization (example: org-XXXXXXXXXXXXXXXXXXXXXXXX)"
+        organizationEventTypes:
+          type: array
+          title: Event types
+          description: One or more compliance log categories to collect
+          items:
+            type: string
+          uniqueItems: true
+        stateUpdateExpression:
+          type: string
+          title: State update expression
+          description: JavaScript expression that defines how to update the state from an event. Use the event's data and the current state to compute the new state. See [Understanding State Expression Fields](https://docs.cribl.io/stream/collectors-rest#state-tracking-expression-fields) for more information.
+        stateMergeExpression:
+          type: string
+          title: State merge expression
+          description: JavaScript expression that defines which state to keep when merging a task's newly reported state with previously saved state. Evaluates `prevState` and `newState` variables, resolving to the state to keep.
+        manageState:
+          type: object
+        __template_workspaceId:
+          type: string
+          description: Binds 'workspaceId' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'workspaceId' at runtime.
+        __template_organizationId:
+          type: string
+          description: Binds 'organizationId' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'organizationId' at runtime.
     Input:
       oneOf:
         - $ref: "#/components/schemas/InputCollection"
@@ -22544,6 +22951,7 @@ components:
         - $ref: "#/components/schemas/InputOffice365MsgTrace"
         - $ref: "#/components/schemas/InputMicrosoftGraph"
         - $ref: "#/components/schemas/InputEventhub"
+        - $ref: "#/components/schemas/InputEventhubAmqp"
         - $ref: "#/components/schemas/InputExec"
         - $ref: "#/components/schemas/InputFirehose"
         - $ref: "#/components/schemas/InputGooglePubsub"
@@ -22587,6 +22995,7 @@ components:
         - $ref: "#/components/schemas/InputServicenowTable"
         - $ref: "#/components/schemas/InputZscalerHec"
         - $ref: "#/components/schemas/InputCloudflareHec"
+        - $ref: "#/components/schemas/InputOpenaiComplianceLogs"
       discriminator:
         propertyName: type
         mapping:
@@ -22610,6 +23019,7 @@ components:
           office365_msg_trace: "#/components/schemas/InputOffice365MsgTrace"
           microsoft_graph: "#/components/schemas/InputMicrosoftGraph"
           eventhub: "#/components/schemas/InputEventhub"
+          eventhub_amqp: "#/components/schemas/InputEventhubAmqp"
           exec: "#/components/schemas/InputExec"
           firehose: "#/components/schemas/InputFirehose"
           google_pubsub: "#/components/schemas/InputGooglePubsub"
@@ -22653,6 +23063,7 @@ components:
           servicenow_table: "#/components/schemas/InputServicenowTable"
           zscaler_hec: "#/components/schemas/InputZscalerHec"
           cloudflare_hec: "#/components/schemas/InputCloudflareHec"
+          openai_compliance_logs: "#/components/schemas/InputOpenaiComplianceLogs"
     CountedInput:
       type: object
       properties:
@@ -38494,7 +38905,7 @@ components:
           type: string
           description: Unique identifier for the comment.
         index:
-          type: number
+          type: integer
           description: Relative position of the comment among all comments for the Route.
       required:
         - comment
@@ -42043,6 +42454,17 @@ components:
         - v2
         - v4
       x-speakeasy-unknown-values: allow
+    LogLevelOptionsContentConfigItemsDebugError:
+      type: string
+      title: Log level
+      enum:
+        - error
+        - warn
+        - info
+        - debug
+        - silly
+      description: Collector runtime log level
+      x-speakeasy-unknown-values: allow
     ItemsTypeContentConfigItemsRequestParams:
       type: object
       required:
@@ -42799,7 +43221,7 @@ components:
           type: string
           description: Brief description of the Route Group.
         index:
-          type: number
+          type: integer
           description: Relative position of the Route Group among all Route Groups. Routes are evaluated in ascending order according to the index value of their Route Group.
         name:
           type: string
@@ -44399,6 +44821,15 @@ components:
           - logs
         sendToRoutes: true
         pqEnabled: false
+    InputCreateExamplesEventhubAmqp:
+      summary: Event Hubs AMQP
+      value:
+        id: eventhub-amqp-source
+        type: eventhub_amqp
+        eventHubName: my-event-hub
+        consumerGroup: $Default
+        sendToRoutes: true
+        pqEnabled: false
     InputCreateExamplesExec:
       summary: Exec
       value:
@@ -44625,6 +45056,22 @@ components:
             disabled: false
         sendToRoutes: true
         pqEnabled: false
+    InputCreateExamplesOpenAIComplianceLogs:
+      summary: OpenAI Compliance Logs
+      value:
+        id: openai-compliance-logs-source
+        type: openai_compliance_logs
+        textSecret: openai-api-key-secret
+        accountType: workspace
+        workspaceId: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+        workspaceEventTypes:
+          - AUDIT_LOG
+          - AUTH_LOG
+        cronSchedule: "*/15 * * * *"
+        earliest: -1h
+        latest: now
+        sendToRoutes: true
+        pqEnabled: false
     InputCreateExamplesOpenTelemetry:
       summary: OpenTelemetry
       value:
@@ -44703,7 +45150,7 @@ components:
           - sys_id
           - number
           - short_description
-        displayValue: "false"
+        useRawValues: true
         pageSize: 10000
         cronSchedule: 0 * * * *
         earliest: -1d
@@ -47382,6 +47829,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesElastic"
               InputCreateExamplesEventhub:
                 $ref: "#/components/examples/InputCreateExamplesEventhub"
+              InputCreateExamplesEventhubAmqp:
+                $ref: "#/components/examples/InputCreateExamplesEventhubAmqp"
               InputCreateExamplesExec:
                 $ref: "#/components/examples/InputCreateExamplesExec"
               InputCreateExamplesFile:
@@ -47428,6 +47877,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesOffice365Service"
               InputCreateExamplesOpenAI:
                 $ref: "#/components/examples/InputCreateExamplesOpenAI"
+              InputCreateExamplesOpenAIComplianceLogs:
+                $ref: "#/components/examples/InputCreateExamplesOpenAIComplianceLogs"
               InputCreateExamplesOpenTelemetry:
                 $ref: "#/components/examples/InputCreateExamplesOpenTelemetry"
               InputCreateExamplesPrometheus:
@@ -47581,6 +48032,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesElastic"
               InputCreateExamplesEventhub:
                 $ref: "#/components/examples/InputCreateExamplesEventhub"
+              InputCreateExamplesEventhubAmqp:
+                $ref: "#/components/examples/InputCreateExamplesEventhubAmqp"
               InputCreateExamplesExec:
                 $ref: "#/components/examples/InputCreateExamplesExec"
               InputCreateExamplesFile:
@@ -47627,6 +48080,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesOffice365Service"
               InputCreateExamplesOpenAI:
                 $ref: "#/components/examples/InputCreateExamplesOpenAI"
+              InputCreateExamplesOpenAIComplianceLogs:
+                $ref: "#/components/examples/InputCreateExamplesOpenAIComplianceLogs"
               InputCreateExamplesOpenTelemetry:
                 $ref: "#/components/examples/InputCreateExamplesOpenTelemetry"
               InputCreateExamplesPrometheus:
@@ -47972,6 +48427,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesElastic"
               InputCreateExamplesEventhub:
                 $ref: "#/components/examples/InputCreateExamplesEventhub"
+              InputCreateExamplesEventhubAmqp:
+                $ref: "#/components/examples/InputCreateExamplesEventhubAmqp"
               InputCreateExamplesExec:
                 $ref: "#/components/examples/InputCreateExamplesExec"
               InputCreateExamplesFile:
@@ -48018,6 +48475,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesOffice365Service"
               InputCreateExamplesOpenAI:
                 $ref: "#/components/examples/InputCreateExamplesOpenAI"
+              InputCreateExamplesOpenAIComplianceLogs:
+                $ref: "#/components/examples/InputCreateExamplesOpenAIComplianceLogs"
               InputCreateExamplesOpenTelemetry:
                 $ref: "#/components/examples/InputCreateExamplesOpenTelemetry"
               InputCreateExamplesPrometheus:
@@ -48190,6 +48649,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesElastic"
               InputCreateExamplesEventhub:
                 $ref: "#/components/examples/InputCreateExamplesEventhub"
+              InputCreateExamplesEventhubAmqp:
+                $ref: "#/components/examples/InputCreateExamplesEventhubAmqp"
               InputCreateExamplesExec:
                 $ref: "#/components/examples/InputCreateExamplesExec"
               InputCreateExamplesFile:
@@ -48236,6 +48697,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesOffice365Service"
               InputCreateExamplesOpenAI:
                 $ref: "#/components/examples/InputCreateExamplesOpenAI"
+              InputCreateExamplesOpenAIComplianceLogs:
+                $ref: "#/components/examples/InputCreateExamplesOpenAIComplianceLogs"
               InputCreateExamplesOpenTelemetry:
                 $ref: "#/components/examples/InputCreateExamplesOpenTelemetry"
               InputCreateExamplesPrometheus:
