@@ -15,7 +15,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.18.0-alpha.1776765370303-78edef6e
+  version: 4.18.0-alpha.1776797533587-4e4e09dc
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -22534,33 +22534,30 @@ components:
           type: string
           title: Credentials secret
           description: Select or create a secret that references your credentials
-        loginUrl:
+        oauthGrantType:
+          enum:
+            - client_credentials
+            - password
           type: string
-          title: Login URL
-          description: URL for OAuth
-          pattern: ^https?://.*
-        secretParamName:
+          title: Grant type
+          description: ServiceNow OAuth grant type used for token requests
+          x-speakeasy-enum-descriptions:
+            - Password
+            - Client credentials
+          x-speakeasy-unknown-values: allow
+        username:
           type: string
-          title: OAuth Secret parameter name
-          description: Secret parameter name to pass in request body
+          title: Username
+          description: ServiceNow username for the password grant type
+          pattern: .*\S.*
         textSecret:
           type: string
-          title: OAuth secret (text secret)
-          description: Select or create a stored text secret for the OAuth client secret parameter value
-        tokenAttributeName:
-          type: string
-          title: Token attribute name
-          description: Name of the auth token attribute in the OAuth response. Can be top-level (e.g., 'token'); or nested, using a period (e.g., 'data.token').
-        authHeaderExpr:
-          type: string
-          title: Authorize expression
-          description: "JavaScript expression to compute the Authorization header value to pass in requests. The value `${token}` is used to reference the token obtained from authentication, e.g.: `Bearer ${token}`."
-        tokenTimeoutSecs:
-          type: number
-          title: Refresh interval (secs.)
-          description: How often the OAuth token should be refreshed.
-          minimum: 1
-          maximum: 300000
+          title: Password
+          description: Select or create a stored text secret for the ServiceNow password value
+        useCustomOAuthParamsOrHeaders:
+          type: boolean
+          title: Use custom parameters and/or headers
+          description: Enable custom OAuth request parameters or headers for advanced ServiceNow configurations. Leave disabled for standard ServiceNow OAuth flows.
         oauthParams:
           type: array
           title: OAuth parameters
@@ -22573,6 +22570,14 @@ components:
           description: Additional headers to send in the OAuth login request. @{product} will automatically add the content-type header 'application/x-www-form-urlencoded' when sending this request.
           items:
             $ref: "#/components/schemas/ItemsTypeOauthHeaders"
+        clientId:
+          type: string
+          title: ServiceNow OAuth client ID
+          pattern: .*\S.*
+        clientTextSecret:
+          type: string
+          title: Client secret
+          description: Select or create a stored text secret for the OAuth client secret value
         stateUpdateExpression:
           type: string
           title: State update expression
@@ -22595,9 +22600,12 @@ components:
         __template_query:
           type: string
           description: Binds 'query' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'query' at runtime.
-        __template_loginUrl:
+        __template_username:
           type: string
-          description: Binds 'loginUrl' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'loginUrl' at runtime.
+          description: Binds 'username' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'username' at runtime.
+        __template_clientId:
+          type: string
+          description: Binds 'clientId' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'clientId' at runtime.
     InputZscalerHec:
       type: object
       required:
@@ -41454,30 +41462,31 @@ components:
       type: object
       properties:
         duration:
-          type: number
-          description: Amount of time to keep capture open, in seconds.
+          type: integer
+          description: Amount of time to keep capture open, in seconds. If not provided, the default is 5 seconds.
+          minimum: 1
         filter:
           type: string
-          description: JavaScript expression evaluated against each event to determine whether an event is included in the capture output. Expressions can reference any event field and use logical operators.
+          description: JavaScript expression evaluated against each event to determine whether an event is included in the capture output. Expressions can reference any event field and use logical operators. If not provided, all events are captured.
         level:
           $ref: "#/components/schemas/CaptureLevel"
+          description: Stage at which events are captured. If not provided, the default is 0 (Before pre-processing Pipeline).
+          minimum: 0
+          maximum: 3
         maxEvents:
           type: integer
-          description: Maximum number of events to capture.
+          description: Maximum number of events to capture. If not provided, the default is 100.
+          minimum: 1
+          maximum: 10000
         stepDuration:
           type: integer
-          description: How long to wait before increasing the capture sample size. Specify <code>1</code> second or longer.
+          description: How long to wait before increasing the capture sample size. Specify <code>1</code> second or longer. If not provided, the default is 5 seconds.
         workerId:
           type: string
           description: Unique ID of the Worker.
         workerThreshold:
           type: integer
-          description: Maximum number of Workers that can capture initially. A value of <code>0</code> means unlimited (all available Workers can capture).
-      required:
-        - duration
-        - filter
-        - level
-        - maxEvents
+          description: Maximum number of Workers that can capture initially. A value of <code>0</code> means unlimited (all available Workers can capture). If not provided, the default is 50.
     CountedNumber:
       type: object
       properties:
