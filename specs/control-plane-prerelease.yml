@@ -15,7 +15,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.18.0-alpha.1777983792570-5ec9cfad
+  version: 4.18.0-alpha.1778067732701-66fb93e0
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -12041,15 +12041,6 @@ components:
           s3: "#/components/schemas/CollectorS3"
           script: "#/components/schemas/CollectorScript"
           splunk: "#/components/schemas/CollectorSplunk"
-    Connection:
-      type: object
-      properties:
-        output:
-          type: string
-        pipeline:
-          type: string
-      required:
-        - output
     RbacResource:
       type: string
       enum:
@@ -24893,215 +24884,6 @@ components:
         - stats
         - status
       description: Detailed information about a job, including its configuration, status, and statistics.
-    CountedInputResponse:
-      type: object
-      properties:
-        count:
-          type: integer
-          description: number of items present in the items array
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/InputResponse"
-    Provenance:
-      type: object
-      properties:
-        destinationArn:
-          type: string
-        origin:
-          type: string
-          const: data_source_discovery
-        sourceArn:
-          type: string
-      required:
-        - origin
-    Notification:
-      type: object
-      required:
-        - id
-        - condition
-      properties:
-        id:
-          type: string
-          title: ID
-          pattern: ^[a-zA-Z0-9_-]+$
-          description: Unique identifier for the Notification.
-        disabled:
-          type: boolean
-          title: Disabled
-          description: If true, the Notification is disabled and the specified condition will not trigger it.
-        condition:
-          type: string
-          title: Condition
-          description: The condition that triggers the Notification.
-        targets:
-          type: array
-          title: Notification targets
-          description: List of the IDs for the Notification targets to send the Notification to.
-          items:
-            type: string
-        targetConfigs:
-          type: array
-          title: Target configuration
-          description: Override settings to apply for each referenced Notification target.
-          items:
-            type: object
-            required:
-              - id
-            properties:
-              id:
-                type: string
-                title: Notification target ID
-                pattern: ^[a-zA-Z0-9_-]+$
-            anyOf:
-              - properties:
-                  conf:
-                    type: object
-                    title: Notification config for SMTP target
-                    properties:
-                      subject:
-                        type: string
-                        title: Subject
-                        description: Email subject
-                      body:
-                        type: string
-                        title: Message
-                        description: Email body
-                      emailRecipient:
-                        type: object
-                        required:
-                          - to
-                        properties:
-                          to:
-                            type: string
-                            title: To
-                            description: Recipients' email addresses
-                          cc:
-                            type: string
-                            title: Cc
-                            description: "Cc: Recipients' email addresses"
-                          bcc:
-                            type: string
-                            title: Bcc
-                            description: "Bcc: Recipients' email addresses"
-        conf:
-          type: object
-          title: Condition-specific configurations
-          description: Configuration for the condition that triggers the Notification. Supported fields vary depending on the condition.
-          properties: {}
-        metadata:
-          type: array
-          title: Fields
-          description: Fields to add to events from this input
-          items:
-            $ref: "#/components/schemas/ItemsTypeMetadata"
-        group:
-          type: string
-          title: Worker Group/Fleet
-          description: The worker group/fleet this notification belongs to
-        pack:
-          type: string
-          title: Pack
-          description: The pack this notification belongs to
-        mode:
-          type: string
-          title: Mode
-          description: "Notification mode: direct or policy-based"
-          enum:
-            - direct
-            - policy
-          x-speakeasy-unknown-values: allow
-        templateTargetPairs:
-          type: array
-          title: Template & Target Pairs
-          description: Pairs of templates and targets for notification routing
-          items:
-            $ref: "#/components/schemas/ItemsTypePoliciesItemsTemplateTargetPairs"
-      oneOf:
-        - properties:
-            mode:
-              const: direct
-            templateTargetPairs:
-              minItems: 1
-          required:
-            - mode
-            - templateTargetPairs
-        - properties:
-            mode:
-              const: policy
-            templateTargetPairs:
-              maxItems: 0
-          required:
-            - mode
-        - properties:
-            mode: {}
-    StatusError:
-      type: object
-      properties:
-        details:
-          type: object
-          additionalProperties: true
-          description: Additional error details.
-        message:
-          type: string
-          description: Human-readable message that describes the error.
-      required:
-        - message
-    HealthStringType:
-      type: string
-      enum:
-        - Green
-        - Yellow
-        - Red
-        - Unknown
-      x-speakeasy-unknown-values: allow
-    WorkerPQStatus:
-      type: object
-      properties:
-        error:
-          $ref: "#/components/schemas/StatusError"
-        health:
-          type: number
-        metrics:
-          type: object
-          additionalProperties: true
-        timestamp:
-          type: number
-      required:
-        - health
-        - metrics
-        - timestamp
-    InputResponse:
-      allOf:
-        - $ref: "#/components/schemas/Input"
-        - type: object
-          properties:
-            connections:
-              type: array
-              items:
-                $ref: "#/components/schemas/Connection"
-            criblSourceProvenance:
-              $ref: "#/components/schemas/Provenance"
-              description: Read-only. Set automatically when a Source is created by Data Source Discovery (DSD). Preserved on update when omitted from the request body.
-            disabled:
-              type: boolean
-            id:
-              type: string
-            notifications:
-              type: array
-              items:
-                $ref: "#/components/schemas/Notification"
-              description: Notifications attached to this Source.
-            sendToRoutes:
-              type: boolean
-            status:
-              $ref: "#/components/schemas/StatusType"
-            type:
-              type: string
-          required:
-            - id
-            - type
-      description: Source configuration with optional notifications and runtime status.
     SourceType:
       type: array
       items:
@@ -25918,6 +25700,29 @@ components:
             - 19
             - 20
             - 21
+          x-speakeasy-enum-descriptions:
+            - kern
+            - user
+            - mail
+            - daemon
+            - auth
+            - syslog
+            - lpr
+            - news
+            - uucp
+            - cron
+            - authpriv
+            - ftp
+            - ntp
+            - security
+            - console
+            - solaris-cron
+            - local0
+            - local1
+            - local2
+            - local3
+            - local4
+            - local5
           x-speakeasy-unknown-values: allow
         severity:
           type: integer
@@ -35369,6 +35174,14 @@ components:
           minItems: 0
           items:
             $ref: "#/components/schemas/ItemsTypeKeyValueMetadata"
+        dynamicHeadersEnabled:
+          type: boolean
+          title: Use dynamic metadata
+          description: Batch event data upon dynamic metadata (whether presented or not)
+        dynamicHeadersField:
+          type: string
+          title: Dynamic metadata field
+          description: When presented, this field which contains metadata, will be injected into the Destination metadata and used to batch events.
         concurrency:
           type: number
           title: Request concurrency
@@ -35644,6 +35457,14 @@ components:
           minItems: 0
           items:
             $ref: "#/components/schemas/ItemsTypeKeyValueMetadata"
+        dynamicHeadersEnabled:
+          type: boolean
+          title: Use dynamic metadata
+          description: Batch event data upon dynamic metadata (whether presented or not)
+        dynamicHeadersField:
+          type: string
+          title: Dynamic metadata field
+          description: When presented, this field which contains metadata, will be injected into the Destination metadata and used to batch events.
         concurrency:
           type: number
           title: Request concurrency
@@ -39136,6 +38957,14 @@ components:
           minItems: 0
           items:
             $ref: "#/components/schemas/ItemsTypeKeyValueMetadata"
+        dynamicHeadersEnabled:
+          type: boolean
+          title: Use dynamic metadata
+          description: Batch event data upon dynamic metadata (whether presented or not)
+        dynamicHeadersField:
+          type: string
+          title: Dynamic metadata field
+          description: When presented, this field which contains metadata, will be injected into the Destination metadata and used to batch events.
         concurrency:
           type: number
           title: Request concurrency
@@ -42499,7 +42328,7 @@ components:
           dell_s3: "#/components/schemas/OutputDellS3"
           cloudian_s3: "#/components/schemas/OutputCloudianS3"
           scality_s3: "#/components/schemas/OutputScalityS3"
-    CountedOutputResponse:
+    CountedOutput:
       type: object
       properties:
         count:
@@ -42508,27 +42337,7 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/OutputResponse"
-    OutputResponse:
-      allOf:
-        - $ref: "#/components/schemas/Output"
-        - type: object
-          properties:
-            id:
-              type: string
-            notifications:
-              type: array
-              items:
-                $ref: "#/components/schemas/Notification"
-              description: Notifications attached to this Destination.
-            status:
-              $ref: "#/components/schemas/StatusType"
-            type:
-              type: string
-          required:
-            - id
-            - type
-      description: Destination configuration with optional notifications and runtime status returned by Destinations APIs.
+            $ref: "#/components/schemas/Output"
     DestinationType:
       type: string
       enum:
@@ -42898,6 +42707,26 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InputStatus"
+    StatusError:
+      type: object
+      properties:
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details.
+        message:
+          type: string
+          description: Human-readable message that describes the error.
+      required:
+        - message
+    HealthStringType:
+      type: string
+      enum:
+        - Green
+        - Yellow
+        - Red
+        - Unknown
+      x-speakeasy-unknown-values: allow
     HealthCountType:
       type: object
       properties:
@@ -43377,6 +43206,126 @@ components:
         - $ref: "#/components/schemas/SavedJobCollection"
         - $ref: "#/components/schemas/SavedJobExecutor"
         - $ref: "#/components/schemas/SavedJobScheduledSearch"
+    Notification:
+      type: object
+      required:
+        - id
+        - condition
+      properties:
+        id:
+          type: string
+          title: ID
+          pattern: ^[a-zA-Z0-9_-]+$
+          description: Unique identifier for the Notification.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Notification is disabled and the specified condition will not trigger it.
+        condition:
+          type: string
+          title: Condition
+          description: The condition that triggers the Notification.
+        targets:
+          type: array
+          title: Notification targets
+          description: List of the IDs for the Notification targets to send the Notification to.
+          items:
+            type: string
+        targetConfigs:
+          type: array
+          title: Target configuration
+          description: Override settings to apply for each referenced Notification target.
+          items:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                title: Notification target ID
+                pattern: ^[a-zA-Z0-9_-]+$
+            anyOf:
+              - properties:
+                  conf:
+                    type: object
+                    title: Notification config for SMTP target
+                    properties:
+                      subject:
+                        type: string
+                        title: Subject
+                        description: Email subject
+                      body:
+                        type: string
+                        title: Message
+                        description: Email body
+                      emailRecipient:
+                        type: object
+                        required:
+                          - to
+                        properties:
+                          to:
+                            type: string
+                            title: To
+                            description: Recipients' email addresses
+                          cc:
+                            type: string
+                            title: Cc
+                            description: "Cc: Recipients' email addresses"
+                          bcc:
+                            type: string
+                            title: Bcc
+                            description: "Bcc: Recipients' email addresses"
+        conf:
+          type: object
+          title: Condition-specific configurations
+          description: Configuration for the condition that triggers the Notification. Supported fields vary depending on the condition.
+          properties: {}
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/ItemsTypeMetadata"
+        group:
+          type: string
+          title: Worker Group/Fleet
+          description: The worker group/fleet this notification belongs to
+        pack:
+          type: string
+          title: Pack
+          description: The pack this notification belongs to
+        mode:
+          type: string
+          title: Mode
+          description: "Notification mode: direct or policy-based"
+          enum:
+            - direct
+            - policy
+          x-speakeasy-unknown-values: allow
+        templateTargetPairs:
+          type: array
+          title: Template & Target Pairs
+          description: Pairs of templates and targets for notification routing
+          items:
+            $ref: "#/components/schemas/ItemsTypePoliciesItemsTemplateTargetPairs"
+      oneOf:
+        - properties:
+            mode:
+              const: direct
+            templateTargetPairs:
+              minItems: 1
+          required:
+            - mode
+            - templateTargetPairs
+        - properties:
+            mode:
+              const: policy
+            templateTargetPairs:
+              maxItems: 0
+          required:
+            - mode
+        - properties:
+            mode: {}
     CloudProvider:
       type:
         - string
@@ -43638,19 +43587,13 @@ components:
           type: string
       required:
         - version
-    ProductsBase:
+    ProductsCore:
       type: string
       enum:
         - stream
         - edge
-      title: ProductsBase
+        - outpost
       x-speakeasy-unknown-values: allow
-    ProductsCore:
-      oneOf:
-        - $ref: "#/components/schemas/ProductsBase"
-        - enum:
-            - outpost
-          x-speakeasy-unknown-values: allow
     CountedTeamAccessControlList:
       type: object
       properties:
@@ -43673,6 +43616,12 @@ components:
       required:
         - perms
         - team
+    ProductsBase:
+      type: string
+      enum:
+        - stream
+        - edge
+      x-speakeasy-unknown-values: allow
     CountedCriblLakeDataset:
       type: object
       properties:
@@ -46289,29 +46238,6 @@ components:
         - type: object
           additionalProperties:
             type: number
-    StatusType:
-      type: object
-      properties:
-        error:
-          $ref: "#/components/schemas/StatusError"
-          description: Error information, if applicable.
-        health:
-          $ref: "#/components/schemas/HealthStringType"
-          description: Overall health status of the Source or Destination.
-        metrics:
-          type: object
-          additionalProperties: true
-          description: Metrics data for the Source or Destination.
-        pq:
-          $ref: "#/components/schemas/WorkerPQStatus"
-          description: Persistent queue status information (if persistent queue is enabled).
-        timestamp:
-          type: number
-          description: Timestamp (in Unix time) when the status was last updated.
-        useStatusFromLB:
-          type: boolean
-          description: Set to prefer status from the LB process, not from the worker process.
-      description: "Runtime status: health, metrics, and optional persistent-queue info. Fields may be absent when data is unavailable."
     MethodOptions:
       type: string
       title: Method
@@ -51758,7 +51684,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputResponse"
+                $ref: "#/components/schemas/CountedInput"
         "401":
           description: Unauthorized
         "500":
@@ -51934,7 +51860,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputResponse"
+                $ref: "#/components/schemas/CountedInput"
         "401":
           description: Unauthorized
         "500":
@@ -52143,7 +52069,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputResponse"
+                $ref: "#/components/schemas/CountedInput"
         "401":
           description: Unauthorized
         "500":
@@ -52175,7 +52101,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputResponse"
+                $ref: "#/components/schemas/CountedInput"
         "401":
           description: Unauthorized
         "500":
@@ -52362,7 +52288,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputResponse"
+                $ref: "#/components/schemas/CountedInput"
         "401":
           description: Unauthorized
         "500":
@@ -52544,7 +52470,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputResponse"
+                $ref: "#/components/schemas/CountedInput"
         "401":
           description: Unauthorized
         "500":
@@ -52772,7 +52698,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputResponse"
+                $ref: "#/components/schemas/CountedInput"
         "401":
           description: Unauthorized
         "500":
@@ -52810,7 +52736,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputResponse"
+                $ref: "#/components/schemas/CountedInput"
         "401":
           description: Unauthorized
         "500":
@@ -53021,7 +52947,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/CountedOutput"
         "401":
           description: Unauthorized
         "500":
@@ -53215,7 +53141,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/CountedOutput"
         "401":
           description: Unauthorized
         "500":
@@ -53248,7 +53174,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/CountedOutput"
         "401":
           description: Unauthorized
         "500":
@@ -53440,7 +53366,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/CountedOutput"
         "401":
           description: Unauthorized
         "500":
@@ -53472,7 +53398,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/CountedOutput"
         "401":
           description: Unauthorized
         "500":
@@ -53645,7 +53571,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/CountedOutput"
         "401":
           description: Unauthorized
         "500":
@@ -53845,7 +53771,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/CountedOutput"
         "401":
           description: Unauthorized
         "500":
@@ -53891,7 +53817,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/CountedOutput"
         "401":
           description: Unauthorized
         "500":
@@ -54089,7 +54015,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/CountedOutput"
         "401":
           description: Unauthorized
         "500":
@@ -54127,7 +54053,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/CountedOutput"
         "401":
           description: Unauthorized
         "500":
