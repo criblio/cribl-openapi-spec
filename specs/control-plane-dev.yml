@@ -15,7 +15,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.18.0-alpha.1778022434896-e10325ea
+  version: 4.18.0-alpha.1778108987338-84e7ca4a
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -18623,7 +18623,7 @@ components:
           minimum: 1
           maximum: 100
         fileConcurrency:
-          type: number
+          type: integer
           title: File concurrency
           description: The maximum number of files to process concurrently per receiver. Applicable only when processing multi-file messages.
           minimum: 1
@@ -19647,7 +19647,7 @@ components:
           minimum: 1
           maximum: 100
         fileConcurrency:
-          type: number
+          type: integer
           title: File concurrency
           description: The maximum number of files to process concurrently per receiver. Applicable only when processing multi-file messages.
           minimum: 1
@@ -19889,7 +19889,7 @@ components:
           minimum: 1
           maximum: 100
         fileConcurrency:
-          type: number
+          type: integer
           title: File concurrency
           description: The maximum number of files to process concurrently per receiver. Applicable only when processing multi-file messages.
           minimum: 1
@@ -22950,7 +22950,7 @@ components:
           minimum: 1
           maximum: 100
         fileConcurrency:
-          type: number
+          type: integer
           title: File concurrency
           description: The maximum number of files to process concurrently per receiver. Applicable only when processing multi-file messages.
           minimum: 1
@@ -24413,16 +24413,6 @@ components:
           openai_compliance_logs: "#/components/schemas/InputOpenaiComplianceLogs"
           anthropic_compliance: "#/components/schemas/InputAnthropicCompliance"
           okta: "#/components/schemas/InputOkta"
-    CountedInput:
-      type: object
-      properties:
-        count:
-          type: integer
-          description: number of items present in the items array
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Input"
     CountedInputSplunkHec:
       type: object
       properties:
@@ -24884,6 +24874,185 @@ components:
         - stats
         - status
       description: Detailed information about a job, including its configuration, status, and statistics.
+    CountedInputResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: number of items present in the items array
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InputResponse"
+    Notification:
+      type: object
+      required:
+        - id
+        - condition
+      properties:
+        id:
+          type: string
+          title: ID
+          pattern: ^[a-zA-Z0-9_-]+$
+          description: Unique identifier for the Notification.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Notification is disabled and the specified condition will not trigger it.
+        condition:
+          type: string
+          title: Condition
+          description: The condition that triggers the Notification.
+        targets:
+          type: array
+          title: Notification targets
+          description: List of the IDs for the Notification targets to send the Notification to.
+          items:
+            type: string
+        targetConfigs:
+          type: array
+          title: Target configuration
+          description: Override settings to apply for each referenced Notification target.
+          items:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+                title: Notification target ID
+                pattern: ^[a-zA-Z0-9_-]+$
+            anyOf:
+              - properties:
+                  conf:
+                    type: object
+                    title: Notification config for SMTP target
+                    properties:
+                      subject:
+                        type: string
+                        title: Subject
+                        description: Email subject
+                      body:
+                        type: string
+                        title: Message
+                        description: Email body
+                      emailRecipient:
+                        type: object
+                        required:
+                          - to
+                        properties:
+                          to:
+                            type: string
+                            title: To
+                            description: Recipients' email addresses
+                          cc:
+                            type: string
+                            title: Cc
+                            description: "Cc: Recipients' email addresses"
+                          bcc:
+                            type: string
+                            title: Bcc
+                            description: "Bcc: Recipients' email addresses"
+        conf:
+          type: object
+          title: Condition-specific configurations
+          description: Configuration for the condition that triggers the Notification. Supported fields vary depending on the condition.
+          properties: {}
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/ItemsTypeMetadata"
+        group:
+          type: string
+          title: Worker Group/Fleet
+          description: The worker group/fleet this notification belongs to
+        pack:
+          type: string
+          title: Pack
+          description: The pack this notification belongs to
+        mode:
+          type: string
+          title: Mode
+          description: "Notification mode: direct or policy-based"
+          enum:
+            - direct
+            - policy
+          x-speakeasy-unknown-values: allow
+        templateTargetPairs:
+          type: array
+          title: Template & Target Pairs
+          description: Pairs of templates and targets for notification routing
+          items:
+            $ref: "#/components/schemas/ItemsTypePoliciesItemsTemplateTargetPairs"
+      oneOf:
+        - properties:
+            mode:
+              const: direct
+            templateTargetPairs:
+              minItems: 1
+          required:
+            - mode
+            - templateTargetPairs
+        - properties:
+            mode:
+              const: policy
+            templateTargetPairs:
+              maxItems: 0
+          required:
+            - mode
+        - properties:
+            mode: {}
+    StatusError:
+      type: object
+      properties:
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details.
+        message:
+          type: string
+          description: Human-readable message that describes the error.
+      required:
+        - message
+    HealthStringType:
+      type: string
+      enum:
+        - Green
+        - Yellow
+        - Red
+        - Unknown
+      x-speakeasy-unknown-values: allow
+    WorkerPQStatus:
+      type: object
+      properties:
+        error:
+          $ref: "#/components/schemas/StatusError"
+        health:
+          type: number
+        metrics:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: number
+      required:
+        - health
+        - metrics
+        - timestamp
+    InputResponse:
+      allOf:
+        - $ref: "#/components/schemas/Input"
+        - type: object
+          properties:
+            notifications:
+              type: array
+              items:
+                $ref: "#/components/schemas/Notification"
+              description: Notifications attached to the Source.
+            status:
+              $ref: "#/components/schemas/StatusType"
+      description: Source configuration with optional Notifications and runtime status.
     SourceType:
       type: array
       items:
@@ -25724,6 +25893,29 @@ components:
             - local4
             - local5
           x-speakeasy-unknown-values: allow
+          x-speakeasy-enums:
+            - Kern
+            - User
+            - Mail
+            - Daemon
+            - Auth
+            - Syslog
+            - Lpr
+            - News
+            - Uucp
+            - Cron
+            - Authpriv
+            - Ftp
+            - Ntp
+            - Security
+            - Console
+            - SolarisCron
+            - Local0
+            - Local1
+            - Local2
+            - Local3
+            - Local4
+            - Local5
         severity:
           type: integer
           title: Severity
@@ -37636,7 +37828,12 @@ components:
             - manual
           x-speakeasy-unknown-values: allow
         format:
-          $ref: "#/components/schemas/FormatOptions"
+          type: string
+          enum:
+            - json
+            - parquet
+            - ddss
+          x-speakeasy-unknown-values: allow
         maxConcurrentFileParts:
           type: number
           title: Concurrent file parts limit
@@ -42328,7 +42525,7 @@ components:
           dell_s3: "#/components/schemas/OutputDellS3"
           cloudian_s3: "#/components/schemas/OutputCloudianS3"
           scality_s3: "#/components/schemas/OutputScalityS3"
-    CountedOutput:
+    CountedOutputResponse:
       type: object
       properties:
         count:
@@ -42337,7 +42534,20 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/Output"
+            $ref: "#/components/schemas/OutputResponse"
+    OutputResponse:
+      allOf:
+        - $ref: "#/components/schemas/Output"
+        - type: object
+          properties:
+            notifications:
+              type: array
+              items:
+                $ref: "#/components/schemas/Notification"
+              description: Notifications attached to the Destination.
+            status:
+              $ref: "#/components/schemas/StatusType"
+      description: Destination configuration with optional Notifications and runtime status.
     DestinationType:
       type: string
       enum:
@@ -42707,26 +42917,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InputStatus"
-    StatusError:
-      type: object
-      properties:
-        details:
-          type: object
-          additionalProperties: true
-          description: Additional error details.
-        message:
-          type: string
-          description: Human-readable message that describes the error.
-      required:
-        - message
-    HealthStringType:
-      type: string
-      enum:
-        - Green
-        - Yellow
-        - Red
-        - Unknown
-      x-speakeasy-unknown-values: allow
     HealthCountType:
       type: object
       properties:
@@ -43206,126 +43396,6 @@ components:
         - $ref: "#/components/schemas/SavedJobCollection"
         - $ref: "#/components/schemas/SavedJobExecutor"
         - $ref: "#/components/schemas/SavedJobScheduledSearch"
-    Notification:
-      type: object
-      required:
-        - id
-        - condition
-      properties:
-        id:
-          type: string
-          title: ID
-          pattern: ^[a-zA-Z0-9_-]+$
-          description: Unique identifier for the Notification.
-        disabled:
-          type: boolean
-          title: Disabled
-          description: If true, the Notification is disabled and the specified condition will not trigger it.
-        condition:
-          type: string
-          title: Condition
-          description: The condition that triggers the Notification.
-        targets:
-          type: array
-          title: Notification targets
-          description: List of the IDs for the Notification targets to send the Notification to.
-          items:
-            type: string
-        targetConfigs:
-          type: array
-          title: Target configuration
-          description: Override settings to apply for each referenced Notification target.
-          items:
-            type: object
-            required:
-              - id
-            properties:
-              id:
-                type: string
-                title: Notification target ID
-                pattern: ^[a-zA-Z0-9_-]+$
-            anyOf:
-              - properties:
-                  conf:
-                    type: object
-                    title: Notification config for SMTP target
-                    properties:
-                      subject:
-                        type: string
-                        title: Subject
-                        description: Email subject
-                      body:
-                        type: string
-                        title: Message
-                        description: Email body
-                      emailRecipient:
-                        type: object
-                        required:
-                          - to
-                        properties:
-                          to:
-                            type: string
-                            title: To
-                            description: Recipients' email addresses
-                          cc:
-                            type: string
-                            title: Cc
-                            description: "Cc: Recipients' email addresses"
-                          bcc:
-                            type: string
-                            title: Bcc
-                            description: "Bcc: Recipients' email addresses"
-        conf:
-          type: object
-          title: Condition-specific configurations
-          description: Configuration for the condition that triggers the Notification. Supported fields vary depending on the condition.
-          properties: {}
-        metadata:
-          type: array
-          title: Fields
-          description: Fields to add to events from this input
-          items:
-            $ref: "#/components/schemas/ItemsTypeMetadata"
-        group:
-          type: string
-          title: Worker Group/Fleet
-          description: The worker group/fleet this notification belongs to
-        pack:
-          type: string
-          title: Pack
-          description: The pack this notification belongs to
-        mode:
-          type: string
-          title: Mode
-          description: "Notification mode: direct or policy-based"
-          enum:
-            - direct
-            - policy
-          x-speakeasy-unknown-values: allow
-        templateTargetPairs:
-          type: array
-          title: Template & Target Pairs
-          description: Pairs of templates and targets for notification routing
-          items:
-            $ref: "#/components/schemas/ItemsTypePoliciesItemsTemplateTargetPairs"
-      oneOf:
-        - properties:
-            mode:
-              const: direct
-            templateTargetPairs:
-              minItems: 1
-          required:
-            - mode
-            - templateTargetPairs
-        - properties:
-            mode:
-              const: policy
-            templateTargetPairs:
-              maxItems: 0
-          required:
-            - mode
-        - properties:
-            mode: {}
     CloudProvider:
       type:
         - string
@@ -43654,18 +43724,25 @@ components:
           type: array
           items:
             type: string
+          description: Accelerated fields (materialized columns) for the cache connection.
         backfillStatus:
           $ref: "#/components/schemas/CacheConnectionBackfillStatus"
+          description: Backfill status for data being loaded into the cache.
         cacheRef:
           type: string
+          description: Identifier of the Lakehouse cache referenced by the Dataset.
         createdAt:
           type: number
+          description: Timestamp when the continuous data feed to the Lakehouse cache started, in Unix time (milliseconds).
         lakehouseConnectionType:
           $ref: "#/components/schemas/LakehouseConnectionType"
+          description: If <code>new</code>, the Lakehouse was attached before data existed in the Dataset. If <code>existing</code>, the Lakehouse was attached after data existed in the Dataset.
         migrationQueryId:
           type: string
+          description: Query identifier of the active Lakehouse migration. Omitted if no migration is in progress.
         retentionInDays:
           type: number
+          description: Retention period for the Lakehouse cache connection, in days.
       required:
         - cacheRef
         - createdAt
@@ -43675,8 +43752,10 @@ components:
       properties:
         currentSizeBytes:
           type: number
+          description: Total current logical size of the Dataset, in bytes.
         metricsDate:
           type: string
+          description: Timestamp (ISO 8601) when the metrics snapshot was generated.
       required:
         - currentSizeBytes
         - metricsDate
@@ -43746,18 +43825,24 @@ components:
           type: array
           items:
             type: string
+          description: Datatype identifiers assigned to the Dataset for search-time event classification.
         description:
           type: string
+          description: Brief description of Dataset search configuration.
         metadata:
           $ref: "#/components/schemas/DatasetMetadata"
+          description: Key-value metadata for the Dataset search configuration.
         pathFilters:
           type: array
           items:
             $ref: "#/components/schemas/ObjectStorageFilter"
+          description: Glob-to-Datatype mappings for the Lake bucket path. Used only for search execution v2.
         searchVersion:
           $ref: "#/components/schemas/SearchVersion"
+          description: Search execution version for the Cribl Lake Dataset. Search execution v1 uses Event Breakers and Datatypes, and v2 uses path filters. If omitted, default is v1.
         tags:
           type: string
+          description: Comma-separated tags for the Dataset search configuration.
     CriblLakeDataset:
       type: object
       properties:
@@ -43765,32 +43850,44 @@ components:
           type: array
           items:
             type: string
+          description: Accelerated fields for the Dataset. Data is partitioned by these fields in storage to improve query performance.
         bucketName:
           type: string
+          description: Name of the legacy Cribl Lake bucket that backs the Dataset. Mutually exclusive with <code>storageLocationId</code>.
         cacheConnection:
           $ref: "#/components/schemas/CacheConnection"
+          description: Lakehouse cache connection settings for the Dataset.
         deletionStartedAt:
           type: number
+          description: Timestamp (in Unix time) when Dataset deletion was initiated, in milliseconds.
         description:
           type: string
+          description: Brief description of the Dataset.
         format:
-          $ref: "#/components/schemas/FormatOptions"
+          $ref: "#/components/schemas/FormatOptionsCriblLakeDataset"
         httpDAUsed:
           type: boolean
+          description: If <code>true</code>, the Dataset is used by Direct Access HTTP.
         id:
           type: string
+          description: Unique identifier for the Dataset.
         metrics:
           $ref: "#/components/schemas/LakeDatasetMetrics"
+          description: Most recent Dataset metrics snapshot.
         retentionPeriodInDays:
-          type: number
+          type: integer
+          description: Dataset retention period, in days.
         searchConfig:
           $ref: "#/components/schemas/LakeDatasetSearchConfig"
+          description: Search configuration for the Dataset.
         storageClass:
           $ref: "#/components/schemas/StorageClassOptionsCriblLakeDataset"
         storageLocationId:
           type: string
+          description: Identifier for the Storage Location that backs the Dataset. Mutually exclusive with <code>bucketName</code>.
         viewName:
           type: string
+          description: Name of the ClickHouse view for the Dataset on the Lakehouse.
       required:
         - id
     CriblLakeDatasetUpdate:
@@ -43800,32 +43897,44 @@ components:
           type: array
           items:
             type: string
+          description: Accelerated fields for the Dataset. Data is partitioned by these fields in storage to improve query performance.
         bucketName:
           type: string
+          description: Name of the legacy Cribl Lake bucket that backs the Dataset. Mutually exclusive with <code>storageLocationId</code>.
         cacheConnection:
           $ref: "#/components/schemas/CacheConnection"
+          description: Lakehouse cache connection settings for the Dataset.
         deletionStartedAt:
           type: number
+          description: Timestamp (in Unix time) when Dataset deletion was initiated, in milliseconds.
         description:
           type: string
+          description: Brief description of the Dataset.
         format:
-          $ref: "#/components/schemas/FormatOptions"
+          $ref: "#/components/schemas/FormatOptionsCriblLakeDataset"
         httpDAUsed:
           type: boolean
+          description: If <code>true</code>, the Dataset is used by Direct Access HTTP.
         id:
           type: string
+          description: Dataset identifier. Optional; the path parameter <code>id</code> is authoritative.
         metrics:
           $ref: "#/components/schemas/LakeDatasetMetrics"
+          description: Most recent Dataset metrics snapshot.
         retentionPeriodInDays:
-          type: number
+          type: integer
+          description: Dataset retention period, in days.
         searchConfig:
           $ref: "#/components/schemas/LakeDatasetSearchConfig"
+          description: Search configuration for the Dataset.
         storageClass:
           $ref: "#/components/schemas/StorageClassOptionsCriblLakeDataset"
         storageLocationId:
           type: string
+          description: Identifier for the Storage Location that backs the Dataset. Mutually exclusive with <code>bucketName</code>.
         viewName:
           type: string
+          description: Name of the ClickHouse view for the Dataset on the Lakehouse.
     EventBreakerRuleFields:
       type: object
       properties:
@@ -44249,6 +44358,8 @@ components:
           $ref: "#/components/schemas/HeartbeatMetadata"
         nodeUpgradeStatus:
           $ref: "#/components/schemas/NodeUpgradeStatus"
+        provisioningTokenId:
+          type: string
         status:
           type: string
         type:
@@ -46238,6 +46349,29 @@ components:
         - type: object
           additionalProperties:
             type: number
+    StatusType:
+      type: object
+      properties:
+        error:
+          $ref: "#/components/schemas/StatusError"
+          description: Error information, if applicable.
+        health:
+          $ref: "#/components/schemas/HealthStringType"
+          description: Overall health status of the Source or Destination.
+        metrics:
+          type: object
+          additionalProperties: true
+          description: Metrics data for the Source or Destination.
+        pq:
+          $ref: "#/components/schemas/WorkerPQStatus"
+          description: Persistent queue status information (if persistent queue is enabled).
+        timestamp:
+          type: number
+          description: Timestamp (in Unix time) when the status was last updated.
+        useStatusFromLB:
+          type: boolean
+          description: Set to prefer status from the LB process, not from the worker process.
+      description: "Runtime status: health, metrics, and optional persistent-queue info. Fields may be absent when data is unavailable."
     MethodOptions:
       type: string
       title: Method
@@ -46903,13 +47037,6 @@ components:
         - Raw
       description: When set to JSON, the event is automatically formatted with required fields before sending. When set to Raw, only the event's `_raw` value is sent.
       x-speakeasy-unknown-values: allow
-    FormatOptions:
-      type: string
-      enum:
-        - json
-        - parquet
-        - ddss
-      x-speakeasy-unknown-values: allow
     AuthenticationTypeOptions:
       type: string
       title: Authentication type
@@ -47058,16 +47185,25 @@ components:
         - stream
       description: Explicit type of the Worker Group, Outpost Group, or Edge Fleet.
       x-speakeasy-unknown-values: allow
+    FormatOptionsCriblLakeDataset:
+      type: string
+      enum:
+        - ddss
+        - json
+        - parquet
+      description: Storage format used for data persisted in the Dataset.
+      x-speakeasy-unknown-values: allow
     StorageClassOptionsCriblLakeDataset:
       type: string
       enum:
-        - STANDARD
-        - STANDARD_IA
-        - ONEZONE_IA
-        - INTELLIGENT_TIERING
+        - DEEP_ARCHIVE
         - GLACIER
         - GLACIER_IR
-        - DEEP_ARCHIVE
+        - INTELLIGENT_TIERING
+        - ONEZONE_IA
+        - STANDARD
+        - STANDARD_IA
+      description: Storage class used for objects written to the Dataset.
       x-speakeasy-unknown-values: allow
     ScalarOrArray:
       oneOf:
@@ -51417,6 +51553,7 @@ tags:
     x-cribl-availability: both
   - name: system
     description: Actions related to system settings
+    x-cribl-availability: both
   - name: teams
     description: Actions related to Teams
     x-cribl-availability: both
@@ -51684,7 +51821,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInput"
+                $ref: "#/components/schemas/CountedInputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -51860,7 +51997,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInput"
+                $ref: "#/components/schemas/CountedInputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -51893,7 +52030,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInput"
+                $ref: "#/components/schemas/CountedInputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -52069,7 +52206,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInput"
+                $ref: "#/components/schemas/CountedInputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -52101,7 +52238,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInput"
+                $ref: "#/components/schemas/CountedInputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -52288,7 +52425,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInput"
+                $ref: "#/components/schemas/CountedInputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -52470,7 +52607,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInput"
+                $ref: "#/components/schemas/CountedInputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -52516,7 +52653,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInput"
+                $ref: "#/components/schemas/CountedInputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -52698,7 +52835,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInput"
+                $ref: "#/components/schemas/CountedInputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -52736,7 +52873,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInput"
+                $ref: "#/components/schemas/CountedInputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -52947,7 +53084,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutput"
+                $ref: "#/components/schemas/CountedOutputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -53141,7 +53278,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutput"
+                $ref: "#/components/schemas/CountedOutputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -53174,7 +53311,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutput"
+                $ref: "#/components/schemas/CountedOutputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -53366,7 +53503,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutput"
+                $ref: "#/components/schemas/CountedOutputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -53398,7 +53535,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutput"
+                $ref: "#/components/schemas/CountedOutputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -53571,7 +53708,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutput"
+                $ref: "#/components/schemas/CountedOutputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -53771,7 +53908,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutput"
+                $ref: "#/components/schemas/CountedOutputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -53817,7 +53954,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutput"
+                $ref: "#/components/schemas/CountedOutputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -54015,7 +54152,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutput"
+                $ref: "#/components/schemas/CountedOutputResponse"
         "401":
           description: Unauthorized
         "500":
@@ -54053,7 +54190,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutput"
+                $ref: "#/components/schemas/CountedOutputResponse"
         "401":
           description: Unauthorized
         "500":
