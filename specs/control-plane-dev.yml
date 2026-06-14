@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.19.0-alpha.1781391840829-562c3b2e
+  version: 4.19.0-alpha.1781478251164-8c899080
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -16978,10 +16978,12 @@ components:
             - static
             - dns
             - ec2
+            - http_sd
           x-speakeasy-enum-descriptions:
             - Static
             - DNS
             - AWS EC2
+            - HTTP SD
           description: Target discovery mechanism. Use static to manually enter a list of
             targets.
           x-speakeasy-unknown-values: allow
@@ -17147,6 +17149,27 @@ components:
             hours).
           minimum: 900
           maximum: 43200
+        httpDiscoveryUrl:
+          type: string
+          title: Discovery URL
+          description: URL to fetch target groups from (must be http or https)
+          pattern: ^https?://
+        httpDiscoveryHeaders:
+          type: array
+          title: HTTP headers
+          description: Extra headers to send with the discovery request
+          items:
+            $ref: "#/components/schemas/HttpDiscoveryHeaderConfInputPrometheus"
+        httpDiscoveryRejectUnauthorized:
+          type: boolean
+          title: Reject unauthorized certificates
+          description: Reject TLS certificates that cannot be verified for the discovery
+            endpoint. Falls back to the source-level setting if not specified.
+        maxResponseBodySize:
+          type: string
+          title: Max response body size
+          description: Maximum size of the HTTP SD response body. Responses exceeding this
+            limit will be rejected. Defaults to 20 MB.
         username:
           type: string
           title: Username
@@ -17316,6 +17339,7 @@ components:
             - k8s-node
             - k8s-pods
             - k8s-service-monitor
+            - http_sd
           x-speakeasy-enum-descriptions:
             - Static
             - DNS
@@ -17323,6 +17347,7 @@ components:
             - Kubernetes Node
             - Kubernetes Pods
             - Kubernetes Service Monitor (v4.18+)
+            - HTTP SD
           description: Target discovery mechanism. Use static to manually enter a list of
             targets.
           x-speakeasy-unknown-values: allow
@@ -17514,6 +17539,27 @@ components:
                 type: string
                 title: Description
                 description: Optional description of this rule's purpose
+        httpDiscoveryUrl:
+          type: string
+          title: Discovery URL
+          description: URL to fetch target groups from (must be http or https)
+          pattern: ^https?://
+        httpDiscoveryHeaders:
+          type: array
+          title: HTTP headers
+          description: Extra headers to send with the discovery request
+          items:
+            $ref: "#/components/schemas/HttpDiscoveryHeaderConfInputPrometheus"
+        httpDiscoveryRejectUnauthorized:
+          type: boolean
+          title: Reject unauthorized certificates
+          description: Reject TLS certificates that cannot be verified for the discovery
+            endpoint. Falls back to the source-level setting if not specified.
+        maxResponseBodySize:
+          type: string
+          title: Max response body size
+          description: Maximum size of the HTTP SD response body. Responses exceeding this
+            limit will be rejected. Defaults to 20 MB.
         username:
           type: string
           title: Username
@@ -18779,7 +18825,31 @@ components:
               title: Client Secret (text secret)
               description: Select or create a stored text secret
             certificate:
-              $ref: "#/components/schemas/CertificateTypeAzureBlobAuthTypeClientCert"
+              type: object
+              required:
+                - certificateName
+                - certPath
+                - privKeyPath
+              properties:
+                certificateName:
+                  type: string
+                  title: Certificate
+                  description: The certificate you registered as credentials for your app in the
+                    Azure portal
+                certPath:
+                  type: string
+                  title: Certificate path
+                  description: Path on server containing certificates to use. PEM format. Can
+                    reference $ENV_VARS.
+                privKeyPath:
+                  type: string
+                  title: Private key path
+                  description: Path on server containing the private key to use. PEM format. Can
+                    reference $ENV_VARS.
+                passphrase:
+                  type: string
+                  title: Passphrase
+                  description: Passphrase to use to decrypt private key
             oauthEndpoint:
               $ref: "#/components/schemas/MicrosoftEntraIdAuthenticationEndpointOptionsSasl"
             clientId:
@@ -26139,7 +26209,7 @@ components:
                 title: Query parameters
                 description: Query-string parameters to send with this endpoint
                 items:
-                  $ref: "#/components/schemas/RequestParamConfInputOpenai"
+                  $ref: "#/components/schemas/HttpDiscoveryHeaderConfInputPrometheus"
               paginationType:
                 type: string
                 title: Pagination type
@@ -36385,6 +36455,12 @@ components:
           minimum: 1
         tls:
           $ref: "#/components/schemas/TlsSettingsClientSideTypeExtended"
+        maxPayloadEvents:
+          type: number
+          title: Events-per-request limit
+          description: Max number of events to include in the request body. Default is 0
+            (unlimited).
+          minimum: 0
         onBackpressure:
           $ref: "#/components/schemas/BackpressureBehaviorOptions"
         description:
@@ -41490,7 +41566,7 @@ components:
             field. Example: '__labels: {host: \"cribl.io\", level: \"error\"}'"
           minItems: 0
           items:
-            $ref: "#/components/schemas/RequestParamConfInputOpenai"
+            $ref: "#/components/schemas/HttpDiscoveryHeaderConfInputPrometheus"
         metricRenameExpr:
           type: string
           title: Metrics renaming expression
@@ -41755,7 +41831,7 @@ components:
             field. Example: '__labels: {host: \"cribl.io\", level: \"error\"}'"
           minItems: 0
           items:
-            $ref: "#/components/schemas/RequestParamConfInputOpenai"
+            $ref: "#/components/schemas/HttpDiscoveryHeaderConfInputPrometheus"
         authType:
           $ref: "#/components/schemas/AuthenticationTypeOptionsPrometheusAuthBasicCredent\
             ialsSecret"
@@ -55619,6 +55695,18 @@ components:
           items:
             type: string
             minLength: 1
+    HttpDiscoveryHeaderConfInputPrometheus:
+      type: object
+      required:
+        - name
+        - value
+      properties:
+        name:
+          type: string
+          title: Name
+        value:
+          type: string
+          title: Value
     CompressionOptionsPersistence:
       type: string
       title: Compression
@@ -55888,18 +55976,6 @@ components:
         - silly
       description: Collector runtime log level
       x-speakeasy-unknown-values: allow
-    RequestParamConfInputOpenai:
-      type: object
-      required:
-        - name
-        - value
-      properties:
-        name:
-          type: string
-          title: Name
-        value:
-          type: string
-          title: Value
     OauthParamConfInputServicenowTable:
       type: object
       required:
