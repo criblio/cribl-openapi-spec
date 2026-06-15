@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.19.0-alpha.1781266421654-638e2836
+  version: 4.19.0-alpha.1781391904236-562c3b2e
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -20942,6 +20942,16 @@ components:
             the Kubernetes Logs Event Breaker and the kubernetes_logs
             Pre-processing Pipeline to remove them from the events after the
             timestamps are extracted.
+        lineBufferLimit:
+          type: number
+          minimum: 1024
+          title: Line buffer limit
+          description: Maximum bytes to buffer while reassembling a single log line. A
+            line that exceeds this size is flushed as-is, either whole or
+            partially. The default is 1048576 (1 MB).
+        __LBDisableAssembly:
+          type: boolean
+          description: Internal flag to disable LB worker payload reassembly.
         metadata:
           type: array
           title: Fields
@@ -27390,16 +27400,12 @@ components:
           items:
             type: string
             minLength: 1
-        hecAcks:
-          type: boolean
-          title: Zscaler HEC Acks
-          description: Whether to enable Zscaler HEC acknowledgements
         accessControlAllowOrigin:
           title: CORS allowed origins
           type: array
-          description: Optionally, list HTTP origins to which @{product} should send CORS
-            (cross-origin resource sharing) Access-Control-Allow-* headers.
-            Supports wildcards.
+          description: HTTP origins to which @{product} should send CORS (cross-origin
+            resource sharing) Access-Control-Allow-* headers. Supports
+            wildcards.
           minItems: 0
           items:
             type: string
@@ -27407,9 +27413,9 @@ components:
         accessControlAllowHeaders:
           title: CORS allowed headers
           type: array
-          description: Optionally, list HTTP headers that @{product} will send to allowed
-            origins as "Access-Control-Allow-Headers" in a CORS preflight
-            response. Use "*" to allow all headers.
+          description: HTTP headers that @{product} will send to allowed origins as
+            "Access-Control-Allow-Headers" in a CORS preflight response. Use "*"
+            to allow all headers.
           minItems: 0
           items:
             type: string
@@ -27417,8 +27423,12 @@ components:
         emitTokenMetrics:
           type: boolean
           title: Emit per-token request metrics
-          description: Enable to emit per-token (<prefix>.http.perToken) and summary
+          description: Emit per-token (<prefix>.http.perToken) and summary
             (<prefix>.http.summary) request metrics
+        hecAcks:
+          type: boolean
+          title: Zscaler HEC Acks
+          description: Whether to enable Zscaler HEC acknowledgements
         description:
           type: string
           title: Description
@@ -27447,6 +27457,24 @@ components:
           description: Binds 'hecAPI' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'hecAPI' at runtime.
+        __template_allowedIndexes:
+          type: string
+          description: Binds 'allowedIndexes' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'allowedIndexes' at
+            runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
     InputCloudflareHec:
       type: object
       required:
@@ -27520,46 +27548,7 @@ components:
           description: "Shared secrets to be provided by any client (Authorization:
             <token>). If empty, unauthorized access is permitted."
           items:
-            type: object
-            properties:
-              authType:
-                title: Authentication method
-                type: string
-                enum:
-                  - secret
-                description: Select Secret to use a text secret to authenticate
-                x-speakeasy-unknown-values: allow
-              tokenSecret:
-                type: string
-                title: Token secret (text secret)
-                description: Select or create a stored text secret
-              token:
-                type: string
-                title: Token
-                description: "Shared secret to be provided by any client (Authorization:
-                  <token>)"
-              enabled:
-                type: boolean
-                title: Enable token
-              description:
-                type: string
-                title: Description
-              allowedIndexesAtToken:
-                type: array
-                title: Allowed indexes
-                description: Enter the values you want to allow in the HEC event index field at
-                  the token level. Supports wildcards. To skip validation, leave
-                  blank.
-                minItems: 0
-                items:
-                  type: string
-                  minLength: 1
-              metadata:
-                type: array
-                title: Fields
-                description: Fields to add to events referencing this token
-                items:
-                  $ref: "#/components/schemas/MetadataConfInputCollection"
+            $ref: "#/components/schemas/AuthTokenConfInputCloudflareHec"
         tls:
           type: object
           title: TLS settings (server side)
@@ -27695,6 +27684,31 @@ components:
           items:
             type: string
             minLength: 1
+        accessControlAllowOrigin:
+          title: CORS allowed origins
+          type: array
+          description: HTTP origins to which @{product} should send CORS (cross-origin
+            resource sharing) Access-Control-Allow-* headers. Supports
+            wildcards.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowHeaders:
+          title: CORS allowed headers
+          type: array
+          description: HTTP headers that @{product} will send to allowed origins as
+            "Access-Control-Allow-Headers" in a CORS preflight response. Use "*"
+            to allow all headers.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        emitTokenMetrics:
+          type: boolean
+          title: Emit per-token request metrics
+          description: Emit per-token (<prefix>.http.perToken) and summary
+            (<prefix>.http.summary) request metrics
         breakerRulesets:
           type: array
           title: Event Breaker rulesets
@@ -27710,6 +27724,212 @@ components:
             out, as is, to the Pipelines
           minimum: 10
           maximum: 43200000
+        description:
+          type: string
+          title: Description
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_hecAPI:
+          type: string
+          description: Binds 'hecAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'hecAPI' at runtime.
+        __template_allowedIndexes:
+          type: string
+          description: Binds 'allowedIndexes' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'allowedIndexes' at
+            runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
+    InputSysdigHec:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - hecAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          enum:
+            - sysdig_hec
+        disabled:
+          type: boolean
+          title: Disabled
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Tags for filtering and grouping in @{product}
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestina\
+            tionArnConstraint"
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization:
+            <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokenConfInputCloudflareHec"
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set
+            to 0 for unlimited. Caution: Increasing the limit above the default
+            value, or setting it to unlimited, may degrade performance and
+            reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        enableProxyHeader:
+          type: boolean
+          title: Show originating IP
+          description: Extract the client IP and port from PROXY protocol v1/v2. When
+            enabled, the X-Forwarded-For header is ignored. Disable to use the
+            X-Forwarded-For header for client IP extraction.
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        hecAPI:
+          type: string
+          title: HEC endpoint
+          description: Absolute path on which to listen for the Sysdig HTTP Event
+            Collector API requests. This input supports the /event and /raw
+            endpoints.
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to every event. May be overridden by fields added at
+            the token or request level.
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        allowedIndexes:
+          type: array
+          title: Allowed indexes
+          description: List values allowed in HEC event index field. Leave blank to skip
+            validation. Supports wildcards. The values here can expand index
+            validation at the token level.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
         accessControlAllowOrigin:
           title: CORS allowed origins
           type: array
@@ -28385,6 +28605,7 @@ components:
         - $ref: "#/components/schemas/InputServicenowTable"
         - $ref: "#/components/schemas/InputZscalerHec"
         - $ref: "#/components/schemas/InputCloudflareHec"
+        - $ref: "#/components/schemas/InputSysdigHec"
         - $ref: "#/components/schemas/InputOpenaiComplianceLogs"
         - $ref: "#/components/schemas/InputAnthropicCompliance"
         - $ref: "#/components/schemas/InputOkta"
@@ -28456,6 +28677,7 @@ components:
           servicenow_table: "#/components/schemas/InputServicenowTable"
           zscaler_hec: "#/components/schemas/InputZscalerHec"
           cloudflare_hec: "#/components/schemas/InputCloudflareHec"
+          sysdig_hec: "#/components/schemas/InputSysdigHec"
           openai_compliance_logs: "#/components/schemas/InputOpenaiComplianceLogs"
           anthropic_compliance: "#/components/schemas/InputAnthropicCompliance"
           okta: "#/components/schemas/InputOkta"
@@ -29534,7 +29756,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -29981,7 +30203,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -30439,7 +30661,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -30620,7 +30842,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -30922,7 +31144,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -31219,7 +31441,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -31448,7 +31670,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -31678,7 +31900,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -31906,7 +32128,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -32121,7 +32343,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -33722,7 +33944,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -34018,7 +34240,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -34267,7 +34489,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -34501,7 +34723,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -34729,7 +34951,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -35054,7 +35276,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -35899,7 +36121,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -36169,7 +36391,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -36355,7 +36577,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -36810,7 +37032,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -37053,7 +37275,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -37357,7 +37579,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -37709,7 +37931,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -37949,7 +38171,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -38211,7 +38433,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -38448,7 +38670,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -38749,7 +38971,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -38984,7 +39206,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -39565,7 +39787,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -39728,7 +39950,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -39891,7 +40113,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -40153,7 +40375,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -40423,7 +40645,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -40798,7 +41020,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -41112,7 +41334,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -41380,7 +41602,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -41669,7 +41891,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -41893,7 +42115,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -42353,7 +42575,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -42624,7 +42846,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -42892,7 +43114,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -43114,7 +43336,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -43382,7 +43604,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -43651,7 +43873,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -43876,7 +44098,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -44098,7 +44320,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -45537,7 +45759,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -45833,7 +46055,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -46179,7 +46401,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -46461,7 +46683,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -46826,7 +47048,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -47139,7 +47361,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -47465,7 +47687,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -47752,7 +47974,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -48387,7 +48609,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         pqControls:
           type: object
@@ -52490,6 +52712,12 @@ components:
         cloud:
           $ref: "#/components/schemas/ConfigGroupCloud"
           description: Cloud provider and region details for a Cribl.Cloud Worker Group.
+        collectorsHaEnabled:
+          type: boolean
+          description: Enable to keep Collector jobs running when a Worker fails in this
+            Worker Group. Applies only to Stream Worker Groups. Always
+            <code>true</code> for Cribl.Cloud groups; defaults to
+            <code>false</code> for on-prem groups.
         configVersion:
           type: string
           description: "Commit hash of the deployed configuration version for the Worker
@@ -52641,6 +52869,12 @@ components:
         cloud:
           $ref: "#/components/schemas/ConfigGroupCloud"
           description: Cloud provider and region details for a Cribl.Cloud Worker Group.
+        collectorsHaEnabled:
+          type: boolean
+          description: Enable to keep Collector jobs running when a Worker fails in this
+            Worker Group. Applies only to Stream Worker Groups. Always
+            <code>true</code> for Cribl.Cloud groups; defaults to
+            <code>false</code> for on-prem groups.
         description:
           type: string
           description: Brief description of the Worker Group, Outpost Group, or Edge Fleet.
@@ -55833,6 +56067,13 @@ components:
           type: string
           title: Value
           description: OAuth header value
+    AuthenticationMethodOptionsAuthTokensItemsSecret:
+      title: Authentication method
+      type: string
+      enum:
+        - secret
+      description: Select Secret to use a text secret to authenticate
+      x-speakeasy-unknown-values: allow
     JobTypeOptionsRunnableJobCollection:
       type: string
       title: Job type
@@ -57111,7 +57352,7 @@ components:
           title: Buffer size limit (bytes)
           description: The maximum size to hold in memory before writing events to disk.
             Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 1MB.
+            and the maximum value is 10MB.
           pattern: ^\d+\s*(?:\w{2})?$
         maxBufferSize:
           type: number
@@ -57680,6 +57921,41 @@ components:
           type: boolean
           title: Detailed metrics
           description: Generate full GPU metrics
+    AuthTokenConfInputCloudflareHec:
+      type: object
+      properties:
+        authType:
+          $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensItemsSecret"
+        tokenSecret:
+          type: string
+          title: Token secret (text secret)
+          description: Select or create a stored text secret
+        token:
+          type: string
+          title: Token
+          description: "Shared secret to be provided by any client (Authorization: <token>)"
+        enabled:
+          type: boolean
+          title: Enable token
+        description:
+          type: string
+          title: Description
+        allowedIndexesAtToken:
+          type: array
+          title: Allowed indexes
+          description: Enter the values you want to allow in the HEC event index field at
+            the token level. Supports wildcards. To skip validation, leave
+            blank.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events referencing this token
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
     RunnableJobCollectionScheduleRunType:
       type: object
       required:
@@ -58544,25 +58820,70 @@ components:
         connectionTimeout: 15000
         tags: secure,oracle,sensitive-data
     FunctionResponseExamplesEvalFunction:
-      summary: Eval Function response
-      description: Example response for the Eval Function, which adds, removes, or
-        updates event fields using JavaScript expressions.
+      summary: Get the Eval Function
+      description: Example response for getting the Eval Function.
       value:
-        id: eval
-        name: Eval
-        description: Adds, removes, or updates event fields using JavaScript expressions.
-        category: fields
-        tags: eval,fields
+        count: 1
+        items:
+          - id: eval
+            name: Eval
+            version: "0.4"
+            group: Standard
+            __filename: eval/index.js
+            loadTime: 0
+            modTime: 0
+            uischema: {}
+            description: Adds, removes, or updates event fields using JavaScript
+              expressions.
+            category: fields
+            tags: eval,fields
     FunctionResponseExamplesDropFunction:
-      summary: Drop Function response
-      description: Example response for the Drop Function, which removes events that
-        match a specified filter expression.
+      summary: Get the Drop Function
+      description: Example response for getting the Drop Function, which removes
+        events that match a specified filter expression.
       value:
-        id: drop
-        name: Drop
-        description: Removes events that match the specified filter expression.
-        category: filtering
-        tags: drop,filter
+        count: 1
+        items:
+          - id: drop
+            name: Drop
+            version: "0.1"
+            group: Standard
+            __filename: drop/index.js
+            loadTime: 0
+            modTime: 0
+            uischema: {}
+            description: Removes events that match the specified filter expression.
+            category: filtering
+            tags: drop,filter
+    FunctionListResponseExamplesFunctionList:
+      summary: List all Functions
+      description: Example response for listing all Functions.
+      value:
+        count: 2
+        items:
+          - id: eval
+            name: Eval
+            version: "0.4"
+            group: Standard
+            __filename: eval/index.js
+            loadTime: 0
+            modTime: 0
+            uischema: {}
+            description: Adds, removes, or updates event fields using JavaScript
+              expressions.
+            category: fields
+            tags: eval,fields
+          - id: drop
+            name: Drop
+            version: "0.1"
+            group: Standard
+            __filename: drop/index.js
+            loadTime: 0
+            modTime: 0
+            uischema: {}
+            description: Removes events that match the specified filter expression.
+            category: filtering
+            tags: drop,filter
     InputResponseExamplesSyslogSource:
       summary: Syslog Source response
       description: Example response for getting or updating a Syslog Source.
@@ -59175,6 +59496,16 @@ components:
         queueName: my-queue
         queueType: standard
         region: us-east-1
+        sendToRoutes: true
+        pqEnabled: false
+    InputCreateExamplesSysdigHec:
+      summary: Sysdig Cloud NSS
+      value:
+        id: sysdig-hec-source
+        type: sysdig_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
         sendToRoutes: true
         pqEnabled: false
     InputCreateExamplesSyslog:
@@ -60063,6 +60394,20 @@ components:
       description: Example request body for updating a SQS Source.<br/><br/>The
         request body must include a complete representation of the Source that
         you want to update. This endpoint does not support partial updates.
+    UpdateInputExamplesSysdigHec:
+      summary: Sysdig Cloud NSS
+      value:
+        id: sysdig-hec-source
+        type: sysdig_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Sysdig Cloud NSS
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
     UpdateInputExamplesSyslog:
       summary: Syslog
       value:
@@ -65061,10 +65406,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/CountedFunctionResponse"
               examples:
-                FunctionResponseExamplesEvalFunction:
-                  $ref: "#/components/examples/FunctionResponseExamplesEvalFunction"
-                FunctionResponseExamplesDropFunction:
-                  $ref: "#/components/examples/FunctionResponseExamplesDropFunction"
+                FunctionListResponseExamplesFunctionList:
+                  $ref: "#/components/examples/FunctionListResponseExamplesFunctionList"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -66526,6 +66869,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesSplunkSearch"
               InputCreateExamplesSqs:
                 $ref: "#/components/examples/InputCreateExamplesSqs"
+              InputCreateExamplesSysdigHec:
+                $ref: "#/components/examples/InputCreateExamplesSysdigHec"
               InputCreateExamplesSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesSystemMetrics:
@@ -66784,6 +67129,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesSplunkSearch"
               UpdateInputExamplesSqs:
                 $ref: "#/components/examples/UpdateInputExamplesSqs"
+              UpdateInputExamplesSysdigHec:
+                $ref: "#/components/examples/UpdateInputExamplesSysdigHec"
               UpdateInputExamplesSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSyslog"
               UpdateInputExamplesSystemMetrics:
@@ -69586,6 +69933,12 @@ paths:
           schema:
             type: boolean
           description: Exclude DDSS format datasets from the response.
+        - name: excludeNetskope
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Exclude Netskope format datasets from the response.
         - name: excludeDeleted
           in: query
           required: false
@@ -70220,6 +70573,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesSplunkSearch"
               InputCreateExamplesSqs:
                 $ref: "#/components/examples/InputCreateExamplesSqs"
+              InputCreateExamplesSysdigHec:
+                $ref: "#/components/examples/InputCreateExamplesSysdigHec"
               InputCreateExamplesSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesSystemMetrics:
@@ -70458,6 +70813,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesSplunkSearch"
               UpdateInputExamplesSqs:
                 $ref: "#/components/examples/UpdateInputExamplesSqs"
+              UpdateInputExamplesSysdigHec:
+                $ref: "#/components/examples/UpdateInputExamplesSysdigHec"
               UpdateInputExamplesSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSyslog"
               UpdateInputExamplesSystemMetrics:
