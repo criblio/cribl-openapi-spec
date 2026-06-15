@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.19.0-alpha.1781478251164-8c899080
+  version: 4.19.0-alpha.1781564968784-83d7e3bb
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -47,10 +47,20 @@ components:
   schemas:
     Error:
       type: object
+      required:
+        - status
+        - message
       properties:
+        status:
+          type: string
+          description: Always "error" for API error responses.
+          const: error
         message:
           type: string
-          description: Error message
+          description: Human-readable message describing the error.
+        details:
+          description: Optional structured details about the error (e.g. validation
+            failures).
     DiffLineDelete:
       type: object
       description: Deleted line in a Git diff hunk.
@@ -13742,6 +13752,11 @@ components:
     RestApiJsonError:
       type: object
       properties:
+        details:
+          type: object
+          additionalProperties: true
+          description: Optional structured details about the error (e.g. validation
+            failures).
         message:
           type: string
           description: Human-readable message or serialized validation details for the
@@ -42185,7 +42200,24 @@ components:
         onBackpressure:
           $ref: "#/components/schemas/BackpressureBehaviorOptions"
         authType:
-          $ref: "#/components/schemas/AuthenticationTypeOptionsPrometheusAuth"
+          type: string
+          title: Authentication type
+          description: Remote Write authentication type
+          enum:
+            - none
+            - basic
+            - credentialsSecret
+            - token
+            - textSecret
+            - aws_sigv4
+          x-speakeasy-enum-descriptions:
+            - None
+            - Basic
+            - Basic (credentials secret)
+            - Token
+            - Token (text secret)
+            - AWS Signature v4
+          x-speakeasy-unknown-values: allow
         description:
           type: string
           title: Description
@@ -42271,6 +42303,45 @@ components:
           type: string
           title: Token (text secret)
           description: Select or create a stored text secret
+        awsAuthenticationMethod:
+          $ref: "#/components/schemas/AuthenticationMethodOptionsAutoSecret"
+        awsSecret:
+          type: string
+          title: Secret key pair
+          description: Select or create a stored secret that references your access key
+            and secret key
+        region:
+          type: string
+          title: Region
+          description: AWS region used to sign Remote Write requests
+        awsService:
+          type: string
+          title: AWS service ID
+          description: ID used to sign Remote Write requests (for example, `aps` for
+            Amazon Managed Service for Prometheus)
+          pattern: ^[a-z][a-z0-9]*(-[a-z0-9]+)*$
+        enableAssumeRole:
+          type: boolean
+          title: Enable for Prometheus
+          description: Use Assume Role credentials to access Prometheus
+        assumeRoleArn:
+          type: string
+          title: AssumeRole ARN
+          description: Amazon Resource Name (ARN) of the role to assume
+          pattern: "^arn:"
+          minLength: 20
+        assumeRoleExternalId:
+          type: string
+          title: External ID
+          description: External ID to use when assuming role
+        durationSeconds:
+          type: number
+          title: Duration (seconds)
+          description: Duration of the assumed role's session, in seconds. Minimum is 900
+            (15 minutes), default is 3600 (1 hour), and maximum is 43200 (12
+            hours).
+          minimum: 900
+          maximum: 43200
         __template_streamtags:
           type: string
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
@@ -42293,6 +42364,27 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+        __template_region:
+          type: string
+          description: Binds 'region' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'region' at runtime.
+        __template_awsService:
+          type: string
+          description: Binds 'awsService' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'awsService' at runtime.
+        __template_assumeRoleArn:
+          type: string
+          description: Binds 'assumeRoleArn' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'assumeRoleArn' at runtime.
+        __template_assumeRoleExternalId:
+          type: string
+          description: Binds 'assumeRoleExternalId' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'assumeRoleExternalId' at runtime.
     OutputRing:
       type: object
       properties:
@@ -48813,16 +48905,7 @@ components:
           items:
             type: string
         awsAuthenticationMethod:
-          type: string
-          title: Authentication method
-          description: AWS authentication method. Choose Auto to use IAM roles.
-          enum:
-            - auto
-            - secret
-          x-speakeasy-enum-descriptions:
-            - Auto
-            - Secret Key pair
-          x-speakeasy-unknown-values: allow
+          $ref: "#/components/schemas/AuthenticationMethodOptionsAutoSecret"
         reuseConnections:
           type: boolean
           title: Reuse connections
@@ -52790,10 +52873,11 @@ components:
           description: Cloud provider and region details for a Cribl.Cloud Worker Group.
         collectorsHaEnabled:
           type: boolean
-          description: Enable to keep Collector jobs running when a Worker fails in this
-            Worker Group. Applies only to Stream Worker Groups. Always
-            <code>true</code> for Cribl.Cloud groups; defaults to
-            <code>false</code> for on-prem groups.
+          description: Keeps Collector jobs running if the Leader Node fails. Applies only
+            to Stream Worker Groups. Always <code>true</code> for Cribl.Cloud
+            groups; defaults to <code>false</code> for on-prem groups. to Stream
+            Worker Groups. Always <code>true</code> for Cribl.Cloud groups;
+            defaults to <code>false</code> for on-prem groups.
         configVersion:
           type: string
           description: "Commit hash of the deployed configuration version for the Worker
@@ -52940,10 +53024,11 @@ components:
           description: Cloud provider and region details for a Cribl.Cloud Worker Group.
         collectorsHaEnabled:
           type: boolean
-          description: Enable to keep Collector jobs running when a Worker fails in this
-            Worker Group. Applies only to Stream Worker Groups. Always
-            <code>true</code> for Cribl.Cloud groups; defaults to
-            <code>false</code> for on-prem groups.
+          description: Keeps Collector jobs running if the Leader Node fails. Applies only
+            to Stream Worker Groups. Always <code>true</code> for Cribl.Cloud
+            groups; defaults to <code>false</code> for on-prem groups. to Stream
+            Worker Groups. Always <code>true</code> for Cribl.Cloud groups;
+            defaults to <code>false</code> for on-prem groups.
         description:
           type: string
           description: Brief description of the Worker Group, Outpost Group, or Edge Fleet.
@@ -56665,6 +56750,17 @@ components:
         - Auth token (text secret)
         - Basic
         - Basic (credentials secret)
+      x-speakeasy-unknown-values: allow
+    AuthenticationMethodOptionsAutoSecret:
+      enum:
+        - auto
+        - secret
+      type: string
+      title: Authentication method
+      description: AWS authentication method. Choose Auto to use IAM roles.
+      x-speakeasy-enum-descriptions:
+        - Auto
+        - Secret Key pair
       x-speakeasy-unknown-values: allow
     ProtocolOptions:
       type: string
@@ -65465,6 +65561,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "429":
           description: Rate limit exceeded (check Retry-After header).
           headers:
@@ -65511,6 +65611,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -65543,6 +65647,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -65629,6 +65737,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -65706,6 +65818,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -65774,6 +65890,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: The requested resource does not exist — Database Connection not
             found.
@@ -65841,6 +65961,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: Database Connection not found.
           content:
@@ -65927,6 +66051,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: Database Connection not found.
           content:
@@ -65971,6 +66099,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66004,6 +66136,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66057,6 +66193,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66096,6 +66236,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66155,6 +66299,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66194,6 +66342,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66235,6 +66387,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66362,6 +66518,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66415,6 +66575,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66547,6 +66711,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66592,6 +66760,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66631,6 +66803,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66687,6 +66863,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66750,6 +66930,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -66814,6 +66998,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -67010,6 +67198,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "409":
           description: Request conflicts with current resource state — source with the
             same ID already exists.
@@ -67067,6 +67259,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: The requested resource does not exist.
         "500":
@@ -67270,6 +67466,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -67316,6 +67516,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -67355,6 +67559,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -67418,6 +67626,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -67485,6 +67697,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -67533,6 +67749,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -67580,6 +67800,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -67796,6 +68020,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -67850,6 +68078,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: The requested resource does not exist.
         "500":
@@ -68070,6 +68302,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68116,6 +68352,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68152,6 +68392,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68200,6 +68444,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68251,6 +68499,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68301,6 +68553,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68362,6 +68618,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68443,6 +68703,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68507,6 +68771,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68588,6 +68856,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68654,6 +68926,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68701,6 +68977,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68742,6 +69022,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68789,6 +69073,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68832,6 +69120,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68878,6 +69170,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68917,6 +69213,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -68951,6 +69251,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69071,6 +69375,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69109,6 +69417,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69156,6 +69468,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69279,6 +69595,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69342,6 +69662,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "409":
           description: Request conflicts with current resource state — duplicate group ID
             or duplicate group name.
@@ -69404,6 +69728,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69475,6 +69803,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69517,6 +69849,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69547,6 +69883,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69599,6 +69939,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69650,6 +69994,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69693,6 +70041,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -69749,6 +70101,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "403":
           description: Not authorized or licensed to perform this action.
         "500":
@@ -69789,6 +70145,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "403":
           description: Not authorized or licensed to perform this action.
         "500":
@@ -69837,6 +70197,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "403":
           description: Not authorized or licensed to perform this action.
         "500":
@@ -69929,6 +70293,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "403":
           description: Not authorized or licensed to perform this action.
         "500":
@@ -69975,6 +70343,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "403":
           description: Not authorized or licensed to perform this action.
         "500":
@@ -70022,6 +70394,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -70112,6 +70488,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -70160,6 +70540,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -70209,6 +70593,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -70262,6 +70650,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -70308,6 +70700,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -70340,6 +70736,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -70388,6 +70788,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -70444,6 +70848,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -70500,6 +70908,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -70550,6 +70962,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -70740,6 +71156,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "409":
           description: Request conflicts with current resource state — source with the
             same ID already exists.
@@ -70784,6 +71204,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: The requested resource does not exist.
         "500":
@@ -70980,6 +71404,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71020,6 +71448,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71058,6 +71490,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71115,6 +71551,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71176,6 +71616,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71217,6 +71661,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71258,6 +71706,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71468,6 +71920,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71509,6 +71965,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: The requested resource does not exist.
         "500":
@@ -71723,6 +72183,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71763,6 +72227,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71798,6 +72266,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71840,6 +72312,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71885,6 +72361,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71929,6 +72409,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -71975,6 +72459,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72001,6 +72489,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72040,6 +72532,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72076,6 +72572,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72150,6 +72650,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72207,6 +72711,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72281,6 +72789,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72334,6 +72846,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72372,6 +72888,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72405,6 +72925,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72448,6 +72972,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72487,6 +73015,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72517,6 +73049,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72569,6 +73105,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72607,6 +73147,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72640,6 +73184,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72673,6 +73221,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72716,6 +73268,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72770,6 +73326,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -72805,6 +73365,10 @@ paths:
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
