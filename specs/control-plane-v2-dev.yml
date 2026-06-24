@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.19.0-alpha.1782255882446-a6ce2ecc
+  version: 4.19.0-alpha.1782342403888-cda9f731
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -30168,6 +30168,239 @@ components:
             resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
             prefixed ID (group-scoped). Variable value overrides
             'accessControlAllowHeaders' at runtime.
+    InputUpwindHec:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - hecAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - upwind_hec
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Tags for filtering and grouping in @{product}
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestina\
+            tionArnConstraint"
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization:
+            <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokenConfInputCloudflareHec"
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set
+            to 0 for unlimited. Caution: Increasing the limit above the default
+            value, or setting it to unlimited, may degrade performance and
+            reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        enableProxyHeader:
+          type: boolean
+          title: Show originating IP
+          description: Extract the client IP and port from PROXY protocol v1/v2. When
+            enabled, the X-Forwarded-For header is ignored. Disable to use the
+            X-Forwarded-For header for client IP extraction.
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        hecAPI:
+          type: string
+          title: HEC endpoint
+          description: Absolute path on which to listen for the Upwind HTTP Event
+            Collector API requests. This input supports the /event endpoint.
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to every event. May be overridden by fields added at
+            the token or request level.
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        allowedIndexes:
+          type: array
+          title: Allowed indexes
+          description: List values allowed in HEC event index field. Leave blank to skip
+            validation. Supports wildcards. The values here can expand index
+            validation at the token level.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowOrigin:
+          title: CORS allowed origins
+          type: array
+          description: HTTP origins to which @{product} should send CORS (cross-origin
+            resource sharing) Access-Control-Allow-* headers. Supports
+            wildcards.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowHeaders:
+          title: CORS allowed headers
+          type: array
+          description: HTTP headers that @{product} will send to allowed origins as
+            "Access-Control-Allow-Headers" in a CORS preflight response. Use "*"
+            to allow all headers.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        emitTokenMetrics:
+          type: boolean
+          title: Emit per-token request metrics
+          description: Emit per-token (<prefix>.http.perToken) and summary
+            (<prefix>.http.summary) request metrics
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_hecAPI:
+          type: string
+          description: Binds 'hecAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'hecAPI' at runtime.
+        __template_allowedIndexes:
+          type: string
+          description: Binds 'allowedIndexes' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'allowedIndexes' at
+            runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
     InputOpenaiComplianceLogs:
       type: object
       required:
@@ -30779,6 +31012,7 @@ components:
         - $ref: "#/components/schemas/InputZscalerHec"
         - $ref: "#/components/schemas/InputCloudflareHec"
         - $ref: "#/components/schemas/InputSysdigHec"
+        - $ref: "#/components/schemas/InputUpwindHec"
         - $ref: "#/components/schemas/InputOpenaiComplianceLogs"
         - $ref: "#/components/schemas/InputAnthropicCompliance"
         - $ref: "#/components/schemas/InputOkta"
@@ -30851,6 +31085,7 @@ components:
           zscaler_hec: "#/components/schemas/InputZscalerHec"
           cloudflare_hec: "#/components/schemas/InputCloudflareHec"
           sysdig_hec: "#/components/schemas/InputSysdigHec"
+          upwind_hec: "#/components/schemas/InputUpwindHec"
           openai_compliance_logs: "#/components/schemas/InputOpenaiComplianceLogs"
           anthropic_compliance: "#/components/schemas/InputAnthropicCompliance"
           okta: "#/components/schemas/InputOkta"
@@ -57477,8 +57712,11 @@ components:
           properties:
             backupPersistence:
               type: string
+              description: How long to retain backups. Value is a duration string such as
+                <code>24h</code>.
             backupsDirectory:
               type: string
+              description: Filesystem path where configuration backups are stored.
           required:
             - backupPersistence
             - backupsDirectory
@@ -57489,6 +57727,8 @@ components:
           properties:
             enablePiiDetection:
               type: boolean
+              description: If <code>true</code>, enable PII detection for events processed by
+                the Cribl instance. Otherwise, <code>false</code>.
           required:
             - enablePiiDetection
         - $ref: "#/components/schemas/EmptyObject"
@@ -57498,10 +57738,15 @@ components:
           properties:
             rollbackEnabled:
               type: boolean
+              description: If <code>true</code>, enable automatic rollback if an upgrade
+                fails. Otherwise, <code>false</code>.
             rollbackRetries:
-              type: number
+              type: integer
+              description: Number of times to retry a rollback before marking it as failed.
             rollbackTimeout:
-              type: number
+              type: integer
+              description: Maximum duration in milliseconds to wait for a rollback to complete
+                before marking it as failed.
           required:
             - rollbackEnabled
         - $ref: "#/components/schemas/EmptyObject"
@@ -57511,6 +57756,8 @@ components:
           properties:
             disableSNIRouting:
               type: boolean
+              description: If <code>true</code>, disable Server Name Indication (SNI) routing.
+                Otherwise, <code>false</code>.
           required:
             - disableSNIRouting
         - $ref: "#/components/schemas/EmptyObject"
@@ -57520,14 +57767,23 @@ components:
           properties:
             defaultCipherList:
               type: string
+              description: Cipher suite list to use for TLS connections. <code>DEFAULT</code>
+                means the system default.
             defaultEcdhCurve:
               type: string
+              description: ECDH curve name for TLS key exchange. Use <code>auto</code> to let
+                Node.js choose.
             maxVersion:
               type: string
+              description: Maximum TLS protocol version to accept.
             minVersion:
               type: string
+              description: Minimum TLS protocol version to accept.
             rejectUnauthorized:
               type: boolean
+              description: If <code>true</code>, reject TLS certificates that cannot be
+                verified against a valid Certificate Authority. Otherwise,
+                <code>false</code>.
           required:
             - defaultCipherList
             - defaultEcdhCurve
@@ -57540,20 +57796,30 @@ components:
       properties:
         isRolling:
           type: boolean
+          description: If <code>true</code>, perform a rolling upgrade that updates nodes
+            incrementally. If <code>false</code>, upgrade all nodes
+            simultaneously.
         quantity:
-          type: number
+          type: integer
+          description: Percentage of nodes to upgrade at a time during a rolling upgrade.
         retryCount:
-          type: number
+          type: integer
+          description: Number of times to retry upgrading a node before marking it as
+            failed.
         retryDelay:
-          type: number
+          type: integer
+          description: Delay in milliseconds between upgrade retries when a node fails to
+            upgrade.
       title: UpgradeGroupSettings
     UpgradePackageUrls:
       type: object
       properties:
         packageHashUrl:
           type: string
+          description: URL of the hash file used to verify the package download.
         packageUrl:
           type: string
+          description: URL of the upgrade package file.
       required:
         - packageUrl
     UpgradeSettings:
@@ -57561,16 +57827,25 @@ components:
       properties:
         automaticUpgradeCheckPeriod:
           type: string
+          description: How frequently to check for available upgrades. Value is a duration
+            string such as <code>24h</code>.
         disableAutomaticUpgrade:
           type: boolean
+          description: If <code>true</code>, automatic upgrades are disabled. Otherwise,
+            <code>false</code>.
         enableLegacyEdgeUpgrade:
           type: boolean
+          description: If <code>true</code>, enable the legacy upgrade flow for Edge
+            Nodes. Otherwise, <code>false</code>.
         packageUrls:
           type: array
           items:
             $ref: "#/components/schemas/UpgradePackageUrls"
+          description: List of custom package URLs to use for manual upgrades.
         upgradeSource:
           type: string
+          description: "Upgrade source: <code>cribl</code> for official Cribl packages or
+            <code>custom</code> for a custom package URL."
     SystemSettingsConf:
       type: object
       properties:
@@ -57579,103 +57854,160 @@ components:
           properties:
             baseUrl:
               type: string
+              description: Base URL for the API server. Used when the server is behind a
+                reverse proxy.
             disableApiCache:
               type: boolean
+              description: If <code>true</code>, disable the API response cache. Otherwise,
+                <code>false</code>.
             disabled:
               type: boolean
+              description: If <code>true</code>, the API server is disabled. Otherwise,
+                <code>false</code>.
             headers:
               type: object
               additionalProperties:
                 type: string
+              description: Custom HTTP response headers to include in every API response.
             host:
               type: string
+              description: Hostname or IP address the API server listens on.
             idleSessionTTL:
-              type: number
+              type: integer
+              description: Idle session timeout in seconds. Sessions are invalidated after the
+                specified seconds of inactivity.
             listenOnPort:
               type: boolean
+              description: If <code>true</code>, bind to the configured port as the server
+                listen port. Otherwise, <code>false</code>.
             loginRateLimit:
               type: string
+              description: Rate limit for login attempts. Value is a string such as
+                <code>100/min</code>.
             port:
-              type: number
+              type: integer
+              description: Port number the API server listens on.
             protocol:
               type: string
+              description: "API protocol: <code>http</code> or <code>https</code>."
             scripts:
               type: boolean
+              description: If <code>true</code>, enable JavaScript scripting support in the
+                API. Otherwise, <code>false</code>.
             sensitiveFields:
               type: array
               items:
                 type: string
+              description: List of field names whose values are redacted in API responses and
+                logs.
             ssl:
               type: object
               properties:
                 caPath:
                   type: string
+                  description: Filesystem path to the PEM-encoded Certificate Authority (CA)
+                    certificate for client authentication.
                 certPath:
                   type: string
+                  description: Filesystem path to the PEM-encoded TLS certificate.
                 disabled:
                   type: boolean
+                  description: If <code>true</code>, TLS is disabled for the API server.
+                    Otherwise, <code>false</code>.
                 passphrase:
                   type: string
+                  description: Passphrase to decrypt the TLS private key, if encrypted.
                 privKeyPath:
                   type: string
+                  description: Filesystem path to the PEM-encoded TLS private key.
               required:
                 - certPath
                 - disabled
                 - passphrase
                 - privKeyPath
+              description: TLS configuration for the API server.
             ssoRateLimit:
               type: string
+              description: Rate limit for SSO authentication attempts. Value is a string such
+                as <code>100/min</code>.
             workerRemoteAccess:
               type: boolean
+              description: If <code>true</code>, enable remote access (teleporting) to Worker
+                Processes via the API. Otherwise, <code>false</code>.
           required:
             - disabled
             - host
             - port
+          description: API server configuration for the Cribl instance.
         apps:
           type: object
           properties:
             enabled:
               type: boolean
+              description: If <code>true</code>, enable Apps. Otherwise, <code>false</code>.
           required:
             - enabled
+          description: App configuration.
         backups:
           $ref: "#/components/schemas/BackupsSettings"
+          description: Configuration backup settings, including storage location and
+            retention period.
         customLogo:
           type: object
           properties:
             enabled:
               type: boolean
+              description: If <code>true</code>, display the custom logo in the UI. Otherwise,
+                <code>false</code>.
             logoDescription:
               type: string
+              description: Description text displayed alongside the custom logo.
             logoImage:
               type: string
+              description: Custom logo image as a base64-encoded data URI (PNG or JPEG,
+                maximum 2 MB).
           required:
             - enabled
+          description: Custom logo configuration for the Cribl UI login page and
+            navigation bar.
         pii:
           $ref: "#/components/schemas/PiiSettings"
+          description: Personally identifiable information (PII) detection configuration.
         proxy:
           type: object
           properties:
             useEnvVars:
               type: boolean
+              description: If <code>true</code>, use proxy settings from environment variables
+                (<code>HTTP_PROXY</code>, <code>HTTPS_PROXY</code>,
+                <code>NO_PROXY</code>). Otherwise, <code>false</code>.
           required:
             - useEnvVars
+          description: HTTP proxy configuration for outbound connections.
         rollback:
           $ref: "#/components/schemas/RollbackSettings"
+          description: Automatic rollback settings applied when an upgrade fails.
         shutdown:
           type: object
           properties:
             drainTimeout:
-              type: number
+              type: integer
+              description: Maximum time in milliseconds to wait for in-flight events to drain
+                before forcing a shutdown.
           required:
             - drainTimeout
+          description: Graceful shutdown configuration.
         sni:
           $ref: "#/components/schemas/SniSettings"
+          description: Server Name Indication (SNI) routing configuration.
         sockets:
           type: object
           properties:
             directory:
               type: string
+              description: Filesystem directory path where Unix domain socket files are
+                created.
+          description: Unix domain socket configuration.
         support:
           type: object
           properties:
@@ -57686,65 +58018,106 @@ components:
                 properties:
                   disabled:
                     type: boolean
+                    description: If <code>true</code>, the feature flag is disabled. Otherwise,
+                      <code>false</code>.
                   flagId:
                     type: string
+                    description: Unique identifier of the feature flag to override.
                 required:
                   - disabled
                   - flagId
+              description: List of feature flag overrides applied to this Cribl instance.
             logFileMaxFiles:
-              type: number
+              type: integer
+              description: Maximum number of log files to retain before rotating.
             logFileMaxSize:
               type: string
+              description: Maximum size of each log file. Value is a numeral and unit such as
+                <code>10 MB</code>.
+          description: Support and diagnostics settings.
         system:
           type: object
           properties:
             intercom:
               type: boolean
+              description: If <code>true</code>, enable Intercom integration for in-product
+                messaging. Otherwise, <code>false</code>.
             upgrade:
               enum:
-                - false
                 - api
+                - false
+              description: "Upgrade permission policy: <code>api</code> to allow upgrades from
+                the UI or API or <code>false</code> to disable."
               x-speakeasy-unknown-values: allow
           required:
             - intercom
             - upgrade
+          description: System-level operational settings for the Cribl instance.
         tls:
           $ref: "#/components/schemas/TlsSettings"
+          description: Global TLS/SSL settings applied to all outbound connections that do
+            not specify their own TLS configuration.
         upgradeGroupSettings:
           $ref: "#/components/schemas/UpgradeGroupSettings"
+          description: Rolling upgrade group settings that control how many nodes are
+            upgraded at a time.
         upgradeSettings:
           $ref: "#/components/schemas/UpgradeSettings"
+          description: Automatic upgrade scheduling and package source configuration.
         workers:
           type: object
           properties:
             count:
-              type: number
+              type: integer
+              description: Number of Worker Processes to spawn. Set to <code>0</code> to use
+                the number of available CPU cores.
             enableHeapSnapshots:
               type: boolean
+              description: If <code>true</code>, enable V8 heap snapshot generation on
+                out-of-memory errors. Otherwise, <code>false</code>.
             loadThrottlePerc:
-              type: number
+              type: integer
+              description: CPU load percentage threshold above which new connections are
+                throttled.
             memory:
-              type: number
+              type: integer
+              description: Maximum memory (in MB) per Worker Process. Set to <code>0</code>
+                for no limit.
             minimum:
-              type: number
+              type: integer
+              description: Minimum number of Worker Processes to keep running.
             restartUnresponsiveProcesses:
               type: boolean
+              description: If <code>true</code>, automatically restart Worker Processes that
+                become unresponsive. Otherwise, <code>false</code>.
             startupMaxConns:
-              type: number
+              type: integer
+              description: Maximum number of connections to accept during Worker Process
+                startup before throttling begins.
             startupThrottleTimeout:
-              type: number
+              type: integer
+              description: Timeout in milliseconds to wait for Worker Processes to reach idle
+                before ending the startup throttle period.
             v8SingleThread:
               type: boolean
+              description: If <code>true</code>, run all worker threads in a single V8
+                isolate. Otherwise, <code>false</code>.
             workerProcessConfigUpdateConcurrency:
-              type: number
+              type: integer
+              description: Maximum number of Worker Processes that can reload configuration
+                concurrently.
             workerProcessReloadTimeout:
-              type: number
+              type: integer
+              description: Timeout in milliseconds to wait for a Worker Process to reload
+                configuration before treating the reload as failed.
             workerThreadPoolSize:
-              type: number
+              type: integer
+              description: Size of the Worker thread pool used for CPU-bound tasks.
           required:
             - count
             - memory
             - minimum
+          description: Worker Process configuration.
       required:
         - api
         - backups
@@ -63000,6 +63373,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a TCP JSON Source.
+    InputCreateExamplesUpwindHec:
+      summary: Upwind
+      value:
+        id: upwind-hec-source
+        type: upwind_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Upwind Source.
     InputCreateExamplesWef:
       summary: Windows Event Forwarder
       value:
@@ -63921,6 +64305,19 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for updating a TCP JSON Source.<br/><br/>The
+        request body must include a complete representation of the Source that
+        you want to update. This endpoint does not support partial updates.
+    UpdateInputExamplesUpwindHec:
+      summary: Upwind
+      value:
+        id: upwind-hec-source
+        type: upwind_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Upwind Source.<br/><br/>The
         request body must include a complete representation of the Source that
         you want to update. This endpoint does not support partial updates.
     UpdateInputExamplesWef:
@@ -69154,6 +69551,87 @@ components:
         /packs</code> request to install the Pack.
       value:
         source: cribl-palo-alto-networks-1.1.4.AbCdEfGh.crbl
+    GetSystemSettingsConfExamplesDefault:
+      summary: Get system settings
+      description: Example response for getting the current Cribl system settings.
+      value:
+        items:
+          - api:
+              host: 0.0.0.0
+              port: 9000
+              disabled: false
+              ssl:
+                disabled: false
+                privKeyPath: /opt/cribl/local/cribl/auth/cribl.key
+                certPath: /opt/cribl/local/cribl/auth/cribl.crt
+                passphrase: ""
+            system:
+              upgrade: api
+              intercom: true
+            workers:
+              count: 0
+              minimum: 1
+              memory: 0
+            tls:
+              minVersion: TLSv1.2
+              maxVersion: TLSv1.3
+              defaultCipherList: DEFAULT
+              defaultEcdhCurve: auto
+              rejectUnauthorized: true
+            proxy:
+              useEnvVars: false
+            shutdown:
+              drainTimeout: 10000
+            sni: {}
+            pii: {}
+            upgradeSettings: {}
+            upgradeGroupSettings: {}
+            backups: {}
+            rollback: {}
+            apps:
+              enabled: true
+        count: 1
+    UpdateSystemSettingsResponseExamplesUpdateApiSettings:
+      summary: Update system settings
+      description: Example response for updating the Cribl API server network and TLS
+        settings.
+      value:
+        items:
+          - api:
+              host: 0.0.0.0
+              port: 9000
+              disabled: false
+              ssl:
+                disabled: false
+                privKeyPath: /opt/cribl/local/cribl/auth/cribl.key
+                certPath: /opt/cribl/local/cribl/auth/cribl.crt
+                passphrase: ""
+            system:
+              upgrade: api
+              intercom: true
+            workers:
+              count: 0
+              minimum: 1
+              memory: 0
+            tls:
+              minVersion: TLSv1.2
+              maxVersion: TLSv1.3
+              defaultCipherList: DEFAULT
+              defaultEcdhCurve: auto
+              rejectUnauthorized: true
+            proxy:
+              useEnvVars: false
+            shutdown:
+              drainTimeout: 10000
+            sni: {}
+            pii: {}
+            upgradeSettings: {}
+            upgradeGroupSettings: {}
+            backups: {}
+            rollback: {}
+            apps:
+              enabled: true
+        count: 1
     UpdateSystemSettingsExamplesUpdateApiSettings:
       summary: Update API server settings
       description: Example request body for updating the Cribl API server network and
@@ -69200,6 +69678,14 @@ components:
           backupPersistence: 24h
         rollback:
           rollbackEnabled: true
+    RestartSystemExamplesDefault:
+      summary: Initiate restart
+      description: Example response for a successful server restart request. The
+        server will restart shortly after this response is returned.
+      value:
+        items:
+          - restart: true
+        count: 1
     VersionBranchResponseExamplesListBranches:
       summary: List all branches
       description: Example response for listing all branches in the Cribl
@@ -71200,6 +71686,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesTcp"
               InputCreateExamplesTcpjson:
                 $ref: "#/components/examples/InputCreateExamplesTcpjson"
+              InputCreateExamplesUpwindHec:
+                $ref: "#/components/examples/InputCreateExamplesUpwindHec"
               InputCreateExamplesWef:
                 $ref: "#/components/examples/InputCreateExamplesWef"
               InputCreateExamplesWinEventLogs:
@@ -71474,6 +71962,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesTcp"
               UpdateInputExamplesTcpjson:
                 $ref: "#/components/examples/UpdateInputExamplesTcpjson"
+              UpdateInputExamplesUpwindHec:
+                $ref: "#/components/examples/UpdateInputExamplesUpwindHec"
               UpdateInputExamplesWef:
                 $ref: "#/components/examples/UpdateInputExamplesWef"
               UpdateInputExamplesWinEventLogs:
@@ -75342,6 +75832,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesTcp"
               InputCreateExamplesTcpjson:
                 $ref: "#/components/examples/InputCreateExamplesTcpjson"
+              InputCreateExamplesUpwindHec:
+                $ref: "#/components/examples/InputCreateExamplesUpwindHec"
               InputCreateExamplesWef:
                 $ref: "#/components/examples/InputCreateExamplesWef"
               InputCreateExamplesWinEventLogs:
@@ -75596,6 +76088,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesTcp"
               UpdateInputExamplesTcpjson:
                 $ref: "#/components/examples/UpdateInputExamplesTcpjson"
+              UpdateInputExamplesUpwindHec:
+                $ref: "#/components/examples/UpdateInputExamplesUpwindHec"
               UpdateInputExamplesWef:
                 $ref: "#/components/examples/UpdateInputExamplesWef"
               UpdateInputExamplesWinEventLogs:
@@ -76714,14 +77208,17 @@ paths:
       x-cribl-internal: false
       x-cribl-availability: both
       summary: Get system settings
-      description: Get Cribl system settings.
+      description: Get the current Cribl system settings.
       responses:
         "200":
-          description: The requested SystemSettingsConf object in a single-item list.
+          description: The current system settings.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedSystemSettingsConf"
+              examples:
+                GetSystemSettingsConfExamplesDefault:
+                  $ref: "#/components/examples/GetSystemSettingsConfExamplesDefault"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -76747,14 +77244,27 @@ paths:
       x-cribl-internal: false
       x-cribl-availability: both
       summary: Update system settings
-      description: Update Cribl system settings.
+      description: Update the specified Cribl system settings.<br/><br/>Provide a
+        complete representation of the system settings that you want to update
+        in the request body. This endpoint does not support partial updates.
+        Cribl removes any omitted fields when updating the system
+        settings.<br/><br/>Confirm that the configuration in your request body
+        is correct before sending the request. If the configuration is
+        incorrect, the updated system settings might not function as expected.
       responses:
         "200":
-          description: The updated SystemSettingsConf object in a single-item list.
+          description: The updated system settings.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedSystemSettingsConf"
+              examples:
+                UpdateSystemSettingsResponseExamplesUpdateApiSettings:
+                  $ref: "#/components/examples/UpdateSystemSettingsResponseExamplesUpdateApiSetti\
+                    ngs"
+        "400":
+          description: Failed validation or malformed input, such as missing or invalid
+            parameters.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -76765,6 +77275,9 @@ paths:
               example:
                 status: error
                 message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized to perform this action, or the requested change is
+            not permitted in this deployment.
         "500":
           description: Unexpected server error.
           content:
@@ -76791,16 +77304,24 @@ paths:
       x-cribl-internal: false
       x-cribl-availability: both
       summary: Restart the Cribl server
-      description: Restart the Cribl server. Useful for applying configuration changes
-        that require a full process restart, such as changes to system-level
-        settings that cannot be applied by reloading.
+      description: Restart the Cribl server.<br/><br/>This operation requires
+        <code>system.restart</code> to be set to <code>api</code> in
+        <code>cribl.yml</code>. If this setting is not configured, the request
+        returns a <code>403</code> error.<br/><br/>Restarting the server causes
+        a brief period of downtime while the process stops and restarts. All
+        in-flight events are drained before the process exits. Use <code>POST
+        /system/settings/reload</code> to apply configuration changes without a
+        full restart.
       responses:
         "200":
-          description: The created SystemRestartResponse object in a single-item list.
+          description: Result of the restart operation.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedSystemRestartResponse"
+              examples:
+                RestartSystemExamplesDefault:
+                  $ref: "#/components/examples/RestartSystemExamplesDefault"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -76811,6 +77332,9 @@ paths:
               example:
                 status: error
                 message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Restart from the API is disabled. Set <code>system.restart</code>
+            to <code>api</code> in <code>cribl.yml</code> to enable it.
         "500":
           description: Unexpected server error.
           content:
