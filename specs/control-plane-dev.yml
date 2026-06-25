@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.19.0-alpha.1782342324325-cda9f731
+  version: 4.19.0-alpha.1782428662860-59835e84
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -30756,13 +30756,18 @@ components:
             required:
               - contentType
               - cronSchedule
-              - earliest
-              - latest
             properties:
               contentType:
                 type: string
                 title: Endpoint name
                 pattern: ^[a-zA-Z0-9_-\s]+$
+                enum:
+                  - activities
+                  - chats
+                  - projects
+                  - groups
+                  - organizations
+                x-speakeasy-unknown-values: allow
               contentDescription:
                 type: string
                 title: Description
@@ -30785,10 +30790,6 @@ components:
                   task state
               manageState:
                 type: object
-              cronSchedule:
-                type: string
-                title: Cron schedule
-                description: Schedule on which to run this collection job
               earliest:
                 type: string
                 title: Earliest
@@ -30797,6 +30798,10 @@ components:
                 type: string
                 title: Latest
                 description: Latest time for data collection, relative to now
+              cronSchedule:
+                type: string
+                title: Cron schedule
+                description: Schedule on which to run this collection job
               jobTimeout:
                 title: Job timeout
                 type: string
@@ -38792,7 +38797,18 @@ components:
             - telemetry.googleapis.com:443
           x-speakeasy-unknown-values: allow
         googleAuthMethod:
-          $ref: "#/components/schemas/GoogleAuthenticationMethodOptionsAutoSecret"
+          type: string
+          title: Google authentication method
+          description: Choose Auto to use Google Application Default Credentials (ADC).
+            Choose Secret to select or create a stored secret that references
+            Google service account credentials.
+          enum:
+            - auto
+            - secret
+          x-speakeasy-enum-descriptions:
+            - Auto
+            - Secret
+          x-speakeasy-unknown-values: allow
         metadata:
           type: array
           title: Metadata
@@ -39143,6 +39159,7 @@ components:
         - projectId
         - datasetId
         - tableId
+        - googleAuthMethod
       properties:
         id:
           type: string
@@ -39177,17 +39194,28 @@ components:
         projectId:
           type: string
           title: Project ID
-          description: Google Cloud project ID containing the BigQuery dataset
+          description: Google Cloud project ID that contains the BigQuery dataset
         datasetId:
           type: string
           title: Dataset ID
-          description: BigQuery dataset to write to
+          description: BigQuery dataset ID
         tableId:
           type: string
           title: Table ID
-          description: BigQuery table to write to
+          description: BigQuery table ID
         googleAuthMethod:
-          $ref: "#/components/schemas/GoogleAuthenticationMethodOptionsAutoSecret"
+          type: string
+          title: Google authentication method
+          description: Choose Auto to use Google Application Default Credentials (ADC), or
+            Secret to select or create a stored secret that references Google
+            service account credentials
+          enum:
+            - auto
+            - secret
+          x-speakeasy-enum-descriptions:
+            - Auto
+            - Secret
+          x-speakeasy-unknown-values: allow
         secret:
           type: string
           title: Service account credentials (text secret)
@@ -60105,19 +60133,6 @@ components:
           type: string
           title: Value
           description: JavaScript expression to compute the label's value.
-    GoogleAuthenticationMethodOptionsAutoSecret:
-      type: string
-      title: Google authentication method
-      description: Choose Auto to use Google Application Default Credentials (ADC).
-        Choose Secret to select or create a stored secret that references Google
-        service account credentials.
-      enum:
-        - auto
-        - secret
-      x-speakeasy-enum-descriptions:
-        - Auto
-        - Secret
-      x-speakeasy-unknown-values: allow
     AcknowledgmentsOptionsAllLeader:
       type: integer
       title: Acknowledgments
@@ -62668,6 +62683,73 @@ components:
             description: Removes events that match the specified filter expression.
             category: filtering
             tags: drop,filter
+    HecTokenResponseExamplesSplunkHecSource:
+      summary: Splunk HEC Source with HEC tokens
+      description: Example response for adding or updating an HEC token on a Splunk
+        HEC Source.
+      value:
+        count: 1
+        items:
+          - id: splunk-hec-source
+            type: splunk_hec
+            host: 0.0.0.0
+            port: 8088
+            splunkHecAPI: /services/collector
+            sendToRoutes: true
+            pqEnabled: false
+            authTokens:
+              - token: "12345678901"
+                enabled: true
+                metadata:
+                  - name: fieldX
+                    value: valueX
+    HecTokenExamplesHecToken:
+      summary: Basic HEC token
+      description: Example request body for adding an HEC token with metadata to a
+        Splunk HEC Source.
+      value:
+        enabled: true
+        metadata:
+          - name: fieldX
+            value: valueX
+        token: "12345678901"
+    HecTokenExamplesHecTokenWithIndexAccess:
+      summary: HEC token with allowed indexes
+      description: Example request body for adding an HEC token with index-level
+        access control.
+      value:
+        enabled: true
+        allowedIndexesAtToken:
+          - myIndex6
+        token: "12345678901"
+    ClearPQResponseExamplesClearPQJob:
+      summary: Clear PQ job ID
+      description: Example response for clearing the persistent queue. Returns the job
+        ID of the background clear operation.
+      value:
+        count: 1
+        items:
+          - "1727123456.1234567890"
+    PQStatusResponseExamplesCompletedJob:
+      summary: Completed clear-PQ job
+      description: Example response for retrieving the status of a completed clear-PQ job.
+      value:
+        count: 1
+        items:
+          - id: "1727123456.1234567890"
+            type: collection
+            status:
+              state: 5
+            stats: {}
+            args:
+              type: collection
+              collector:
+                type: filesystem
+                conf:
+                  path: /var/log/*.log
+              run:
+                mode: run
+                type: adhoc
     InputResponseExamplesSyslogSource:
       summary: Syslog Source response
       description: Example response for getting or updating a Syslog Source.
@@ -62699,25 +62781,6 @@ components:
         port: 10080
         sendToRoutes: true
         pqEnabled: false
-    HecTokenExamplesHecToken:
-      summary: Basic HEC token
-      description: Example request body for adding an HEC token with metadata to a
-        Splunk HEC Source.
-      value:
-        enabled: true
-        metadata:
-          - name: fieldX
-            value: valueX
-        token: "12345678901"
-    HecTokenExamplesHecTokenWithIndexAccess:
-      summary: HEC token with allowed indexes
-      description: Example request body for adding an HEC token with index-level
-        access control.
-      value:
-        enabled: true
-        allowedIndexesAtToken:
-          - myIndex6
-        token: "12345678901"
     InputCreateExamplesAnthropicCompliance:
       summary: Anthropic Compliance
       value:
@@ -64895,6 +64958,7 @@ components:
         projectId: my-project
         datasetId: my-dataset
         tableId: my-table
+        googleAuthMethod: auto
       description: Example request body for creating a Google BigQuery Destination.
     OutputCreateExamplesGoogleChronicle:
       summary: Google Chronicle
@@ -65851,6 +65915,7 @@ components:
         projectId: my-project
         datasetId: my-dataset
         tableId: my-table
+        googleAuthMethod: auto
       description: Example request body for updating a Google BigQuery
         Destination.<br/><br/>The request body must include a complete
         representation of the Destination that you want to update. This endpoint
@@ -71811,7 +71876,7 @@ paths:
                 status: error
                 message: Authentication failed (missing or invalid credentials or Bearer token).
         "404":
-          description: The requested resource does not exist.
+          description: The requested resource does not exist — Source not found.
         "500":
           description: Unexpected server error.
           content:
@@ -72096,18 +72161,14 @@ paths:
         Source within the specified Pack.
       responses:
         "200":
-          description: the updated Splunk HEC Source with the new HEC token
+          description: The updated Splunk HEC Source with the new HEC token.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedInputSplunkHec"
               examples:
-                InputResponseExamplesSyslogSource:
-                  $ref: "#/components/examples/InputResponseExamplesSyslogSource"
-                InputResponseExamplesSplunkHecSource:
-                  $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
-                InputResponseExamplesHttpSource:
-                  $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                HecTokenResponseExamplesSplunkHecSource:
+                  $ref: "#/components/examples/HecTokenResponseExamplesSplunkHecSource"
         "400":
           description: Failed validation or malformed input — Source not found, source
             type is not <code>splunk_hec</code>, or request payload is invalid.
@@ -72166,18 +72227,14 @@ paths:
         Splunk HEC Source within the specified Pack.
       responses:
         "200":
-          description: the updated HEC token
+          description: The updated Splunk HEC Source with the modified HEC token metadata.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedInputSplunkHec"
               examples:
-                InputResponseExamplesSyslogSource:
-                  $ref: "#/components/examples/InputResponseExamplesSyslogSource"
-                InputResponseExamplesSplunkHecSource:
-                  $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
-                InputResponseExamplesHttpSource:
-                  $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                HecTokenResponseExamplesSplunkHecSource:
+                  $ref: "#/components/examples/HecTokenResponseExamplesSplunkHecSource"
         "400":
           description: Failed validation or malformed input — Source not found, source
             type is not <code>splunk_hec</code>, or request payload is invalid.
@@ -72221,7 +72278,8 @@ paths:
           required: true
           schema:
             type: string
-          description: The HEC token value to update.
+          description: The HEC token value whose metadata you want to update. Must match
+            an existing token on the Source.
         - name: pack
           in: path
           required: true
@@ -72249,12 +72307,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/CountedString"
               examples:
-                InputResponseExamplesSyslogSource:
-                  $ref: "#/components/examples/InputResponseExamplesSyslogSource"
-                InputResponseExamplesSplunkHecSource:
-                  $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
-                InputResponseExamplesHttpSource:
-                  $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                ClearPQResponseExamplesClearPQJob:
+                  $ref: "#/components/examples/ClearPQResponseExamplesClearPQJob"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -72298,18 +72352,14 @@ paths:
         (PQ) for the specified Source within the specified Pack.
       responses:
         "200":
-          description: information about the latest job to clear the PQ for the Source
+          description: The latest clear-PQ job information for the specified Source.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedJobInfo"
               examples:
-                InputResponseExamplesSyslogSource:
-                  $ref: "#/components/examples/InputResponseExamplesSyslogSource"
-                InputResponseExamplesSplunkHecSource:
-                  $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
-                InputResponseExamplesHttpSource:
-                  $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                PQStatusResponseExamplesCompletedJob:
+                  $ref: "#/components/examples/PQStatusResponseExamplesCompletedJob"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -75966,7 +76016,7 @@ paths:
                 status: error
                 message: Authentication failed (missing or invalid credentials or Bearer token).
         "404":
-          description: The requested resource does not exist.
+          description: The requested resource does not exist — Source not found.
         "500":
           description: Unexpected server error.
           content:
@@ -76237,18 +76287,14 @@ paths:
         Source.
       responses:
         "200":
-          description: the updated Splunk HEC Source with the new HEC token
+          description: The updated Splunk HEC Source with the new HEC token.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedInputSplunkHec"
               examples:
-                InputResponseExamplesSyslogSource:
-                  $ref: "#/components/examples/InputResponseExamplesSyslogSource"
-                InputResponseExamplesSplunkHecSource:
-                  $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
-                InputResponseExamplesHttpSource:
-                  $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                HecTokenResponseExamplesSplunkHecSource:
+                  $ref: "#/components/examples/HecTokenResponseExamplesSplunkHecSource"
         "400":
           description: Failed validation or malformed input — Source not found, source
             type is not <code>splunk_hec</code>, or request payload is invalid.
@@ -76301,18 +76347,14 @@ paths:
         Splunk HEC Source.
       responses:
         "200":
-          description: the updated HEC token
+          description: The updated Splunk HEC Source with the modified HEC token metadata.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedInputSplunkHec"
               examples:
-                InputResponseExamplesSyslogSource:
-                  $ref: "#/components/examples/InputResponseExamplesSyslogSource"
-                InputResponseExamplesSplunkHecSource:
-                  $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
-                InputResponseExamplesHttpSource:
-                  $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                HecTokenResponseExamplesSplunkHecSource:
+                  $ref: "#/components/examples/HecTokenResponseExamplesSplunkHecSource"
         "400":
           description: Failed validation or malformed input — Source not found, source
             type is not <code>splunk_hec</code>, or request payload is invalid.
@@ -76356,7 +76398,8 @@ paths:
           required: true
           schema:
             type: string
-          description: The HEC token value to update.
+          description: The HEC token value whose metadata you want to update. Must match
+            an existing token on the Source.
   /system/inputs/{id}/pq:
     get:
       operationId: getInputPqById
@@ -76372,18 +76415,14 @@ paths:
         (PQ) for the specified Source.
       responses:
         "200":
-          description: information about the latest job to clear the PQ for the Source
+          description: The latest clear-PQ job information for the specified Source.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedJobInfo"
               examples:
-                InputResponseExamplesSyslogSource:
-                  $ref: "#/components/examples/InputResponseExamplesSyslogSource"
-                InputResponseExamplesSplunkHecSource:
-                  $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
-                InputResponseExamplesHttpSource:
-                  $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                PQStatusResponseExamplesCompletedJob:
+                  $ref: "#/components/examples/PQStatusResponseExamplesCompletedJob"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -76426,12 +76465,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/CountedString"
               examples:
-                InputResponseExamplesSyslogSource:
-                  $ref: "#/components/examples/InputResponseExamplesSyslogSource"
-                InputResponseExamplesSplunkHecSource:
-                  $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
-                InputResponseExamplesHttpSource:
-                  $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                ClearPQResponseExamplesClearPQJob:
+                  $ref: "#/components/examples/ClearPQResponseExamplesClearPQJob"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
