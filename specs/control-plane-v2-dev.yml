@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.19.0-alpha.1782428747754-59835e84
+  version: 4.19.0-alpha.1782515077922-bb95763d
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -537,6 +537,14 @@ components:
           enum:
             - kvp
           type: string
+        srcField:
+          title: Source field
+          description: Field containing text to be parsed
+          type: string
+        dstField:
+          title: Destination field
+          description: Name of the field to add fields to. Extract mode only.
+          type: string
         keep:
           title: Fields to keep
           description: List of fields to keep. Supports wildcards (*). Takes precedence
@@ -580,6 +588,14 @@ components:
         type:
           enum:
             - delim
+          type: string
+        srcField:
+          title: Source field
+          description: Field containing text to be parsed
+          type: string
+        dstField:
+          title: Destination field
+          description: Name of the field to add fields to. Extract mode only.
           type: string
         fields:
           title: List of fields
@@ -635,6 +651,14 @@ components:
             - elff
             - clf
           type: string
+        srcField:
+          title: Source field
+          description: Field containing text to be parsed
+          type: string
+        dstField:
+          title: Destination field
+          description: Name of the field to add fields to. Extract mode only.
+          type: string
         fields:
           title: List of fields
           description: The fields to be extracted, listed in order. Will auto-generate if
@@ -668,6 +692,14 @@ components:
           enum:
             - json
           type: string
+        srcField:
+          title: Source field
+          description: Field containing text to be parsed
+          type: string
+        dstField:
+          title: Destination field
+          description: Name of the field to add fields to. Extract mode only.
+          type: string
         keep:
           title: Fields to keep
           description: List of fields to keep. Supports wildcards (*). Takes precedence
@@ -693,6 +725,14 @@ components:
         type:
           enum:
             - regex
+          type: string
+        srcField:
+          title: Source field
+          description: Field containing text to be parsed
+          type: string
+        dstField:
+          title: Destination field
+          description: Name of the field to add fields to. Extract mode only.
           type: string
         regex:
           type: string
@@ -728,12 +768,33 @@ components:
             existing fields will be converted to an array.
       required:
         - regex
+    SerdeTypeAuto:
+      type: object
+      properties:
+        type:
+          enum:
+            - auto
+          type: string
+        tagDatatype:
+          type: boolean
+          title: Tag events with datatype and isParsed
+          description: Keep the detected datatype field and set isParsed to true on each
+            event. Enable this when events are bound for downstream Cribl Search
+            processing.
     SerdeTypeGrok:
       type: object
       properties:
         type:
           enum:
             - grok
+          type: string
+        srcField:
+          title: Source field
+          description: Field containing text to be parsed
+          type: string
+        dstField:
+          title: Destination field
+          description: Name of the field to add fields to. Extract mode only.
           type: string
         pattern:
           type: string
@@ -6747,15 +6808,30 @@ components:
             - Reserialize
           x-speakeasy-unknown-values: allow
         type:
-          $ref: "#/components/schemas/TypeOptions"
-        srcField:
-          title: Source field
-          description: Field containing text to be parsed
+          title: Type
+          description: Parser or formatter type to use
           type: string
-        dstField:
-          title: Destination field
-          description: Name of the field to add fields to. Extract mode only.
-          type: string
+          enum:
+            - csv
+            - elff
+            - clf
+            - kvp
+            - json
+            - delim
+            - regex
+            - grok
+            - auto
+          x-speakeasy-enum-descriptions:
+            - CSV
+            - Extended Log File Format
+            - Common Log Format
+            - Key=Value Pairs
+            - JSON Object
+            - Delimited values
+            - Regular Expression
+            - Grok
+            - Auto
+          x-speakeasy-unknown-values: allow
         keep:
           title: Fields to keep
           description: List of fields to keep. Supports wildcards (*). Takes precedence
@@ -6828,6 +6904,12 @@ components:
           title: Overwrite existing fields
           description: Overwrite existing event fields with extracted values. If disabled,
             existing fields will be converted to an array.
+        tagDatatype:
+          type: boolean
+          title: Tag events with datatype and isParsed
+          description: Keep the detected datatype field and set isParsed to true on each
+            event. Enable this when events are bound for downstream Cribl Search
+            processing.
         pattern:
           type: string
           title: Pattern
@@ -6845,6 +6927,7 @@ components:
             - $ref: "#/components/schemas/SerdeTypeCsv"
             - $ref: "#/components/schemas/SerdeTypeJson"
             - $ref: "#/components/schemas/SerdeTypeRegex"
+            - $ref: "#/components/schemas/SerdeTypeAuto"
             - $ref: "#/components/schemas/SerdeTypeGrok"
           discriminator:
             propertyName: type
@@ -6854,6 +6937,7 @@ components:
               csv: "#/components/schemas/SerdeTypeCsv"
               json: "#/components/schemas/SerdeTypeJson"
               regex: "#/components/schemas/SerdeTypeRegex"
+              auto: "#/components/schemas/SerdeTypeAuto"
               grok: "#/components/schemas/SerdeTypeGrok"
     FunctionSerde:
       type: object
@@ -54323,6 +54407,31 @@ components:
             `https://s3.oss-{region}.aliyuncs.com`, internal
             `https://s3.oss-{region}-internal.aliyuncs.com`"
           pattern: ^https?://.*
+        enableAssumeRole:
+          type: boolean
+          title: Enable for Alibaba OSS
+          description: Use Assume Role credentials to access Alibaba OSS
+        durationSeconds:
+          type: number
+          title: Duration (seconds)
+          description: Duration of the assumed role's session, in seconds. Minimum is 900
+            (15 minutes), default is 3600 (1 hour), and maximum is 43200 (12
+            hours).
+          minimum: 900
+          maximum: 43200
+        assumeRoleArn:
+          type: string
+          title: AssumeRole ARN
+          description: "ARN of the RAM role to assume. Format:
+            acs:ram::<account-id>:role/<role-name>. Example:
+            acs:ram::123456789:role/OSSAccessRole"
+          pattern: "^acs:"
+          minLength: 20
+        assumeRoleExternalId:
+          type: string
+          title: External ID
+          description: External ID for the assumed role (optional, for security when
+            configured in the role trust policy)
         description:
           type: string
           title: Description
@@ -54469,6 +54578,17 @@ components:
           description: Binds 'endpoint' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'endpoint' at runtime.
+        __template_assumeRoleArn:
+          type: string
+          description: Binds 'assumeRoleArn' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'assumeRoleArn' at runtime.
+        __template_assumeRoleExternalId:
+          type: string
+          description: Binds 'assumeRoleExternalId' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'assumeRoleExternalId' at runtime.
         __template_compress:
           type: string
           description: Binds 'compress' to a variable for dynamic value resolution. Set to
@@ -58990,29 +59110,6 @@ components:
       x-speakeasy-enum-descriptions:
         - 0.10.0
         - 1.3.1
-      x-speakeasy-unknown-values: allow
-    TypeOptions:
-      title: Type
-      description: Parser or formatter type to use
-      type: string
-      enum:
-        - csv
-        - elff
-        - clf
-        - kvp
-        - json
-        - delim
-        - regex
-        - grok
-      x-speakeasy-enum-descriptions:
-        - CSV
-        - Extended Log File Format
-        - Common Log Format
-        - Key=Value Pairs
-        - JSON Object
-        - Delimited values
-        - Regular Expression
-        - Grok
       x-speakeasy-unknown-values: allow
     AuthenticationProtocolOptionsV3User:
       type: string
