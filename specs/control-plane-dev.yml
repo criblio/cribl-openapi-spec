@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.19.0-alpha.1782860624791-3fcd5194
+  version: 4.19.0-alpha.1782946995691-c068d78a
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -57380,6 +57380,79 @@ components:
         - http
         - https
       x-speakeasy-unknown-values: allow
+    TagsMapHeartbeatMetadata:
+      type: object
+      additionalProperties:
+        type: string
+      description: String-keyed tag map. Each property name is a tag key and the
+        corresponding value is the tag's string value.
+    AwsTypeHeartbeatMetadata:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: If <code>true</code>, the AWS metadata collector is enabled on the
+            node. Otherwise, <code>false</code>.
+        instanceId:
+          type: string
+          description: AWS EC2 instance ID.
+        region:
+          type: string
+          description: AWS region name.
+        tags:
+          $ref: "#/components/schemas/TagsMapHeartbeatMetadata"
+          description: AWS EC2 instance tags, if available.
+        type:
+          type: string
+          description: AWS EC2 instance type.
+        zone:
+          type: string
+          description: AWS availability zone name.
+      required:
+        - enabled
+        - instanceId
+        - region
+        - type
+        - zone
+    AzureTypeHeartbeatMetadata:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: If <code>true</code>, the Azure metadata collector is enabled on
+            the node. Otherwise, <code>false</code>.
+        hostname:
+          type: string
+          description: Azure VM hostname.
+        instanceId:
+          type: string
+          description: Azure instance ID.
+        name:
+          type: string
+          description: Azure VM name.
+        region:
+          type: string
+          description: Azure location or region.
+        resourceGroup:
+          type: string
+          description: Azure resource group name.
+        subscriptionId:
+          type: string
+          description: Azure subscription ID.
+        tags:
+          $ref: "#/components/schemas/TagsMapHeartbeatMetadata"
+          description: Azure tags, if available.
+        type:
+          type: string
+          description: Azure VM size or instance type.
+        vmId:
+          type: string
+          description: Azure VM ID.
+        zone:
+          type: string
+          description: Azure availability zone.
+      required:
+        - enabled
     LookupVersions:
       type: object
       additionalProperties:
@@ -57486,6 +57559,8 @@ components:
             reporting upstream.
         overlayId:
           type: string
+          description: Currently active overlay identifier on the node. Omitted if no
+            overlay is active.
         pid:
           type: integer
           description: The process ID.
@@ -57511,28 +57586,134 @@ components:
         - group
         - guid
         - startTime
+    HostOsTypeHeartbeatMetadata:
+      type: object
+      properties:
+        addresses:
+          type: array
+          items:
+            type: string
+          description: Network addresses reported by the host operating system.
+        enabled:
+          type: boolean
+          description: If <code>true</code>, the host operating system metadata collector
+            is enabled on the node. Otherwise, <code>false</code>.
+        id:
+          type: string
+          description: Host operating system distribution name.
+        version:
+          type: string
+          description: Host operating system version.
+      required:
+        - addresses
+        - enabled
+        - id
+        - version
+    OwnerTypeHeartbeatMetadataKube:
+      type: object
+      properties:
+        kind:
+          type: string
+          description: Kubernetes owner resource kind.
+        name:
+          type: string
+          description: Kubernetes owner resource name.
+      required:
+        - kind
+        - name
+    KubeTypeHeartbeatMetadata:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: If <code>true</code>, the Kubernetes metadata collector is enabled
+            on the node. Otherwise, <code>false</code>.
+        namespace:
+          type: string
+          description: Kubernetes Namespace name.
+        node:
+          type: string
+          description: Kubernetes Node name.
+        owner:
+          $ref: "#/components/schemas/OwnerTypeHeartbeatMetadataKube"
+          description: Kubernetes owner resource for the Pod.
+        pod:
+          type: string
+          description: Kubernetes Pod name.
+        source:
+          type: string
+          description: Kubernetes config source.
+      required:
+        - enabled
+        - namespace
+        - node
+        - pod
+        - source
+    OsTypeHeartbeatMetadata:
+      type: object
+      properties:
+        addresses:
+          type: array
+          items:
+            type: string
+          description: Network addresses reported by the operating system.
+        enabled:
+          type: boolean
+          description: If <code>true</code>, the operating system metadata collector is
+            enabled on the node. Otherwise, <code>false</code>.
+        id:
+          type: string
+          description: Operating system distribution name.
+        version:
+          type: string
+          description: Operating system version.
+      required:
+        - addresses
+        - enabled
+        - id
+        - version
+      title: OsTypeHeartbeatMetadata
     HeartbeatMetadata:
       type: object
       properties:
         aws:
           $ref: "#/components/schemas/AwsTypeHeartbeatMetadata"
+          description: AWS instance metadata collected from the node.
         azure:
           $ref: "#/components/schemas/AzureTypeHeartbeatMetadata"
+          description: Azure instance metadata collected from the node.
         hostOs:
           $ref: "#/components/schemas/HostOsTypeHeartbeatMetadata"
+          description: Host operating system metadata collected from the node.
         kube:
           $ref: "#/components/schemas/KubeTypeHeartbeatMetadata"
+          description: Kubernetes metadata collected from the node.
         os:
-          $ref: "#/components/schemas/HostOsTypeHeartbeatMetadata"
+          $ref: "#/components/schemas/OsTypeHeartbeatMetadata"
+          description: Operating system metadata collected from the node.
+    NodeOsInfo:
+      type: object
+      properties:
+        addresses:
+          type: array
+          items:
+            type: string
+          description: Network addresses reported by the node operating system.
+      required:
+        - addresses
+      title: NodeOsInfo
     OutpostNodeInfo:
       type: object
       properties:
         groupname:
           type: string
+          description: Name of the Outpost Group that contains the Outpost Node.
         guid:
           type: string
+          description: Unique identifier for the Outpost Node.
         host:
           type: string
+          description: Hostname or IP address for the Outpost Node.
       required:
         - guid
         - host
@@ -57540,64 +57721,90 @@ components:
       type: object
       properties:
         apiPort:
-          type: number
+          type: integer
+          description: API port exposed by the node.
         apiScheme:
           $ref: "#/components/schemas/ApiScheme"
+          description: API scheme derived from the node API TLS configuration.
         architecture:
           type: string
+          description: CPU architecture.
+          examples:
+            - x64
+            - arm64
         aws:
           $ref: "#/components/schemas/AwsTypeHeartbeatMetadata"
+          description: AWS metadata collected from the node.
         azure:
           $ref: "#/components/schemas/AzureTypeHeartbeatMetadata"
+          description: Azure metadata collected from the node.
         conn_ip:
           type: string
+          description: Remote <code>ip:port</code> for the worker socket.
         cpus:
-          type: number
+          type: integer
+          description: Number of CPU cores available on the node.
         cribl:
           $ref: "#/components/schemas/HBCriblInfo"
+          description: Cribl software and configuration details reported by the node.
         env:
           type: object
           additionalProperties:
             type: string
+          description: Environment variables reported by the node.
         freeDiskSpace:
-          type: number
+          type: integer
+          description: Free disk space on the node, in bytes.
         hostOs:
           $ref: "#/components/schemas/HostOsTypeHeartbeatMetadata"
+          description: Host operating system metadata collected from the node.
         hostname:
           type: string
+          description: Hostname reported by the node.
         isCaptain:
           type: boolean
+          description: If <code>true</code>, the node considers itself the elected captain
+            for its group. Otherwise, <code>false</code>.
         isSaasWorker:
           type: boolean
+          description: If <code>true</code>, the node runs in Cribl.Cloud. Otherwise,
+            <code>false</code>.
         kube:
           $ref: "#/components/schemas/KubeTypeHeartbeatMetadata"
+          description: Kubernetes metadata collected from the node.
         localTime:
-          type: number
+          type: integer
+          description: Local timestamp (in Unix time) on the node, in milliseconds.
         metadata:
           $ref: "#/components/schemas/HeartbeatMetadata"
+          description: Cloud, Kubernetes, and operating system metadata collected from the
+            node.
         node:
           type: string
+          description: Node.js runtime version running on the node.
         os:
           oneOf:
-            - $ref: "#/components/schemas/HostOsTypeHeartbeatMetadata"
-            - type: object
-              properties:
-                addresses:
-                  type: array
-                  items:
-                    type: string
-              required:
-                - addresses
+            - $ref: "#/components/schemas/NodeOsInfo"
+            - $ref: "#/components/schemas/OsTypeHeartbeatMetadata"
+          description: Operating system metadata collected from the node.
         outpost:
           $ref: "#/components/schemas/OutpostNodeInfo"
+          description: Outpost Node information when the node is connected to an Outpost.
         platform:
           type: string
+          description: Operating system platform.
+          examples:
+            - linux
+            - win32
         release:
           type: string
+          description: Operating system kernel release.
         totalDiskSpace:
-          type: number
+          type: integer
+          description: Total disk space on the node, in bytes.
         totalmem:
-          type: number
+          type: integer
+          description: Total memory on the node, in bytes.
       required:
         - architecture
         - cpus
@@ -57659,65 +57866,101 @@ components:
       properties:
         active:
           $ref: "#/components/schemas/NodeActiveUpgradeStatus"
+          description: Secondary upgrade state when <code>state</code> is
+            <code>ACTIVE</code>.
         failed:
           $ref: "#/components/schemas/NodeFailedUpgradeStatus"
+          description: Secondary upgrade state when <code>state</code> is
+            <code>FAILED</code>.
         skipped:
           $ref: "#/components/schemas/NodeSkippedUpgradeStatus"
+          description: Secondary upgrade state when <code>state</code> is
+            <code>SKIPPED</code>.
         state:
           $ref: "#/components/schemas/NodeUpgradeState"
+          description: Current upgrade state for the Edge Node.
         timestamp:
-          type: number
+          type: integer
+          description: Timestamp (in Unix time) when the node entered the upgrade state,
+            in milliseconds.
       required:
         - state
         - timestamp
+    MasterWorkerProcesses:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of Worker Processes represented by the node entry.
+      required:
+        - count
     MasterWorkerEntry:
       type: object
       properties:
         connectionProtocol:
           $ref: "#/components/schemas/ConnectionProtocol"
+          description: Connection protocol used for node-to-Leader communication.
         deployable:
           type: boolean
+          description: If <code>true</code>, the node can receive configuration
+            deployments. Otherwise, <code>false</code>.
         disconnected:
           type: boolean
+          description: If <code>true</code>, the node is disconnected from the Leader.
+            Otherwise, <code>false</code>.
         firstMsgTime:
-          type: number
+          type: integer
+          description: Timestamp (in Unix time) when the Leader first received a message
+            from the node.
         group:
           type: string
+          description: The <code>id</code> of the Worker Group, Edge Fleet, or Outpost
+            Group that contains the node.
         id:
           type: string
+          description: Unique identifier for the node.
         info:
           $ref: "#/components/schemas/NodeProvidedInfo"
+          description: Metadata reported by the node itself.
         lastMetrics:
           type: object
           additionalProperties: true
+          description: Latest total, input, and destination metrics cached for UI display.
         lastMsgTime:
-          type: number
+          type: integer
+          description: Timestamp (in Unix time) when the Leader last received a message
+            from the node.
         metadata:
           $ref: "#/components/schemas/HeartbeatMetadata"
+          description: Cloud, Kubernetes, and operating system metadata collected from the
+            node.
         nodeUpgradeStatus:
           $ref: "#/components/schemas/NodeUpgradeStatus"
+          description: Upgrade status reported by an Edge Node.
         offlineDurationMs:
-          type: number
+          type: integer
+          description: Configured ephemeral offline duration, in milliseconds.
         provisioningTokenId:
           type: string
+          description: The <code>id</code> of the provisioning token used to authenticate
+            the node, if used.
         status:
           type: string
+          description: Health status reported for the node.
         type:
           type: string
           enum:
             - info
             - req
             - resp
+          description: RPC message type reported by the node.
           x-speakeasy-unknown-values: allow
         workerProcesses:
-          type: number
+          type: integer
+          description: Number of Worker Processes running on the node.
         workers:
-          type: object
-          properties:
-            count:
-              type: number
-          required:
-            - count
+          $ref: "#/components/schemas/MasterWorkerProcesses"
+          description: Worker Process counts associated with the node entry.
       required:
         - firstMsgTime
         - group
@@ -57725,6 +57968,17 @@ components:
         - info
         - lastMsgTime
         - workerProcesses
+    WorkerFilterExpression:
+      type: string
+      description: Filter expression to evaluate against Nodes for inclusion in the
+        response.
+      example: group=="default"
+    WorkerFilterJson:
+      type: string
+      description: JSON-stringified filter object to evaluate against Nodes for
+        inclusion in the response.
+      example: "%7B%22field%22%3A%22group%22%2C%22op%22%3A%22is%22%2C%22value%22%3A%2\
+        2default%22%7D"
     CountedRestartResponse:
       type: object
       properties:
@@ -57808,6 +58062,8 @@ components:
             - quickConnects
             - routes
             - sources
+          description: Resource counts for Worker Groups or Edge Fleets in the deployment
+            summary.
         workers:
           type: object
           properties:
@@ -57845,6 +58101,8 @@ components:
             - groups
             - softwareVersions
             - unhealthy
+          description: Worker or Edge Node counts and health statistics in the deployment
+            summary.
       required:
         - groups
       description: Summary of the deployment for the specified Cribl product (Stream
@@ -61081,86 +61339,6 @@ components:
         - STANDARD_IA
       description: Storage class used for objects written to the Dataset.
       x-speakeasy-unknown-values: allow
-    AwsTypeHeartbeatMetadata:
-      type: object
-      properties:
-        enabled:
-          type: boolean
-        instanceId:
-          type: string
-        region:
-          type: string
-        tags:
-          type: object
-          additionalProperties:
-            type: string
-        type:
-          type: string
-        zone:
-          type: string
-      required:
-        - enabled
-        - instanceId
-        - region
-        - type
-        - zone
-    AzureTypeHeartbeatMetadata:
-      type: object
-      properties:
-        enabled:
-          type: boolean
-        hostname:
-          type: string
-        instanceId:
-          type: string
-        name:
-          type: string
-        region:
-          type: string
-        resourceGroup:
-          type: string
-        subscriptionId:
-          type: string
-        tags:
-          type: object
-          additionalProperties:
-            type: string
-        type:
-          type: string
-        vmId:
-          type: string
-        zone:
-          type: string
-      required:
-        - enabled
-    HostOsTypeHeartbeatMetadata:
-      type: object
-      properties:
-        addresses:
-          type: array
-          items:
-            type: string
-        enabled:
-          type: boolean
-        id:
-          type: string
-        version:
-          type: string
-      required:
-        - addresses
-        - enabled
-        - id
-        - version
-    OwnerTypeHeartbeatMetadataKube:
-      type: object
-      properties:
-        kind:
-          type: string
-        name:
-          type: string
-      required:
-        - kind
-        - name
     SslTypeSystemSettingsConfApi:
       type: object
       properties:
@@ -62467,27 +62645,6 @@ components:
           type: string
           title: Credentials secret
           description: Select or create a secret that references your credentials
-    KubeTypeHeartbeatMetadata:
-      type: object
-      properties:
-        enabled:
-          type: boolean
-        namespace:
-          type: string
-        node:
-          type: string
-        owner:
-          $ref: "#/components/schemas/OwnerTypeHeartbeatMetadataKube"
-        pod:
-          type: string
-        source:
-          type: string
-      required:
-        - enabled
-        - namespace
-        - node
-        - pod
-        - source
     ApiTypeSystemSettingsConf:
       type: object
       properties:
@@ -64982,6 +65139,14 @@ components:
         Source.<br/><br/>The request body must include a complete representation
         of the Source that you want to update. This endpoint does not support
         partial updates.
+    OutputClearPQResponseExamplesClearPQJobId:
+      summary: Clear persistent queue for a Destination
+      description: Example response for clearing the persistent queue (PQ) for a
+        Destination.
+      value:
+        items:
+          - ceb17a42-f785-4f5e-b52a-7f0e1b2c3d4e
+        count: 1
     OutputResponseExamplesSplunkHecDestination:
       summary: Splunk HEC Destination response
       description: Example response for getting or updating a Splunk HEC Destination.
@@ -65800,6 +65965,35 @@ components:
         schema: external
         eventsVolumeName: events
       description: Example request body for creating a Databricks Destination.
+    OutputSamplesResponseExamplesSampleEvents:
+      summary: Get sample events for a Destination
+      description: Example response for getting sample event data for a Destination.
+      value:
+        items:
+          - events:
+              - _raw: Sample event for Destination
+                source: test
+                sourcetype: manual
+        count: 1
+    OutputTestResponseExamplesSuccessfulTest:
+      summary: Successful Destination test
+      description: Example response when a Destination successfully receives sample
+        event data.
+      value:
+        items:
+          - outputId: splunk-hec-output
+            success: true
+            successDetail: Successfully sent 1 event(s) to the Destination.
+        count: 1
+    OutputTestResponseExamplesFailedTest:
+      summary: Failed Destination test
+      description: Example response when a Destination fails to receive sample event data.
+      value:
+        items:
+          - outputId: s3-output
+            success: false
+            error: Connection timed out after 30000ms
+        count: 1
     OutputTestExamplesSingleEvent:
       summary: Send a single test event
       description: Example request body for sending a single test event to the Destination.
@@ -70016,6 +70210,40 @@ components:
         maxEvents: 500
         duration: 15
         level: 1
+    ProductWorkersCountResponseExamplesCountedWorkerNodes:
+      summary: Get a Worker Node count
+      description: Example response that contains the Worker Node count for Cribl Stream.
+      value:
+        count: 1
+        items:
+          - 42
+    WorkersListResponseExamplesWorkerNode:
+      summary: List Worker Nodes
+      description: Example response for listing Worker Nodes for Cribl Stream.
+      value:
+        count: 1
+        items:
+          - id: worker-guid-01
+            group: default
+            firstMsgTime: 1717200000000
+            lastMsgTime: 1717200060000
+            workerProcesses: 4
+            status: healthy
+            info:
+              hostname: worker-01
+              platform: linux
+              architecture: x64
+              release: 6.8.0
+              cpus: 8
+              totalmem: 34359738368
+              node: v22.17.1
+              env: {}
+              cribl:
+                config: {}
+                distMode: worker
+                group: default
+                guid: worker-guid-01
+                startTime: 1717200000000
     RestartWorkersExamplesRestartWorkers:
       summary: Restart worker/edge Nodes
       description: Restart multiple Worker/Edge Nodes by providing an array of GUIDs
@@ -70024,6 +70252,28 @@ components:
           - guid-12345678-abcd-1234-abcd-123456789abc
           - guid-87654321-dcba-4321-dcba-cba987654321
           - guid-11111111-2222-3333-4444-555555555555
+    ProductSummaryResponseExamplesStreamDeploymentSummary:
+      summary: Get a Cribl Stream deployment summary
+      description: Example response for getting a deployment summary for Cribl Stream.
+      value:
+        count: 1
+        items:
+          - groups:
+              count: 1
+              routes: 3
+              pipelines: 2
+              sources: 4
+              destinations: 2
+              quickConnects: 1
+              packs: 1
+            workers:
+              count: 2
+              disconnectedCount: 0
+              groups: 1
+              alive: 2
+              unhealthy: 0
+              softwareVersions: 1
+              confVersions: 1
     HealthExamplesHealthyPrimary:
       summary: Healthy (primary)
       description: Example response for a healthy server that is acting as primary.
@@ -73589,19 +73839,14 @@ paths:
         within the specified Pack.
       responses:
         "201":
-          description: A list of job ids for the background job that clears the persistent
-            queue
+          description: The job ID for the background job that clears the persistent queue.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedString"
               examples:
-                OutputResponseExamplesSplunkHecDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
-                OutputResponseExamplesS3Destination:
-                  $ref: "#/components/examples/OutputResponseExamplesS3Destination"
-                OutputResponseExamplesSyslogDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
+                OutputClearPQResponseExamplesClearPQJobId:
+                  $ref: "#/components/examples/OutputClearPQResponseExamplesClearPQJobId"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -73645,18 +73890,11 @@ paths:
         (PQ) for the specified Destination within the specified Pack.
       responses:
         "200":
-          description: information about the latest PQ clear job for the Destination
+          description: Information about the latest job to clear the PQ for the Destination.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedJobInfo"
-              examples:
-                OutputResponseExamplesSplunkHecDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
-                OutputResponseExamplesS3Destination:
-                  $ref: "#/components/examples/OutputResponseExamplesS3Destination"
-                OutputResponseExamplesSyslogDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -73700,21 +73938,17 @@ paths:
         configuration or test connectivity within the specified Pack.
       responses:
         "200":
-          description: Sample event data for the Destination
+          description: Sample event data for the Destination.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedOutputSamplesResponse"
               examples:
-                OutputResponseExamplesSplunkHecDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
-                OutputResponseExamplesS3Destination:
-                  $ref: "#/components/examples/OutputResponseExamplesS3Destination"
-                OutputResponseExamplesSyslogDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
+                OutputSamplesResponseExamplesSampleEvents:
+                  $ref: "#/components/examples/OutputSamplesResponseExamplesSampleEvents"
         "400":
           description: Failed validation or malformed input — invalid request or
-            Destination error
+            Destination error.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -73758,20 +73992,18 @@ paths:
         configuration or test connectivity within the specified Pack.
       responses:
         "200":
-          description: Destination test result
+          description: Destination test result.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedOutputTestResponse"
               examples:
-                OutputResponseExamplesSplunkHecDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
-                OutputResponseExamplesS3Destination:
-                  $ref: "#/components/examples/OutputResponseExamplesS3Destination"
-                OutputResponseExamplesSyslogDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
+                OutputTestResponseExamplesSuccessfulTest:
+                  $ref: "#/components/examples/OutputTestResponseExamplesSuccessfulTest"
+                OutputTestResponseExamplesFailedTest:
+                  $ref: "#/components/examples/OutputTestResponseExamplesFailedTest"
         "400":
-          description: Failed validation or malformed input — missing or invalid events
+          description: Failed validation or malformed input — missing or invalid events.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -75379,12 +75611,12 @@ paths:
       x-speakeasy-name-override: get
       x-cribl-internal: false
       x-cribl-availability: both
-      summary: Get a summary of the deployment for a specific product.
+      summary: Get a summary of the deployment for a Cribl product
       description: Get a summary of the deployment for the specified Cribl product
         (Stream or Edge).<br/><br/>The summary includes a count of Worker Groups
-        or Edge Fleets and resources  such as Pipelines, Routes, Sources, and
-        Destinations. For Distributed deployments,  it also includes a count and
-        statistics for Worker or Edge Nodes.
+        or Edge Fleets and resources such as Pipelines, Routes, Sources, and
+        Destinations. For Distributed deployments, the summary also includes a
+        count and statistics for Worker or Edge Nodes.
       responses:
         "200":
           description: List of DistributedSummary objects.
@@ -75392,6 +75624,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedDistributedSummary"
+              examples:
+                ProductSummaryResponseExamplesStreamDeploymentSummary:
+                  $ref: "#/components/examples/ProductSummaryResponseExamplesStreamDeploymentSumm\
+                    ary"
         "400":
           description: Failed validation or malformed input if the product is not "stream"
             or "edge"
@@ -75439,6 +75675,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedNumber"
+              examples:
+                ProductWorkersCountResponseExamplesCountedWorkerNodes:
+                  $ref: "#/components/examples/ProductWorkersCountResponseExamplesCountedWorkerNo\
+                    des"
         "400":
           description: Failed validation or malformed input if the product is not
             "stream", "edge", or "outpost"
@@ -75472,7 +75712,7 @@ paths:
           in: query
           required: false
           schema:
-            type: string
+            $ref: "#/components/schemas/WorkerFilterExpression"
           description: Filter expression to evaluate against Nodes for inclusion in the
             response.
   /products/{product}/workers:
@@ -75494,6 +75734,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedMasterWorkerEntry"
+              examples:
+                WorkersListResponseExamplesWorkerNode:
+                  $ref: "#/components/examples/WorkersListResponseExamplesWorkerNode"
         "400":
           description: Failed validation or malformed input if the product is not
             "stream", "edge", or "outpost"
@@ -75526,7 +75769,7 @@ paths:
           in: query
           required: false
           schema:
-            type: string
+            $ref: "#/components/schemas/WorkerFilterExpression"
           description: Filter expression to evaluate against Nodes for inclusion in the
             response.
         - name: sortExp
@@ -75540,7 +75783,7 @@ paths:
           in: query
           required: false
           schema:
-            type: string
+            $ref: "#/components/schemas/WorkerFilterJson"
           description: JSON-stringified filter object to evaluate against Nodes for
             inclusion in the response.
         - name: sort
@@ -77658,19 +77901,14 @@ paths:
       description: Clear the persistent queue (PQ) for the specified Destination.
       responses:
         "201":
-          description: A list of job ids for the background job that clears the persistent
-            queue
+          description: The job ID for the background job that clears the persistent queue.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedString"
               examples:
-                OutputResponseExamplesSplunkHecDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
-                OutputResponseExamplesS3Destination:
-                  $ref: "#/components/examples/OutputResponseExamplesS3Destination"
-                OutputResponseExamplesSyslogDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
+                OutputClearPQResponseExamplesClearPQJobId:
+                  $ref: "#/components/examples/OutputClearPQResponseExamplesClearPQJobId"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -77708,18 +77946,11 @@ paths:
         (PQ) for the specified Destination.
       responses:
         "200":
-          description: information about the latest PQ clear job for the Destination
+          description: Information about the latest job to clear the PQ for the Destination.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedJobInfo"
-              examples:
-                OutputResponseExamplesSplunkHecDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
-                OutputResponseExamplesS3Destination:
-                  $ref: "#/components/examples/OutputResponseExamplesS3Destination"
-                OutputResponseExamplesSyslogDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -77757,21 +77988,17 @@ paths:
         configuration or test connectivity.
       responses:
         "200":
-          description: Sample event data for the Destination
+          description: Sample event data for the Destination.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedOutputSamplesResponse"
               examples:
-                OutputResponseExamplesSplunkHecDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
-                OutputResponseExamplesS3Destination:
-                  $ref: "#/components/examples/OutputResponseExamplesS3Destination"
-                OutputResponseExamplesSyslogDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
+                OutputSamplesResponseExamplesSampleEvents:
+                  $ref: "#/components/examples/OutputSamplesResponseExamplesSampleEvents"
         "400":
           description: Failed validation or malformed input — invalid request or
-            Destination error
+            Destination error.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -77809,20 +78036,18 @@ paths:
         configuration or test connectivity.
       responses:
         "200":
-          description: Destination test result
+          description: Destination test result.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedOutputTestResponse"
               examples:
-                OutputResponseExamplesSplunkHecDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
-                OutputResponseExamplesS3Destination:
-                  $ref: "#/components/examples/OutputResponseExamplesS3Destination"
-                OutputResponseExamplesSyslogDestination:
-                  $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
+                OutputTestResponseExamplesSuccessfulTest:
+                  $ref: "#/components/examples/OutputTestResponseExamplesSuccessfulTest"
+                OutputTestResponseExamplesFailedTest:
+                  $ref: "#/components/examples/OutputTestResponseExamplesFailedTest"
         "400":
-          description: Failed validation or malformed input — missing or invalid events
+          description: Failed validation or malformed input — missing or invalid events.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
