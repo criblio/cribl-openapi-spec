@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.19.0-alpha.1782946995691-c068d78a
+  version: 4.19.0-alpha.1783033439755-cce5d464
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -12755,7 +12755,8 @@ components:
           minItems: 1
           items:
             type: number
-            minLength: 1
+            minimum: 100
+            maximum: 599
         enableHeader:
           type: boolean
           title: Honor Retry-After header
@@ -12798,7 +12799,8 @@ components:
           minItems: 1
           items:
             type: number
-            minLength: 1
+            minimum: 100
+            maximum: 599
         enableHeader:
           type: boolean
           title: Honor Retry-After header
@@ -14285,7 +14287,8 @@ components:
           minItems: 1
           items:
             type: number
-            minLength: 1
+            minimum: 100
+            maximum: 599
         enableHeader:
           type: boolean
           title: Honor Retry-After header
@@ -14344,7 +14347,8 @@ components:
           minItems: 1
           items:
             type: number
-            minLength: 1
+            minimum: 100
+            maximum: 599
         enableHeader:
           type: boolean
           title: Honor Retry-After header
@@ -15328,7 +15332,8 @@ components:
           minItems: 1
           items:
             type: number
-            minLength: 1
+            minimum: 100
+            maximum: 599
         enableHeader:
           type: boolean
           title: Honor Retry-After header
@@ -15380,7 +15385,8 @@ components:
           minItems: 1
           items:
             type: number
-            minLength: 1
+            minimum: 100
+            maximum: 599
         enableHeader:
           type: boolean
           title: Honor Retry-After header
@@ -15703,17 +15709,6 @@ components:
       required:
         - perms
         - user
-    CountedUserAccessControlList:
-      type: object
-      properties:
-        count:
-          type: integer
-          description: number of items present in the items array
-        items:
-          type: array
-          description: List of items in this response.
-          items:
-            $ref: "#/components/schemas/UserAccessControlList"
     DatabaseConnectionAuthType:
       type: string
       enum:
@@ -15892,6 +15887,9 @@ components:
         RESTEndpoint.sendError (and similar handlers).
     CountedFunctionResponse:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -15901,6 +15899,29 @@ components:
           description: List of items in this response.
           items:
             $ref: "#/components/schemas/FunctionResponse"
+    PaginatedFunctionResponse:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The pre-limited items in the list of results
+          items:
+            $ref: "#/components/schemas/FunctionResponse"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     InputCollection:
       type: object
       properties:
@@ -27658,7 +27679,6 @@ components:
               - heartbeatInterval
               - batchTimeout
               - targets
-            minLength: 1
             properties:
               subscriptionName:
                 title: Subscription name
@@ -27736,7 +27756,6 @@ components:
                 title: Queries
                 items:
                   type: object
-                  minLength: 1
                   required:
                     - path
                     - queryExpression
@@ -28393,7 +28412,7 @@ components:
                 type: string
                 title: Content name
                 description: The name of the Wiz query
-                pattern: ^[a-zA-Z0-9_-\s]+$
+                pattern: ^[a-zA-Z0-9_\-\s]+$
               contentDescription:
                 type: string
                 title: Description
@@ -31201,11 +31220,12 @@ components:
               contentType:
                 type: string
                 title: Endpoint name
-                pattern: ^[a-zA-Z0-9_-\s]+$
+                pattern: ^[a-zA-Z0-9_\-\s]+$
                 enum:
                   - activities
                   - chats
                   - projects
+                  - chat_messages
                   - groups
                   - organizations
                 x-speakeasy-unknown-values: allow
@@ -31594,6 +31614,9 @@ components:
           okta: "#/components/schemas/InputOkta"
     CountedInputSplunkHec:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -31633,6 +31656,9 @@ components:
         - token
     CountedString:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -31644,6 +31670,9 @@ components:
             type: string
     CountedJobInfo:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -32115,6 +32144,9 @@ components:
         status, and statistics.
     CountedInputResponse:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -32303,6 +32335,29 @@ components:
       type: array
       items:
         type: string
+    PaginatedInputResponse:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The pre-limited items in the list of results
+          items:
+            $ref: "#/components/schemas/InputResponse"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     UpdateHecTokenRequest:
       type: object
       properties:
@@ -55549,6 +55604,9 @@ components:
           ibm_cloud_s3: "#/components/schemas/OutputIbmCloudS3"
     CountedOutputResponse:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -55658,8 +55716,34 @@ components:
         - alibaba_cloud_s3
         - ibm_cloud_s3
       x-speakeasy-unknown-values: allow
+    PaginatedOutputResponse:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The pre-limited items in the list of results
+          items:
+            $ref: "#/components/schemas/OutputResponse"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     CountedOutputSamplesResponse:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -55683,6 +55767,9 @@ components:
       description: Sample events from a Destination.
     CountedOutputTestResponse:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -55730,6 +55817,9 @@ components:
       description: Request body for testing a Destination by sending sample events.
     CountedPipeline:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -55809,8 +55899,34 @@ components:
                 to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
                 (group-scoped). Variable value overrides 'streamtags' at
                 runtime.
+    PaginatedPipeline:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The pre-limited items in the list of results
+          items:
+            $ref: "#/components/schemas/Pipeline"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     CountedRoutes:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -55978,6 +56094,9 @@ components:
         $ref: "#/components/schemas/RouteConfInput"
     CountedInputStatus:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -56089,8 +56208,34 @@ components:
         - id
         - status
       description: Status of the Source, aggregated across all Worker Processes.
+    PaginatedInputStatus:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The pre-limited items in the list of results
+          items:
+            $ref: "#/components/schemas/InputStatus"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     CountedOutputStatus:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -56117,8 +56262,34 @@ components:
         - id
         - status
       description: Status of a Destination, aggregated across all Worker Processes.
+    PaginatedOutputStatus:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The pre-limited items in the list of results
+          items:
+            $ref: "#/components/schemas/OutputStatus"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     CountedSavedJobResponse:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -56575,6 +56746,29 @@ components:
         - script
         - splunk
       x-speakeasy-unknown-values: allow
+    PaginatedSavedJobResponse:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The pre-limited items in the list of results
+          items:
+            $ref: "#/components/schemas/SavedJobResponse"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     CloudProvider:
       type:
         - string
@@ -56789,8 +56983,34 @@ components:
             Edge Fleet.
       required:
         - id
+    PaginatedConfigGroup:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The pre-limited items in the list of results
+          items:
+            $ref: "#/components/schemas/ConfigGroup"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     CountedConfigGroup:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -56891,6 +57111,8 @@ components:
       properties:
         context:
           type: string
+          description: Lookup context to deploy. Use <code>cribl</code> for the default
+            context or a Pack <code>id</code> for Pack lookups.
         lookups:
           type: array
           items:
@@ -56898,11 +57120,14 @@ components:
             properties:
               file:
                 type: string
+                description: Unique identifier (file name) of the lookup to deploy.
               version:
                 type: string
+                description: Version of the lookup file to deploy.
             required:
               - file
               - version
+          description: List of lookup files to deploy in this context.
       required:
         - context
         - lookups
@@ -56913,10 +57138,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DeployRequestLookups"
+          description: Optional list of lookup file deployments to include with the commit
+            deployment.
         version:
           type: string
+          description: Commit hash to deploy to the Worker Group, Outpost Group, or Edge
+            Fleet.
       required:
         - version
+    CountedUserAccessControlList:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        count:
+          type: integer
+          description: number of items present in the items array
+        items:
+          type: array
+          description: List of items in this response.
+          items:
+            $ref: "#/components/schemas/UserAccessControlList"
     ProductsCore:
       type: string
       enum:
@@ -56926,6 +57169,9 @@ components:
       x-speakeasy-unknown-values: allow
     CountedTeamAccessControlList:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -56962,6 +57208,9 @@ components:
       title: EmptyObject
     CountedCriblLakeDataset:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -57200,6 +57449,29 @@ components:
           description: Name of the ClickHouse view for the Dataset on the Lakehouse.
       required:
         - id
+    PaginatedCriblLakeDataset:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The pre-limited items in the list of results
+          items:
+            $ref: "#/components/schemas/CriblLakeDataset"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     CriblLakeDatasetUpdate:
       type: object
       properties:
@@ -57347,6 +57619,9 @@ components:
             If not provided, the default is 50.
     CountedNumber:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -57358,6 +57633,9 @@ components:
             type: number
     CountedMasterWorkerEntry:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -57979,8 +58257,34 @@ components:
         inclusion in the response.
       example: "%7B%22field%22%3A%22group%22%2C%22op%22%3A%22is%22%2C%22value%22%3A%2\
         2default%22%7D"
+    PaginatedMasterWorkerEntry:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The pre-limited items in the list of results
+          items:
+            $ref: "#/components/schemas/MasterWorkerEntry"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     CountedRestartResponse:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -58016,17 +58320,29 @@ components:
           description: GUIDs of the Worker or Edge Nodes to restart.
       required:
         - guids
-    CountedDistributedSummary:
+    PaginatedDistributedSummary:
       type: object
+      required:
+        - items
+        - count
       properties:
-        count:
-          type: integer
-          description: number of items present in the items array
         items:
           type: array
-          description: List of items in this response.
+          description: The pre-limited items in the list of results
           items:
             $ref: "#/components/schemas/DistributedSummary"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     DistributedSummary:
       type: object
       properties:
@@ -58177,6 +58493,9 @@ components:
       description: Health status of the Leader or Worker Node.
     CountedPackInstallInfo:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -58364,6 +58683,9 @@ components:
             - source
     CountedPackUninstallInfo:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -58387,6 +58709,9 @@ components:
         - source
     CountedPackInfo:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -58459,6 +58784,29 @@ components:
       required:
         - id
         - source
+    PaginatedPackInfo:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The pre-limited items in the list of results
+          items:
+            $ref: "#/components/schemas/PackInfo"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     PackUpgradeRequest:
       type: object
       properties:
@@ -58495,6 +58843,9 @@ components:
         - source
     CountedGitCommitSummary:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -58586,6 +58937,9 @@ components:
         - summary
     CountedGitCountResult:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -58605,6 +58959,9 @@ components:
         - count
     CountedGitDiffResult:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -58755,6 +59112,9 @@ components:
         - diffJson
     CountedGitFilesResponse:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -58807,6 +59167,9 @@ components:
         - items
     CountedGitRevertResult:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -58882,6 +59245,9 @@ components:
         - commit
     CountedGitShowResult:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -58905,6 +59271,9 @@ components:
         - diffJson
     CountedSystemSettingsConf:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -59114,6 +59483,9 @@ components:
         - workers
     CountedSystemRestartResponse:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -59134,6 +59506,9 @@ components:
         - restart
     CountedBranchInfo:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -59180,6 +59555,9 @@ components:
         - branch
     CountedGitInfo:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -59207,17 +59585,29 @@ components:
       required:
         - remote
         - versioning
-    CountedGitLogResult:
+    PaginatedGitLogResult:
       type: object
+      required:
+        - items
+        - count
       properties:
-        count:
-          type: integer
-          description: number of items present in the items array
         items:
           type: array
-          description: List of items in this response.
+          description: The pre-limited items in the list of results
           items:
             $ref: "#/components/schemas/GitLogResult"
+        count:
+          type: integer
+          description: Number of items present in the items array
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Pagination limit
+        totalCount:
+          type: integer
+          description: Total number of items available (present when limit is set)
     GitLogResult:
       type: object
       properties:
@@ -59244,6 +59634,9 @@ components:
           description: Git refs (branches, tags) pointing to this commit.
     CountedGitStatusResult:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -59350,6 +59743,9 @@ components:
         - staged
     CountedBoolean:
       type: object
+      required:
+        - items
+        - count
       properties:
         count:
           type: integer
@@ -62058,7 +62454,8 @@ components:
           minItems: 1
           items:
             type: number
-            minLength: 1
+            minimum: 100
+            maximum: 599
         enableHeader:
           type: boolean
           title: Honor Retry-After header
@@ -62136,7 +62533,8 @@ components:
           minItems: 1
           items:
             type: number
-            minLength: 1
+            minimum: 100
+            maximum: 599
         enableHeader:
           type: boolean
           title: Honor Retry-After header
@@ -63113,6 +63511,8 @@ components:
             textSecret: postgres-warehouse-connection
             connectionTimeout: 15000
             tags: warehouse,postgres,reporting
+        offset: 0
+        limit: 20
     UpdateDatabaseConnectionExamplesUpdateMySQLDatabaseConnectionWithConnectionString:
       summary: Update a MySQL Database Connection with a connection string
       description: Example request body for updating a MySQL Database Connection using
@@ -63329,6 +63729,8 @@ components:
             description: Removes events that match the specified filter expression.
             category: filtering
             tags: drop,filter
+        offset: 0
+        limit: 20
     HecTokenResponseExamplesSplunkHecSource:
       summary: Splunk HEC Source with HEC tokens
       description: Example response for adding or updating an HEC token on a Splunk
@@ -63400,33 +63802,45 @@ components:
       summary: Syslog Source response
       description: Example response for getting or updating a Syslog Source.
       value:
-        id: syslog-source
-        type: syslog
-        host: 0.0.0.0
-        udpPort: 514
-        sendToRoutes: true
-        pqEnabled: false
+        items:
+          - id: syslog-source
+            type: syslog
+            host: 0.0.0.0
+            udpPort: 514
+            sendToRoutes: true
+            pqEnabled: false
+        count: 1
+        offset: 0
+        limit: 20
     InputResponseExamplesSplunkHecSource:
       summary: Splunk HEC Source response
       description: Example response for getting or updating a Splunk HEC Source.
       value:
-        id: splunk-hec-source
-        type: splunk_hec
-        host: 0.0.0.0
-        port: 8088
-        splunkHecAPI: /services/collector
-        sendToRoutes: true
-        pqEnabled: false
+        items:
+          - id: splunk-hec-source
+            type: splunk_hec
+            host: 0.0.0.0
+            port: 8088
+            splunkHecAPI: /services/collector
+            sendToRoutes: true
+            pqEnabled: false
+        count: 1
+        offset: 0
+        limit: 20
     InputResponseExamplesHttpSource:
       summary: HTTP Source response
       description: Example response for getting or updating an HTTP Source.
       value:
-        id: http-source
-        type: http
-        host: 0.0.0.0
-        port: 10080
-        sendToRoutes: true
-        pqEnabled: false
+        items:
+          - id: http-source
+            type: http
+            host: 0.0.0.0
+            port: 10080
+            sendToRoutes: true
+            pqEnabled: false
+        count: 1
+        offset: 0
+        limit: 20
     InputCreateExamplesAnthropicCompliance:
       summary: Anthropic Compliance
       value:
@@ -65151,28 +65565,40 @@ components:
       summary: Splunk HEC Destination response
       description: Example response for getting or updating a Splunk HEC Destination.
       value:
-        id: splunk-hec-output
-        type: splunk_hec
-        host: localhost
-        port: 8088
-        hecToken: 1234abcd5678efgh9101ijklEXAMPLETOKEN
+        items:
+          - id: splunk-hec-output
+            type: splunk_hec
+            host: localhost
+            port: 8088
+            hecToken: 1234abcd5678efgh9101ijklEXAMPLETOKEN
+        count: 1
+        offset: 0
+        limit: 20
     OutputResponseExamplesS3Destination:
       summary: Amazon S3 Destination response
       description: Example response for getting or updating an Amazon S3 Destination.
       value:
-        id: s3-output
-        type: s3
-        bucket: my-bucket
-        region: us-east-1
-        stagePath: /tmp/staging
+        items:
+          - id: s3-output
+            type: s3
+            bucket: my-bucket
+            region: us-east-1
+            stagePath: /tmp/staging
+        count: 1
+        offset: 0
+        limit: 20
     OutputResponseExamplesSyslogDestination:
       summary: Syslog Destination response
       description: Example response for getting or updating a Syslog Destination.
       value:
-        id: syslog-output
-        type: syslog
-        host: localhost
-        port: 514
+        items:
+          - id: syslog-output
+            type: syslog
+            host: localhost
+            port: 514
+        count: 1
+        offset: 0
+        limit: 20
     OutputCreateExamplesTcpjson:
       summary: TCP JSON
       value:
@@ -67049,28 +67475,36 @@ components:
       summary: Show an empty Pipeline response
       description: Example response for showing an empty Pipeline with no functions.
       value:
-        id: empty-pipeline
-        conf:
-          asyncFuncTimeout: 3000
-          description: ""
-          functions: []
+        items:
+          - id: empty-pipeline
+            conf:
+              asyncFuncTimeout: 3000
+              description: ""
+              functions: []
+        count: 1
+        offset: 0
+        limit: 20
     PipelineResponseExamplesEvalPipeline:
       summary: Show an Eval Pipeline response
       description: Example response for showing a Pipeline that uses an Eval function
         to add fields to events.
       value:
-        id: eval-pipeline
-        conf:
-          asyncFuncTimeout: 3000
-          description: Adds environment metadata to events.
-          functions:
-            - id: eval
-              filter: "true"
-              disabled: false
-              conf:
-                add:
-                  - name: env
-                    value: "'production'"
+        items:
+          - id: eval-pipeline
+            conf:
+              asyncFuncTimeout: 3000
+              description: Adds environment metadata to events.
+              functions:
+                - id: eval
+                  filter: "true"
+                  disabled: false
+                  conf:
+                    add:
+                      - name: env
+                        value: "'production'"
+        count: 1
+        offset: 0
+        limit: 20
     PipelineExamplesEmpty:
       summary: Create a new empty Pipeline
       description: Example request body for creating a new Pipeline with no functions.
@@ -69346,46 +69780,76 @@ components:
       summary: Source with Green health status
       description: Example response for getting the status of a Source that is healthy.
       value:
-        id: syslog-source
-        type: syslog
-        status:
-          health: Green
-          healthCounts:
-            Green: 2
+        items:
+          - id: syslog-source
+            type: syslog
+            status:
+              health: Green
+              healthCounts:
+                Green: 2
+                Yellow: 0
+                Red: 0
+                Unknown: 0
+              timestamp: 1627123456789
+        count: 1
+        offset: 0
+        limit: 20
     InputStatusResponseExamplesYellowSource:
       summary: Source with Yellow health status
       description: Example response for getting the status of a Source that is
         experiencing issues.
       value:
-        id: splunk-hec-source
-        type: splunk_hec
-        status:
-          health: Yellow
-          healthCounts:
-            Green: 1
-            Yellow: 1
+        items:
+          - id: splunk-hec-source
+            type: splunk_hec
+            status:
+              health: Yellow
+              healthCounts:
+                Green: 1
+                Yellow: 1
+                Red: 0
+                Unknown: 0
+              timestamp: 1627123456789
+        count: 1
+        offset: 0
+        limit: 20
     OutputStatusResponseExamplesGreenDestination:
       summary: Destination with Green health status
       description: Example response for getting the status of a Destination that is healthy.
       value:
-        id: splunk-hec-output
-        type: splunk_hec
-        status:
-          health: Green
-          healthCounts:
-            Green: 2
+        items:
+          - id: splunk-hec-output
+            type: splunk_hec
+            status:
+              health: Green
+              healthCounts:
+                Green: 2
+                Yellow: 0
+                Red: 0
+                Unknown: 0
+              timestamp: 1627123456789
+        count: 1
+        offset: 0
+        limit: 20
     OutputStatusResponseExamplesYellowDestination:
       summary: Destination with Yellow health status
       description: Example response for getting the status of a Destination that is
         experiencing issues.
       value:
-        id: s3-output
-        type: s3
-        status:
-          health: Yellow
-          healthCounts:
-            Green: 1
-            Yellow: 1
+        items:
+          - id: s3-output
+            type: s3
+            status:
+              health: Yellow
+              healthCounts:
+                Green: 1
+                Yellow: 1
+                Red: 0
+                Unknown: 0
+              timestamp: 1627123456789
+        count: 1
+        offset: 0
+        limit: 20
     CollectorResponseExamplesRestCollector:
       summary: Get a REST API Collector
       description: Example response for a REST API Collector in a response envelope
@@ -69757,6 +70221,8 @@ components:
               - s3-output
             history: []
             notifications: []
+        offset: 0
+        limit: 20
     UpdateCollectorExamplesRest:
       summary: Update a REST API Collector
       description: Example request body for updating an existing REST API Collector
@@ -70065,6 +70531,8 @@ components:
         provisioned: true
     CreateGroupExamplesOnPremWg:
       summary: Create a Worker Group in customer-managed deployment
+      description: Example request body for creating a Worker Group in a
+        customer-managed deployment.
       value:
         id: goatOnPremIanWg
         name: goatonpremianwg
@@ -70074,6 +70542,8 @@ components:
         onPrem: true
     CreateGroupExamplesCloneWg:
       summary: Clone an on-prem Worker Group
+      description: Example request body for cloning an existing Worker Group into a
+        new Worker Group.
       value:
         id: goatOnPremDollyWg
         name: goatonpremdollywg
@@ -70083,11 +70553,13 @@ components:
         onPrem: true
         sourceGroupId: goatOnPremIanWg
     CreateGroupExamplesEdgeFleet:
-      summary: Create Edge Fleet
+      summary: Create an Edge Fleet
+      description: Example request body for creating an Edge Fleet in a
+        customer-managed deployment.
       value:
         id: goatIanEdgeFleet
         name: goatianedgefleet
-        description: Create a new Edge Fleet
+        description: Edge Fleet for customer-managed deployments
         workerRemoteAccess: true
         type: edge
         onPrem: true
@@ -70133,6 +70605,168 @@ components:
         incompatibleWorkerCount: 0
         deployingWorkerCount: 0
         lookupDeployments: []
+    GroupConfigVersionResponseExamplesConfigVersion:
+      summary: Get a configuration version
+      description: Example response for getting the configuration version for the
+        specified Worker Group.
+      value:
+        count: 1
+        items:
+          - abc1234
+    GroupCreateResponseExamplesWorkerGroup:
+      summary: Create a Worker Group
+      description: Example response for creating a Worker Group.
+      value:
+        count: 1
+        items:
+          - id: goatCloudIanWg
+            name: goatcloudianwg
+            cloud:
+              provider: aws
+              region: us-west-2
+            workerRemoteAccess: true
+            type: stream
+            onPrem: false
+            estimatedIngestRate: 2048
+            provisioned: true
+            configVersion: abc1234
+            workerCount: 3
+            incompatibleWorkerCount: 0
+            deployingWorkerCount: 0
+            lookupDeployments: []
+    GroupDeleteResponseExamplesWorkerGroup:
+      summary: Delete a Worker Group
+      description: Example response for deleting the specified Worker Group.
+      value:
+        count: 1
+        items:
+          - id: goatCloudIanWg
+            name: goatcloudianwg
+            cloud:
+              provider: aws
+              region: us-west-2
+            workerRemoteAccess: true
+            type: stream
+            onPrem: false
+            estimatedIngestRate: 2048
+            provisioned: true
+            configVersion: abc1234
+            workerCount: 3
+            incompatibleWorkerCount: 0
+            deployingWorkerCount: 0
+            lookupDeployments: []
+    GroupDeployResponseExamplesWorkerGroup:
+      summary: Deploy commits to a Worker Group
+      description: Example response for deploying commits to the specified Worker Group.
+      value:
+        count: 1
+        items:
+          - id: goatCloudIanWg
+            name: goatcloudianwg
+            cloud:
+              provider: aws
+              region: us-west-2
+            workerRemoteAccess: true
+            type: stream
+            onPrem: false
+            estimatedIngestRate: 2048
+            provisioned: true
+            configVersion: abc1234
+            workerCount: 3
+            incompatibleWorkerCount: 0
+            deployingWorkerCount: 0
+            lookupDeployments:
+              - context: cribl
+                lookups:
+                  - file: customers.csv
+                    deployedVersion: lookup123
+    DeployGroupExamplesDeployWorkerGroup:
+      summary: Deploy commits to a Worker Group
+      description: Example request body for deploying a committed configuration
+        version to a Worker Group.
+      value:
+        version: abc1234
+        lookups:
+          - context: cribl
+            lookups:
+              - file: customers.csv
+                version: lookup123
+    GroupGetResponseExamplesWorkerGroup:
+      summary: Get a Worker Group
+      description: Example response for getting the specified Worker Group.
+      value:
+        count: 1
+        items:
+          - id: goatCloudIanWg
+            name: goatcloudianwg
+            cloud:
+              provider: aws
+              region: us-west-2
+            workerRemoteAccess: true
+            type: stream
+            onPrem: false
+            estimatedIngestRate: 2048
+            provisioned: true
+            configVersion: abc1234
+            workerCount: 3
+            incompatibleWorkerCount: 0
+            deployingWorkerCount: 0
+            lookupDeployments: []
+    GroupListResponseExamplesWorkerGroups:
+      summary: List Worker Groups
+      description: Example response for listing Worker Groups for a Cribl product.
+      value:
+        count: 2
+        items:
+          - id: goatCloudIanWg
+            name: goatcloudianwg
+            cloud:
+              provider: aws
+              region: us-west-2
+            workerRemoteAccess: true
+            type: stream
+            onPrem: false
+            estimatedIngestRate: 2048
+            provisioned: true
+            configVersion: abc1234
+            workerCount: 3
+            incompatibleWorkerCount: 0
+            deployingWorkerCount: 0
+            lookupDeployments: []
+          - id: goatOnPremIanWg
+            name: goatonpremianwg
+            description: Worker group in customer-managed deployment
+            workerRemoteAccess: true
+            type: stream
+            onPrem: true
+            configVersion: def5678
+            workerCount: 5
+            incompatibleWorkerCount: 0
+            deployingWorkerCount: 0
+            lookupDeployments: []
+        offset: 0
+        limit: 20
+    GroupUpdateResponseExamplesWorkerGroup:
+      summary: Update a Worker Group
+      description: Example response for updating the specified Worker Group.
+      value:
+        count: 1
+        items:
+          - id: goatCloudIanWg
+            name: goatcloudianwg
+            cloud:
+              provider: aws
+              region: us-west-2
+            workerRemoteAccess: true
+            type: stream
+            onPrem: false
+            estimatedIngestRate: 4096
+            provisioned: true
+            configVersion: abc1234
+            workerCount: 3
+            incompatibleWorkerCount: 0
+            deployingWorkerCount: 0
+            lookupDeployments: []
     LakeDatasetCreateExamplesJsonDataset:
       summary: Create a Lake Dataset in JSON format
       description: Example request body for creating a Lake Dataset in JSON format
@@ -70244,6 +70878,8 @@ components:
                 group: default
                 guid: worker-guid-01
                 startTime: 1717200000000
+        offset: 0
+        limit: 20
     RestartWorkersExamplesRestartWorkers:
       summary: Restart worker/edge Nodes
       description: Restart multiple Worker/Edge Nodes by providing an array of GUIDs
@@ -70274,6 +70910,8 @@ components:
               unhealthy: 0
               softwareVersions: 1
               confVersions: 1
+        offset: 0
+        limit: 20
     HealthExamplesHealthyPrimary:
       summary: Healthy (primary)
       description: Example response for a healthy server that is acting as primary.
@@ -70418,6 +71056,8 @@ components:
             source: ""
             exports: []
         count: 2
+        offset: 0
+        limit: 20
     PackUpgradeResponseExamplesUpgraded:
       summary: Pack upgraded response
       description: Example response for upgrading a Pack to a newer version.
@@ -70697,6 +71337,8 @@ components:
             body: ""
             author_name: Admin User
             author_email: admin@example.com
+        offset: 0
+        limit: 20
     VersionPushResponseExamplesPushResult:
       summary: Push result
       description: Example response for pushing local commits to the remote repository.
@@ -70907,7 +71549,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedFunctionResponse"
+                $ref: "#/components/schemas/PaginatedFunctionResponse"
               examples:
                 FunctionListResponseExamplesFunctionList:
                   $ref: "#/components/examples/FunctionListResponseExamplesFunctionList"
@@ -70935,6 +71577,31 @@ paths:
             type: boolean
           description: If <code>true</code>, include hidden Functions in the response.
             Otherwise, hidden Functions are excluded.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
   /functions/{id}:
     get:
       operationId: getFunctionsById
@@ -71431,7 +72098,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedSavedJobResponse"
+                $ref: "#/components/schemas/PaginatedSavedJobResponse"
               examples:
                 CollectorListResponseExamplesListed:
                   $ref: "#/components/examples/CollectorListResponseExamplesListed"
@@ -71458,6 +72125,31 @@ paths:
           schema:
             $ref: "#/components/schemas/CollectorType"
           description: Filter by collector type.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
     post:
       operationId: createSavedJob
       tags:
@@ -71703,7 +72395,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedPipeline"
+                $ref: "#/components/schemas/PaginatedPipeline"
               examples:
                 PipelineResponseExamplesEmptyPipeline:
                   $ref: "#/components/examples/PipelineResponseExamplesEmptyPipeline"
@@ -71726,12 +72418,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       parameters:
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
         - name: pack
           in: path
           required: true
           schema:
             type: string
           description: The <code>id</code> of the Pack.
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
     post:
       operationId: createPipelinesByPack
       tags:
@@ -72397,7 +73114,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputResponse"
+                $ref: "#/components/schemas/PaginatedInputResponse"
               examples:
                 InputResponseExamplesSyslogSource:
                   $ref: "#/components/examples/InputResponseExamplesSyslogSource"
@@ -72430,12 +73147,37 @@ paths:
           description: Type of Source to include in the results. Each request can include
             only one <code>type</code> parameter; multiple parameters per
             request are not supported.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
         - name: pack
           in: path
           required: true
           schema:
             type: string
           description: The <code>id</code> of the Pack.
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
     post:
       operationId: createInputSystemByPack
       x-speakeasy-group: packs.sources
@@ -72647,19 +73389,6 @@ paths:
         - sources
       summary: Get a Source within a Pack
       description: Get the specified Source within the specified Pack.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Source to get.
-        - name: pack
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Pack.
       responses:
         "200":
           description: The requested Source object in a single-item list.
@@ -72692,6 +73421,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Source to get.
+        - name: pack
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Pack.
     patch:
       operationId: updateInputSystemByPackAndId
       x-speakeasy-group: packs.sources
@@ -72711,19 +73453,6 @@ paths:
         <code>criblSourceProvenance</code> when you omit it from the request
         body, and you cannot overwrite it through this endpoint within the
         specified Pack.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Source to update.
-        - name: pack
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Pack.
       requestBody:
         description: Input object.
         required: true
@@ -72902,6 +73631,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Source to update.
+        - name: pack
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Pack.
     delete:
       operationId: deleteInputSystemByPackAndId
       x-speakeasy-group: packs.sources
@@ -72912,19 +73654,6 @@ paths:
         - sources
       summary: Delete a Source within a Pack
       description: Delete the specified Source within the specified Pack.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Source to delete.
-        - name: pack
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Pack.
       responses:
         "200":
           description: The deleted Source object in a single-item list.
@@ -72955,6 +73684,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Source to delete.
+        - name: pack
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Pack.
   /p/{pack}/system/inputs/{id}/hectoken:
     post:
       operationId: createInputSystemHecTokenByPackAndId
@@ -73215,7 +73957,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/PaginatedOutputResponse"
               examples:
                 OutputResponseExamplesSplunkHecDestination:
                   $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
@@ -73248,12 +73990,37 @@ paths:
           description: Type of Destination to include in the results. Each request can
             include only one <code>type</code> parameter; multiple parameters
             per request are not supported.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
         - name: pack
           in: path
           required: true
           schema:
             type: string
           description: The <code>id</code> of the Pack.
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
     post:
       operationId: createOutputSystemByPack
       x-speakeasy-group: packs.destinations
@@ -73489,19 +74256,6 @@ paths:
         - destinations
       summary: Get a Destination within a Pack
       description: Get the specified Destination within the specified Pack.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Destination to get.
-        - name: pack
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Pack.
       responses:
         "200":
           description: The requested Destination object in a single-item list.
@@ -73534,6 +74288,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Destination to get.
+        - name: pack
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Pack.
     patch:
       operationId: updateOutputSystemByPackAndId
       x-speakeasy-group: packs.destinations
@@ -73550,19 +74317,6 @@ paths:
         configuration in your request body is correct before sending the
         request. If the configuration is incorrect, the updated Destination
         might not function as expected within the specified Pack.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Destination to update.
-        - name: pack
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Pack.
       requestBody:
         description: Output object.
         required: true
@@ -73767,6 +74521,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Destination to update.
+        - name: pack
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Pack.
     delete:
       operationId: deleteOutputSystemByPackAndId
       x-speakeasy-group: packs.destinations
@@ -73777,19 +74544,6 @@ paths:
         - destinations
       summary: Delete a Destination within a Pack
       description: Delete the specified Destination within the specified Pack.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Destination to delete.
-        - name: pack
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Pack.
       responses:
         "200":
           description: The deleted Destination object in a single-item list.
@@ -73825,6 +74579,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Destination to delete.
+        - name: pack
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Pack.
   /p/{pack}/system/outputs/{id}/pq:
     delete:
       operationId: deleteOutputSystemPqByPackAndId
@@ -74063,7 +74830,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputStatus"
+                $ref: "#/components/schemas/PaginatedInputStatus"
               examples:
                 InputStatusResponseExamplesGreenSource:
                   $ref: "#/components/examples/InputStatusResponseExamplesGreenSource"
@@ -74222,7 +74989,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputStatus"
+                $ref: "#/components/schemas/PaginatedOutputStatus"
               examples:
                 OutputStatusResponseExamplesGreenDestination:
                   $ref: "#/components/examples/OutputStatusResponseExamplesGreenDestination"
@@ -74442,7 +75209,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedPackInfo"
+                $ref: "#/components/schemas/PaginatedPackInfo"
               examples:
                 PackListResponseExamplesPackList:
                   $ref: "#/components/examples/PackListResponseExamplesPackList"
@@ -74472,6 +75239,31 @@ paths:
             response. When set, the response includes a count of each specified
             property in each Pack. Supported values: <code>inputs</code>,
             <code>outputs</code>, <code>collectors</code>."
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
     put:
       operationId: updatePacks
       tags:
@@ -74694,7 +75486,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedPipeline"
+                $ref: "#/components/schemas/PaginatedPipeline"
               examples:
                 PipelineResponseExamplesEmptyPipeline:
                   $ref: "#/components/examples/PipelineResponseExamplesEmptyPipeline"
@@ -74716,6 +75508,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
     post:
       operationId: createPipelines
       tags:
@@ -75087,8 +75905,7 @@ paths:
       x-speakeasy-name-override: list
       x-cribl-internal: false
       x-cribl-availability: both
-      summary: List all Worker Groups, Outpost Groups, or Edge Fleets for the
-        specified Cribl product
+      summary: List all Worker Groups, Outpost Groups, or Edge Fleets
       description: Get a list of all Worker Groups, Outpost Groups, or Edge Fleets for
         the specified Cribl product.
       responses:
@@ -75097,7 +75914,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedConfigGroup"
+                $ref: "#/components/schemas/PaginatedConfigGroup"
+              examples:
+                GroupListResponseExamplesWorkerGroups:
+                  $ref: "#/components/examples/GroupListResponseExamplesWorkerGroups"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -75130,6 +75950,31 @@ paths:
           description: Comma-separated list of additional properties to include in the
             response. Available values are <code>git.commit</code>,
             <code>git.localChanges</code>, and <code>git.log</code>.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
     post:
       operationId: createProductsGroupsByProduct
       tags:
@@ -75138,8 +75983,7 @@ paths:
       x-speakeasy-name-override: create
       x-cribl-internal: false
       x-cribl-availability: both
-      summary: Create a Worker Group, Outpost Group, or Edge Fleet for the specified
-        Cribl product
+      summary: Create a Worker Group, Outpost Group, or Edge Fleet
       description: Create a new Worker Group, Outpost Group, or Edge Fleet for the
         specified Cribl product.
       responses:
@@ -75149,6 +75993,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedConfigGroup"
+              examples:
+                GroupCreateResponseExamplesWorkerGroup:
+                  $ref: "#/components/examples/GroupCreateResponseExamplesWorkerGroup"
         "400":
           description: Failed validation or malformed input — Invalid group payload or
             invalid cloud/on-prem configuration.
@@ -75213,6 +76060,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedConfigGroup"
+              examples:
+                GroupGetResponseExamplesWorkerGroup:
+                  $ref: "#/components/examples/GroupGetResponseExamplesWorkerGroup"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -75223,6 +76073,8 @@ paths:
               example:
                 status: error
                 message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: Worker Group, Outpost Group, or Edge Fleet not found.
         "500":
           description: Unexpected server error.
           content:
@@ -75282,6 +76134,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedConfigGroup"
+              examples:
+                GroupUpdateResponseExamplesWorkerGroup:
+                  $ref: "#/components/examples/GroupUpdateResponseExamplesWorkerGroup"
         "400":
           description: Failed validation or malformed input — Invalid update payload,
             including read-only field mutations or invalid cloud/on-prem
@@ -75346,6 +76201,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedConfigGroup"
+              examples:
+                GroupDeleteResponseExamplesWorkerGroup:
+                  $ref: "#/components/examples/GroupDeleteResponseExamplesWorkerGroup"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -75514,6 +76372,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedString"
+              examples:
+                GroupConfigVersionResponseExamplesConfigVersion:
+                  $ref: "#/components/examples/GroupConfigVersionResponseExamplesConfigVersion"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -75564,6 +76425,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedConfigGroup"
+              examples:
+                GroupDeployResponseExamplesWorkerGroup:
+                  $ref: "#/components/examples/GroupDeployResponseExamplesWorkerGroup"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -75587,14 +76451,17 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/DeployRequest"
+            examples:
+              DeployGroupExamplesDeployWorkerGroup:
+                $ref: "#/components/examples/DeployGroupExamplesDeployWorkerGroup"
       parameters:
         - name: product
           in: path
           required: true
           schema:
             $ref: "#/components/schemas/ProductsCore"
-          description: Name of the Cribl product to deploy commits to the Worker Groups,
-            Outpost Groups, or Edge Fleets for.
+          description: Name of the Cribl product that contains the Worker Group, Outpost
+            Group, or Edge Fleet.
         - name: id
           in: path
           required: true
@@ -75623,7 +76490,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedDistributedSummary"
+                $ref: "#/components/schemas/PaginatedDistributedSummary"
               examples:
                 ProductSummaryResponseExamplesStreamDeploymentSummary:
                   $ref: "#/components/examples/ProductSummaryResponseExamplesStreamDeploymentSumm\
@@ -75656,6 +76523,31 @@ paths:
           schema:
             $ref: "#/components/schemas/ProductsBase"
           description: Name of the Cribl product to get the summary for.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
   /products/{product}/summary/workers:
     get:
       operationId: getProductsSummaryWorkersByProduct
@@ -75733,7 +76625,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedMasterWorkerEntry"
+                $ref: "#/components/schemas/PaginatedMasterWorkerEntry"
               examples:
                 WorkersListResponseExamplesWorkerNode:
                   $ref: "#/components/examples/WorkersListResponseExamplesWorkerNode"
@@ -75945,7 +76837,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedCriblLakeDataset"
+                $ref: "#/components/schemas/PaginatedCriblLakeDataset"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -76026,6 +76918,31 @@ paths:
           description: Set to <code>true</code> to include storage metrics for each Lake
             Dataset. Otherwise, <code>false</code> (default). Requires a Cribl
             Lake metrics license.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
     post:
       operationId: createCriblLakeDatasetByLakeId
       tags:
@@ -76549,7 +77466,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputResponse"
+                $ref: "#/components/schemas/PaginatedInputResponse"
               examples:
                 InputResponseExamplesSyslogSource:
                   $ref: "#/components/examples/InputResponseExamplesSyslogSource"
@@ -76582,6 +77499,31 @@ paths:
           description: Type of Source to include in the results. Each request can include
             only one <code>type</code> parameter; multiple parameters per
             request are not supported.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
     post:
       operationId: createInput
       x-speakeasy-group: sources
@@ -76786,13 +77728,6 @@ paths:
         - sources
       summary: Get a Source
       description: Get the specified Source.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Source to get.
       responses:
         "200":
           description: The requested Source object in a single-item list.
@@ -76825,6 +77760,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Source to get.
     patch:
       operationId: updateInputById
       x-speakeasy-group: sources
@@ -76843,13 +77785,6 @@ paths:
         function as expected.<br/><br/>Cribl preserves
         <code>criblSourceProvenance</code> when you omit it from the request
         body, and you cannot overwrite it through this endpoint.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Source to update.
       requestBody:
         description: Input object.
         required: true
@@ -77028,6 +77963,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Source to update.
     delete:
       operationId: deleteInputById
       x-speakeasy-group: sources
@@ -77038,13 +77980,6 @@ paths:
         - sources
       summary: Delete a Source
       description: Delete the specified Source.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Source to delete.
       responses:
         "200":
           description: The deleted Source object in a single-item list.
@@ -77075,6 +78010,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Source to delete.
   /system/inputs/{id}/hectoken:
     post:
       operationId: createInputHecTokenById
@@ -77309,7 +78251,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputResponse"
+                $ref: "#/components/schemas/PaginatedOutputResponse"
               examples:
                 OutputResponseExamplesSplunkHecDestination:
                   $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
@@ -77342,6 +78284,31 @@ paths:
           description: Type of Destination to include in the results. Each request can
             include only one <code>type</code> parameter; multiple parameters
             per request are not supported.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
     post:
       operationId: createOutput
       x-speakeasy-group: destinations
@@ -77570,13 +78537,6 @@ paths:
         - destinations
       summary: Get a Destination
       description: Get the specified Destination.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Destination to get.
       responses:
         "200":
           description: The requested Destination object in a single-item list.
@@ -77609,6 +78569,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Destination to get.
     patch:
       operationId: updateOutputById
       x-speakeasy-group: destinations
@@ -77625,13 +78592,6 @@ paths:
         configuration in your request body is correct before sending the
         request. If the configuration is incorrect, the updated Destination
         might not function as expected.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Destination to update.
       requestBody:
         description: Output object.
         required: true
@@ -77836,6 +78796,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Destination to update.
     delete:
       operationId: deleteOutputById
       x-speakeasy-group: destinations
@@ -77846,13 +78813,6 @@ paths:
         - destinations
       summary: Delete a Destination
       description: Delete the specified Destination.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The <code>id</code> of the Destination to delete.
       responses:
         "200":
           description: The deleted Destination object in a single-item list.
@@ -77888,6 +78848,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The <code>id</code> of the Destination to delete.
   /system/outputs/{id}/pq:
     delete:
       operationId: deleteOutputPqById
@@ -78244,7 +79211,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedInputStatus"
+                $ref: "#/components/schemas/PaginatedInputStatus"
               examples:
                 InputStatusResponseExamplesGreenSource:
                   $ref: "#/components/examples/InputStatusResponseExamplesGreenSource"
@@ -78389,7 +79356,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedOutputStatus"
+                $ref: "#/components/schemas/PaginatedOutputStatus"
               examples:
                 OutputStatusResponseExamplesGreenDestination:
                   $ref: "#/components/examples/OutputStatusResponseExamplesGreenDestination"
@@ -78535,7 +79502,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedGitLogResult"
+                $ref: "#/components/schemas/PaginatedGitLogResult"
               examples:
                 VersionListResponseExamplesListCommitHistory:
                   $ref: "#/components/examples/VersionListResponseExamplesListCommitHistory"
@@ -78562,6 +79529,31 @@ paths:
           schema:
             type: integer
           description: Maximum number of commits to return in the response for this request.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
   /version/branch:
     get:
       operationId: getVersionBranch
