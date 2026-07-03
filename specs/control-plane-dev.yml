@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.19.0-alpha.1783092126309-1ce0032a
+  version: 4.19.0-alpha.1783119854385-f696d44d
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -29555,6 +29555,357 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'SQSAwsSecretKey' at
             runtime.
+    InputBedrockS3:
+      type: object
+      required:
+        - type
+        - queueName
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          enum:
+            - bedrock_s3
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestina\
+            tionArnConstraint"
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        queueName:
+          type: string
+          title: Queue
+          description: "The name, URL, or ARN of the SQS queue to read notifications from.
+            When a non-AWS URL is specified, format must be:
+            '{url}/myQueueName'. Example: 'https://host:port/myQueueName'. Value
+            must be a JavaScript expression (which can evaluate to a constant
+            value), enclosed in quotes or backticks. Can be evaluated only at
+            init time. Example referencing a Global Variable:
+            `https://host:port/myQueue-${C.vars.myVar}`."
+        fileFilter:
+          type: string
+          title: Filename filter
+          description: "Regex matching file names to download and process. Defaults to: .*"
+        awsAccountId:
+          title: AWS account ID
+          description: SQS queue owner's AWS account ID. Leave empty if SQS queue is in
+            same AWS account.
+          type: string
+        awsAuthenticationMethod:
+          $ref: "#/components/schemas/AuthenticationMethodOptionsS3CollectorConf"
+        awsSecretKey:
+          type: string
+          title: Secret key
+        region:
+          type: string
+          title: Region
+          description: AWS Region where the S3 bucket and SQS queue are located. Required,
+            unless the Queue entry is a URL or ARN that includes a Region.
+        endpoint:
+          type: string
+          title: Endpoint
+          description: S3 service endpoint. If empty, defaults to the AWS Region-specific
+            endpoint. Otherwise, it must point to S3-compatible endpoint.
+        reuseConnections:
+          type: boolean
+          title: Reuse connections
+          description: Reuse connections between requests, which can improve performance
+        rejectUnauthorized:
+          type: boolean
+          title: Reject unauthorized certificates
+          description: Reject certificates that cannot be verified against a valid CA,
+            such as self-signed certificates
+        breakerRulesets:
+          type: array
+          title: Event Breaker rulesets
+          description: A list of event-breaking rulesets that will be applied, in order,
+            to the input data stream
+          items:
+            type: string
+        staleChannelFlushMs:
+          type: number
+          title: Event Breaker buffer timeout (ms)
+          description: How long (in milliseconds) the Event Breaker will wait for new data
+            to be sent to a specific channel before flushing the data stream
+            out, as is, to the Pipelines
+          minimum: 10
+          maximum: 43200000
+        maxMessages:
+          type: number
+          title: Message limit
+          description: "The maximum number of messages SQS should return in a poll
+            request. Amazon SQS never returns more messages than this value
+            (however, fewer messages might be returned). Valid values: 1 to 10."
+          minimum: 1
+          maximum: 10
+        visibilityTimeout:
+          type: number
+          title: Visibility timeout seconds
+          description: After messages are retrieved by a ReceiveMessage request,
+            @{product} will hide them from subsequent retrieve requests for at
+            least this duration. You can set this as high as 43200 sec. (12
+            hours).
+          minimum: 0
+          maximum: 43200
+        numReceivers:
+          type: number
+          title: Number of receivers
+          description: How many receiver processes to run. The higher the number, the
+            better the throughput - at the expense of CPU overhead.
+          minimum: 1
+          maximum: 100
+        socketTimeout:
+          type: number
+          title: Socket timeout
+          description: Socket inactivity timeout (in seconds). Increase this value if
+            timeouts occur due to backpressure.
+          minimum: 1
+          maximum: 43200
+        skipOnError:
+          type: boolean
+          title: Skip file on error
+          description: Skip files that trigger a processing error. Disabled by default,
+            which allows retries after processing errors.
+        includeSqsMetadata:
+          type: boolean
+          title: Include notification metadata
+          description: Attach SQS notification metadata to a __sqsMetadata field on each
+            event
+        enableAssumeRole:
+          type: boolean
+          title: Enable for Amazon S3
+          description: Use Assume Role credentials to access Amazon S3
+        assumeRoleArn:
+          type: string
+          title: AssumeRole ARN
+          description: Amazon Resource Name (ARN) of the role to assume
+          pattern: "^arn:"
+          minLength: 20
+        assumeRoleExternalId:
+          type: string
+          title: External ID
+          description: External ID to use when assuming role
+        durationSeconds:
+          type: number
+          title: Duration (seconds)
+          description: Duration of the assumed role's session, in seconds. Minimum is 900
+            (15 minutes), default is 3600 (1 hour), and maximum is 43200 (12
+            hours).
+          minimum: 900
+          maximum: 43200
+        enableSQSAssumeRole:
+          type: boolean
+          title: Enable for Amazon SQS
+          description: Use Assume Role credentials when accessing Amazon SQS
+        sharedCredentials:
+          type: boolean
+          title: Share credentials for SQS and S3
+          description: Use the same credential settings for S3 and SQS
+        sharedAssumeRoleArn:
+          type: boolean
+          title: Share AssumeRole ARN settings
+          description: Use the same settings for S3 and SQS
+        preprocess:
+          $ref: "#/components/schemas/PreprocessType"
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        parquetChunkSizeMB:
+          type: number
+          title: Parquet chunk size limit (MB)
+          description: Maximum file size for each Parquet chunk
+          maximum: 100
+          minimum: 1
+        parquetChunkDownloadTimeout:
+          type: number
+          title: Parquet chunk download timeout (seconds)
+          description: The maximum time allowed for downloading a Parquet chunk.
+            Processing will stop if a chunk cannot be downloaded within the time
+            specified.
+          maximum: 3600
+          minimum: 1
+        checkpointing:
+          $ref: "#/components/schemas/CheckpointingType"
+        pollTimeout:
+          type: number
+          title: Poll timeout (secs)
+          description: How long to wait for events before trying polling again. The lower
+            the number the higher the AWS bill. The higher the number the longer
+            it will take for the source to react to configuration changes and
+            system restarts.
+          minimum: 1
+          maximum: 20
+        encoding:
+          type: string
+          title: Encoding
+          description: Character encoding to use when parsing ingested data. When not set,
+            @{product} will default to UTF-8 but may incorrectly interpret
+            multi-byte characters.
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        awsApiKey:
+          type: string
+          title: Access key
+          description: ""
+        awsSecret:
+          type: string
+          title: Secret key pair
+          description: Select or create a stored secret that references your access key
+            and secret key
+        SQSAssumeRoleArn:
+          type: string
+          title: SQS AssumeRole ARN
+          description: Amazon Resource Name (ARN) of the role to assume
+          pattern: "^arn:"
+          minLength: 20
+        SQSAssumeRoleExternalId:
+          type: string
+          title: SQS External ID
+          description: External ID to use when assuming role
+        SQSDurationSeconds:
+          type: number
+          title: SQS duration (seconds)
+          description: Duration of the assumed role's session, in seconds. Minimum is 900
+            (15 minutes), default is 3600 (1 hour), and maximum is 43200 (12
+            hours).
+          minimum: 900
+          maximum: 43200
+        SQSAwsAuthenticationMethod:
+          $ref: "#/components/schemas/SqsAuthenticationMethodOptions"
+        SQSAwsSecret:
+          type: string
+          title: SQS secret key pair
+          description: Select or create a stored secret that references your access key
+            and secret key
+        SQSAwsSecretKey:
+          type: string
+          title: SQS secret key
+        tagAfterProcessing:
+          $ref: "#/components/schemas/TagAfterProcessingOptions"
+        processedTagKey:
+          type: string
+          title: Tag key
+          description: The key for the S3 object tag applied after processing. This field
+            accepts an expression for dynamic generation.
+        processedTagValue:
+          type: string
+          title: Tag value
+          description: The value for the S3 object tag applied after processing. This
+            field accepts an expression for dynamic generation.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_queueName:
+          type: string
+          description: Binds 'queueName' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'queueName' at runtime.
+        __template_awsAccountId:
+          type: string
+          description: Binds 'awsAccountId' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'awsAccountId' at runtime.
+        __template_awsSecretKey:
+          type: string
+          description: Binds 'awsSecretKey' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'awsSecretKey' at runtime.
+        __template_region:
+          type: string
+          description: Binds 'region' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'region' at runtime.
+        __template_endpoint:
+          type: string
+          description: Binds 'endpoint' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'endpoint' at runtime.
+        __template_assumeRoleArn:
+          type: string
+          description: Binds 'assumeRoleArn' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'assumeRoleArn' at runtime.
+        __template_assumeRoleExternalId:
+          type: string
+          description: Binds 'assumeRoleExternalId' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'assumeRoleExternalId' at runtime.
+        __template_awsApiKey:
+          type: string
+          description: Binds 'awsApiKey' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'awsApiKey' at runtime.
+        __template_SQSAssumeRoleArn:
+          type: string
+          description: Binds 'SQSAssumeRoleArn' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'SQSAssumeRoleArn' at runtime.
+        __template_SQSAssumeRoleExternalId:
+          type: string
+          description: Binds 'SQSAssumeRoleExternalId' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'SQSAssumeRoleExternalId' at runtime.
+        __template_SQSAwsSecretKey:
+          type: string
+          description: Binds 'SQSAwsSecretKey' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'SQSAwsSecretKey' at
+            runtime.
     InputServicenowTable:
       type: object
       required:
@@ -31531,6 +31882,7 @@ components:
         - $ref: "#/components/schemas/InputWizWebhook"
         - $ref: "#/components/schemas/InputNetflow"
         - $ref: "#/components/schemas/InputSecurityLake"
+        - $ref: "#/components/schemas/InputBedrockS3"
         - $ref: "#/components/schemas/InputServicenowTable"
         - $ref: "#/components/schemas/InputZscalerHec"
         - $ref: "#/components/schemas/InputCloudflareHec"
@@ -31604,6 +31956,7 @@ components:
           wiz_webhook: "#/components/schemas/InputWizWebhook"
           netflow: "#/components/schemas/InputNetflow"
           security_lake: "#/components/schemas/InputSecurityLake"
+          bedrock_s3: "#/components/schemas/InputBedrockS3"
           servicenow_table: "#/components/schemas/InputServicenowTable"
           zscaler_hec: "#/components/schemas/InputZscalerHec"
           cloudflare_hec: "#/components/schemas/InputCloudflareHec"
@@ -34619,23 +34972,23 @@ components:
             retry options. When disabled, all Retry-After headers are ignored.
         wiz_connector_id:
           type: string
-          title: Wiz Connector ID
+          title: Wiz connector ID
           description: The unique identifier for the specific Cribl connector defined in
             your Wiz Settings. This is used to cross-validate the bearer token
             and ensure traffic is originating from the authorized integration.
         wiz_environment:
           type: string
-          title: Wiz Environment
-          description: Your Wiz deployment environment.
+          title: Wiz environment
+          description: Your Wiz deployment environment
         data_center:
           type: string
-          title: Wiz Data Center
-          description: Your Wiz deployment data center (e.g., us1, us8, eu1). From Tenant
-            Info → Data Center and Regions → Tenant Data Center in your Wiz
-            console.
+          title: Wiz data center
+          description: Your Wiz deployment data center (such as us1, us8, or eu1). From
+            Tenant Info → Data Center and Regions → Tenant Data Center in your
+            Wiz console.
         wiz_sourcetype:
           type: string
-          title: Wiz Defend Source Type
+          title: Wiz Defend Source type
           description: ""
         onBackpressure:
           $ref: "#/components/schemas/BackpressureBehaviorOptions"
@@ -64352,6 +64705,16 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Raw UDP Source.
+    InputCreateExamplesBedrockS3:
+      summary: Bedrock
+      value:
+        id: bedrock-s3-source
+        type: bedrock_s3
+        queueName: s3-notifications-queue
+        region: us-east-1
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Bedrock Source.
     InputCreateExamplesS3:
       summary: S3
       value:
@@ -65247,6 +65610,18 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for updating a Raw UDP Source.<br/><br/>The
+        request body must include a complete representation of the Source that
+        you want to update. This endpoint does not support partial updates.
+    UpdateInputExamplesBedrockS3:
+      summary: Bedrock
+      value:
+        id: bedrock-s3-source
+        type: bedrock_s3
+        queueName: s3-notifications-queue
+        region: us-east-1
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Bedrock Source.<br/><br/>The
         request body must include a complete representation of the Source that
         you want to update. This endpoint does not support partial updates.
     UpdateInputExamplesS3:
@@ -73289,6 +73664,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesPrometheusRw"
               InputCreateExamplesRawUdp:
                 $ref: "#/components/examples/InputCreateExamplesRawUdp"
+              InputCreateExamplesBedrockS3:
+                $ref: "#/components/examples/InputCreateExamplesBedrockS3"
               InputCreateExamplesS3:
                 $ref: "#/components/examples/InputCreateExamplesS3"
               InputCreateExamplesS3Inventory:
@@ -73552,6 +73929,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesPrometheusRw"
               UpdateInputExamplesRawUdp:
                 $ref: "#/components/examples/UpdateInputExamplesRawUdp"
+              UpdateInputExamplesBedrockS3:
+                $ref: "#/components/examples/UpdateInputExamplesBedrockS3"
               UpdateInputExamplesS3:
                 $ref: "#/components/examples/UpdateInputExamplesS3"
               UpdateInputExamplesS3Inventory:
@@ -77635,6 +78014,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesPrometheusRw"
               InputCreateExamplesRawUdp:
                 $ref: "#/components/examples/InputCreateExamplesRawUdp"
+              InputCreateExamplesBedrockS3:
+                $ref: "#/components/examples/InputCreateExamplesBedrockS3"
               InputCreateExamplesS3:
                 $ref: "#/components/examples/InputCreateExamplesS3"
               InputCreateExamplesS3Inventory:
@@ -77884,6 +78265,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesPrometheusRw"
               UpdateInputExamplesRawUdp:
                 $ref: "#/components/examples/UpdateInputExamplesRawUdp"
+              UpdateInputExamplesBedrockS3:
+                $ref: "#/components/examples/UpdateInputExamplesBedrockS3"
               UpdateInputExamplesS3:
                 $ref: "#/components/examples/UpdateInputExamplesS3"
               UpdateInputExamplesS3Inventory:
