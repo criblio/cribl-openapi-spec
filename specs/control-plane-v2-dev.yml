@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.19.0-alpha.1783206342926-1e06e3cb
+  version: 4.19.0-alpha.1783379268463-bc10abc4
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -4420,6 +4420,133 @@ components:
         - name
         - uischema
         - version
+    FunctionConfSchemaMetricsExport:
+      type: object
+      title: Metrics export Configuration
+      additionalProperties: true
+      properties:
+        searchJobId:
+          title: Search Job Id
+          description: Id of the search job this function is running on.
+          type: string
+        dataset:
+          title: Dataset Id
+          description: Id of the metrics dataset
+          type: string
+        nameField:
+          $ref: "#/components/schemas/NameFieldType"
+        timeField:
+          $ref: "#/components/schemas/NameFieldType"
+        valueField:
+          $ref: "#/components/schemas/NameFieldType"
+        typeField:
+          $ref: "#/components/schemas/NameFieldType"
+        labelFields:
+          oneOf:
+            - type: object
+              required:
+                - mode
+                - field
+              properties:
+                mode:
+                  enum:
+                    - object
+                  x-speakeasy-unknown-values: allow
+                field:
+                  $ref: "#/components/schemas/NameFieldType"
+            - type: object
+              required:
+                - mode
+                - fields
+              properties:
+                mode:
+                  enum:
+                    - list
+                  x-speakeasy-unknown-values: allow
+                fields:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/NameFieldType"
+        tee:
+          title: Tee
+          description: Tee results to search. When set to true results will be shipped
+            instead of stats
+          type: boolean
+        flushMs:
+          title: Flush period
+          description: How often stats are flushed in ms
+          type: number
+        suppressPreviews:
+          type: boolean
+          title: Suppress periodic stats
+          description: Disables generation of intermediate stats. When true stats will be
+            emitted only on end
+    FunctionMetricsExport:
+      type: object
+      properties:
+        __filename:
+          type: string
+          description: Path to the JavaScript file that implements the Function.
+        asyncTimeout:
+          type: number
+          description: Maximum time, in milliseconds, that the Function is allowed to run
+            asynchronously before timing out.
+        cribl_version:
+          type: string
+          description: Minimum Cribl version required by the Function, if applicable.
+        disabled:
+          type: boolean
+          description: If <code>true</code>, the Function is disabled and will not execute
+            in a Pipeline. Otherwise, <code>false</code>.
+        group:
+          type: string
+          description: Category group the Function belongs to.
+        handleSignals:
+          type: boolean
+          description: If <code>true</code>, the Function handles stream signals such as
+            <code>flush</code> and <code>close</code>. Otherwise,
+            <code>false</code>.
+        id:
+          type: string
+          enum:
+            - metrics_export
+          description: Identifier of the Function. Always <code>metrics_export</code>
+        loadTime:
+          type: number
+          description: Time the Function module was loaded, in milliseconds since the Unix
+            epoch.
+        modTime:
+          type: number
+          description: Time the Function module was last modified, in milliseconds since
+            the Unix epoch.
+        name:
+          type: string
+          description: Display name of the Function.
+        sync:
+          type: boolean
+          description: If <code>true</code>, the Function executes synchronously.
+            Otherwise, <code>false</code>.
+        uischema:
+          type: object
+          additionalProperties: true
+          description: UI Schema that controls how the Function's configuration form is
+            rendered.
+        version:
+          type: string
+          description: Version string of the Function.
+        schema:
+          type: object
+          additionalProperties: true
+          description: JSON Schema document that describes the Function configuration.
+      required:
+        - __filename
+        - group
+        - id
+        - loadTime
+        - modTime
+        - name
+        - uischema
+        - version
     FunctionConfSchemaMvExpand:
       type: object
       additionalProperties: false
@@ -8305,6 +8432,7 @@ components:
         - $ref: "#/components/schemas/FunctionLocalSearchTransformer"
         - $ref: "#/components/schemas/FunctionLookup"
         - $ref: "#/components/schemas/FunctionMask"
+        - $ref: "#/components/schemas/FunctionMetricsExport"
         - $ref: "#/components/schemas/FunctionMvExpand"
         - $ref: "#/components/schemas/FunctionMvPull"
         - $ref: "#/components/schemas/FunctionNotificationPolicies"
@@ -8377,6 +8505,7 @@ components:
           local_search_transformer: "#/components/schemas/FunctionLocalSearchTransformer"
           lookup: "#/components/schemas/FunctionLookup"
           mask: "#/components/schemas/FunctionMask"
+          metrics_export: "#/components/schemas/FunctionMetricsExport"
           mv_expand: "#/components/schemas/FunctionMvExpand"
           mv_pull: "#/components/schemas/FunctionMvPull"
           notification_policies: "#/components/schemas/FunctionNotificationPolicies"
@@ -9825,6 +9954,50 @@ components:
             - $ref: "#/components/schemas/FunctionConfSchemaMask"
           required:
             - rules
+          description: Configuration specific to the Pipeline Function.
+        groupId:
+          title: Group ID
+          description: Unique identifier of the group that contains the Pipeline Function.
+          type: string
+    PipelineFunctionMetricsExport:
+      type: object
+      required:
+        - id
+        - conf
+      additionalProperties: false
+      properties:
+        filter:
+          title: Filter
+          description: JavaScript expression that selects data to pass through the Function.
+          type: string
+        id:
+          title: ID
+          description: Identifier of the Function. Always <code>metrics_export</code>
+          type: string
+          enum:
+            - metrics_export
+          example: metrics_export
+        description:
+          title: Description
+          description: Brief description of the Pipeline function.
+          type: string
+        disabled:
+          title: Disabled
+          description: If <code>true</code>, disable the Pipeline function so that events
+            are not passed through it. Otherwise, <code>false</code>.
+          type: boolean
+        final:
+          title: Final
+          description: If <code>true</code>, stop passing events to downstream Pipeline
+            Functions after the Function executes. Otherwise,
+            <code>false</code>.
+          type: boolean
+        conf:
+          allOf:
+            - $ref: "#/components/schemas/FunctionConfSchemaMetricsExport"
+          required:
+            - dataset
+            - searchJobId
           description: Configuration specific to the Pipeline Function.
         groupId:
           title: Group ID
@@ -11349,6 +11522,7 @@ components:
         - $ref: "#/components/schemas/PipelineFunctionLocalSearchTransformer"
         - $ref: "#/components/schemas/PipelineFunctionLookup"
         - $ref: "#/components/schemas/PipelineFunctionMask"
+        - $ref: "#/components/schemas/PipelineFunctionMetricsExport"
         - $ref: "#/components/schemas/PipelineFunctionMvExpand"
         - $ref: "#/components/schemas/PipelineFunctionMvPull"
         - $ref: "#/components/schemas/PipelineFunctionNotificationPolicies"
@@ -11421,6 +11595,7 @@ components:
           local_search_transformer: "#/components/schemas/PipelineFunctionLocalSearchTransformer"
           lookup: "#/components/schemas/PipelineFunctionLookup"
           mask: "#/components/schemas/PipelineFunctionMask"
+          metrics_export: "#/components/schemas/PipelineFunctionMetricsExport"
           mv_expand: "#/components/schemas/PipelineFunctionMvExpand"
           mv_pull: "#/components/schemas/PipelineFunctionMvPull"
           notification_policies: "#/components/schemas/PipelineFunctionNotificationPolicies"
@@ -60442,6 +60617,20 @@ components:
           type: string
           title: Value Expression
           description: JavaScript expression to compute the value (can be constant)
+    NameFieldType:
+      type: object
+      required:
+        - raw
+        - path
+      properties:
+        raw:
+          type: string
+        path:
+          type: array
+          items:
+            oneOf:
+              - type: string
+              - type: number
     TemplateTargetPairConfFunctionConfSchemaNotificationPolicies:
       type: object
       required:
@@ -71127,6 +71316,7 @@ components:
           - source
     CaptureExamplesSimpleExpression:
       summary: Capture events by sourcetype
+      description: Example request body for capturing events by sourcetype.
       value:
         filter: sourcetype==="pan:traffic"
         maxEvents: 100
@@ -71134,6 +71324,8 @@ components:
         level: 0
     CaptureExamplesCompoundAndExpression:
       summary: Capture events using the AND operator to specify multiple conditions
+      description: Example request body for capturing events using the AND operator to
+        specify multiple conditions.
       value:
         filter: sourcetype==="pan:traffic" && src_zone==="trusted"
         maxEvents: 100
@@ -71141,6 +71333,8 @@ components:
         level: 0
     CaptureExamplesNestedFieldAccess:
       summary: Capture events using dot notation to specify nested fields
+      description: Example request body for capturing events using dot notation to
+        specify nested fields.
       value:
         filter: sourcetype==="pan:traffic" && dest_geoip.country.iso_code === "US"
         maxEvents: 100
@@ -71148,6 +71342,8 @@ components:
         level: 0
     CaptureExamplesComplexFilter:
       summary: Capture with a complex filter that uses JavaScript methods
+      description: Example request body for capturing with a complex filter that uses
+        JavaScript methods.
       value:
         filter: __inputId.startsWith("http:") && status >= 400 && status < 500
         maxEvents: 500
@@ -79801,7 +79997,9 @@ paths:
           required: false
           schema:
             type: integer
-          description: Maximum number of commits to return in the response for this request.
+          description: Maximum number of commits to read from the commit history. When
+            provided, <code>offset</code> and <code>limit</code> are applied to
+            that read set.
         - name: offset
           in: query
           required: false
