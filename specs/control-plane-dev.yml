@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.19.0-alpha.1783379169455-bc10abc4
+  version: 4.19.0-alpha.1783465431403-8ce5874a
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -31795,6 +31795,13 @@ components:
                 description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m).
                   Enter 0 for unlimited time."
                 pattern: ^\d+[sm]?$
+              pageSize:
+                title: Page size
+                type: number
+                description: Number of items per API page request. Leave empty to use the
+                  endpoint default.
+                minimum: 1
+                maximum: 10000
         requestTimeout:
           type: number
           title: Request timeout (seconds)
@@ -38639,6 +38646,13 @@ components:
             is applied
           minimum: 1
           maximum: 100
+        maxSendRetries:
+          type: number
+          title: Max send retries
+          description: Maximum retries per batch for retryable failures (transient,
+            rate-limit, unknown) before dropping. 0 (default) retries
+            indefinitely.
+          minimum: 0
         onBackpressure:
           $ref: "#/components/schemas/BackpressureBehaviorOptions"
         description:
@@ -57743,15 +57757,6 @@ components:
           description: List of items in this response.
           items:
             $ref: "#/components/schemas/CriblLakeDataset"
-    CacheConnectionBackfillStatus:
-      type: string
-      enum:
-        - scheduled
-        - pending
-        - started
-        - finished
-        - incomplete
-      x-speakeasy-unknown-values: allow
     LakehouseConnectionType:
       type: string
       enum:
@@ -57766,9 +57771,6 @@ components:
           items:
             type: string
           description: Accelerated fields (materialized columns) for the cache connection.
-        backfillStatus:
-          $ref: "#/components/schemas/CacheConnectionBackfillStatus"
-          description: Backfill status for data being loaded into the cache.
         cacheRef:
           type: string
           description: Unique identifier for the Lakehouse cache referenced by the Dataset.
@@ -60751,15 +60753,18 @@ components:
     ModeOptionsPq:
       type: string
       title: Mode
-      description: With Smart mode, PQ will write events to the filesystem only when
-        it detects backpressure from the processing engine. With Always On mode,
-        PQ will always write events directly to the queue before forwarding them
-        to the processing engine.
+      description: With Smart mode (deprecated), PQ will write events to the
+        filesystem only when it detects backpressure from the processing engine.
+        Smart mode will have no new development starting July 2026, followed by
+        End of Support and feature removal (auto-migrating to Always On) in
+        January 2027. We recommend using Always On mode instead. With Always On
+        mode, PQ will always write events directly to the queue before
+        forwarding them to the processing engine.
       enum:
         - smart
         - always
       x-speakeasy-enum-descriptions:
-        - Smart
+        - Smart (Deprecated)
         - Always On
       x-speakeasy-unknown-values: allow
     CompressionOptionsPq:
