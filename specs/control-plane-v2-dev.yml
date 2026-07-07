@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.19.0-alpha.1783379268463-bc10abc4
+  version: 4.19.0-alpha.1783465547556-8ce5874a
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -31746,6 +31746,13 @@ components:
                 description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m).
                   Enter 0 for unlimited time."
                 pattern: ^\d+[sm]?$
+              pageSize:
+                title: Page size
+                type: number
+                description: Number of items per API page request. Leave empty to use the
+                  endpoint default.
+                minimum: 1
+                maximum: 10000
         requestTimeout:
           type: number
           title: Request timeout (seconds)
@@ -38587,6 +38594,13 @@ components:
             is applied
           minimum: 1
           maximum: 100
+        maxSendRetries:
+          type: number
+          title: Max send retries
+          description: Maximum retries per batch for retryable failures (transient,
+            rate-limit, unknown) before dropping. 0 (default) retries
+            indefinitely.
+          minimum: 0
         onBackpressure:
           $ref: "#/components/schemas/BackpressureBehaviorOptions"
         description:
@@ -57719,15 +57733,6 @@ components:
           description: List of items in this response.
           items:
             $ref: "#/components/schemas/CriblLakeDataset"
-    CacheConnectionBackfillStatus:
-      type: string
-      enum:
-        - scheduled
-        - pending
-        - started
-        - finished
-        - incomplete
-      x-speakeasy-unknown-values: allow
     LakehouseConnectionType:
       type: string
       enum:
@@ -57742,9 +57747,6 @@ components:
           items:
             type: string
           description: Accelerated fields (materialized columns) for the cache connection.
-        backfillStatus:
-          $ref: "#/components/schemas/CacheConnectionBackfillStatus"
-          description: Backfill status for data being loaded into the cache.
         cacheRef:
           type: string
           description: Unique identifier for the Lakehouse cache referenced by the Dataset.
@@ -60939,15 +60941,18 @@ components:
     ModeOptionsPq:
       type: string
       title: Mode
-      description: With Smart mode, PQ will write events to the filesystem only when
-        it detects backpressure from the processing engine. With Always On mode,
-        PQ will always write events directly to the queue before forwarding them
-        to the processing engine.
+      description: With Smart mode (deprecated), PQ will write events to the
+        filesystem only when it detects backpressure from the processing engine.
+        Smart mode will have no new development starting July 2026, followed by
+        End of Support and feature removal (auto-migrating to Always On) in
+        January 2027. We recommend using Always On mode instead. With Always On
+        mode, PQ will always write events directly to the queue before
+        forwarding them to the processing engine.
       enum:
         - smart
         - always
       x-speakeasy-enum-descriptions:
-        - Smart
+        - Smart (Deprecated)
         - Always On
       x-speakeasy-unknown-values: allow
     CompressionOptionsPq:
@@ -63991,10 +63996,11 @@ components:
         limit: 20
     UpdateDatabaseConnectionExamplesUpdateMySQLDatabaseConnectionWithConnectionString:
       summary: Update a MySQL Database Connection with a connection string
-      description: Example request body for updating a MySQL Database Connection using
-        a connection string with embedded credentials.<br/><br/>The request body
-        must include a complete representation of the Database Connection that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a MySQL Database Connection
+        using a connection string with embedded credentials.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
       value:
         id: mysql-prod-db
         description: Production MySQL database for customer data
@@ -64005,10 +64011,11 @@ components:
         tags: production,mysql,customer-data
     UpdateDatabaseConnectionExamplesUpdateMySQLDatabaseConnectionWithSecret:
       summary: Update a MySQL Database Connection with a secret
-      description: Example request body for updating a MySQL Database Connection using
-        a stored text secret for the connection string.<br/><br/>The request
-        body must include a complete representation of the Database Connection
-        that you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a MySQL Database Connection
+        using a stored text secret for the connection string.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
       value:
         id: mysql-analytics-db
         description: Analytics MySQL database
@@ -64019,10 +64026,11 @@ components:
         tags: analytics,mysql
     UpdateDatabaseConnectionExamplesUpdatePostgreSQLDatabaseConnectionWithConnectionString:
       summary: Update a PostgreSQL Database Connection with a connection string
-      description: Example request body for updating a PostgreSQL Database Connection
-        using a connection string.<br/><br/>The request body must include a
-        complete representation of the Database Connection that you want to
-        update. This endpoint does not support partial updates.
+      description: "Example request body for updating a PostgreSQL Database Connection
+        using a connection string.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: postgres-warehouse
         description: Data warehouse PostgreSQL database
@@ -64033,10 +64041,11 @@ components:
         tags: warehouse,postgres,reporting
     UpdateDatabaseConnectionExamplesUpdatePostgreSQLDatabaseConnectionWithSecret:
       summary: Update a PostgreSQL Database Connection with a secret
-      description: Example request body for updating a PostgreSQL Database Connection
-        using a stored text secret.<br/><br/>The request body must include a
-        complete representation of the Database Connection that you want to
-        update. This endpoint does not support partial updates.
+      description: "Example request body for updating a PostgreSQL Database Connection
+        using a stored text secret.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: postgres-logs
         description: Logs PostgreSQL database
@@ -64047,10 +64056,11 @@ components:
         tags: logs,postgres
     UpdateDatabaseConnectionExamplesUpdateSQLServerDatabaseConnectionWithConnectionString:
       summary: Update a SQL Server Database Connection with a connection string
-      description: Example request body for updating a SQL Server Database Connection
-        using a connection string.<br/><br/>The request body must include a
-        complete representation of the Database Connection that you want to
-        update. This endpoint does not support partial updates.
+      description: "Example request body for updating a SQL Server Database Connection
+        using a connection string.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: sqlserver-erp
         description: ERP SQL Server database
@@ -64063,10 +64073,11 @@ components:
         tags: erp,sqlserver,finance
     UpdateDatabaseConnectionExamplesUpdateSQLServerDatabaseConnectionWithSecret:
       summary: Update a SQL Server Database Connection with a secret
-      description: Example request body for updating a SQL Server Database Connection
-        using a stored text secret.<br/><br/>The request body must include a
-        complete representation of the Database Connection that you want to
-        update. This endpoint does not support partial updates.
+      description: "Example request body for updating a SQL Server Database Connection
+        using a stored text secret.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: sqlserver-crm
         description: CRM SQL Server database
@@ -64078,11 +64089,11 @@ components:
         tags: crm,sqlserver,sales
     UpdateDatabaseConnectionExamplesUpdateSQLServerDatabaseConnectionWithConfigObject:
       summary: Update a SQL Server Database Connection with a config object
-      description: Example request body for updating a SQL Server Database Connection
-        using a JSON configuration object for advanced settings.<br/><br/>The
-        request body must include a complete representation of the Database
-        Connection that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a SQL Server Database Connection
+        using a JSON configuration object for advanced
+        settings.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: sqlserver-reporting
         description: Reporting SQL Server database with custom config
@@ -64093,10 +64104,11 @@ components:
         tags: reporting,sqlserver,analytics
     UpdateDatabaseConnectionExamplesUpdateOracleDatabaseConnectionWithConnectionString:
       summary: Update an Oracle Database Connection with a connection string
-      description: Example request body for updating an Oracle Database Connection
-        using Easy Connect format with credentials.<br/><br/>The request body
-        must include a complete representation of the Database Connection that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating an Oracle Database Connection
+        using Easy Connect format with credentials.<br/><br/>Supports partial
+        updates: omitted fields are left unchanged, and nested objects are
+        merged recursively.<br/><br/>Set a field to <code>null</code> to remove
+        it from the stored configuration."
       value:
         id: oracle-erp
         description: Oracle ERP database
@@ -64109,11 +64121,11 @@ components:
         tags: erp,oracle,finance
     UpdateDatabaseConnectionExamplesUpdateOracleDatabaseConnectionWithSecret:
       summary: Update an Oracle Database Connection with a secret
-      description: Example request body for updating an Oracle Database Connection
-        using a stored text secret for the connection string.<br/><br/>The
-        request body must include a complete representation of the Database
-        Connection that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating an Oracle Database Connection
+        using a stored text secret for the connection string.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
       value:
         id: oracle-warehouse
         description: Oracle data warehouse
@@ -64126,11 +64138,11 @@ components:
         tags: warehouse,oracle,reporting
     UpdateDatabaseConnectionExamplesUpdateOracleDatabaseConnectionWithCredentialsSecrets:
       summary: Update an Oracle Database Connection with credentials secrets
-      description: Example request body for updating an Oracle Database Connection
+      description: "Example request body for updating an Oracle Database Connection
         using separate secrets for credentials and the connection
-        string.<br/><br/>The request body must include a complete representation
-        of the Database Connection that you want to update. This endpoint does
-        not support partial updates.
+        string.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: oracle-secure-db
         description: High-security Oracle database with credential secrets
@@ -65106,10 +65118,10 @@ components:
             stateMergeExpression: "prevState.latestTime > newState.latestTime ? prevState : newState"
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Anthropic Compliance
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Anthropic Compliance
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesAppleUnifiedLogs:
       summary: Apple Unified Logs
       value:
@@ -65118,10 +65130,10 @@ components:
         predicate: subsystem == "com.apple.security"
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Apple Unified Logs
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Apple Unified Logs
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesAppscope:
       summary: AppScope
       value:
@@ -65131,9 +65143,10 @@ components:
         port: 9109
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a AppScope Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a AppScope
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesAzureBlob:
       summary: Azure Blob
       value:
@@ -65142,9 +65155,10 @@ components:
         queueName: azure-blob-queue
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Azure Blob Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Azure Blob
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesCloudflareHec:
       summary: Cloudflare HEC
       value:
@@ -65155,10 +65169,10 @@ components:
         hecAPI: /services/collector
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Cloudflare HEC
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Cloudflare HEC
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesConfluentCloud:
       summary: Confluent Cloud
       value:
@@ -65170,10 +65184,10 @@ components:
           - logs
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Confluent Cloud
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Confluent Cloud
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesCollection:
       summary: Collection
       value:
@@ -65181,9 +65195,10 @@ components:
         type: collection
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Collection Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Collection
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesCribl:
       summary: Cribl Internal
       value:
@@ -65191,10 +65206,10 @@ components:
         type: cribl
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Cribl Internal
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Cribl Internal
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesCriblHttp:
       summary: Cribl HTTP
       value:
@@ -65204,9 +65219,10 @@ components:
         port: 10080
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Cribl HTTP Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Cribl HTTP
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesCriblLakeHttp:
       summary: Cribl Lake HTTP
       value:
@@ -65216,10 +65232,10 @@ components:
         port: 10080
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Cribl Lake HTTP
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Cribl Lake HTTP
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesCriblMetrics:
       summary: Cribl Metrics
       value:
@@ -65227,10 +65243,10 @@ components:
         type: criblmetrics
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Cribl Metrics
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Cribl Metrics
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesCriblTcp:
       summary: Cribl TCP
       value:
@@ -65240,9 +65256,10 @@ components:
         port: 10090
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Cribl TCP Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Cribl TCP
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesCrowdstrike:
       summary: CrowdStrike FDR
       value:
@@ -65252,10 +65269,10 @@ components:
         region: us-east-1
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a CrowdStrike FDR
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a CrowdStrike FDR
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesDatadogAgent:
       summary: Datadog Agent
       value:
@@ -65265,10 +65282,10 @@ components:
         port: 8126
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Datadog Agent
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Datadog Agent
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesDatagen:
       summary: Datagen
       value:
@@ -65279,9 +65296,10 @@ components:
             eventsPerSec: 10
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Datagen Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Datagen
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesEdgePrometheus:
       summary: Edge Prometheus
       value:
@@ -65296,10 +65314,10 @@ components:
             scrapePath: /metrics
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Edge Prometheus
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Edge Prometheus
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesElastic:
       summary: Elasticsearch
       value:
@@ -65310,10 +65328,10 @@ components:
         elasticAPI: /
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Elasticsearch
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Elasticsearch
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesEventhub:
       summary: Event Hubs
       value:
@@ -65325,9 +65343,10 @@ components:
           - logs
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Event Hubs Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Event Hubs
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesEventhubAmqp:
       summary: Event Hubs AMQP
       value:
@@ -65340,10 +65359,10 @@ components:
             containerName: my-container
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Event Hubs AMQP
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Event Hubs AMQP
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesExec:
       summary: Exec
       value:
@@ -65353,9 +65372,10 @@ components:
         interval: 60
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Exec Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Exec Source.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
     UpdateInputExamplesFile:
       summary: File Monitor
       value:
@@ -65364,10 +65384,10 @@ components:
         mode: manual
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a File Monitor
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a File Monitor
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesFirehose:
       summary: Firehose
       value:
@@ -65377,9 +65397,10 @@ components:
         port: 10080
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Firehose Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Firehose
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesGrafana:
       summary: Grafana
       value:
@@ -65390,9 +65411,10 @@ components:
         prometheusAPI: /api/prom/push
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Grafana Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Grafana
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesGooglePubsub:
       summary: Google Pub/Sub
       value:
@@ -65402,10 +65424,10 @@ components:
         topicName: my-topic
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Google Pub/Sub
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Google Pub/Sub
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesHttp:
       summary: HTTP
       value:
@@ -65415,9 +65437,10 @@ components:
         port: 10080
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a HTTP Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a HTTP Source.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
     UpdateInputExamplesHttpRaw:
       summary: HTTP Raw
       value:
@@ -65427,9 +65450,10 @@ components:
         port: 10080
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a HTTP Raw Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a HTTP Raw
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesJournalFiles:
       summary: Journal Files
       value:
@@ -65440,10 +65464,10 @@ components:
           - system
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Journal Files
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Journal Files
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesKafka:
       summary: Kafka
       value:
@@ -65455,9 +65479,10 @@ components:
           - logs
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Kafka Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Kafka
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesKinesis:
       summary: Kinesis
       value:
@@ -65467,9 +65492,10 @@ components:
         region: us-east-1
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Kinesis Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Kinesis
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesKubeEvents:
       summary: Kubernetes Events
       value:
@@ -65477,10 +65503,10 @@ components:
         type: kube_events
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Kubernetes Events
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Kubernetes Events
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesKubeLogs:
       summary: Kubernetes Logs
       value:
@@ -65488,10 +65514,10 @@ components:
         type: kube_logs
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Kubernetes Logs
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Kubernetes Logs
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesKubeMetrics:
       summary: Kubernetes Metrics
       value:
@@ -65499,10 +65525,10 @@ components:
         type: kube_metrics
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Kubernetes Metrics
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Kubernetes Metrics
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesLoki:
       summary: Loki
       value:
@@ -65513,9 +65539,10 @@ components:
         lokiAPI: /loki/api/v1/push
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Loki Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Loki Source.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
     UpdateInputExamplesMetrics:
       summary: Metrics
       value:
@@ -65525,9 +65552,10 @@ components:
         udpPort: 8125
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Metrics Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Metrics
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesModelDrivenTelemetry:
       summary: Model Driven Telemetry
       value:
@@ -65537,10 +65565,10 @@ components:
         port: 57000
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Model Driven Telemetry
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Model Driven Telemetry
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesMsk:
       summary: MSK
       value:
@@ -65554,9 +65582,10 @@ components:
         awsAuthenticationMethod: auto
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a MSK Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a MSK Source.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
     UpdateInputExamplesNetflow:
       summary: Netflow
       value:
@@ -65566,9 +65595,10 @@ components:
         port: 2055
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Netflow Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Netflow
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesOffice365Mgmt:
       summary: Microsoft 365 Management Activity
       value:
@@ -65579,10 +65609,11 @@ components:
         planType: enterprise_gcc
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Microsoft 365 Management
-        Activity Source.<br/><br/>The request body must include a complete
-        representation of the Source that you want to update. This endpoint does
-        not support partial updates.
+      description: "Example request body for updating a Microsoft 365 Management
+        Activity Source.<br/><br/>Supports partial updates: omitted fields are
+        left unchanged, and nested objects are merged recursively.<br/><br/>Set
+        a field to <code>null</code> to remove it from the stored
+        configuration."
     UpdateInputExamplesMicrosoftGraph:
       summary: Microsoft Graph
       value:
@@ -65592,10 +65623,10 @@ components:
         interval: 15
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Microsoft Graph
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Microsoft Graph
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesOffice365MsgTrace:
       summary: Microsoft 365 Message Trace
       value:
@@ -65605,10 +65636,10 @@ components:
         interval: 15
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Microsoft 365 Message Trace
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Microsoft 365 Message Trace
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesOffice365Service:
       summary: Microsoft 365 Services
       value:
@@ -65618,10 +65649,10 @@ components:
         appId: app-id
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Microsoft 365 Services
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Microsoft 365 Services
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesOkta:
       summary: Okta
       value:
@@ -65634,9 +65665,10 @@ components:
         latest: now
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Okta Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Okta Source.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
     UpdateInputExamplesOpenAI:
       summary: OpenAI
       value:
@@ -65662,9 +65694,10 @@ components:
             disabled: false
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a OpenAI Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a OpenAI
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesOpenAIComplianceLogs:
       summary: OpenAI Compliance Logs
       value:
@@ -65681,10 +65714,10 @@ components:
         latest: now
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a OpenAI Compliance Logs
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a OpenAI Compliance Logs
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesOpenTelemetry:
       summary: OpenTelemetry
       value:
@@ -65694,10 +65727,10 @@ components:
         port: 4317
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a OpenTelemetry
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a OpenTelemetry
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesPrometheus:
       summary: Prometheus Scraper
       value:
@@ -65710,10 +65743,10 @@ components:
           - http://localhost:9090/metrics
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Prometheus Scraper
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Prometheus Scraper
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesPrometheusRw:
       summary: Prometheus Remote Write
       value:
@@ -65724,10 +65757,10 @@ components:
         prometheusAPI: /write
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Prometheus Remote Write
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Prometheus Remote Write
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesRawUdp:
       summary: Raw UDP
       value:
@@ -65737,9 +65770,10 @@ components:
         port: 514
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Raw UDP Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Raw UDP
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesBedrockS3:
       summary: Bedrock
       value:
@@ -65749,9 +65783,10 @@ components:
         region: us-east-1
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Bedrock Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Bedrock
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesS3:
       summary: S3
       value:
@@ -65761,9 +65796,10 @@ components:
         region: us-east-1
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a S3 Source.<br/><br/>The request
-        body must include a complete representation of the Source that you want
-        to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a S3 Source.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
     UpdateInputExamplesS3Inventory:
       summary: S3 Inventory
       value:
@@ -65773,10 +65809,10 @@ components:
         region: us-east-1
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a S3 Inventory
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a S3 Inventory
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesSecurityLake:
       summary: Security Lake
       value:
@@ -65786,10 +65822,10 @@ components:
         region: us-east-1
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Security Lake
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Security Lake
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesServiceNowTable:
       summary: ServiceNow Table API
       value:
@@ -65807,10 +65843,10 @@ components:
         latest: now
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a ServiceNow Table API
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a ServiceNow Table API
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesSnmp:
       summary: SNMP
       value:
@@ -65820,9 +65856,10 @@ components:
         port: 161
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a SNMP Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a SNMP Source.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
     UpdateInputExamplesSplunk:
       summary: Splunk TCP
       value:
@@ -65832,9 +65869,10 @@ components:
         port: 9997
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Splunk TCP Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Splunk TCP
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesSplunkHec:
       summary: Splunk HEC
       value:
@@ -65845,9 +65883,10 @@ components:
         splunkHecAPI: /services/collector
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Splunk HEC Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Splunk HEC
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesSplunkSearch:
       summary: Splunk Search
       value:
@@ -65861,10 +65900,10 @@ components:
         outputMode: json
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Splunk Search
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Splunk Search
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesSqs:
       summary: SQS
       value:
@@ -65875,9 +65914,10 @@ components:
         region: us-east-1
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a SQS Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a SQS Source.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
     UpdateInputExamplesSysdigHec:
       summary: Sysdig Cloud NSS
       value:
@@ -65888,10 +65928,10 @@ components:
         hecAPI: /services/collector
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Sysdig Cloud NSS
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Sysdig Cloud NSS
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesSyslog:
       summary: Syslog
       value:
@@ -65901,9 +65941,10 @@ components:
         udpPort: 514
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Syslog Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Syslog
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesSystemMetrics:
       summary: System Metrics
       value:
@@ -65911,10 +65952,10 @@ components:
         type: system_metrics
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a System Metrics
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a System Metrics
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesSystemState:
       summary: System State
       value:
@@ -65922,10 +65963,10 @@ components:
         type: system_state
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a System State
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a System State
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesTcp:
       summary: TCP
       value:
@@ -65935,9 +65976,10 @@ components:
         port: 10090
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a TCP Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a TCP Source.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
     UpdateInputExamplesTcpjson:
       summary: TCP JSON
       value:
@@ -65947,9 +65989,10 @@ components:
         port: 10090
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a TCP JSON Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a TCP JSON
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesUpwindHec:
       summary: Upwind
       value:
@@ -65960,9 +66003,10 @@ components:
         hecAPI: /services/collector
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Upwind Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Upwind
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesWef:
       summary: Windows Event Forwarder
       value:
@@ -65981,10 +66025,10 @@ components:
             targets: []
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Windows Event Forwarder
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Windows Event Forwarder
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesWinEventLogs:
       summary: Windows Event Logs
       value:
@@ -65995,10 +66039,10 @@ components:
           - System
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Windows Event Logs
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Windows Event Logs
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesWindowsMetrics:
       summary: Windows Metrics
       value:
@@ -66006,10 +66050,10 @@ components:
         type: windows_metrics
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Windows Metrics
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Windows Metrics
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesWiz:
       summary: Wiz API
       value:
@@ -66021,9 +66065,10 @@ components:
         contentConfig: []
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Wiz API Source.<br/><br/>The
-        request body must include a complete representation of the Source that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Wiz API
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesWizWebhook:
       summary: Wiz Webhook
       value:
@@ -66033,10 +66078,10 @@ components:
         port: 10080
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Wiz Webhook
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Wiz Webhook
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesZscalerHec:
       summary: Zscaler Cloud NSS
       value:
@@ -66047,10 +66092,10 @@ components:
         hecAPI: /services/collector
         sendToRoutes: true
         pqEnabled: false
-      description: Example request body for updating a Zscaler Cloud NSS
-        Source.<br/><br/>The request body must include a complete representation
-        of the Source that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Zscaler Cloud NSS
+        Source.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     OutputClearPQResponseExamplesClearPQJobId:
       summary: Clear persistent queue for a Destination
       description: Example response for clearing the persistent queue (PQ) for a
@@ -66943,10 +66988,10 @@ components:
         id: default-output
         type: default
         defaultId: my-default-output
-      description: Example request body for updating a Default
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Default
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesTcpjson:
       summary: TCP JSON
       value:
@@ -66954,10 +66999,10 @@ components:
         type: tcpjson
         host: localhost
         port: 10090
-      description: Example request body for updating a TCP JSON
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a TCP JSON
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSplunk:
       summary: Splunk
       value:
@@ -66965,10 +67010,10 @@ components:
         type: splunk
         host: localhost
         port: 9997
-      description: Example request body for updating a Splunk
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Splunk
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSplunkLb:
       summary: Splunk Load Balanced
       value:
@@ -66977,10 +67022,10 @@ components:
         hosts:
           - host: localhost
             port: 9997
-      description: Example request body for updating a Splunk Load Balanced
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Splunk Load Balanced
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSplunkHec:
       summary: Splunk HEC
       value:
@@ -66989,10 +67034,10 @@ components:
         host: localhost
         port: 8088
         hecToken: your-hec-token
-      description: Example request body for updating a Splunk HEC
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Splunk HEC
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSyslog:
       summary: Syslog
       value:
@@ -67000,20 +67045,20 @@ components:
         type: syslog
         host: localhost
         port: 514
-      description: Example request body for updating a Syslog
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Syslog
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesFilesystem:
       summary: Filesystem
       value:
         id: filesystem-output
         type: filesystem
         destPath: /var/log/output
-      description: Example request body for updating a Filesystem
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Filesystem
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesS3:
       summary: S3
       value:
@@ -67022,9 +67067,10 @@ components:
         bucket: my-bucket
         region: us-east-1
         stagePath: /tmp/staging
-      description: Example request body for updating a S3 Destination.<br/><br/>The
-        request body must include a complete representation of the Destination
-        that you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a S3
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesNutanixObjects:
       summary: Nutanix Objects
       value:
@@ -67033,10 +67079,10 @@ components:
         bucket: my-bucket
         endpoint: https://nutanix-objects.example.com
         stagePath: /tmp/staging
-      description: Example request body for updating a Nutanix Objects
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Nutanix Objects
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesStorjS3:
       summary: Storj
       value:
@@ -67045,9 +67091,10 @@ components:
         bucket: my-bucket
         endpoint: https://gateway.storjshare.io
         stagePath: /tmp/staging
-      description: Example request body for updating a Storj Destination.<br/><br/>The
-        request body must include a complete representation of the Destination
-        that you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Storj
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesAlphasocS3:
       summary: AlphaSOC
       value:
@@ -67056,10 +67103,10 @@ components:
         bucket: events
         endpoint: https://s3.alphasoc.net
         stagePath: /tmp/staging
-      description: Example request body for updating a AlphaSOC
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a AlphaSOC
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesdellS3:
       summary: Dell PowerScale OneFS
       value:
@@ -67068,10 +67115,10 @@ components:
         bucket: my-bucket
         endpoint: https://powerscale.example.com:9021
         stagePath: /tmp/staging
-      description: Example request body for updating a Dell PowerScale OneFS
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Dell PowerScale OneFS
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplescloudianS3:
       summary: Cloudian
       value:
@@ -67080,10 +67127,10 @@ components:
         bucket: my-bucket
         endpoint: https://s3.hyperstore.example.com
         stagePath: /tmp/staging
-      description: Example request body for updating a Cloudian
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Cloudian
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesscalityS3:
       summary: Scality
       value:
@@ -67092,10 +67139,10 @@ components:
         bucket: my-bucket
         endpoint: https://s3.scality.example.com
         stagePath: /tmp/staging
-      description: Example request body for updating a Scality
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Scality
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesalibabaCloudS3:
       summary: Alibaba OSS
       value:
@@ -67104,10 +67151,10 @@ components:
         bucket: my-bucket
         endpoint: https://s3.oss-cn-hangzhou.aliyuncs.com
         stagePath: /tmp/staging
-      description: Example request body for updating a Alibaba OSS
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Alibaba OSS
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesibmCloudS3:
       summary: IBM Cloud Object Storage
       value:
@@ -67116,10 +67163,10 @@ components:
         bucket: my-bucket
         endpoint: https://s3.us-south.cloud-object-storage.appdomain.cloud
         stagePath: /tmp/staging
-      description: Example request body for updating a IBM Cloud Object Storage
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a IBM Cloud Object Storage
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesAzureBlob:
       summary: Azure Blob
       value:
@@ -67127,10 +67174,10 @@ components:
         type: azure_blob
         containerName: my-container
         stagePath: /tmp/staging
-      description: Example request body for updating a Azure Blob
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Azure Blob
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesAzureDataExplorer:
       summary: Azure Data Explorer
       value:
@@ -67148,10 +67195,10 @@ components:
         ingestMode: streaming
         format: json
         compress: gzip
-      description: Example request body for updating a Azure Data Explorer
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Azure Data Explorer
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSentinel:
       summary: Azure Sentinel
       value:
@@ -67162,10 +67209,10 @@ components:
         loginUrl: https://login.microsoftonline.com
         secret: client-secret
         client_id: client-id
-      description: Example request body for updating a Azure Sentinel
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Azure Sentinel
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesAzureLogs:
       summary: Azure Logs
       value:
@@ -67175,10 +67222,10 @@ components:
         workspaceKey: workspace-key
         logType: Cribl
         authType: manual
-      description: Example request body for updating a Azure Logs
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Azure Logs
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesKafka:
       summary: Kafka
       value:
@@ -67187,9 +67234,10 @@ components:
         brokers:
           - localhost:9092
         topic: logs
-      description: Example request body for updating a Kafka Destination.<br/><br/>The
-        request body must include a complete representation of the Destination
-        that you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Kafka
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesConfluentCloud:
       summary: Confluent Cloud
       value:
@@ -67198,10 +67246,10 @@ components:
         brokers:
           - pkc-xxxxx.us-east-1.aws.confluent.cloud:9092
         topic: logs
-      description: Example request body for updating a Confluent Cloud
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Confluent Cloud
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesMsk:
       summary: MSK
       value:
@@ -67212,9 +67260,10 @@ components:
         topic: logs
         region: us-east-1
         awsAuthenticationMethod: auto
-      description: Example request body for updating a MSK Destination.<br/><br/>The
-        request body must include a complete representation of the Destination
-        that you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a MSK
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesKinesis:
       summary: Kinesis
       value:
@@ -67222,10 +67271,10 @@ components:
         type: kinesis
         streamName: my-stream
         region: us-east-1
-      description: Example request body for updating a Kinesis
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Kinesis
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesElastic:
       summary: Elasticsearch
       value:
@@ -67234,10 +67283,10 @@ components:
         host: localhost
         port: 9200
         index: logs
-      description: Example request body for updating a Elasticsearch
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Elasticsearch
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesElasticCloud:
       summary: Elastic Cloud
       value:
@@ -67245,10 +67294,10 @@ components:
         type: elastic_cloud
         url: my-cloud-id
         index: logs
-      description: Example request body for updating a Elastic Cloud
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Elastic Cloud
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesMicrosoftFabric:
       summary: Microsoft Fabric
       value:
@@ -67256,10 +67305,10 @@ components:
         type: microsoft_fabric
         bootstrap_server: myeventstream.servicebus.windows.net:9093
         topic: logs
-      description: Example request body for updating a Microsoft Fabric
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Microsoft Fabric
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesCloudflareR2:
       summary: Cloudflare R2
       value:
@@ -67268,10 +67317,10 @@ components:
         bucket: my-bucket
         endpoint: https://account-id.r2.cloudflarestorage.com
         stagePath: /tmp/staging
-      description: Example request body for updating a Cloudflare R2
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Cloudflare R2
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesHoneycomb:
       summary: Honeycomb
       value:
@@ -67279,10 +67328,10 @@ components:
         type: honeycomb
         apiKey: your-api-key
         dataset: my-dataset
-      description: Example request body for updating a Honeycomb
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Honeycomb
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesNewrelic:
       summary: New Relic
       value:
@@ -67290,10 +67339,10 @@ components:
         type: newrelic
         apiKey: your-api-key
         baseUrl: https://insights-collector.newrelic.com
-      description: Example request body for updating a New Relic
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a New Relic
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesNewrelicEvents:
       summary: New Relic Events
       value:
@@ -67303,10 +67352,10 @@ components:
         eventType: CriblEvent
         apiKey: your-api-key
         baseUrl: https://insights-collector.newrelic.com
-      description: Example request body for updating a New Relic Events
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a New Relic Events
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSnmp:
       summary: SNMP
       value:
@@ -67315,9 +67364,10 @@ components:
         hosts:
           - host: 192.168.1.1
             port: 161
-      description: Example request body for updating a SNMP Destination.<br/><br/>The
-        request body must include a complete representation of the Destination
-        that you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a SNMP
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesInfluxdb:
       summary: InfluxDB
       value:
@@ -67325,10 +67375,10 @@ components:
         type: influxdb
         url: http://localhost:8086
         database: mydb
-      description: Example request body for updating a InfluxDB
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a InfluxDB
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesMinio:
       summary: MinIO
       value:
@@ -67337,9 +67387,10 @@ components:
         bucket: my-bucket
         stagePath: /tmp/staging
         endpoint: http://localhost:9000
-      description: Example request body for updating a MinIO Destination.<br/><br/>The
-        request body must include a complete representation of the Destination
-        that you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a MinIO
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesCloudwatch:
       summary: CloudWatch
       value:
@@ -67348,10 +67399,10 @@ components:
         logGroupName: my-log-group
         logStreamName: my-log-stream
         region: us-east-1
-      description: Example request body for updating a CloudWatch
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a CloudWatch
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesAzureEventhub:
       summary: Azure Event Hub
       value:
@@ -67360,10 +67411,10 @@ components:
         brokers:
           - myeventhub.servicebus.windows.net:9093
         topic: logs
-      description: Example request body for updating a Azure Event Hub
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Azure Event Hub
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesStatsd:
       summary: StatsD
       value:
@@ -67372,10 +67423,10 @@ components:
         protocol: udp
         host: localhost
         port: 8125
-      description: Example request body for updating a StatsD
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a StatsD
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesStatsdExt:
       summary: StatsD Extended
       value:
@@ -67384,10 +67435,10 @@ components:
         protocol: udp
         host: localhost
         port: 8125
-      description: Example request body for updating a StatsD Extended
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a StatsD Extended
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesGraphite:
       summary: Graphite
       value:
@@ -67396,10 +67447,10 @@ components:
         protocol: tcp
         host: localhost
         port: 2003
-      description: Example request body for updating a Graphite
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Graphite
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesWavefront:
       summary: Wavefront
       value:
@@ -67408,10 +67459,10 @@ components:
         domain: longboard
         endpoint: https://your-instance.wavefront.com
         token: your-token
-      description: Example request body for updating a Wavefront
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Wavefront
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSignalfx:
       summary: SignalFx
       value:
@@ -67420,10 +67471,10 @@ components:
         realm: us0
         endpoint: https://ingest.signalfx.com
         token: your-token
-      description: Example request body for updating a SignalFx
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a SignalFx
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSqs:
       summary: SQS
       value:
@@ -67432,9 +67483,10 @@ components:
         queueName: my-queue
         queueType: standard
         region: us-east-1
-      description: Example request body for updating a SQS Destination.<br/><br/>The
-        request body must include a complete representation of the Destination
-        that you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a SQS
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesGoogleCloudStorage:
       summary: Google Cloud Storage
       value:
@@ -67445,10 +67497,10 @@ components:
         region: us-east1
         stagePath: /tmp/staging
         projectId: my-project
-      description: Example request body for updating a Google Cloud Storage
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Google Cloud Storage
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSumoLogic:
       summary: Sumo Logic
       value:
@@ -67456,10 +67508,10 @@ components:
         type: sumo_logic
         url: https://endpoint1.collection.us2.sumologic.com
         sourceCategory: logs
-      description: Example request body for updating a Sumo Logic
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Sumo Logic
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesDatadog:
       summary: Datadog
       value:
@@ -67467,30 +67519,30 @@ components:
         type: datadog
         endpoint: https://http-intake.logs.datadoghq.com
         apiKey: your-api-key
-      description: Example request body for updating a Datadog
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Datadog
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesWebhook:
       summary: Webhook
       value:
         id: webhook-output
         type: webhook
         url: https://example.com/webhook
-      description: Example request body for updating a Webhook
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Webhook
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesPrometheus:
       summary: Prometheus
       value:
         id: prometheus-output
         type: prometheus
         url: http://localhost:9091/api/v1/write
-      description: Example request body for updating a Prometheus
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Prometheus
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesAmazonManagedPrometheus:
       summary: Amazon Managed Service for Prometheus
       value:
@@ -67499,10 +67551,11 @@ components:
         url: https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-example/api/v1/remote_write
         region: us-east-1
         awsAuthenticationMethod: auto
-      description: Example request body for updating a Amazon Managed Service for
-        Prometheus Destination.<br/><br/>The request body must include a
-        complete representation of the Destination that you want to update. This
-        endpoint does not support partial updates.
+      description: "Example request body for updating a Amazon Managed Service for
+        Prometheus Destination.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
     UpdateOutputExamplesGooglePubsub:
       summary: Google Pub/Sub
       value:
@@ -67510,10 +67563,10 @@ components:
         type: google_pubsub
         projectId: my-project
         topicName: my-topic
-      description: Example request body for updating a Google Pub/Sub
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Google Pub/Sub
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesGoogleBigQuery:
       summary: Google BigQuery
       value:
@@ -67523,10 +67576,10 @@ components:
         datasetId: my-dataset
         tableId: my-table
         googleAuthMethod: auto
-      description: Example request body for updating a Google BigQuery
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Google BigQuery
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesGoogleChronicle:
       summary: Google Chronicle
       value:
@@ -67535,10 +67588,10 @@ components:
         logFormatType: unstructured
         region: us
         customerId: customer-id
-      description: Example request body for updating a Google Chronicle
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Google Chronicle
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesChronicle:
       summary: Chronicle
       value:
@@ -67548,39 +67601,40 @@ components:
         gcpInstance: customer-id
         region: us
         logType: UNKNOWN
-      description: Example request body for updating a Chronicle
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Chronicle
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesGrafanaCloud:
       summary: Grafana Cloud
       value:
         id: grafana-cloud-output
         type: grafana_cloud
         lokiUrl: https://logs-prod-us-central1.grafana.net
-      description: Example request body for updating a Grafana Cloud
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Grafana Cloud
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesLoki:
       summary: Loki
       value:
         id: loki-output
         type: loki
         url: http://localhost:3100/loki/api/v1/push
-      description: Example request body for updating a Loki Destination.<br/><br/>The
-        request body must include a complete representation of the Destination
-        that you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Loki
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesOpenTelemetry:
       summary: OpenTelemetry
       value:
         id: opentelemetry-output
         type: open_telemetry
         endpoint: http://localhost:4317
-      description: Example request body for updating a OpenTelemetry
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a OpenTelemetry
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesServiceNow:
       summary: ServiceNow
       value:
@@ -67590,10 +67644,10 @@ components:
         protocol: http
         otlpVersion: 1.3.1
         tokenSecret: your-token-secret
-      description: Example request body for updating a ServiceNow
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a ServiceNow
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesDynatraceOtlp:
       summary: Dynatrace OTLP
       value:
@@ -67604,20 +67658,20 @@ components:
         protocol: http
         otlpVersion: 1.3.1
         tokenSecret: your-token-secret
-      description: Example request body for updating a Dynatrace OTLP
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Dynatrace OTLP
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesGoogleCloudObservability:
       summary: Google Cloud Observability
       value:
         id: google-cloud-observability-output
         type: google_cloud_observability
         googleAuthMethod: auto
-      description: Example request body for updating a Google Cloud Observability
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Google Cloud Observability
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSentinelOneAiSiem:
       summary: SentinelOne AI SIEM
       value:
@@ -67625,29 +67679,29 @@ components:
         type: sentinel_one_ai_siem
         region: US
         endpoint: /services/collector/event
-      description: Example request body for updating a SentinelOne AI SIEM
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a SentinelOne AI SIEM
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesDataset:
       summary: Dataset
       value:
         id: dataset-output
         type: dataset
         dataset: my-dataset
-      description: Example request body for updating a Dataset
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Dataset
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesRing:
       summary: Ring Buffer
       value:
         id: ring-output
         type: ring
-      description: Example request body for updating a Ring Buffer
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Ring Buffer
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesRouter:
       summary: Output Router
       value:
@@ -67656,10 +67710,10 @@ components:
         rules:
           - filter: "true"
             output: my-output
-      description: Example request body for updating a Output Router
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Output Router
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesWizHec:
       summary: Wiz Defend
       value:
@@ -67671,10 +67725,10 @@ components:
         wiz_environment: test
         authType: manual
         hecToken: your-hec-token
-      description: Example request body for updating a Wiz Defend
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Wiz Defend
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesHumioHec:
       summary: Humio HEC
       value:
@@ -67684,10 +67738,10 @@ components:
         format: JSON
         authType: manual
         token: your-token
-      description: Example request body for updating a Humio HEC
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Humio HEC
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesCrowdstrikeNextGenSiem:
       summary: CrowdStrike Next Gen SIEM
       value:
@@ -67697,10 +67751,10 @@ components:
         format: JSON
         authType: manual
         token: your-token
-      description: Example request body for updating a CrowdStrike Next Gen SIEM
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a CrowdStrike Next Gen SIEM
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesCriblHttp:
       summary: Cribl HTTP
       value:
@@ -67708,10 +67762,10 @@ components:
         type: cribl_http
         host: localhost
         port: 10080
-      description: Example request body for updating a Cribl HTTP
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Cribl HTTP
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesCriblTcp:
       summary: Cribl TCP
       value:
@@ -67719,10 +67773,10 @@ components:
         type: cribl_tcp
         host: localhost
         port: 10090
-      description: Example request body for updating a Cribl TCP
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Cribl TCP
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesCriblSearchEngine:
       summary: Cribl Search Engine
       value:
@@ -67792,10 +67846,10 @@ components:
         useRoundRobinDns: true
         type: cribl_search_engine
         url: https://0.0.0.0:10200
-      description: Example request body for updating a Cribl Search Engine
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Cribl Search Engine
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesGoogleCloudLogging:
       summary: Google Cloud Logging
       value:
@@ -67805,10 +67859,10 @@ components:
         logLocationExpression: my-project
         logNameExpression: my-log
         projectId: my-project
-      description: Example request body for updating a Google Cloud Logging
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Google Cloud Logging
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSns:
       summary: SNS
       value:
@@ -67817,9 +67871,10 @@ components:
         topicArn: arn:aws:sns:us-east-1:123456789012:my-topic
         messageGroupId: my-message-group
         region: us-east-1
-      description: Example request body for updating a SNS Destination.<br/><br/>The
-        request body must include a complete representation of the Destination
-        that you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a SNS
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesDlS3:
       summary: Data Lake S3
       value:
@@ -67828,10 +67883,10 @@ components:
         bucket: my-bucket
         stagePath: /tmp/staging
         region: us-east-1
-      description: Example request body for updating a Data Lake S3
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Data Lake S3
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesSecurityLake:
       summary: Security Lake
       value:
@@ -67843,20 +67898,20 @@ components:
         accountId: "123456789012"
         customSource: my-custom-source
         assumeRoleArn: arn:aws:iam::123456789012:role/my-role
-      description: Example request body for updating a Security Lake
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Security Lake
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesCriblLake:
       summary: Cribl Lake
       value:
         id: cribl-lake-output
         type: cribl_lake
         dataset: my-dataset
-      description: Example request body for updating a Cribl Lake
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Cribl Lake
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesExabeam:
       summary: Exabeam
       value:
@@ -67867,20 +67922,20 @@ components:
         endpoint: https://storage.googleapis.com
         stagePath: /tmp/staging
         collectorInstanceId: 11112222-3333-4444-5555-666677778888
-      description: Example request body for updating a Exabeam
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Exabeam
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesDiskSpool:
       summary: Disk Spool
       value:
         id: disk-spool-output
         type: disk_spool
         path: /var/spool/cribl
-      description: Example request body for updating a Disk Spool
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Disk Spool
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesClickHouse:
       summary: ClickHouse
       value:
@@ -67889,10 +67944,10 @@ components:
         url: http://localhost:8123/
         database: mydb
         tableName: mytable
-      description: Example request body for updating a ClickHouse
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a ClickHouse
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesLocalSearchStorage:
       summary: Local Search Storage
       value:
@@ -67901,10 +67956,10 @@ components:
         url: http://localhost:8123/
         database: default
         tableName: mytable
-      description: Example request body for updating a Local Search Storage
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Local Search Storage
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesCustomerMetricsStorage:
       summary: Customer Metrics Storage
       value:
@@ -67913,10 +67968,10 @@ components:
         url: http://localhost:8123/
         database: default
         tableName: mytable
-      description: Example request body for updating a Customer Metrics Storage
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Customer Metrics Storage
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesXsiam:
       summary: XSIAM
       value:
@@ -67924,9 +67979,10 @@ components:
         type: xsiam
         endpoint: https://api.paloaltonetworks.com
         apiKey: your-api-key
-      description: Example request body for updating a XSIAM Destination.<br/><br/>The
-        request body must include a complete representation of the Destination
-        that you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a XSIAM
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesNetflow:
       summary: Netflow
       value:
@@ -67935,10 +67991,10 @@ components:
         hosts:
           - host: localhost
             port: 2055
-      description: Example request body for updating a Netflow
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Netflow
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesDynatraceHttp:
       summary: Dynatrace HTTP
       value:
@@ -67949,10 +68005,10 @@ components:
         telemetryType: logs
         authType: token
         token: your-api-key
-      description: Example request body for updating a Dynatrace HTTP
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Dynatrace HTTP
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesDatabricks:
       summary: Databricks
       value:
@@ -67965,10 +68021,10 @@ components:
         catalog: main
         schema: external
         eventsVolumeName: events
-      description: Example request body for updating a Databricks
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Databricks
+        Destination.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
     PipelineResponseExamplesEmptyPipeline:
       summary: Show an empty Pipeline response
       description: Example response for showing an empty Pipeline with no functions.
@@ -68998,10 +69054,10 @@ components:
                 pretty: false
     UpdatePipelineExamplesEmpty:
       summary: Update an empty Pipeline
-      description: Example request body for updating an existing Pipeline with no
-        functions.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating an existing Pipeline with no
+        functions.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: empty-pipeline
         conf:
@@ -69014,11 +69070,11 @@ components:
     UpdatePipelineExamplesAggregations:
       summary: Update a Pipeline with an aggregation function that sums rejected bytes
         grouped by source address
-      description: Example request body for updating a Pipeline with an aggregation
+      description: "Example request body for updating a Pipeline with an aggregation
         function that sums rejected bytes grouped by source
-        address.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        address.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: aggregation-pipeline
         conf:
@@ -69047,11 +69103,11 @@ components:
     UpdatePipelineExamplesAggregateMetrics:
       summary: Update a Pipeline with an aggregate metrics function that computes
         statistics on process metrics
-      description: Example request body for updating a Pipeline with an aggregate
+      description: "Example request body for updating a Pipeline with an aggregate
         metrics function that computes statistics on process
-        metrics.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        metrics.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: aggregate-metrics-pipeline
         conf:
@@ -69089,10 +69145,11 @@ components:
     UpdatePipelineExamplesAutoTimestamp:
       summary: Update a Pipeline with an auto timestamp function that extracts
         timestamps from event data
-      description: Example request body for updating a Pipeline with an auto timestamp
-        function that extracts timestamps from event data.<br/><br/>The request
-        body must include a complete representation of the Pipeline that you
-        want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Pipeline with an auto
+        timestamp function that extracts timestamps from event
+        data.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: auto-timestamp-pipeline
         conf:
@@ -69121,10 +69178,11 @@ components:
     UpdatePipelineExamplesCEFSerializer:
       summary: Update a Pipeline with a CEF serializer function that formats events in
         Common Event Format
-      description: Example request body for updating a Pipeline with a CEF serializer
-        function that formats events in Common Event Format.<br/><br/>The
-        request body must include a complete representation of the Pipeline that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Pipeline with a CEF serializer
+        function that formats events in Common Event Format.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
       value:
         id: cef-serializer-pipeline
         conf:
@@ -69160,11 +69218,11 @@ components:
     UpdatePipelineExamplesChain:
       summary: Update a Pipeline with a chain function that connects to another
         pipeline for sequential processing
-      description: Example request body for updating a Pipeline with a chain function
+      description: "Example request body for updating a Pipeline with a chain function
         that connects to another pipeline for sequential
-        processing.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        processing.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: chain-pipeline
         conf:
@@ -69182,10 +69240,11 @@ components:
     UpdatePipelineExamplesClone:
       summary: Update a Pipeline with a clone function that creates copies of events
         with additional fields
-      description: Example request body for updating a Pipeline with a clone function
-        that creates copies of events with additional fields.<br/><br/>The
-        request body must include a complete representation of the Pipeline that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Pipeline with a clone function
+        that creates copies of events with additional fields.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
       value:
         id: clone-pipeline
         conf:
@@ -69205,10 +69264,11 @@ components:
     UpdatePipelineExamplesComment:
       summary: Update a Pipeline with a comment function that adds documentation
         annotations
-      description: Example request body for updating a Pipeline with a comment
-        function that adds documentation annotations.<br/><br/>The request body
-        must include a complete representation of the Pipeline that you want to
-        update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Pipeline with a comment
+        function that adds documentation annotations.<br/><br/>Supports partial
+        updates: omitted fields are left unchanged, and nested objects are
+        merged recursively.<br/><br/>Set a field to <code>null</code> to remove
+        it from the stored configuration."
       value:
         id: comment-pipeline
         conf:
@@ -69226,10 +69286,11 @@ components:
     UpdatePipelineExamplesDNSLookup:
       summary: Update a Pipeline with a DNS lookup function that resolves hostnames
         and IP addresses
-      description: Example request body for updating a Pipeline with a DNS lookup
-        function that resolves hostnames and IP addresses.<br/><br/>The request
-        body must include a complete representation of the Pipeline that you
-        want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Pipeline with a DNS lookup
+        function that resolves hostnames and IP addresses.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
       value:
         id: dns-lookup-pipeline
         conf:
@@ -69258,10 +69319,11 @@ components:
     UpdatePipelineExamplesDrop:
       summary: Update a Pipeline with a drop function that filters out events matching
         specified criteria
-      description: Example request body for updating a Pipeline with a drop function
-        that filters out events matching specified criteria.<br/><br/>The
-        request body must include a complete representation of the Pipeline that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Pipeline with a drop function
+        that filters out events matching specified criteria.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
       value:
         id: drop-pipeline
         conf:
@@ -69277,11 +69339,12 @@ components:
     UpdatePipelineExamplesDropDimensions:
       summary: Update a Pipeline with a drop dimensions function that reduces metric
         cardinality by removing dimensions
-      description: Example request body for updating a Pipeline with a drop dimensions
-        function that reduces metric cardinality by removing specified
-        dimensions.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Pipeline with a drop
+        dimensions function that reduces metric cardinality by removing
+        specified dimensions.<br/><br/>Supports partial updates: omitted fields
+        are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: drop-dimensions-pipeline
         conf:
@@ -69306,11 +69369,11 @@ components:
     UpdatePipelineExamplesDynamicSampling:
       summary: Update a Pipeline with a dynamic sampling function that automatically
         adjusts sample rates based on event volume
-      description: Example request body for updating a Pipeline with a dynamic
+      description: "Example request body for updating a Pipeline with a dynamic
         sampling function that automatically adjusts sample rates based on event
-        volume.<br/><br/>The request body must include a complete representation
-        of the Pipeline that you want to update. This endpoint does not support
-        partial updates.
+        volume.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: dynamic-sampling-pipeline
         conf:
@@ -69332,11 +69395,11 @@ components:
     UpdatePipelineExamplesEval:
       summary: Update a Pipeline with an eval function that adds, modifies, and
         removes event fields using JavaScript expressions
-      description: Example request body for updating a Pipeline with an eval function
+      description: "Example request body for updating a Pipeline with an eval function
         that adds, modifies, and removes event fields using JavaScript
-        expressions.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        expressions.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: eval-pipeline
         conf:
@@ -69365,11 +69428,11 @@ components:
     UpdatePipelineExamplesEventBreaker:
       summary: Update a Pipeline with an event breaker function that splits large
         blobs or streams into discrete events
-      description: Example request body for updating a Pipeline with an event breaker
+      description: "Example request body for updating a Pipeline with an event breaker
         function that splits large blobs or streams into discrete
-        events.<br/><br/>The request body must include a complete representation
-        of the Pipeline that you want to update. This endpoint does not support
-        partial updates.
+        events.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: event-breaker-pipeline
         conf:
@@ -69398,11 +69461,11 @@ components:
     UpdatePipelineExamplesFlatten:
       summary: Update a Pipeline with a flatten function that pulls nested fields up
         to a higher level in the object
-      description: Example request body for updating a Pipeline with a flatten
+      description: "Example request body for updating a Pipeline with a flatten
         function that pulls nested fields up to a higher level in the
-        object.<br/><br/>The request body must include a complete representation
-        of the Pipeline that you want to update. This endpoint does not support
-        partial updates.
+        object.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: flatten-pipeline
         conf:
@@ -69422,11 +69485,11 @@ components:
     UpdatePipelineExamplesFoldKeys:
       summary: Update a Pipeline with a fold keys function that transforms flat field
         names into nested structures
-      description: Example request body for updating a Pipeline with a fold keys
+      description: "Example request body for updating a Pipeline with a fold keys
         function that transforms flat field names into nested
-        structures.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        structures.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: fold-keys-pipeline
         conf:
@@ -69446,11 +69509,11 @@ components:
     UpdatePipelineExamplesGeoIP:
       summary: Update a Pipeline with a GeoIP function that enriches events with
         geographic information based on IP addresses
-      description: Example request body for updating a Pipeline with a GeoIP function
+      description: "Example request body for updating a Pipeline with a GeoIP function
         that enriches events with geographic information based on IP
-        addresses.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        addresses.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: geoip-pipeline
         conf:
@@ -69472,11 +69535,11 @@ components:
     UpdatePipelineExamplesGrok:
       summary: Update a Pipeline with a grok function that extracts structured fields
         from unstructured log data using named patterns
-      description: Example request body for updating a Pipeline with a grok function
+      description: "Example request body for updating a Pipeline with a grok function
         that extracts structured fields from unstructured log data using named
-        patterns.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        patterns.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: grok-pipeline
         conf:
@@ -69497,11 +69560,11 @@ components:
     UpdatePipelineExamplesGuard:
       summary: Update a Pipeline with a guard function that detects and protects
         sensitive data using AI-driven scanning rulesets
-      description: Example request body for updating a Pipeline with a guard function
+      description: "Example request body for updating a Pipeline with a guard function
         that detects and protects sensitive data using AI-driven scanning
-        rulesets.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        rulesets.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: guard-pipeline
         conf:
@@ -69529,11 +69592,11 @@ components:
     UpdatePipelineExamplesJSONUnroll:
       summary: Update a Pipeline with a JSON unroll function that explodes arrays of
         objects into individual events
-      description: Example request body for updating a Pipeline with a JSON unroll
+      description: "Example request body for updating a Pipeline with a JSON unroll
         function that explodes arrays of objects into individual
-        events.<br/><br/>The request body must include a complete representation
-        of the Pipeline that you want to update. This endpoint does not support
-        partial updates.
+        events.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: json-unroll-pipeline
         conf:
@@ -69552,11 +69615,11 @@ components:
     UpdatePipelineExamplesLookup:
       summary: Update a Pipeline with a lookup function that enriches events with
         external fields from lookup tables
-      description: Example request body for updating a Pipeline with a lookup function
-        that enriches events with external fields from lookup
-        tables.<br/><br/>The request body must include a complete representation
-        of the Pipeline that you want to update. This endpoint does not support
-        partial updates.
+      description: "Example request body for updating a Pipeline with a lookup
+        function that enriches events with external fields from lookup
+        tables.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: lookup-pipeline
         conf:
@@ -69586,11 +69649,11 @@ components:
     UpdatePipelineExamplesMask:
       summary: Update a Pipeline with a mask function that redacts sensitive data
         using pattern matching and replacement
-      description: Example request body for updating a Pipeline with a mask function
+      description: "Example request body for updating a Pipeline with a mask function
         that redacts sensitive data using pattern matching and
-        replacement.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        replacement.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: mask-pipeline
         conf:
@@ -69613,11 +69676,12 @@ components:
     UpdatePipelineExamplesNumerify:
       summary: Update a Pipeline with a numerify function that converts string number
         values to numeric types
-      description: Example request body for updating a Pipeline with a numerify
+      description: "Example request body for updating a Pipeline with a numerify
         function that converts string number values to numeric types for
-        mathematical operations.<br/><br/>The request body must include a
-        complete representation of the Pipeline that you want to update. This
-        endpoint does not support partial updates.
+        mathematical operations.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: numerify-pipeline
         conf:
@@ -69638,11 +69702,11 @@ components:
     UpdatePipelineExamplesOTLPLogs:
       summary: Update a Pipeline with an OTLP logs function that normalizes and
         batches OpenTelemetry log events
-      description: Example request body for updating a Pipeline with an OTLP logs
+      description: "Example request body for updating a Pipeline with an OTLP logs
         function that normalizes and batches OpenTelemetry log
-        events.<br/><br/>The request body must include a complete representation
-        of the Pipeline that you want to update. This endpoint does not support
-        partial updates.
+        events.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: otlp-logs-pipeline
         conf:
@@ -69666,11 +69730,11 @@ components:
     UpdatePipelineExamplesOTLPMetrics:
       summary: Update a Pipeline with an OTLP metrics function that converts
         dimensional metrics to OpenTelemetry format
-      description: Example request body for updating a Pipeline with an OTLP metrics
+      description: "Example request body for updating a Pipeline with an OTLP metrics
         function that converts dimensional metrics to OpenTelemetry
-        format.<br/><br/>The request body must include a complete representation
-        of the Pipeline that you want to update. This endpoint does not support
-        partial updates.
+        format.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: otlp-metrics-pipeline
         conf:
@@ -69703,11 +69767,11 @@ components:
     UpdatePipelineExamplesOTLPTraces:
       summary: Update a Pipeline with an OTLP traces function that normalizes and
         batches OpenTelemetry trace events
-      description: Example request body for updating a Pipeline with an OTLP traces
+      description: "Example request body for updating a Pipeline with an OTLP traces
         function that normalizes and batches OpenTelemetry trace
-        events.<br/><br/>The request body must include a complete representation
-        of the Pipeline that you want to update. This endpoint does not support
-        partial updates.
+        events.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: otlp-traces-pipeline
         conf:
@@ -69732,10 +69796,11 @@ components:
     UpdatePipelineExamplesParser:
       summary: Update a Pipeline with a parser function that extracts fields from
         key-value pairs
-      description: Example request body for updating a Pipeline with a parser function
-        that extracts fields from key-value pair formatted data.<br/><br/>The
-        request body must include a complete representation of the Pipeline that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Pipeline with a parser
+        function that extracts fields from key-value pair formatted
+        data.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: parser-pipeline
         conf:
@@ -69761,11 +69826,12 @@ components:
     UpdatePipelineExamplesPublishMetrics:
       summary: Update a Pipeline with a publish metrics function that extracts and
         formats metrics from events
-      description: Example request body for updating a Pipeline with a publish metrics
-        function that extracts and formats metrics from events for aggregation
-        platforms.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+      description: "Example request body for updating a Pipeline with a publish
+        metrics function that extracts and formats metrics from events for
+        aggregation platforms.<br/><br/>Supports partial updates: omitted fields
+        are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: publish-metrics-pipeline
         conf:
@@ -69796,11 +69862,11 @@ components:
     UpdatePipelineExamplesRedis:
       summary: Update a Pipeline with a Redis function that interacts with Redis
         stores using GET and SET commands
-      description: Example request body for updating a Pipeline with a Redis function
+      description: "Example request body for updating a Pipeline with a Redis function
         that interacts with Redis stores using GET and SET
-        commands.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        commands.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: redis-pipeline
         conf:
@@ -69825,11 +69891,12 @@ components:
     UpdatePipelineExamplesRegexExtract:
       summary: Update a Pipeline with a regex extract function that extracts fields
         from events using regular expressions with named capture groups
-      description: Example request body for updating a Pipeline with a regex extract
+      description: "Example request body for updating a Pipeline with a regex extract
         function that extracts fields from events using regular expressions with
-        named capture groups.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        named capture groups.<br/><br/>Supports partial updates: omitted fields
+        are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: regex-extract-pipeline
         conf:
@@ -69850,11 +69917,11 @@ components:
     UpdatePipelineExamplesRegexFilter:
       summary: Update a Pipeline with a regex filter function that filters out events
         based on regular expression matches
-      description: Example request body for updating a Pipeline with a regex filter
+      description: "Example request body for updating a Pipeline with a regex filter
         function that filters out events based on regular expression
-        matches.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        matches.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: regex-filter-pipeline
         conf:
@@ -69872,10 +69939,11 @@ components:
     UpdatePipelineExamplesRename:
       summary: Update a Pipeline with a rename function that changes or reformats
         field names within events
-      description: Example request body for updating a Pipeline with a rename function
-        that changes or reformats field names within events.<br/><br/>The
-        request body must include a complete representation of the Pipeline that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Pipeline with a rename
+        function that changes or reformats field names within
+        events.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: rename-pipeline
         conf:
@@ -69897,11 +69965,11 @@ components:
     UpdatePipelineExamplesRollupMetrics:
       summary: Update a Pipeline with a rollup metrics function that consolidates
         high-frequency metrics into time windows
-      description: Example request body for updating a Pipeline with a rollup metrics
+      description: "Example request body for updating a Pipeline with a rollup metrics
         function that consolidates high-frequency metrics into manageable time
-        windows.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        windows.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: rollup-metrics-pipeline
         conf:
@@ -69922,11 +69990,11 @@ components:
     UpdatePipelineExamplesSampling:
       summary: Update a Pipeline with a sampling function that filters events based on
         criteria and sampling rates
-      description: Example request body for updating a Pipeline with a sampling
+      description: "Example request body for updating a Pipeline with a sampling
         function that filters events based on criteria and sampling
-        rates.<br/><br/>The request body must include a complete representation
-        of the Pipeline that you want to update. This endpoint does not support
-        partial updates.
+        rates.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: sampling-pipeline
         conf:
@@ -69946,11 +70014,11 @@ components:
     UpdatePipelineExamplesSerialize:
       summary: Update a Pipeline with a serialize function that converts event content
         into predefined formats
-      description: Example request body for updating a Pipeline with a serialize
+      description: "Example request body for updating a Pipeline with a serialize
         function that converts event content into predefined
-        formats.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        formats.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: serialize-pipeline
         conf:
@@ -69972,11 +70040,11 @@ components:
     UpdatePipelineExamplesSNMPTrapSerialize:
       summary: Update a Pipeline with an SNMP trap serialize function that converts
         compliant events into SNMP trap format
-      description: Example request body for updating a Pipeline with an SNMP trap
+      description: "Example request body for updating a Pipeline with an SNMP trap
         serialize function that converts compliant events into SNMP trap
-        format.<br/><br/>The request body must include a complete representation
-        of the Pipeline that you want to update. This endpoint does not support
-        partial updates.
+        format.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: snmp-trap-serialize-pipeline
         conf:
@@ -69995,11 +70063,11 @@ components:
     UpdatePipelineExamplesSuppress:
       summary: Update a Pipeline with a suppress function that suppresses duplicate
         events based on key expressions
-      description: Example request body for updating a Pipeline with a suppress
+      description: "Example request body for updating a Pipeline with a suppress
         function that suppresses duplicate events based on key
-        expressions.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        expressions.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: suppress-pipeline
         conf:
@@ -70022,11 +70090,11 @@ components:
     UpdatePipelineExamplesTee:
       summary: Update a Pipeline with a tee function that sends events to an external
         command via stdin for debugging and verification
-      description: Example request body for updating a Pipeline with a tee function
+      description: "Example request body for updating a Pipeline with a tee function
         that sends events to an external command via stdin for debugging and
-        verification.<br/><br/>The request body must include a complete
-        representation of the Pipeline that you want to update. This endpoint
-        does not support partial updates.
+        verification.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: tee-pipeline
         conf:
@@ -70048,10 +70116,11 @@ components:
     UpdatePipelineExamplesUnroll:
       summary: Update a Pipeline with an unroll function that breaks array fields into
         individual events
-      description: Example request body for updating a Pipeline with an unroll
-        function that breaks array fields into individual events.<br/><br/>The
-        request body must include a complete representation of the Pipeline that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Pipeline with an unroll
+        function that breaks array fields into individual
+        events.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: unroll-pipeline
         conf:
@@ -70069,10 +70138,11 @@ components:
     UpdatePipelineExamplesXMLUnroll:
       summary: Update a Pipeline with an XML unroll function that converts XML
         elements into individual events
-      description: Example request body for updating a Pipeline with an XML unroll
-        function that converts XML elements into individual events.<br/><br/>The
-        request body must include a complete representation of the Pipeline that
-        you want to update. This endpoint does not support partial updates.
+      description: "Example request body for updating a Pipeline with an XML unroll
+        function that converts XML elements into individual
+        events.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: xml-unroll-pipeline
         conf:
@@ -70132,9 +70202,10 @@ components:
       summary: Update Routes with a basic Route configuration
       description: "Example request body for updating the default Routes table
         (<code>id: default</code>) with a simple Route that filters access.log
-        events and sends them to the main Pipeline.<br/><br/>The request body
-        must include a complete representation of the Routing table that you
-        want to update. This endpoint does not support partial updates."
+        events and sends them to the main Pipeline.<br/><br/>Supports partial
+        updates: omitted fields are left unchanged, and nested objects are
+        merged recursively.<br/><br/>Set a field to <code>null</code> to remove
+        it from the stored configuration."
       value:
         id: default
         routes:
@@ -70148,9 +70219,10 @@ components:
       summary: Update Routes with multiple Routes and a catch-all
       description: "Example request body for updating the default Routes table
         (<code>id: default</code>) with multiple specific Routes evaluated in
-        order, followed by a default catch-all Route.<br/><br/>The request body
-        must include a complete representation of the Routing table that you
-        want to update. This endpoint does not support partial updates."
+        order, followed by a default catch-all Route.<br/><br/>Supports partial
+        updates: omitted fields are left unchanged, and nested objects are
+        merged recursively.<br/><br/>Set a field to <code>null</code> to remove
+        it from the stored configuration."
       value:
         id: default
         routes:
@@ -70186,10 +70258,10 @@ components:
       summary: Update Routes with dynamic Destination expression
       description: "Example request body for updating the default Routes table
         (<code>id: default</code>) with a Route that uses a JavaScript
-        expression to dynamically determine the Destination.<br/><br/>The
-        request body must include a complete representation of the Routing table
-        that you want to update. This endpoint does not support partial
-        updates."
+        expression to dynamically determine the Destination.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
       value:
         id: default
         routes:
@@ -70207,9 +70279,10 @@ components:
         (<code>id: default</code>) with a basic Route that omits the
         <code>id</code> and <code>final</code> fields. The server generates a
         deterministic <code>id</code> and sets <code>final</code> to
-        <code>true</code> by default.<br/><br/>The request body must include a
-        complete representation of the Routing table that you want to update.
-        This endpoint does not support partial updates."
+        <code>true</code> by default.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: default
         routes:
@@ -70723,10 +70796,11 @@ components:
         limit: 20
     UpdateCollectorExamplesRest:
       summary: Update a REST API Collector
-      description: Example request body for updating an existing REST API Collector
-        with a revised schedule.<br/><br/>The request body must include a
-        complete representation of the Collector that you want to update. This
-        endpoint does not support partial updates.
+      description: "Example request body for updating an existing REST API Collector
+        with a revised schedule.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: rest-collector
         type: collection
@@ -70756,10 +70830,11 @@ components:
           - default
     UpdateCollectorExamplesS3:
       summary: Update an S3 Bucket Collector
-      description: Example request body for updating an existing S3 Collector with a
-        new bucket and pipeline configuration.<br/><br/>The request body must
-        include a complete representation of the Collector that you want to
-        update. This endpoint does not support partial updates.
+      description: "Example request body for updating an existing S3 Collector with a
+        new bucket and pipeline configuration.<br/><br/>Supports partial
+        updates: omitted fields are left unchanged, and nested objects are
+        merged recursively.<br/><br/>Set a field to <code>null</code> to remove
+        it from the stored configuration."
       value:
         id: s3-collector
         type: collection
@@ -70789,10 +70864,11 @@ components:
           - s3-output
     UpdateCollectorExamplesFilesystem:
       summary: Update a Filesystem Collector
-      description: Example request body for updating an existing Filesystem Collector
-        with a revised path configuration.<br/><br/>The request body must
-        include a complete representation of the Collector that you want to
-        update. This endpoint does not support partial updates.
+      description: "Example request body for updating an existing Filesystem Collector
+        with a revised path configuration.<br/><br/>Supports partial updates:
+        omitted fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: filesystem-collector
         type: collection
@@ -70818,10 +70894,11 @@ components:
           - elasticsearch
     UpdateCollectorExamplesAzureBlob:
       summary: Update an Azure Blob Storage Collector
-      description: Example request body for updating an existing Azure Blob Storage
-        Collector with revised container settings.<br/><br/>The request body
-        must include a complete representation of the Collector that you want to
-        update. This endpoint does not support partial updates.
+      description: "Example request body for updating an existing Azure Blob Storage
+        Collector with revised container settings.<br/><br/>Supports partial
+        updates: omitted fields are left unchanged, and nested objects are
+        merged recursively.<br/><br/>Set a field to <code>null</code> to remove
+        it from the stored configuration."
       value:
         id: azure-blob-collector
         type: collection
@@ -70852,10 +70929,11 @@ components:
           - azure-output
     UpdateCollectorExamplesGoogleCloudStorage:
       summary: Update a Google Cloud Storage Collector
-      description: Example request body for updating an existing Google Cloud Storage
-        Collector with revised bucket settings.<br/><br/>The request body must
-        include a complete representation of the Collector that you want to
-        update. This endpoint does not support partial updates.
+      description: "Example request body for updating an existing Google Cloud Storage
+        Collector with revised bucket settings.<br/><br/>Supports partial
+        updates: omitted fields are left unchanged, and nested objects are
+        merged recursively.<br/><br/>Set a field to <code>null</code> to remove
+        it from the stored configuration."
       value:
         id: gcs-collector
         type: collection
@@ -70885,10 +70963,11 @@ components:
           - bigquery
     UpdateCollectorExamplesDatabase:
       summary: Update a Database Collector
-      description: Example request body for updating an existing Database Collector
-        with revised query settings.<br/><br/>The request body must include a
-        complete representation of the Collector that you want to update. This
-        endpoint does not support partial updates.
+      description: "Example request body for updating an existing Database Collector
+        with revised query settings.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: database-collector
         type: collection
@@ -70915,10 +70994,11 @@ components:
           - postgres-output
     UpdateCollectorExamplesSplunk:
       summary: Update a Splunk Collector
-      description: Example request body for updating an existing Splunk Collector with
-        revised search settings.<br/><br/>The request body must include a
-        complete representation of the Collector that you want to update. This
-        endpoint does not support partial updates.
+      description: "Example request body for updating an existing Splunk Collector
+        with revised search settings.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: splunk-collector
         type: collection
@@ -70950,10 +71030,11 @@ components:
           - splunk-output
     UpdateCollectorExamplesScript:
       summary: Update a Script Collector
-      description: Example request body for updating an existing Script Collector with
-        revised script settings.<br/><br/>The request body must include a
-        complete representation of the Collector that you want to update. This
-        endpoint does not support partial updates.
+      description: "Example request body for updating an existing Script Collector
+        with revised script settings.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: script-collector
         type: collection
@@ -70980,10 +71061,11 @@ components:
           - file-output
     UpdateCollectorExamplesCriblLake:
       summary: Update a Cribl Lake Dataset Collector
-      description: Example request body for updating an existing Cribl Lake Dataset
-        Collector with revised dataset settings.<br/><br/>The request body must
-        include a complete representation of the Collector that you want to
-        update. This endpoint does not support partial updates.
+      description: "Example request body for updating an existing Cribl Lake Dataset
+        Collector with revised dataset settings.<br/><br/>Supports partial
+        updates: omitted fields are left unchanged, and nested objects are
+        merged recursively.<br/><br/>Set a field to <code>null</code> to remove
+        it from the stored configuration."
       value:
         id: cribl-lake-collector
         type: collection
@@ -71225,10 +71307,11 @@ components:
             lookupDeployments: []
     UpdateGroupExamplesScaleCloudWorkerGroup:
       summary: Scale a Cribl.Cloud Worker Group by updating estimated ingest rate
-      description: Example request body for scaling a Cribl.Cloud Worker Group to
-        handle higher throughput.<br/><br/>The request body must include a
-        complete representation of the Group or Fleet that you want to update.
-        This endpoint does not support partial updates.
+      description: "Example request body for scaling a Cribl.Cloud Worker Group to
+        handle higher throughput.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       value:
         id: goatCloudIanWg
         name: goatcloudianwg
@@ -71249,10 +71332,10 @@ components:
         lookupDeployments: []
     UpdateGroupExamplesUpdateOnPremWorkerGroup:
       summary: Update a customer-managed Worker Group
-      description: Example request body for updating a customer-managed Worker
-        Group.<br/><br/>The request body must include a complete representation
-        of the Group or Fleet that you want to update. This endpoint does not
-        support partial updates.
+      description: "Example request body for updating a customer-managed Worker
+        Group.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       value:
         id: goatOnPremIanWg
         name: goatonpremianwg
@@ -72425,14 +72508,10 @@ paths:
       x-cribl-internal: false
       x-cribl-availability: both
       summary: Update a Database Connection
-      description: Update the specified Database Connection.<br/><br/>Provide a
-        complete representation of the Database Connection that you want to
-        update in the request body. This endpoint does not support partial
-        updates. Cribl removes any omitted fields when updating the Database
-        Connection.<br/><br/>Confirm that the configuration in your request body
-        is correct before sending the request. If the configuration is
-        incorrect, the updated Database Connection might not function as
-        expected.
+      description: "Update the specified Database Connection.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
       responses:
         "200":
           description: The updated Database Connection in a response envelope with
@@ -72772,13 +72851,10 @@ paths:
       x-cribl-internal: false
       x-cribl-availability: both
       summary: Update a Collector
-      description: Update the specified Collector.<br/><br/>Provide a complete
-        representation of the Collector that you want to update in the request
-        body. This endpoint does not support partial updates. Cribl removes any
-        omitted fields when updating the Collector.<br/><br/>Confirm that the
-        configuration in your request body is correct before sending the
-        request. If the configuration is incorrect, the updated Collector might
-        not function as expected.
+      description: "Update the specified Collector.<br/><br/>Supports partial updates:
+        omitted fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       responses:
         "200":
           description: The updated Collector in a response envelope with
@@ -73151,14 +73227,10 @@ paths:
       x-cribl-internal: false
       x-cribl-availability: both
       summary: Update a Pipeline within a Pack
-      description: Update the specified Pipeline within the specified
-        Pack.<br/><br/>Provide a complete representation of the Pipeline that
-        you want to update in the request body.<br/><br/>This endpoint does not
-        support partial updates. Cribl removes any omitted fields when updating
-        the Pipeline.<br/><br/>Confirm that the configuration in your request
-        body is correct before sending the request.<br/><br/>If the
-        configuration is incorrect, the updated Pipeline might not function as
-        expected.
+      description: "Update the specified Pipeline within the specified
+        Pack.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       responses:
         "200":
           description: The updated Pipeline object in a single-item list.
@@ -73453,15 +73525,10 @@ paths:
       x-cribl-internal: false
       x-cribl-availability: both
       summary: Update a Routing table within a Pack
-      description: Update the specified Routing table within the specified
-        Pack.<br/><br/>Provide a complete representation of the Routing table
-        that you want to update in the request body.<br/><br/>This endpoint does
-        not support partial updates. Cribl removes any omitted fields when
-        updating the Routing table.<br/><br/>Confirm that the configuration in
-        your request body is correct before sending the request. If the
-        configuration is incorrect, the updated Routing table might not function
-        as expected.<br/><br/>Cribl also removes any omitted Routes when
-        updating the Routing table.
+      description: "Update the specified Routing table within the specified
+        Pack.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       responses:
         "200":
           description: The updated Routing table object in a single-item list.
@@ -73950,16 +74017,16 @@ paths:
       tags:
         - sources
       summary: Update a Source within a Pack
-      description: Update the specified Source.<br/><br/>Provide a complete
-        representation of the Source that you want to update in the request
-        body. This endpoint does not support partial updates. Cribl removes any
-        omitted fields when updating the Source.<br/><br/>Confirm that the
-        configuration in your request body is correct before sending the
-        request. If the configuration is incorrect, the updated Source might not
-        function as expected.<br/><br/>Cribl preserves
+      description: "Update the specified Source.<br/><br/>Cribl preserves
         <code>criblSourceProvenance</code> when you omit it from the request
-        body, and you cannot overwrite it through this endpoint within the
-        specified Pack.
+        body, and you cannot overwrite it through this
+        endpoint.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration
+        within the specified Pack.<br/><br/>Supports partial updates: omitted
+        fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       requestBody:
         description: Input object.
         required: true
@@ -74808,13 +74875,13 @@ paths:
       tags:
         - destinations
       summary: Update a Destination within a Pack
-      description: Update the specified Destination.<br/><br/>Provide a complete
-        representation of the Destination that you want to update in the request
-        body. This endpoint does not support partial updates. Cribl removes any
-        omitted fields when updating the Destination.<br/><br/>Confirm that the
-        configuration in your request body is correct before sending the
-        request. If the configuration is incorrect, the updated Destination
-        might not function as expected within the specified Pack.
+      description: "Update the specified Destination.<br/><br/>Supports partial
+        updates: omitted fields are left unchanged, and nested objects are
+        merged recursively.<br/><br/>Set a field to <code>null</code> to remove
+        it from the stored configuration within the specified
+        Pack.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       requestBody:
         description: Output object.
         required: true
@@ -76250,13 +76317,10 @@ paths:
       x-cribl-internal: false
       x-cribl-availability: both
       summary: Update a Pipeline
-      description: Update the specified Pipeline.<br/><br/>Provide a complete
-        representation of the Pipeline that you want to update in the request
-        body.<br/><br/>This endpoint does not support partial updates. Cribl
-        removes any omitted fields when updating the Pipeline.<br/><br/>Confirm
-        that the configuration in your request body is correct before sending
-        the request.<br/><br/>If the configuration is incorrect, the updated
-        Pipeline might not function as expected.
+      description: "Update the specified Pipeline.<br/><br/>Supports partial updates:
+        omitted fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       responses:
         "200":
           description: The updated Pipeline object in a single-item list.
@@ -76601,19 +76665,17 @@ paths:
       x-cribl-availability: both
       summary: Update a Worker Group, Outpost Group, or Edge Fleet
       description: "Update the specified Worker Group, Outpost Group, or Edge
-        Fleet.<br/><br/>Provide a complete representation of the Group or Fleet
-        that you want to update in the request body. This endpoint does not
-        support partial updates. Cribl removes any omitted fields when updating
-        the Group or Fleet.<br/><br/>Confirm that the configuration in your
-        request body is correct before sending the request. If the configuration
-        is incorrect, the updated Group or Fleet might not function as
-        expected.<br/><br/>**Warning**: Do not change the values for the
-        following parameters in the body of PATCH requests. The request body
-        must include the values as they appear in the <code>GET
+        Fleet.<br/><br/>**Warning**: Do not change the values for the following
+        parameters in the body of PATCH requests. The request body must include
+        the values as they appear in the <code>GET
         /products/{product}/groups/{id}</code> response.<br/> -
         <code>configVersion</code><br/> - <code>deployingWorkerCount</code><br/>
         - <code>incompatibleWorkerCount</code><br/> -
-        <code>workerCount</code><br/> - <code>lookupDeployments</code>."
+        <code>workerCount</code><br/> -
+        <code>lookupDeployments</code>.<br/><br/>Supports partial updates:
+        omitted fields are left unchanged, and nested objects are merged
+        recursively.<br/><br/>Set a field to <code>null</code> to remove it from
+        the stored configuration."
       responses:
         "200":
           description: The updated ConfigGroup object in a single-item list.
@@ -77746,14 +77808,10 @@ paths:
       x-cribl-internal: false
       x-cribl-availability: both
       summary: Update a Routing table
-      description: Update the specified Routing table.<br/><br/>Provide a complete
-        representation of the Routing table that you want to update in the
-        request body.<br/><br/>This endpoint does not support partial updates.
-        Cribl removes any omitted fields when updating the Routing
-        table.<br/><br/>Confirm that the configuration in your request body is
-        correct before sending the request. If the configuration is incorrect,
-        the updated Routing table might not function as expected.<br/><br/>Cribl
-        also removes any omitted Routes when updating the Routing table.
+      description: "Update the specified Routing table.<br/><br/>Supports partial
+        updates: omitted fields are left unchanged, and nested objects are
+        merged recursively.<br/><br/>Set a field to <code>null</code> to remove
+        it from the stored configuration."
       responses:
         "200":
           description: The updated Routing table object in a single-item list.
@@ -78265,15 +78323,12 @@ paths:
       tags:
         - sources
       summary: Update a Source
-      description: Update the specified Source.<br/><br/>Provide a complete
-        representation of the Source that you want to update in the request
-        body. This endpoint does not support partial updates. Cribl removes any
-        omitted fields when updating the Source.<br/><br/>Confirm that the
-        configuration in your request body is correct before sending the
-        request. If the configuration is incorrect, the updated Source might not
-        function as expected.<br/><br/>Cribl preserves
+      description: "Update the specified Source.<br/><br/>Cribl preserves
         <code>criblSourceProvenance</code> when you omit it from the request
-        body, and you cannot overwrite it through this endpoint.
+        body, and you cannot overwrite it through this
+        endpoint.<br/><br/>Supports partial updates: omitted fields are left
+        unchanged, and nested objects are merged recursively.<br/><br/>Set a
+        field to <code>null</code> to remove it from the stored configuration."
       requestBody:
         description: Input object.
         required: true
@@ -79065,13 +79120,10 @@ paths:
       tags:
         - destinations
       summary: Update a Destination
-      description: Update the specified Destination.<br/><br/>Provide a complete
-        representation of the Destination that you want to update in the request
-        body. This endpoint does not support partial updates. Cribl removes any
-        omitted fields when updating the Destination.<br/><br/>Confirm that the
-        configuration in your request body is correct before sending the
-        request. If the configuration is incorrect, the updated Destination
-        might not function as expected.
+      description: "Update the specified Destination.<br/><br/>Supports partial
+        updates: omitted fields are left unchanged, and nested objects are
+        merged recursively.<br/><br/>Set a field to <code>null</code> to remove
+        it from the stored configuration."
       requestBody:
         description: Output object.
         required: true
@@ -79565,13 +79617,10 @@ paths:
       x-cribl-internal: false
       x-cribl-availability: both
       summary: Update system settings
-      description: Update the specified Cribl system settings.<br/><br/>Provide a
-        complete representation of the system settings that you want to update
-        in the request body. This endpoint does not support partial updates.
-        Cribl removes any omitted fields when updating the system
-        settings.<br/><br/>Confirm that the configuration in your request body
-        is correct before sending the request. If the configuration is
-        incorrect, the updated system settings might not function as expected.
+      description: "Update the specified Cribl system settings.<br/><br/>Supports
+        partial updates: omitted fields are left unchanged, and nested objects
+        are merged recursively.<br/><br/>Set a field to <code>null</code> to
+        remove it from the stored configuration."
       responses:
         "200":
           description: The updated system settings.
