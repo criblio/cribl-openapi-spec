@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.19.0-alpha.1783629086495-aaa35722
+  version: 4.20.0-alpha.1783724646034-6cf5ad04
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -545,6 +545,18 @@ components:
           description: Secret that references Redis admin password
       required:
         - textSecret
+    SerdeTypeAuto:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/TypeOptionsEventBreakerExistingOrNewNewTimestampTyp\
+            eAuto"
+        tagDatatype:
+          type: boolean
+          title: Tag events with datatype and isParsed
+          description: Keep the detected datatype field and set isParsed to true on each
+            event. Enable this when events are bound for downstream Cribl Search
+            processing.
     SerdeTypeKvp:
       type: object
       properties:
@@ -782,18 +794,6 @@ components:
             existing fields will be converted to an array.
       required:
         - regex
-    SerdeTypeAuto:
-      type: object
-      properties:
-        type:
-          $ref: "#/components/schemas/TypeOptionsEventBreakerExistingOrNewNewTimestampTyp\
-            eAuto"
-        tagDatatype:
-          type: boolean
-          title: Tag events with datatype and isParsed
-          description: Keep the detected datatype field and set isParsed to true on each
-            event. Enable this when events are bound for downstream Cribl Search
-            processing.
     SerdeTypeGrok:
       type: object
       properties:
@@ -1878,6 +1878,212 @@ components:
           enum:
             - comment
           description: Identifier of the Function. Always <code>comment</code>
+        loadTime:
+          type: number
+          description: Time the Function module was loaded, in milliseconds since the Unix
+            epoch.
+        modTime:
+          type: number
+          description: Time the Function module was last modified, in milliseconds since
+            the Unix epoch.
+        name:
+          type: string
+          description: Display name of the Function.
+        sync:
+          type: boolean
+          description: If <code>true</code>, the Function executes synchronously.
+            Otherwise, <code>false</code>.
+        uischema:
+          type: object
+          additionalProperties: true
+          description: UI Schema that controls how the Function's configuration form is
+            rendered.
+        version:
+          type: string
+          description: Version string of the Function.
+        schema:
+          type: object
+          additionalProperties: true
+          description: JSON Schema document that describes the Function configuration.
+      required:
+        - __filename
+        - group
+        - id
+        - loadTime
+        - modTime
+        - name
+        - uischema
+        - version
+    FunctionConfSchemaDetectionRules:
+      type: object
+      title: Detection Rules
+      properties:
+        upstreamSources:
+          title: Upstream Rule Sources
+          description: Baseline rule sets maintained by a vendor or community. Loaded
+            first; org sources can replace individual rules by ID.
+          type: array
+          items:
+            $ref: "#/components/schemas/UpstreamSourceConfFunctionConfSchemaDetectionRules"
+        orgSources:
+          title: Organization Rule Sources
+          description: Your organization's rules. A rule with the same ID as an upstream
+            rule fully replaces it.
+          type: array
+          items:
+            $ref: "#/components/schemas/UpstreamSourceConfFunctionConfSchemaDetectionRules"
+        localOverrides:
+          title: Local Overrides
+          description: Instance-level tuning applied after all sources are merged. No git
+            required.
+          type: object
+          properties:
+            disabled:
+              title: Disabled Rules
+              description: Rule IDs to silence entirely.
+              type: array
+              items:
+                type: string
+            fieldOverrides:
+              title: Field Overrides
+              description: Patch scalar fields of a rule without copying its full definition.
+              type: array
+              items:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    title: Rule ID
+                    type: string
+                    description: Rule ID
+                  severityId:
+                    title: Severity
+                    type: integer
+                    enum:
+                      - 1
+                      - 2
+                      - 3
+                      - 4
+                      - 5
+                    description: Severity
+                    x-speakeasy-unknown-values: allow
+                    x-speakeasy-enums:
+                      - SeverityIdOne
+                      - SeverityIdTwo
+                      - SeverityIdThree
+                      - SeverityIdFour
+                      - SeverityIdFive
+                  confidenceId:
+                    title: Confidence
+                    type: integer
+                    enum:
+                      - 1
+                      - 2
+                      - 3
+                    description: Confidence
+                    x-speakeasy-unknown-values: allow
+                    x-speakeasy-enums:
+                      - ConfidenceIdOne
+                      - ConfidenceIdTwo
+                      - ConfidenceIdThree
+                  impactId:
+                    title: Impact
+                    type: integer
+                    enum:
+                      - 1
+                      - 2
+                      - 3
+                      - 4
+                    description: Impact
+                    x-speakeasy-unknown-values: allow
+                    x-speakeasy-enums:
+                      - ImpactIdOne
+                      - ImpactIdTwo
+                      - ImpactIdThree
+                      - ImpactIdFour
+                  isAlert:
+                    title: Is Alert
+                    type: boolean
+                    description: Is Alert
+                  message:
+                    title: Message Override
+                    type: string
+                    description: Message Override
+            inlineRules:
+              title: Inline Rules
+              description: Full rule definitions authored here. Quick one-offs that don't
+                warrant a git commit.
+              type: array
+              items:
+                type: object
+                required:
+                  - id
+                  - name
+                  - condition
+                properties:
+                  id:
+                    type: string
+                    title: Rule ID
+                    description: Rule ID
+                  name:
+                    type: string
+                    title: Rule Name
+                    description: Rule Name
+                  condition:
+                    type: string
+                    title: Condition Expression
+                    description: Condition Expression
+                  severityId:
+                    type: integer
+                    title: Severity
+                    description: Severity
+                  confidenceId:
+                    type: integer
+                    title: Confidence
+                    description: Confidence
+                  isAlert:
+                    type: boolean
+                    title: Is Alert
+                    description: Is Alert
+                  message:
+                    type: string
+                    title: Message
+                    description: Message
+                  tags:
+                    type: array
+                    items:
+                      type: string
+    FunctionDetectionRules:
+      type: object
+      properties:
+        __filename:
+          type: string
+          description: Path to the JavaScript file that implements the Function.
+        asyncTimeout:
+          type: number
+          description: Maximum time, in milliseconds, that the Function is allowed to run
+            asynchronously before timing out.
+        cribl_version:
+          type: string
+          description: Minimum Cribl version required by the Function, if applicable.
+        disabled:
+          type: boolean
+          description: If <code>true</code>, the Function is disabled and will not execute
+            in a Pipeline. Otherwise, <code>false</code>.
+        group:
+          type: string
+          description: Category group the Function belongs to.
+        handleSignals:
+          type: boolean
+          description: If <code>true</code>, the Function handles stream signals such as
+            <code>flush</code> and <code>close</code>. Otherwise,
+            <code>false</code>.
+        id:
+          type: string
+          enum:
+            - detection_rules
+          description: Identifier of the Function. Always <code>detection_rules</code>
         loadTime:
           type: number
           description: Time the Function module was loaded, in milliseconds since the Unix
@@ -6992,6 +7198,7 @@ components:
           description: Parser or formatter type to use
           type: string
           enum:
+            - auto
             - csv
             - elff
             - clf
@@ -7000,8 +7207,8 @@ components:
             - delim
             - regex
             - grok
-            - auto
           x-speakeasy-enum-descriptions:
+            - Auto
             - CSV
             - Extended Log File Format
             - Common Log Format
@@ -7010,8 +7217,13 @@ components:
             - Delimited values
             - Regular Expression
             - Grok
-            - Auto
           x-speakeasy-unknown-values: allow
+        tagDatatype:
+          type: boolean
+          title: Tag events with datatype and isParsed
+          description: Keep the detected datatype field and set isParsed to true on each
+            event. Enable this when events are bound for downstream Cribl Search
+            processing.
         keep:
           title: Fields to keep
           description: List of fields to keep. Supports wildcards (*). Takes precedence
@@ -7085,12 +7297,6 @@ components:
           title: Overwrite existing fields
           description: Overwrite existing event fields with extracted values. If disabled,
             existing fields will be converted to an array.
-        tagDatatype:
-          type: boolean
-          title: Tag events with datatype and isParsed
-          description: Keep the detected datatype field and set isParsed to true on each
-            event. Enable this when events are bound for downstream Cribl Search
-            processing.
         pattern:
           type: string
           title: Pattern
@@ -7104,22 +7310,22 @@ components:
             $ref: "#/components/schemas/PatternListConfSerdeTypeGrok"
       allOf:
         - oneOf:
+            - $ref: "#/components/schemas/SerdeTypeAuto"
             - $ref: "#/components/schemas/SerdeTypeKvp"
             - $ref: "#/components/schemas/SerdeTypeDelim"
             - $ref: "#/components/schemas/SerdeTypeCsv"
             - $ref: "#/components/schemas/SerdeTypeJson"
             - $ref: "#/components/schemas/SerdeTypeRegex"
-            - $ref: "#/components/schemas/SerdeTypeAuto"
             - $ref: "#/components/schemas/SerdeTypeGrok"
           discriminator:
             propertyName: type
             mapping:
+              auto: "#/components/schemas/SerdeTypeAuto"
               kvp: "#/components/schemas/SerdeTypeKvp"
               delim: "#/components/schemas/SerdeTypeDelim"
               csv: "#/components/schemas/SerdeTypeCsv"
               json: "#/components/schemas/SerdeTypeJson"
               regex: "#/components/schemas/SerdeTypeRegex"
-              auto: "#/components/schemas/SerdeTypeAuto"
               grok: "#/components/schemas/SerdeTypeGrok"
     FunctionSerde:
       type: object
@@ -8422,6 +8628,7 @@ components:
         - $ref: "#/components/schemas/FunctionClone"
         - $ref: "#/components/schemas/FunctionCode"
         - $ref: "#/components/schemas/FunctionComment"
+        - $ref: "#/components/schemas/FunctionDetectionRules"
         - $ref: "#/components/schemas/FunctionDistinct"
         - $ref: "#/components/schemas/FunctionDnsLookup"
         - $ref: "#/components/schemas/FunctionDrop"
@@ -8495,6 +8702,7 @@ components:
           clone: "#/components/schemas/FunctionClone"
           code: "#/components/schemas/FunctionCode"
           comment: "#/components/schemas/FunctionComment"
+          detection_rules: "#/components/schemas/FunctionDetectionRules"
           distinct: "#/components/schemas/FunctionDistinct"
           dns_lookup: "#/components/schemas/FunctionDnsLookup"
           drop: "#/components/schemas/FunctionDrop"
@@ -8883,6 +9091,46 @@ components:
           type: boolean
         conf:
           $ref: "#/components/schemas/FunctionConfSchemaComment"
+          description: Configuration specific to the Pipeline Function.
+        groupId:
+          title: Group ID
+          description: Unique identifier of the group that contains the Pipeline Function.
+          type: string
+    PipelineFunctionDetectionRules:
+      type: object
+      required:
+        - id
+        - conf
+      additionalProperties: false
+      properties:
+        filter:
+          title: Filter
+          description: JavaScript expression that selects data to pass through the Function.
+          type: string
+        id:
+          title: ID
+          description: Identifier of the Function. Always <code>detection_rules</code>
+          type: string
+          enum:
+            - detection_rules
+          example: detection_rules
+        description:
+          title: Description
+          description: Brief description of the Pipeline function.
+          type: string
+        disabled:
+          title: Disabled
+          description: If <code>true</code>, disable the Pipeline function so that events
+            are not passed through it. Otherwise, <code>false</code>.
+          type: boolean
+        final:
+          title: Final
+          description: If <code>true</code>, stop passing events to downstream Pipeline
+            Functions after the Function executes. Otherwise,
+            <code>false</code>.
+          type: boolean
+        conf:
+          $ref: "#/components/schemas/FunctionConfSchemaDetectionRules"
           description: Configuration specific to the Pipeline Function.
         groupId:
           title: Group ID
@@ -11512,6 +11760,7 @@ components:
         - $ref: "#/components/schemas/PipelineFunctionClone"
         - $ref: "#/components/schemas/PipelineFunctionCode"
         - $ref: "#/components/schemas/PipelineFunctionComment"
+        - $ref: "#/components/schemas/PipelineFunctionDetectionRules"
         - $ref: "#/components/schemas/PipelineFunctionDistinct"
         - $ref: "#/components/schemas/PipelineFunctionDnsLookup"
         - $ref: "#/components/schemas/PipelineFunctionDrop"
@@ -11585,6 +11834,7 @@ components:
           clone: "#/components/schemas/PipelineFunctionClone"
           code: "#/components/schemas/PipelineFunctionCode"
           comment: "#/components/schemas/PipelineFunctionComment"
+          detection_rules: "#/components/schemas/PipelineFunctionDetectionRules"
           distinct: "#/components/schemas/PipelineFunctionDistinct"
           dns_lookup: "#/components/schemas/PipelineFunctionDnsLookup"
           drop: "#/components/schemas/PipelineFunctionDrop"
@@ -22469,7 +22719,7 @@ components:
                   enabled:
                     type: boolean
                     title: Splunk HEC
-                    description: Splunk HEC
+                    description: When enabled, the token value is available on events as __hecToken
                   defaultDataset:
                     type: string
                   allowedIndexesAtToken:
@@ -30695,8 +30945,8 @@ components:
             (<prefix>.http.summary) request metrics
         hecAcks:
           type: boolean
-          title: Zscaler HEC Acks
-          description: Whether to enable Zscaler HEC acknowledgements
+          description: Whether HEC acknowledgements are enabled. Always true for Zscaler
+            sources.
         description:
           type: string
           title: Description
@@ -58270,6 +58520,8 @@ components:
             Edge Fleet.
       required:
         - id
+      description: Configuration settings and dynamic status for a Worker Group,
+        Outpost Group, or Edge Fleet.
     PaginatedConfigGroup:
       type: object
       required:
@@ -58393,6 +58645,8 @@ components:
             Edge Fleet.
       required:
         - id
+      description: Request body for creating a new Worker Group, Outpost Group, or
+        Edge Fleet. Do not include automatically populated fields.
     DeployRequestLookups:
       type: object
       properties:
@@ -59270,6 +59524,8 @@ components:
       required:
         - guid
         - host
+      description: Node information for the Outpost through which a Worker connects to
+        the Leader.
     NodeProvidedInfo:
       type: object
       properties:
@@ -59521,6 +59777,8 @@ components:
         - info
         - lastMsgTime
         - workerProcesses
+      description: Worker or Edge Node entry returned by Distributed Management worker
+        and outpost endpoints.
     WorkerFilterExpression:
       type: string
       description: Filter expression to evaluate against Nodes for inclusion in the
@@ -59574,17 +59832,22 @@ components:
       properties:
         id:
           type: string
+          description: Unique identifier for the Worker or Edge Node (GUID).
         message:
           type: string
+          description: Error message if the restart request failed for this Node.
         status:
           type: string
           enum:
             - Error
             - Restarting
+          description: Result of the restart request for this Node
+            (<code>Restarting</code> or <code>Error</code>).
           x-speakeasy-unknown-values: allow
       required:
         - id
         - status
+      description: Result of a restart request for a Worker or Edge Node.
     RestartRequest:
       type: object
       properties:
@@ -59701,24 +59964,12 @@ components:
     ActiveHealthOverlayStatus:
       type: object
       properties:
-        binaryVersion:
-          type: string
-          description: Binary version targeted by the active overlay.
-          example: 4.12.0
-        overlayId:
-          type: string
-          description: Active overlay identifier.
-          examples:
-            - patch.0
-            - sideload.a1b2c3d
         state:
           type: string
           const: active
           description: Current overlay state.
           example: active
       required:
-        - binaryVersion
-        - overlayId
         - state
       title: ActiveHealthOverlayStatus
     NoActiveHealthOverlayStatus:
@@ -59739,6 +59990,10 @@ components:
     HealthServerStatus:
       type: object
       properties:
+        isCaptain:
+          type: boolean
+          description: Whether this node is currently the captain (job scheduling
+            coordinator) in a Collectors HA deployment.
         overlay:
           $ref: "#/components/schemas/HealthOverlayStatus"
           description: Overlay state for this process.
@@ -61255,6 +61510,27 @@ components:
           type: string
           title: Value Expression
           description: JavaScript expression to compute the value (can be constant)
+    RefreshIntervalOptionsUpstreamSourcesItems:
+      title: Refresh Interval
+      type: string
+      description: How often to pull updates. Ignored when ref is a tag or SHA.
+      enum:
+        - never
+        - 5m
+        - 15m
+        - 1h
+        - 6h
+        - 24h
+      x-speakeasy-unknown-values: allow
+    SourceTypeOptionsUpstreamSourcesItems:
+      title: Source Type
+      type: string
+      enum:
+        - git_repo
+      x-speakeasy-enum-descriptions:
+        - Git repository
+      description: Source Type
+      x-speakeasy-unknown-values: allow
     NameFieldType:
       type: object
       required:
@@ -63615,6 +63891,32 @@ components:
         maxVersion:
           $ref: "#/components/schemas/MaximumTlsVersionOptionsRedisDeploymentTypeStandalo\
             neTlsOptions"
+    UpstreamSourceConfFunctionConfSchemaDetectionRules:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          $ref: "#/components/schemas/SourceTypeOptionsUpstreamSourcesItems"
+        url:
+          title: Git Repository URL
+          type: string
+          description: HTTPS git URL only. Required for git_repo.
+        ref:
+          title: Git Ref
+          type: string
+          description: Branch, tag, or commit SHA. Tags/SHAs never auto-refresh.
+        glob:
+          title: Rule File Glob
+          type: string
+          description: Glob relative to repo root.
+        refreshInterval:
+          $ref: "#/components/schemas/RefreshIntervalOptionsUpstreamSourcesItems"
+        token:
+          title: Access Token
+          type: string
+          description: HTTPS personal access token (PAT). Injected into the URL at clone
+            time — not stored in the URL field.
     PaginationTypeRestDiscoveryDiscoverTypeHttp:
       type: object
       required:
@@ -72609,6 +72911,38 @@ components:
         count: 1
         items:
           - 42
+    GetProductWorkerByIdResponseExamplesOneWorker:
+      summary: Get detailed metadata for a Worker, Edge, or Outpost Node
+      description: Example response for getting detailed metadata for a single Worker,
+        Edge, or Outpost Node by its id.
+      value:
+        count: 1
+        items:
+          - id: 11111111-1111-1111-1111-111111111111
+            group: default
+            workerProcesses: 4
+            status: healthy
+            lastMsgTime: 1710000060000
+            firstMsgTime: 1700000000000
+            info:
+              hostname: worker-1
+              platform: linux
+              architecture: x64
+              release: 6.8.0-1013-oem
+              cpus: 8
+              totalmem: 17179869184
+              node: v22.17.1
+              env:
+                TZ: UTC
+                LANG: en_US.UTF-8
+              cribl:
+                startTime: 1700000000000
+                guid: 11111111-1111-1111-1111-111111111111
+                config:
+                  version: 1.0.0
+                distMode: worker
+                group: default
+                version: 4.19.0
     WorkersListResponseExamplesWorkerNode:
       summary: List Worker Nodes
       description: Example response for listing Worker Nodes for Cribl Stream.
@@ -72638,9 +72972,37 @@ components:
                 startTime: 1717200000000
         offset: 0
         limit: 20
+    RestartProductWorkersResponseExamplesRestartingWorkers:
+      summary: Restart Worker, Edge, or Outpost Nodes for a Cribl product
+      description: Example response for restarting Worker, Edge, or Outpost Nodes when
+        all requested Nodes accept the restart. The response returns one entry
+        per requested Node with its restart status.
+      value:
+        count: 2
+        items:
+          - id: guid-12345678-abcd-1234-abcd-123456789abc
+            status: Restarting
+          - id: guid-87654321-dcba-4321-dcba-cba987654321
+            status: Restarting
+    RestartProductWorkersResponseExamplesRestartingWorkersWithError:
+      summary: Restart Worker, Edge, or Outpost Nodes for a Cribl product with a
+        partial failure
+      description: Example response for restarting Worker, Edge, or Outpost Nodes when
+        one of the requested Nodes fails to restart. Failed Nodes report
+        <code>status</code> <code>Error</code> and include a
+        <code>message</code>.
+      value:
+        count: 2
+        items:
+          - id: guid-12345678-abcd-1234-abcd-123456789abc
+            status: Restarting
+          - id: guid-87654321-dcba-4321-dcba-cba987654321
+            status: Error
+            message: Node is not connected to the Leader.
     RestartWorkersExamplesRestartWorkers:
-      summary: Restart worker/edge Nodes
-      description: Restart multiple Worker/Edge Nodes by providing an array of GUIDs
+      summary: Restart Worker, Edge, or Outpost Nodes
+      description: Example request body for restarting multiple Worker, Edge, or
+        Outpost Nodes by providing an array of <code>id</code> values.
       value:
         guids:
           - guid-12345678-abcd-1234-abcd-123456789abc
@@ -78532,6 +78894,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedMasterWorkerEntry"
+              examples:
+                GetProductWorkerByIdResponseExamplesOneWorker:
+                  $ref: "#/components/examples/GetProductWorkerByIdResponseExamplesOneWorker"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -78582,6 +78947,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedRestartResponse"
+              examples:
+                RestartProductWorkersResponseExamplesRestartingWorkers:
+                  $ref: "#/components/examples/RestartProductWorkersResponseExamplesRestartingWor\
+                    kers"
+                RestartProductWorkersResponseExamplesRestartingWorkersWithError:
+                  $ref: "#/components/examples/RestartProductWorkersResponseExamplesRestartingWor\
+                    kersWithError"
         "400":
           description: Failed validation or malformed input if the product is not
             "stream", "edge", or "outpost"
