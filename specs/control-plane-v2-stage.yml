@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.19.1-alpha.1785280273505-df57535e
+  version: 4.19.1-alpha.1785366410987-23e50f51
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -5385,6 +5385,11 @@ components:
           type: boolean
           title: Drop non-log events
           description: Drop events that are not OTLP log records.
+        preserveNativeAnyValue:
+          type: boolean
+          title: Preserve native AnyValue wrappers
+          description: 'Body and attribute values already in OTLP AnyValue form (e.g.
+            {string_value: "..."}) are preserved rather than being re-wrapped'
         batchOTLPLogs:
           type: boolean
           title: Batch OTLP logs
@@ -7532,83 +7537,6 @@ components:
         - name
         - uischema
         - version
-    FunctionConfSchemaSignalFilter:
-      type: object
-      title: Signal Filter Configuration
-      additionalProperties: false
-      properties:
-        signals:
-          type: array
-          title: Signal event types to filter
-          description: List of signal event types to filter
-          items:
-            type: string
-    FunctionSignalFilter:
-      type: object
-      properties:
-        __filename:
-          type: string
-          description: Path to the JavaScript file that implements the Function.
-        asyncTimeout:
-          type: number
-          description: Maximum time, in milliseconds, that the Function is allowed to run
-            asynchronously before timing out.
-        cribl_version:
-          type: string
-          description: Minimum Cribl version required by the Function, if applicable.
-        disabled:
-          type: boolean
-          description: If <code>true</code>, the Function is disabled and will not execute
-            in a Pipeline. Otherwise, <code>false</code>.
-        group:
-          type: string
-          description: Category group the Function belongs to.
-        handleSignals:
-          type: boolean
-          description: If <code>true</code>, the Function handles stream signals such as
-            <code>flush</code> and <code>close</code>. Otherwise,
-            <code>false</code>.
-        id:
-          type: string
-          enum:
-            - signal_filter
-          description: Identifier of the Function. Always <code>signal_filter</code>
-        loadTime:
-          type: number
-          description: Time the Function module was loaded, in milliseconds since the Unix
-            epoch.
-        modTime:
-          type: number
-          description: Time the Function module was last modified, in milliseconds since
-            the Unix epoch.
-        name:
-          type: string
-          description: Display name of the Function.
-        sync:
-          type: boolean
-          description: If <code>true</code>, the Function executes synchronously.
-            Otherwise, <code>false</code>.
-        uischema:
-          type: object
-          additionalProperties: true
-          description: UI Schema that controls how the Function's configuration form is
-            rendered.
-        version:
-          type: string
-          description: Version string of the Function.
-        schema:
-          type: object
-          additionalProperties: true
-          description: JSON Schema document that describes the Function configuration.
-      required:
-        - __filename
-        - group
-        - id
-        - loadTime
-        - modTime
-        - name
-        - uischema
-        - version
     FunctionConfSchemaSnmpTrapSerialize:
       type: object
       properties:
@@ -8616,7 +8544,6 @@ components:
         - $ref: "#/components/schemas/FunctionSerde"
         - $ref: "#/components/schemas/FunctionSerialize"
         - $ref: "#/components/schemas/FunctionSidlookup"
-        - $ref: "#/components/schemas/FunctionSignalFilter"
         - $ref: "#/components/schemas/FunctionSnmpTrapSerialize"
         - $ref: "#/components/schemas/FunctionSort"
         - $ref: "#/components/schemas/FunctionStore"
@@ -8689,7 +8616,6 @@ components:
           serde: "#/components/schemas/FunctionSerde"
           serialize: "#/components/schemas/FunctionSerialize"
           sidlookup: "#/components/schemas/FunctionSidlookup"
-          signal_filter: "#/components/schemas/FunctionSignalFilter"
           snmp_trap_serialize: "#/components/schemas/FunctionSnmpTrapSerialize"
           sort: "#/components/schemas/FunctionSort"
           store: "#/components/schemas/FunctionStore"
@@ -11235,47 +11161,6 @@ components:
           title: Group ID
           description: Unique identifier of the group that contains the Pipeline Function.
           type: string
-    PipelineFunctionSignalFilter:
-      type: object
-      required:
-        - id
-        - conf
-      additionalProperties: false
-      properties:
-        filter:
-          title: Filter
-          description: JavaScript expression that selects data to pass through the Function.
-          type: string
-        id:
-          title: ID
-          description: Identifier of the Function. Always <code>signal_filter</code>
-          type: string
-          enum:
-            - signal_filter
-          examples:
-            - signal_filter
-        description:
-          title: Description
-          description: Brief description of the Pipeline function.
-          type: string
-        disabled:
-          title: Disabled
-          description: If <code>true</code>, disable the Pipeline function so that events
-            are not passed through it. Otherwise, <code>false</code>.
-          type: boolean
-        final:
-          title: Final
-          description: If <code>true</code>, stop passing events to downstream Pipeline
-            Functions after the Function executes. Otherwise,
-            <code>false</code>.
-          type: boolean
-        conf:
-          $ref: "#/components/schemas/FunctionConfSchemaSignalFilter"
-          description: Configuration specific to the Pipeline Function.
-        groupId:
-          title: Group ID
-          description: Unique identifier of the group that contains the Pipeline Function.
-          type: string
     PipelineFunctionSnmpTrapSerialize:
       type: object
       required:
@@ -11776,7 +11661,6 @@ components:
         - $ref: "#/components/schemas/PipelineFunctionSerde"
         - $ref: "#/components/schemas/PipelineFunctionSerialize"
         - $ref: "#/components/schemas/PipelineFunctionSidlookup"
-        - $ref: "#/components/schemas/PipelineFunctionSignalFilter"
         - $ref: "#/components/schemas/PipelineFunctionSnmpTrapSerialize"
         - $ref: "#/components/schemas/PipelineFunctionSort"
         - $ref: "#/components/schemas/PipelineFunctionStore"
@@ -11849,7 +11733,6 @@ components:
           serde: "#/components/schemas/PipelineFunctionSerde"
           serialize: "#/components/schemas/PipelineFunctionSerialize"
           sidlookup: "#/components/schemas/PipelineFunctionSidlookup"
-          signal_filter: "#/components/schemas/PipelineFunctionSignalFilter"
           snmp_trap_serialize: "#/components/schemas/PipelineFunctionSnmpTrapSerialize"
           sort: "#/components/schemas/PipelineFunctionSort"
           store: "#/components/schemas/PipelineFunctionStore"
@@ -41553,6 +41436,11 @@ components:
             - Auto
             - Secret
           x-speakeasy-unknown-values: allow
+        preserveNativeAnyValue:
+          type: boolean
+          title: Preserve native AnyValue wrappers
+          description: 'Values already in OTLP AnyValue form (e.g. {string_value: "..."})
+            are serialized directly instead of being wrapped as key-value maps'
         metadata:
           type: array
           title: Metadata
@@ -48371,6 +48259,11 @@ components:
             - 0.10.0
             - 1.3.1
           x-speakeasy-unknown-values: allow
+        preserveNativeAnyValue:
+          type: boolean
+          title: Preserve native AnyValue wrappers
+          description: 'Values already in OTLP AnyValue form (e.g. {string_value: "..."})
+            are serialized directly instead of being wrapped as key-value maps'
         compress:
           $ref: "#/components/schemas/CompressionOptionsDeflateGzip"
           description: Type of compression to apply to messages sent to the OpenTelemetry
@@ -48763,6 +48656,11 @@ components:
         protocol:
           $ref: "#/components/schemas/ProtocolOptions"
           description: Select a transport option for OpenTelemetry
+        preserveNativeAnyValue:
+          type: boolean
+          title: Preserve native AnyValue wrappers
+          description: 'Values already in OTLP AnyValue form (e.g. {string_value: "..."})
+            are serialized directly instead of being wrapped as key-value maps'
         compress:
           $ref: "#/components/schemas/CompressionOptionsDeflateGzip"
           description: Type of compression to apply to messages sent to the OpenTelemetry
@@ -53551,6 +53449,11 @@ components:
           $ref: "#/components/schemas/OtlpVersionOptions"
           description: The version of OTLP Protobuf definitions to use when structuring
             data to send
+        preserveNativeAnyValue:
+          type: boolean
+          title: Preserve native AnyValue wrappers
+          description: 'Values already in OTLP AnyValue form (e.g. {string_value: "..."})
+            are serialized directly instead of being wrapped as key-value maps'
         compress:
           $ref: "#/components/schemas/CompressionOptionsDeflateGzip"
           description: Type of compression to apply to messages sent to the OpenTelemetry
