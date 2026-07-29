@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.20.0-alpha.1785193421881-ad36b285
+  version: 4.20.0-alpha.1785366311502-7f178f24
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -3963,6 +3963,75 @@ components:
           enum:
             - lake_export
           description: Identifier of the Function. Always <code>lake_export</code>
+        loadTime:
+          type: number
+          description: Time the Function module was loaded, in milliseconds since the Unix
+            epoch.
+        modTime:
+          type: number
+          description: Time the Function module was last modified, in milliseconds since
+            the Unix epoch.
+        name:
+          type: string
+          description: Display name of the Function.
+        sync:
+          type: boolean
+          description: If <code>true</code>, the Function executes synchronously.
+            Otherwise, <code>false</code>.
+        uischema:
+          type: object
+          additionalProperties: true
+          description: UI Schema that controls how the Function's configuration form is
+            rendered.
+        version:
+          type: string
+          description: Version string of the Function.
+        schema:
+          type: object
+          additionalProperties: true
+          description: JSON Schema document that describes the Function configuration.
+      required:
+        - __filename
+        - group
+        - id
+        - loadTime
+        - modTime
+        - name
+        - uischema
+        - version
+    FunctionConfSchemaLakehouseEngineMetricsNormalizer:
+      type: object
+    FunctionLakehouseEngineMetricsNormalizer:
+      type: object
+      properties:
+        __filename:
+          type: string
+          description: Path to the JavaScript file that implements the Function.
+        asyncTimeout:
+          type: number
+          description: Maximum time, in milliseconds, that the Function is allowed to run
+            asynchronously before timing out.
+        cribl_version:
+          type: string
+          description: Minimum Cribl version required by the Function, if applicable.
+        disabled:
+          type: boolean
+          description: If <code>true</code>, the Function is disabled and will not execute
+            in a Pipeline. Otherwise, <code>false</code>.
+        group:
+          type: string
+          description: Category group the Function belongs to.
+        handleSignals:
+          type: boolean
+          description: If <code>true</code>, the Function handles stream signals such as
+            <code>flush</code> and <code>close</code>. Otherwise,
+            <code>false</code>.
+        id:
+          type: string
+          enum:
+            - lakehouse_engine_metrics_normalizer
+          description: Identifier of the Function. Always
+            <code>lakehouse_engine_metrics_normalizer</code>
         loadTime:
           type: number
           description: Time the Function module was loaded, in milliseconds since the Unix
@@ -8801,6 +8870,7 @@ components:
         - $ref: "#/components/schemas/FunctionJoin"
         - $ref: "#/components/schemas/FunctionJsonUnroll"
         - $ref: "#/components/schemas/FunctionLakeExport"
+        - $ref: "#/components/schemas/FunctionLakehouseEngineMetricsNormalizer"
         - $ref: "#/components/schemas/FunctionLimit"
         - $ref: "#/components/schemas/FunctionLocalSearchDatatypeParser"
         - $ref: "#/components/schemas/FunctionLocalSearchRulesetRunner"
@@ -8875,6 +8945,7 @@ components:
           join: "#/components/schemas/FunctionJoin"
           json_unroll: "#/components/schemas/FunctionJsonUnroll"
           lake_export: "#/components/schemas/FunctionLakeExport"
+          lakehouse_engine_metrics_normalizer: "#/components/schemas/FunctionLakehouseEngineMetricsNormalizer"
           limit: "#/components/schemas/FunctionLimit"
           local_search_datatype_parser: "#/components/schemas/FunctionLocalSearchDatatypeParser"
           local_search_ruleset_runner: "#/components/schemas/FunctionLocalSearchRulesetRunner"
@@ -10068,6 +10139,48 @@ components:
           required:
             - dataset
             - searchJobId
+          description: Configuration specific to the Pipeline Function.
+        groupId:
+          title: Group ID
+          description: Unique identifier of the group that contains the Pipeline Function.
+          type: string
+    PipelineFunctionLakehouseEngineMetricsNormalizer:
+      type: object
+      required:
+        - id
+        - conf
+      additionalProperties: false
+      properties:
+        filter:
+          title: Filter
+          description: JavaScript expression that selects data to pass through the Function.
+          type: string
+        id:
+          title: ID
+          description: Identifier of the Function. Always
+            <code>lakehouse_engine_metrics_normalizer</code>
+          type: string
+          enum:
+            - lakehouse_engine_metrics_normalizer
+          examples:
+            - lakehouse_engine_metrics_normalizer
+        description:
+          title: Description
+          description: Brief description of the Pipeline function.
+          type: string
+        disabled:
+          title: Disabled
+          description: If <code>true</code>, disable the Pipeline function so that events
+            are not passed through it. Otherwise, <code>false</code>.
+          type: boolean
+        final:
+          title: Final
+          description: If <code>true</code>, stop passing events to downstream Pipeline
+            Functions after the Function executes. Otherwise,
+            <code>false</code>.
+          type: boolean
+        conf:
+          $ref: "#/components/schemas/FunctionConfSchemaLakehouseEngineMetricsNormalizer"
           description: Configuration specific to the Pipeline Function.
         groupId:
           title: Group ID
@@ -12004,6 +12117,7 @@ components:
         - $ref: "#/components/schemas/PipelineFunctionJoin"
         - $ref: "#/components/schemas/PipelineFunctionJsonUnroll"
         - $ref: "#/components/schemas/PipelineFunctionLakeExport"
+        - $ref: "#/components/schemas/PipelineFunctionLakehouseEngineMetricsNormalizer"
         - $ref: "#/components/schemas/PipelineFunctionLimit"
         - $ref: "#/components/schemas/PipelineFunctionLocalSearchDatatypeParser"
         - $ref: "#/components/schemas/PipelineFunctionLocalSearchRulesetRunner"
@@ -12078,6 +12192,8 @@ components:
           join: "#/components/schemas/PipelineFunctionJoin"
           json_unroll: "#/components/schemas/PipelineFunctionJsonUnroll"
           lake_export: "#/components/schemas/PipelineFunctionLakeExport"
+          lakehouse_engine_metrics_normalizer: "#/components/schemas/PipelineFunctionLake\
+            houseEngineMetricsNormalizer"
           limit: "#/components/schemas/PipelineFunctionLimit"
           local_search_datatype_parser: "#/components/schemas/PipelineFunctionLocalSearchDatatypeParser"
           local_search_ruleset_runner: "#/components/schemas/PipelineFunctionLocalSearchRulesetRunner"
@@ -25818,6 +25934,51 @@ components:
             <token>). If empty, unauthorized access is permitted."
           items:
             $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+        accessControlAllowOrigin:
+          title: CORS allowed origins
+          type: array
+          description: "HTTP origins allowed to send CORS requests (example:
+            https://pivot.claude.ai). Supports wildcards. Leave empty to disable
+            CORS. Note: IP allowlist/denylist rules are applied before CORS."
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowHeaders:
+          title: CORS allowed headers
+          type: array
+          description: HTTP headers echoed in Access-Control-Allow-Headers on preflight.
+            Use "*" to allow all headers.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowMethods:
+          title: CORS allowed methods
+          type: array
+          description: HTTP methods echoed in Access-Control-Allow-Methods on preflight.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlExposeHeaders:
+          title: CORS exposed headers
+          type: array
+          description: Headers the browser is allowed to access from the response
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowCredentials:
+          type: boolean
+          title: CORS include credentials
+          description: Include credentials in cross-origin requests. Cannot be used with
+            wildcard origins.
+        accessControlMaxAge:
+          type: number
+          title: CORS max age (seconds)
+          description: How long browsers should cache the preflight response
+          minimum: 0
         description:
           type: string
           title: Description
@@ -25852,6 +26013,18 @@ components:
           description: Binds 'allowedPaths' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'allowedPaths' at runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
       title: InputHttpRaw
     InputKinesis:
       type: object
@@ -76120,10 +76293,6 @@ tags:
       https://docs.cribl.io/stream/api-tutorials/#criblcloud to authenticate for
       Cribl.Cloud.
     x-cribl-availability: both
-    x-cribl-api-context:
-      - leader
-      - node
-      - single
   - name: collectors
     description: Actions related to Collectors
     x-cribl-availability: both
