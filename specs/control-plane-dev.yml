@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.20.0-alpha.1785452713475-af729ef9
+  version: 4.20.0-alpha.1785539181262-0f19e83e
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -16387,6 +16387,19 @@ components:
         - perms
         - user
       title: UserAccessControlList
+    TeamAccessControlList:
+      type: object
+      properties:
+        perms:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourcePolicy"
+        team:
+          type: string
+      required:
+        - perms
+        - team
+      title: TeamAccessControlList
     DatabaseConnectionAuthType:
       type: string
       enum:
@@ -29428,6 +29441,11 @@ components:
           title: Render event message strings
           description: Enable/disable the rendering of localized event message strings
             (Applicable for 4.8.0 nodes and newer that use the Native API)
+        includeEmptyJsonFields:
+          type: boolean
+          title: Include empty JSON fields
+          description: Preserve fields with empty values (such as '-') in the JSON output
+            instead of omitting them
         disableXmlRendering:
           type: boolean
           title: Render event message strings
@@ -33500,6 +33518,21 @@ components:
           description: HTTP request inactivity timeout. Use 0 to disable.
           minimum: 0
           maximum: 2400
+        breakerRulesets:
+          type: array
+          title: Event Breaker rulesets
+          description: A list of event-breaking rulesets that will be applied, in order,
+            to the input data stream
+          items:
+            type: string
+        staleChannelFlushMs:
+          type: number
+          title: Event Breaker buffer timeout (ms)
+          description: How long (in milliseconds) the Event Breaker will wait for new data
+            to be sent to a specific channel before flushing the data stream
+            out, as is, to the Pipelines
+          minimum: 10
+          maximum: 43200000
         keepAliveTime:
           type: number
           title: Keep alive time (seconds)
@@ -61218,19 +61251,6 @@ components:
           description: List of items in this response.
           items:
             $ref: "#/components/schemas/TeamAccessControlList"
-    TeamAccessControlList:
-      type: object
-      properties:
-        perms:
-          type: array
-          items:
-            $ref: "#/components/schemas/ResourcePolicy"
-        team:
-          type: string
-      required:
-        - perms
-        - team
-      title: TeamAccessControlList
     ProductsBase:
       type: string
       enum:
@@ -75469,6 +75489,22 @@ components:
             incompatibleWorkerCount: 0
             deployingWorkerCount: 0
             lookupDeployments: []
+    LakeDatasetUpdateExamplesUpdateRetention:
+      summary: Update the retention period for a Lake Dataset
+      description: Example request body for updating the retention period for an
+        existing Lake Dataset.
+      value:
+        retentionPeriodInDays: 180
+    LakeDatasetUpdateExamplesUpdateDescription:
+      summary: Update description and accelerated fields for a Lake Dataset
+      description: Example request body for updating the description and accelerated
+        fields for an existing Lake Dataset.
+      value:
+        description: Web server access logs with accelerated fields.
+        acceleratedFields:
+          - host
+          - status
+          - source
     LakeDatasetCreateExamplesJsonDataset:
       summary: Create a Lake Dataset in JSON format
       description: Example request body for creating a Lake Dataset in JSON format
@@ -75502,22 +75538,24 @@ components:
         required body parameters.
       value:
         id: app_logs
-    LakeDatasetUpdateExamplesUpdateRetention:
-      summary: Update the retention period for a Lake Dataset
-      description: Example request body for updating the retention period for an
-        existing Lake Dataset.
+    LakeDatasetCreateExamplesBulkCreateDatasets:
+      summary: Bulk create Lake Datasets
+      description: "Example request body for creating multiple new Lake Datasets in a
+        single request.<br/><br/>Send an array of objects — one per Lake Dataset
+        to create, using the same fields as a single-item create (this example
+        shows one such element). The response is <code>{ items, errors }</code>:
+        <code>items</code> contains the created Lake Datasets, and
+        <code>errors</code> contains <code>{ id, reason }</code> entries for any
+        Lake Datasets that failed validation."
       value:
-        retentionPeriodInDays: 180
-    LakeDatasetUpdateExamplesUpdateDescription:
-      summary: Update description and accelerated fields for a Lake Dataset
-      description: Example request body for updating the description and accelerated
-        fields for an existing Lake Dataset.
-      value:
-        description: Web server access logs with accelerated fields.
+        id: web_access_logs
+        description: Web server access logs
+        storageLocationId: my-storage-location
+        format: json
+        retentionPeriodInDays: 90
         acceleratedFields:
           - host
           - status
-          - source
     CaptureNdjsonResponseExamplesCapturedEvent:
       summary: Return one captured event
       description: Example response for streaming one captured event as an NDJSON line
@@ -76339,6 +76377,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76399,6 +76440,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76477,6 +76521,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76580,6 +76627,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76670,6 +76720,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76751,6 +76804,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76831,6 +76887,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76930,6 +76989,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76993,6 +77055,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77067,6 +77132,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77136,6 +77204,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77191,6 +77262,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77266,6 +77340,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77318,6 +77395,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77397,6 +77477,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77537,6 +77620,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77604,6 +77690,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77749,6 +77838,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77807,6 +77899,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77859,6 +77954,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77931,6 +78029,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78013,6 +78114,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78095,6 +78199,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78339,6 +78446,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78398,6 +78508,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78624,6 +78737,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78685,6 +78801,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78746,6 +78865,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78818,6 +78940,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78895,6 +79020,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78952,6 +79080,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79015,6 +79146,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79280,6 +79414,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79340,6 +79477,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79584,6 +79724,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79648,6 +79791,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79710,6 +79856,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79764,6 +79913,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79824,6 +79976,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79885,6 +80040,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79959,6 +80117,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80053,6 +80214,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80130,6 +80294,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80224,6 +80391,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80303,6 +80473,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80363,6 +80536,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80442,6 +80618,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80503,6 +80682,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80560,6 +80742,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80620,6 +80805,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80673,6 +80861,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80746,6 +80937,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80879,6 +81073,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80930,6 +81127,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80990,6 +81190,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81127,6 +81330,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81212,6 +81418,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81280,6 +81489,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81362,6 +81574,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81429,6 +81644,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81484,6 +81702,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81547,6 +81768,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81612,6 +81836,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81669,6 +81896,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81743,6 +81973,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81823,6 +82056,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81885,6 +82121,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81991,6 +82230,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82055,6 +82297,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82113,6 +82358,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82222,10 +82470,17 @@ paths:
       x-cribl-availability: cloud
       x-cribl-api-context:
         - leader
-      summary: Create a Lake Dataset (Cribl.Cloud only)
-      description: Create a new Lake Dataset in the specified Lake (Cribl.Cloud only).
+      summary: Create Lake Datasets (Cribl.Cloud only)
+      description: Creates one or more Lake Datasets in the specified Lake in a single
+        transaction (Cribl.Cloud only). Send a single Lake Dataset object to
+        create just one, or an array to bulk-create multiple. When an array is
+        sent, the response is <code>{ items, errors }</code> —
+        <code>items</code> contains the successfully created Lake Datasets, and
+        <code>errors</code> contains an entry (<code>{ id, reason }</code>) for
+        each Lake Dataset that failed validation, so a per-item failure does not
+        fail the rest of the batch.
       responses:
-        "200":
+        "201":
           description: The created CriblLakeDataset object in a single-item list.
           content:
             application/json:
@@ -82240,6 +82495,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82263,13 +82521,15 @@ paths:
                 $ref: "#/components/examples/LakeDatasetCreateExamplesParquetDataset"
               LakeDatasetCreateExamplesMinimalDataset:
                 $ref: "#/components/examples/LakeDatasetCreateExamplesMinimalDataset"
+              LakeDatasetCreateExamplesBulkCreateDatasets:
+                $ref: "#/components/examples/LakeDatasetCreateExamplesBulkCreateDatasets"
       parameters:
         - name: lakeId
           in: path
           required: true
           schema:
             type: string
-          description: The <code>id</code> of the Lake to create the Lake Dataset in.
+          description: The <code>id</code> of the Lake to create the Lake Datasets in.
   /products/lake/lakes/{lakeId}/datasets/{id}:
     get:
       operationId: getCriblLakeDatasetByLakeIdAndId
@@ -82299,6 +82559,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82359,6 +82622,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82423,6 +82689,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82482,6 +82751,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82527,6 +82799,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82592,6 +82867,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82667,6 +82945,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82742,6 +83023,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82807,6 +83091,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83045,6 +83332,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83097,6 +83387,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83316,6 +83609,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83371,6 +83667,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83425,6 +83724,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83491,6 +83793,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83562,6 +83867,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83612,6 +83920,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83669,6 +83980,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83928,6 +84242,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83981,6 +84298,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84219,6 +84539,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84277,6 +84600,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84332,6 +84658,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84380,6 +84709,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84434,6 +84766,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84489,6 +84824,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84551,6 +84889,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84604,6 +84945,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84667,6 +85011,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84719,6 +85066,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84806,6 +85156,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84876,6 +85229,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84963,6 +85319,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85029,6 +85388,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85106,6 +85468,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85163,6 +85528,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85219,6 +85587,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85270,6 +85641,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85313,6 +85687,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85378,6 +85755,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85428,6 +85808,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85473,6 +85856,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85519,6 +85905,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85575,6 +85964,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85642,6 +86034,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -85690,6 +86085,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
