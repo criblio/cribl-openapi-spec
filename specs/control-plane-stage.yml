@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.19.1-alpha.1785452688584-cff488cf
+  version: 4.19.1-alpha.1785539179230-7a522238
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -16008,6 +16008,19 @@ components:
         - perms
         - user
       title: UserAccessControlList
+    TeamAccessControlList:
+      type: object
+      properties:
+        perms:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourcePolicy"
+        team:
+          type: string
+      required:
+        - perms
+        - team
+      title: TeamAccessControlList
     DatabaseConnectionAuthType:
       type: string
       enum:
@@ -27799,7 +27812,8 @@ components:
           minimum: 1
           title: Hash length
           description: Length of file header bytes to use in hash for unique file
-            identification
+            identification. Values above 16384 may cause issues with
+            re-ingesting files.
         metadata:
           type: array
           title: Fields
@@ -32887,6 +32901,21 @@ components:
           description: HTTP request inactivity timeout. Use 0 to disable.
           minimum: 0
           maximum: 2400
+        breakerRulesets:
+          type: array
+          title: Event Breaker rulesets
+          description: A list of event-breaking rulesets that will be applied, in order,
+            to the input data stream
+          items:
+            type: string
+        staleChannelFlushMs:
+          type: number
+          title: Event Breaker buffer timeout (ms)
+          description: How long (in milliseconds) the Event Breaker will wait for new data
+            to be sent to a specific channel before flushing the data stream
+            out, as is, to the Pipelines
+          minimum: 10
+          maximum: 43200000
         keepAliveTime:
           type: number
           title: Keep alive time (seconds)
@@ -60587,19 +60616,6 @@ components:
           description: List of items in this response.
           items:
             $ref: "#/components/schemas/TeamAccessControlList"
-    TeamAccessControlList:
-      type: object
-      properties:
-        perms:
-          type: array
-          items:
-            $ref: "#/components/schemas/ResourcePolicy"
-        team:
-          type: string
-      required:
-        - perms
-        - team
-      title: TeamAccessControlList
     ProductsBase:
       type: string
       enum:
@@ -80411,6 +80427,21 @@ paths:
         "409":
           description: Request conflicts with current resource state — duplicate group ID
             or duplicate group name.
+        "429":
+          description: Config helper cannot be booted due to insufficient memory or system
+            load; retry after the Retry-After interval.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
+          headers:
+            retry-after:
+              description: Number of seconds the client should wait before retrying the
+                request
+              schema:
+                type: integer
+                examples:
+                  - 60
         "500":
           description: Unexpected server error.
           content:
