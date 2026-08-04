@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.19.1-alpha.1784641738382-d73d2920
+  version: 4.19.1-alpha.1785836750097-c3be39f8
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -5385,6 +5385,11 @@ components:
           type: boolean
           title: Drop non-log events
           description: Drop events that are not OTLP log records.
+        preserveNativeAnyValue:
+          type: boolean
+          title: Preserve native AnyValue wrappers
+          description: 'Body and attribute values already in OTLP AnyValue form (e.g.
+            {string_value: "..."}) are preserved rather than being re-wrapped'
         batchOTLPLogs:
           type: boolean
           title: Batch OTLP logs
@@ -7532,83 +7537,6 @@ components:
         - name
         - uischema
         - version
-    FunctionConfSchemaSignalFilter:
-      type: object
-      title: Signal Filter Configuration
-      additionalProperties: false
-      properties:
-        signals:
-          type: array
-          title: Signal event types to filter
-          description: List of signal event types to filter
-          items:
-            type: string
-    FunctionSignalFilter:
-      type: object
-      properties:
-        __filename:
-          type: string
-          description: Path to the JavaScript file that implements the Function.
-        asyncTimeout:
-          type: number
-          description: Maximum time, in milliseconds, that the Function is allowed to run
-            asynchronously before timing out.
-        cribl_version:
-          type: string
-          description: Minimum Cribl version required by the Function, if applicable.
-        disabled:
-          type: boolean
-          description: If <code>true</code>, the Function is disabled and will not execute
-            in a Pipeline. Otherwise, <code>false</code>.
-        group:
-          type: string
-          description: Category group the Function belongs to.
-        handleSignals:
-          type: boolean
-          description: If <code>true</code>, the Function handles stream signals such as
-            <code>flush</code> and <code>close</code>. Otherwise,
-            <code>false</code>.
-        id:
-          type: string
-          enum:
-            - signal_filter
-          description: Identifier of the Function. Always <code>signal_filter</code>
-        loadTime:
-          type: number
-          description: Time the Function module was loaded, in milliseconds since the Unix
-            epoch.
-        modTime:
-          type: number
-          description: Time the Function module was last modified, in milliseconds since
-            the Unix epoch.
-        name:
-          type: string
-          description: Display name of the Function.
-        sync:
-          type: boolean
-          description: If <code>true</code>, the Function executes synchronously.
-            Otherwise, <code>false</code>.
-        uischema:
-          type: object
-          additionalProperties: true
-          description: UI Schema that controls how the Function's configuration form is
-            rendered.
-        version:
-          type: string
-          description: Version string of the Function.
-        schema:
-          type: object
-          additionalProperties: true
-          description: JSON Schema document that describes the Function configuration.
-      required:
-        - __filename
-        - group
-        - id
-        - loadTime
-        - modTime
-        - name
-        - uischema
-        - version
     FunctionConfSchemaSnmpTrapSerialize:
       type: object
       properties:
@@ -8616,7 +8544,6 @@ components:
         - $ref: "#/components/schemas/FunctionSerde"
         - $ref: "#/components/schemas/FunctionSerialize"
         - $ref: "#/components/schemas/FunctionSidlookup"
-        - $ref: "#/components/schemas/FunctionSignalFilter"
         - $ref: "#/components/schemas/FunctionSnmpTrapSerialize"
         - $ref: "#/components/schemas/FunctionSort"
         - $ref: "#/components/schemas/FunctionStore"
@@ -8689,7 +8616,6 @@ components:
           serde: "#/components/schemas/FunctionSerde"
           serialize: "#/components/schemas/FunctionSerialize"
           sidlookup: "#/components/schemas/FunctionSidlookup"
-          signal_filter: "#/components/schemas/FunctionSignalFilter"
           snmp_trap_serialize: "#/components/schemas/FunctionSnmpTrapSerialize"
           sort: "#/components/schemas/FunctionSort"
           store: "#/components/schemas/FunctionStore"
@@ -11235,47 +11161,6 @@ components:
           title: Group ID
           description: Unique identifier of the group that contains the Pipeline Function.
           type: string
-    PipelineFunctionSignalFilter:
-      type: object
-      required:
-        - id
-        - conf
-      additionalProperties: false
-      properties:
-        filter:
-          title: Filter
-          description: JavaScript expression that selects data to pass through the Function.
-          type: string
-        id:
-          title: ID
-          description: Identifier of the Function. Always <code>signal_filter</code>
-          type: string
-          enum:
-            - signal_filter
-          examples:
-            - signal_filter
-        description:
-          title: Description
-          description: Brief description of the Pipeline function.
-          type: string
-        disabled:
-          title: Disabled
-          description: If <code>true</code>, disable the Pipeline function so that events
-            are not passed through it. Otherwise, <code>false</code>.
-          type: boolean
-        final:
-          title: Final
-          description: If <code>true</code>, stop passing events to downstream Pipeline
-            Functions after the Function executes. Otherwise,
-            <code>false</code>.
-          type: boolean
-        conf:
-          $ref: "#/components/schemas/FunctionConfSchemaSignalFilter"
-          description: Configuration specific to the Pipeline Function.
-        groupId:
-          title: Group ID
-          description: Unique identifier of the group that contains the Pipeline Function.
-          type: string
     PipelineFunctionSnmpTrapSerialize:
       type: object
       required:
@@ -11776,7 +11661,6 @@ components:
         - $ref: "#/components/schemas/PipelineFunctionSerde"
         - $ref: "#/components/schemas/PipelineFunctionSerialize"
         - $ref: "#/components/schemas/PipelineFunctionSidlookup"
-        - $ref: "#/components/schemas/PipelineFunctionSignalFilter"
         - $ref: "#/components/schemas/PipelineFunctionSnmpTrapSerialize"
         - $ref: "#/components/schemas/PipelineFunctionSort"
         - $ref: "#/components/schemas/PipelineFunctionStore"
@@ -11849,7 +11733,6 @@ components:
           serde: "#/components/schemas/PipelineFunctionSerde"
           serialize: "#/components/schemas/PipelineFunctionSerialize"
           sidlookup: "#/components/schemas/PipelineFunctionSidlookup"
-          signal_filter: "#/components/schemas/PipelineFunctionSignalFilter"
           snmp_trap_serialize: "#/components/schemas/PipelineFunctionSnmpTrapSerialize"
           sort: "#/components/schemas/PipelineFunctionSort"
           store: "#/components/schemas/PipelineFunctionStore"
@@ -11997,6 +11880,7 @@ components:
           description: The service principal's client ID
         certificate:
           $ref: "#/components/schemas/CertificateTypeAzureBlobAuthTypeClientCert"
+          description: Certificate credentials for the service principal.
         azureCloud:
           type: string
           title: Azure Cloud
@@ -12181,6 +12065,7 @@ components:
             (group-scoped). Variable value overrides 'azureCloud' at runtime.
         certificate:
           $ref: "#/components/schemas/CertificateTypeAzureBlobAuthTypeClientCert"
+          description: Certificate credentials for the service principal.
         __template_containerName:
           type: string
           description: Binds 'containerName' to a variable for dynamic value resolution.
@@ -12216,6 +12101,7 @@ components:
               description: Collector type
             conf:
               $ref: "#/components/schemas/AzureBlobCollectorConf"
+              description: Configuration specific to the AzureBlob Collector.
       description: AzureBlob collector configuration
     CriblLakeCollectorConf:
       type: object
@@ -12248,6 +12134,7 @@ components:
               description: Collector type
             conf:
               $ref: "#/components/schemas/CriblLakeCollectorConf"
+              description: Configuration specific to the CriblLake Collector.
       description: CriblLake collector configuration
     DatabaseCollectorConf:
       type: object
@@ -12282,9 +12169,12 @@ components:
           description: Hidden Default Breakers
         __scheduling:
           type: object
+          description: Internal settings for scheduled execution of this Collector.
           properties:
             stateTracking:
               type: object
+              description: Settings for tracking collection state between consecutive
+                scheduled executions.
               properties:
                 enabled:
                   type: boolean
@@ -12308,6 +12198,7 @@ components:
               description: Collector type
             conf:
               $ref: "#/components/schemas/DatabaseCollectorConf"
+              description: Configuration specific to the Database Collector.
       description: Database collector configuration
     FilesystemCollectorConf:
       type: object
@@ -12379,6 +12270,7 @@ components:
               description: Collector type
             conf:
               $ref: "#/components/schemas/FilesystemCollectorConf"
+              description: Configuration specific to the Filesystem Collector.
       description: Filesystem collector configuration
     GoogleCloudStorageAuthTypeAuto:
       type: object
@@ -12557,6 +12449,7 @@ components:
               description: Collector type
             conf:
               $ref: "#/components/schemas/GoogleCloudStorageCollectorConf"
+              description: Configuration specific to the GoogleCloudStorage Collector.
       description: GoogleCloudStorage collector configuration
     HealthCheckCollectMethodGet:
       type: object
@@ -13209,6 +13102,7 @@ components:
       properties:
         discovery:
           type: object
+          description: Settings that control how the Collector discovers Collect tasks.
           required:
             - discoverType
           properties:
@@ -13373,6 +13267,7 @@ components:
             type: string
         retryRules:
           type: object
+          description: Settings that control how the Collector retries failed HTTP requests.
           required:
             - type
           properties:
@@ -13553,6 +13448,7 @@ components:
               description: Collector type
             conf:
               $ref: "#/components/schemas/HealthCheckCollectorConf"
+              description: Configuration specific to the HealthCheck Collector.
       description: HealthCheck collector configuration
     RestCollectMethodGet:
       type: object
@@ -14358,6 +14254,8 @@ components:
           description: Discover headers
         pagination:
           $ref: "#/components/schemas/PaginationTypeRestDiscoveryDiscoverTypeHttp"
+          description: Settings that control how the Collector paginates through Discover
+            results.
         discoverDataField:
           type: string
           title: Discover data field
@@ -14780,6 +14678,7 @@ components:
       properties:
         discovery:
           type: object
+          description: Settings that control how the Collector discovers Collect tasks.
           required:
             - discoverType
           properties:
@@ -14816,6 +14715,8 @@ components:
               description: Discover headers
             pagination:
               $ref: "#/components/schemas/PaginationTypeRestDiscoveryDiscoverTypeHttp"
+              description: Settings that control how the Collector paginates through Discover
+                results.
             discoverDataField:
               type: string
               title: Discover data field
@@ -14883,12 +14784,14 @@ components:
           x-speakeasy-unknown-values: allow
         collectRequestHeaders:
           title: Collect headers
+          description: Headers to send with each Collect request.
           type: array
           items:
             $ref: "#/components/schemas/CollectRequestParamConfRestCollectMethodGet"
-          description: Collect headers
         pagination:
           type: object
+          description: Settings that control how the Collector paginates through Collect
+            results.
           required:
             - type
           properties:
@@ -15061,6 +14964,7 @@ components:
             type: string
         retryRules:
           type: object
+          description: Settings that control how the Collector retries failed HTTP requests.
           required:
             - type
           properties:
@@ -15090,9 +14994,12 @@ components:
                 '@odata.deltaLink')
         __scheduling:
           type: object
+          description: Internal settings for scheduled execution of this Collector.
           properties:
             stateTracking:
               type: object
+              description: Settings for tracking collection state between consecutive
+                scheduled executions.
               properties:
                 enabled:
                   type: boolean
@@ -15318,6 +15225,7 @@ components:
               description: Collector type
             conf:
               $ref: "#/components/schemas/RestCollectorConf"
+              description: Configuration specific to the Rest Collector.
       description: Rest collector configuration
     S3PartitioningSchemeDdss:
       type: object
@@ -15585,6 +15493,7 @@ components:
               description: Collector type
             conf:
               $ref: "#/components/schemas/S3CollectorConf"
+              description: Configuration specific to the S3 Collector.
       description: S3 collector configuration
     ScriptCollectorConf:
       type: object
@@ -15642,6 +15551,7 @@ components:
               description: Collector type
             conf:
               $ref: "#/components/schemas/ScriptCollectorConf"
+              description: Configuration specific to the Script Collector.
       description: Script collector configuration
     SplunkAuthenticationNone:
       type: object
@@ -15933,6 +15843,7 @@ components:
             Splunk
         retryRules:
           type: object
+          description: Settings that control how the Collector retries failed HTTP requests.
           required:
             - type
           properties:
@@ -16048,6 +15959,7 @@ components:
               description: Collector type
             conf:
               $ref: "#/components/schemas/SplunkCollectorConf"
+              description: Configuration specific to the Splunk Collector.
       description: Splunk collector configuration
     Collector:
       description: Collector configuration
@@ -16087,6 +15999,7 @@ components:
         - notebooks
         - notebook-templates
         - apps
+      title: RbacResource
       x-speakeasy-unknown-values: allow
     ResourcePolicy:
       type: object
@@ -16110,6 +16023,7 @@ components:
         - gid
         - policy
         - type
+      title: ResourcePolicy
     UserAccessControlList:
       type: object
       properties:
@@ -16122,6 +16036,20 @@ components:
       required:
         - perms
         - user
+      title: UserAccessControlList
+    TeamAccessControlList:
+      type: object
+      properties:
+        perms:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourcePolicy"
+        team:
+          type: string
+      required:
+        - perms
+        - team
+      title: TeamAccessControlList
     DatabaseConnectionAuthType:
       type: string
       enum:
@@ -16129,6 +16057,7 @@ components:
         - connectionString
         - secret
         - secrets
+      title: DatabaseConnectionAuthType
       x-speakeasy-unknown-values: allow
     DatabaseConnectionType:
       type: string
@@ -16137,6 +16066,7 @@ components:
         - oracle
         - postgres
         - sqlserver
+      title: DatabaseConnectionType
       x-speakeasy-unknown-values: allow
     SecureVersion:
       type: string
@@ -16145,6 +16075,7 @@ components:
         - TLSv1.2
         - TLSv1.1
         - TLSv1
+      title: SecureVersion
       x-speakeasy-unknown-values: allow
     TLSClientParams:
       type: object
@@ -16184,6 +16115,7 @@ components:
       required:
         - disabled
       description: TLS client connection settings.
+      title: TLSClientParams
     DatabaseConnectionConfig:
       type: object
       properties:
@@ -16275,6 +16207,7 @@ components:
         - databaseType
         - description
         - id
+      title: DatabaseConnectionConfig
     DatabaseConnectionResponseEnvelope:
       type: object
       properties:
@@ -16292,6 +16225,7 @@ components:
       required:
         - count
         - items
+      title: DatabaseConnectionResponseEnvelope
     RestApiJsonError:
       type: object
       properties:
@@ -16313,6 +16247,7 @@ components:
         - status
       description: JSON body returned for many REST failures that use
         RESTEndpoint.sendError (and similar handlers).
+      title: RestApiJsonError
     CountedFunctionResponse:
       type: object
       required:
@@ -16352,6 +16287,8 @@ components:
           description: Total number of items available (present when limit is set)
     InputCollection:
       type: object
+      description: Input settings for a collection job, including event breaking,
+        routing, and preprocessing options.
       properties:
         id:
           type: string
@@ -16361,7 +16298,7 @@ components:
           type: string
           enum:
             - collection
-          description: Connector type identifier.
+          description: Resource type identifier.
         disabled:
           type: boolean
           title: Disabled
@@ -16426,6 +16363,8 @@ components:
           maximum: 43200000
         preprocess:
           $ref: "#/components/schemas/PreprocessType"
+          description: Optional preprocessing step that pipes collected data through an
+            external command before ingestion.
         throttleRatePerSec:
           type: string
           title: Throttling
@@ -16455,6 +16394,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: InputCollection
     InputKafka:
       type: object
       required:
@@ -16720,6 +16660,7 @@ components:
           description: Binds 'groupId' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'groupId' at runtime.
+      title: InputKafka
     InputMsk:
       type: object
       required:
@@ -17071,6 +17012,7 @@ components:
           description: Binds 'awsApiKey' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'awsApiKey' at runtime.
+      title: InputMsk
     InputHttp:
       type: object
       required:
@@ -17302,6 +17244,7 @@ components:
           description: Binds 'splunkHecAPI' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'splunkHecAPI' at runtime.
+      title: InputHttp
     InputSplunk:
       type: object
       required:
@@ -17529,6 +17472,7 @@ components:
           description: Binds 'compress' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'compress' at runtime.
+      title: InputSplunk
     InputSplunkSearch:
       type: object
       required:
@@ -17835,6 +17779,7 @@ components:
           description: Binds 'logLevel' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'logLevel' at runtime.
+      title: InputSplunkSearch
     InputSplunkHec:
       type: object
       required:
@@ -18135,6 +18080,7 @@ components:
           description: Binds 'splunkHecAPI' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'splunkHecAPI' at runtime.
+      title: InputSplunkHec
     InputAzureBlob:
       type: object
       required:
@@ -18318,7 +18264,7 @@ components:
           title: Client secret (text secret)
           description: Select or create a stored text secret
         certificate:
-          $ref: "#/components/schemas/CertificateTypeAzureBlobAuthTypeClientCert"
+          $ref: "#/components/schemas/CertificateType"
         __template_environment:
           type: string
           description: Binds 'environment' to a variable for dynamic value resolution. Set
@@ -18361,6 +18307,7 @@ components:
           description: Binds 'azureCloud' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'azureCloud' at runtime.
+      title: InputAzureBlob
     InputElastic:
       type: object
       required:
@@ -18675,6 +18622,7 @@ components:
           description: Binds 'authTokens' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'authTokens' at runtime.
+      title: InputElastic
     InputConfluentCloud:
       type: object
       required:
@@ -18939,6 +18887,7 @@ components:
           description: Binds 'groupId' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'groupId' at runtime.
+      title: InputConfluentCloud
     InputGrafana:
       type: object
       required:
@@ -19199,6 +19148,7 @@ components:
             - prometheusAPI
         - required:
             - lokiAPI
+      title: InputGrafana
     InputLoki:
       type: object
       required:
@@ -19408,6 +19358,7 @@ components:
           description: Binds 'lokiAPI' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'lokiAPI' at runtime.
+      title: InputLoki
     InputPrometheusRw:
       type: object
       required:
@@ -19622,6 +19573,7 @@ components:
           description: Binds 'username' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'username' at runtime.
+      title: InputPrometheusRw
     InputPrometheus:
       type: object
       required:
@@ -19990,6 +19942,7 @@ components:
           description: Binds 'password' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'password' at runtime.
+      title: InputPrometheus
     InputEdgePrometheus:
       type: object
       required:
@@ -20369,6 +20322,7 @@ components:
             resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
             prefixed ID (group-scoped). Variable value overrides
             'assumeRoleExternalId' at runtime.
+      title: InputEdgePrometheus
     InputOffice365Mgmt:
       type: object
       required:
@@ -20586,6 +20540,7 @@ components:
           description: Binds 'clientSecret' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'clientSecret' at runtime.
+      title: InputOffice365Mgmt
     InputOffice365Service:
       type: object
       required:
@@ -20782,6 +20737,7 @@ components:
           description: Binds 'clientSecret' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'clientSecret' at runtime.
+      title: InputOffice365Service
     InputOffice365MsgTrace:
       type: object
       required:
@@ -21018,6 +20974,7 @@ components:
           description: Binds 'planType' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'planType' at runtime.
+      title: InputOffice365MsgTrace
     InputMicrosoftGraph:
       type: object
       required:
@@ -21276,6 +21233,7 @@ components:
           description: Binds 'planType' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'planType' at runtime.
+      title: InputMicrosoftGraph
     InputEventhub:
       type: object
       required:
@@ -21542,6 +21500,7 @@ components:
           description: Binds 'groupId' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'groupId' at runtime.
+      title: InputEventhub
     InputEventhubAmqp:
       type: object
       required:
@@ -21766,7 +21725,7 @@ components:
                   title: Client secret (text secret)
                   description: Select or create a stored text secret
                 certificate:
-                  $ref: "#/components/schemas/CertificateTypeAzureBlobAuthTypeClientCert"
+                  $ref: "#/components/schemas/CertificateType"
                 __template_storageAccountName:
                   type: string
                   description: Binds 'storageAccountName' to a variable for dynamic value
@@ -21868,6 +21827,7 @@ components:
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: InputEventhubAmqp
     InputExec:
       type: object
       required:
@@ -21995,6 +21955,7 @@ components:
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: InputExec
     InputFirehose:
       type: object
       required:
@@ -22180,6 +22141,7 @@ components:
           description: Binds 'authTokens' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'authTokens' at runtime.
+      title: InputFirehose
     InputGooglePubsub:
       type: object
       required:
@@ -22349,6 +22311,7 @@ components:
           description: Binds 'region' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'region' at runtime.
+      title: InputGooglePubsub
     InputCribl:
       type: object
       properties:
@@ -22431,6 +22394,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: InputCribl
     InputCriblTcp:
       type: object
       required:
@@ -22580,6 +22544,7 @@ components:
           description: Binds 'port' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'port' at runtime.
+      title: InputCriblTcp
     InputCriblHttp:
       type: object
       required:
@@ -22761,6 +22726,7 @@ components:
           description: Binds 'port' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'port' at runtime.
+      title: InputCriblHttp
     InputCriblLakeHttp:
       type: object
       required:
@@ -23030,6 +22996,7 @@ components:
           description: Binds 'splunkHecAPI' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'splunkHecAPI' at runtime.
+      title: InputCriblLakeHttp
     InputTcpjson:
       type: object
       required:
@@ -23189,6 +23156,7 @@ components:
           description: Binds 'port' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'port' at runtime.
+      title: InputTcpjson
     InputSystemMetrics:
       type: object
       properties:
@@ -23538,6 +23506,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: InputSystemMetrics
     InputSystemState:
       type: object
       properties:
@@ -23771,6 +23740,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: InputSystemState
     InputKubeMetrics:
       type: object
       properties:
@@ -23909,6 +23879,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: InputKubeMetrics
     InputKubeLogs:
       type: object
       properties:
@@ -24055,6 +24026,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: InputKubeLogs
     InputKubeEvents:
       type: object
       properties:
@@ -24141,6 +24113,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: InputKubeEvents
     InputWindowsMetrics:
       type: object
       properties:
@@ -24420,6 +24393,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: InputWindowsMetrics
     InputCrowdstrike:
       type: object
       required:
@@ -24618,6 +24592,8 @@ components:
           description: Use the same settings for S3 and SQS
         preprocess:
           $ref: "#/components/schemas/PreprocessType"
+          description: Optional preprocessing step that pipes collected data through an
+            external command before ingestion.
         metadata:
           type: array
           title: Fields
@@ -24765,6 +24741,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'SQSAwsSecretKey' at
             runtime.
+      title: InputCrowdstrike
     InputDatadogAgent:
       type: object
       required:
@@ -25001,6 +24978,7 @@ components:
           description: Binds 'port' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'port' at runtime.
+      title: InputDatadogAgent
     InputDatagen:
       type: object
       required:
@@ -25103,6 +25081,7 @@ components:
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: InputDatagen
     InputHttpRaw:
       type: object
       required:
@@ -25297,6 +25276,51 @@ components:
             <token>). If empty, unauthorized access is permitted."
           items:
             $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+        accessControlAllowOrigin:
+          title: CORS allowed origins
+          type: array
+          description: "HTTP origins allowed to send CORS requests (example:
+            https://pivot.claude.ai). Supports wildcards. Leave empty to disable
+            CORS. Note: IP allowlist/denylist rules are applied before CORS."
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowHeaders:
+          title: CORS allowed headers
+          type: array
+          description: HTTP headers echoed in Access-Control-Allow-Headers on preflight.
+            Use "*" to allow all headers.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowMethods:
+          title: CORS allowed methods
+          type: array
+          description: HTTP methods echoed in Access-Control-Allow-Methods on preflight.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlExposeHeaders:
+          title: CORS exposed headers
+          type: array
+          description: Headers the browser is allowed to access from the response
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowCredentials:
+          type: boolean
+          title: CORS include credentials
+          description: Include credentials in cross-origin requests. Cannot be used with
+            wildcard origins.
+        accessControlMaxAge:
+          type: number
+          title: CORS max age (seconds)
+          description: How long browsers should cache the preflight response
+          minimum: 0
         description:
           type: string
           title: Description
@@ -25331,6 +25355,19 @@ components:
           description: Binds 'allowedPaths' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'allowedPaths' at runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
+      title: InputHttpRaw
     InputKinesis:
       type: object
       required:
@@ -25593,6 +25630,7 @@ components:
           description: Binds 'awsApiKey' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'awsApiKey' at runtime.
+      title: InputKinesis
     InputCriblmetrics:
       type: object
       properties:
@@ -25687,6 +25725,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: InputCriblmetrics
     InputMetrics:
       type: object
       required:
@@ -25827,6 +25866,7 @@ components:
           description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'tcpPort' at runtime.
+      title: InputMetrics
     InputS3:
       type: object
       required:
@@ -26023,6 +26063,8 @@ components:
           description: Use the same settings for S3 and SQS
         preprocess:
           $ref: "#/components/schemas/PreprocessType"
+          description: Optional preprocessing step that pipes collected data through an
+            external command before ingestion.
         metadata:
           type: array
           title: Fields
@@ -26187,6 +26229,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'SQSAwsSecretKey' at
             runtime.
+      title: InputS3
     InputS3Inventory:
       type: object
       required:
@@ -26385,6 +26428,8 @@ components:
           description: Use the same settings for S3 and SQS
         preprocess:
           $ref: "#/components/schemas/PreprocessType"
+          description: Optional preprocessing step that pipes collected data through an
+            external command before ingestion.
         metadata:
           type: array
           title: Fields
@@ -26559,6 +26604,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'SQSAwsSecretKey' at
             runtime.
+      title: InputS3Inventory
     InputSnmp:
       type: object
       required:
@@ -26767,6 +26813,7 @@ components:
           description: Binds 'port' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'port' at runtime.
+      title: InputSnmp
     InputOpenTelemetry:
       type: object
       required:
@@ -27081,6 +27128,7 @@ components:
           description: Binds 'otlpVersion' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'otlpVersion' at runtime.
+      title: InputOpenTelemetry
     InputModelDrivenTelemetry:
       type: object
       required:
@@ -27197,6 +27245,7 @@ components:
           description: Binds 'port' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'port' at runtime.
+      title: InputModelDrivenTelemetry
     InputSqs:
       type: object
       required:
@@ -27443,6 +27492,7 @@ components:
           description: Binds 'awsApiKey' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'awsApiKey' at runtime.
+      title: InputSqs
     InputSyslog:
       type: object
       required:
@@ -27669,6 +27719,7 @@ components:
         - required:
             - host
             - tcpPort
+      title: InputSyslog
     InputFile:
       type: object
       properties:
@@ -27790,7 +27841,8 @@ components:
           minimum: 1
           title: Hash length
           description: Length of file header bytes to use in hash for unique file
-            identification
+            identification. Values above 16384 may cause issues with
+            re-ingesting files.
         metadata:
           type: array
           title: Fields
@@ -27873,6 +27925,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: InputFile
     InputTcp:
       type: object
       required:
@@ -28019,6 +28072,8 @@ components:
             "myToken", "fields": { "field1": "value1", "field2": "value2" } }'
         preprocess:
           $ref: "#/components/schemas/PreprocessType"
+          description: Optional preprocessing step that pipes collected data through an
+            external command before ingestion.
         description:
           type: string
           title: Description
@@ -28056,6 +28111,7 @@ components:
           description: Binds 'port' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'port' at runtime.
+      title: InputTcp
     InputAppscope:
       type: object
       required:
@@ -28308,6 +28364,7 @@ components:
           description: Binds 'port' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'port' at runtime.
+      title: InputAppscope
     InputWef:
       type: object
       required:
@@ -28689,6 +28746,7 @@ components:
           description: Binds 'principal' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'principal' at runtime.
+      title: InputWef
     InputWinEventLogs:
       type: object
       required:
@@ -28845,6 +28903,7 @@ components:
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: InputWinEventLogs
     InputAppleUnifiedLogs:
       type: object
       required:
@@ -28947,6 +29006,7 @@ components:
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: InputAppleUnifiedLogs
     InputRawUdp:
       type: object
       required:
@@ -29080,6 +29140,7 @@ components:
           description: Binds 'port' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'port' at runtime.
+      title: InputRawUdp
     InputJournalFiles:
       type: object
       required:
@@ -29211,6 +29272,7 @@ components:
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: InputJournalFiles
     InputWiz:
       type: object
       required:
@@ -29472,6 +29534,7 @@ components:
           description: Binds 'clientId' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'clientId' at runtime.
+      title: InputWiz
     InputOpenai:
       type: object
       required:
@@ -29754,6 +29817,7 @@ components:
           description: Binds 'openaiProject' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'openaiProject' at runtime.
+      title: InputOpenai
     InputWizWebhook:
       type: object
       required:
@@ -29982,6 +30046,7 @@ components:
           description: Binds 'allowedPaths' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'allowedPaths' at runtime.
+      title: InputWizWebhook
     InputNetflow:
       type: object
       required:
@@ -30130,6 +30195,7 @@ components:
           description: Binds 'port' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'port' at runtime.
+      title: InputNetflow
     InputSecurityLake:
       type: object
       required:
@@ -30326,6 +30392,8 @@ components:
           description: Use the same settings for S3 and SQS
         preprocess:
           $ref: "#/components/schemas/PreprocessType"
+          description: Optional preprocessing step that pipes collected data through an
+            external command before ingestion.
         metadata:
           type: array
           title: Fields
@@ -30487,6 +30555,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'SQSAwsSecretKey' at
             runtime.
+      title: InputSecurityLake
     InputBedrockS3:
       type: object
       required:
@@ -30685,6 +30754,8 @@ components:
           description: Use the same settings for S3 and SQS
         preprocess:
           $ref: "#/components/schemas/PreprocessType"
+          description: Optional preprocessing step that pipes collected data through an
+            external command before ingestion.
         metadata:
           type: array
           title: Fields
@@ -30846,6 +30917,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'SQSAwsSecretKey' at
             runtime.
+      title: InputBedrockS3
     InputServicenowTable:
       type: object
       required:
@@ -31177,6 +31249,7 @@ components:
           description: Binds 'clientId' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'clientId' at runtime.
+      title: InputServicenowTable
     InputZscalerHec:
       type: object
       required:
@@ -31413,8 +31486,8 @@ components:
             (<prefix>.http.summary) request metrics
         hecAcks:
           type: boolean
-          description: Whether HEC acknowledgements are enabled. Always true for Zscaler
-            sources.
+          title: Zscaler HEC Acks
+          description: Whether to enable Zscaler HEC acknowledgements
         description:
           type: string
           title: Description
@@ -31462,6 +31535,7 @@ components:
             resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
             prefixed ID (group-scoped). Variable value overrides
             'accessControlAllowHeaders' at runtime.
+      title: InputZscalerHec
     InputCloudflareHec:
       type: object
       required:
@@ -31770,6 +31844,7 @@ components:
             resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
             prefixed ID (group-scoped). Variable value overrides
             'accessControlAllowHeaders' at runtime.
+      title: InputCloudflareHec
     InputSysdigHec:
       type: object
       required:
@@ -32012,6 +32087,7 @@ components:
             resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
             prefixed ID (group-scoped). Variable value overrides
             'accessControlAllowHeaders' at runtime.
+      title: InputSysdigHec
     InputUpwindHec:
       type: object
       required:
@@ -32253,6 +32329,7 @@ components:
             resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
             prefixed ID (group-scoped). Variable value overrides
             'accessControlAllowHeaders' at runtime.
+      title: InputUpwindHec
     InputOpenaiComplianceLogs:
       type: object
       required:
@@ -32486,6 +32563,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'organizationId' at
             runtime.
+      title: InputOpenaiComplianceLogs
     InputAnthropicCompliance:
       type: object
       required:
@@ -32852,6 +32930,21 @@ components:
           description: HTTP request inactivity timeout. Use 0 to disable.
           minimum: 0
           maximum: 2400
+        breakerRulesets:
+          type: array
+          title: Event Breaker rulesets
+          description: A list of event-breaking rulesets that will be applied, in order,
+            to the input data stream
+          items:
+            type: string
+        staleChannelFlushMs:
+          type: number
+          title: Event Breaker buffer timeout (ms)
+          description: How long (in milliseconds) the Event Breaker will wait for new data
+            to be sent to a specific channel before flushing the data stream
+            out, as is, to the Pipelines
+          minimum: 10
+          maximum: 43200000
         keepAliveTime:
           type: number
           title: Keep alive time (seconds)
@@ -32898,6 +32991,7 @@ components:
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: InputAnthropicCompliance
     InputOkta:
       type: object
       required:
@@ -33048,6 +33142,7 @@ components:
           description: Binds 'oktaDomain' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'oktaDomain' at runtime.
+      title: InputOkta
     Input:
       oneOf:
         - $ref: "#/components/schemas/InputCollection"
@@ -33195,6 +33290,7 @@ components:
           openai_compliance_logs: "#/components/schemas/InputOpenaiComplianceLogs"
           anthropic_compliance: "#/components/schemas/InputAnthropicCompliance"
           okta: "#/components/schemas/InputOkta"
+      title: Input
     CountedInputSplunkHec:
       type: object
       required:
@@ -33237,6 +33333,7 @@ components:
           description: The HEC token value to add to the Splunk HEC Source.
       required:
         - token
+      title: AddHecTokenRequest
     CountedString:
       type: object
       required:
@@ -33333,6 +33430,8 @@ components:
           $ref: "#/components/schemas/Collector"
         input:
           $ref: "#/components/schemas/InputTypeRunnableJobCollection"
+          description: Input settings for a collection job, including event breaking,
+            routing, and preprocessing options.
         run:
           type: object
           required:
@@ -33392,10 +33491,12 @@ components:
               description: Latest time to collect data for the selected timezone
             timestampTimezone:
               type: string
-              title: Range timezone
               description: Timezone to use for Earliest and Latest times
+              title: Range timezone
             timeWarning:
-              $ref: "#/components/schemas/BrokenEventProcessor"
+              $ref: "#/components/schemas/TimeWarningTypeRunnableJobCollectionScheduleRun"
+              description: Warning state used when the collection time range is unset for
+                time-sensitive Collectors.
             expression:
               type: string
               title: Filter
@@ -33464,6 +33565,9 @@ components:
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       type: object
+      description: Configuration for a saved collection job, including Collector,
+        input, and optional run settings.
+      title: RunnableJobCollection
     RunnableJobExecutor:
       required:
         - executor
@@ -33526,6 +33630,7 @@ components:
             type: string
         executor:
           $ref: "#/components/schemas/ExecutorTypeRunnableJobExecutor"
+          description: Executor configuration, including the executor type and its settings.
         run:
           type: object
           properties:
@@ -33554,6 +33659,9 @@ components:
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       type: object
+      description: Configuration for a saved executor job, including executor type and
+        run settings.
+      title: RunnableJobExecutor
     RunnableJobScheduledSearch:
       required:
         - savedQueryId
@@ -33624,11 +33732,15 @@ components:
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       type: object
+      description: Configuration for a saved scheduled search job, including the
+        search query to run.
+      title: RunnableJobScheduledSearch
     RunnableJob:
       oneOf:
         - $ref: "#/components/schemas/RunnableJobCollection"
         - $ref: "#/components/schemas/RunnableJobExecutor"
         - $ref: "#/components/schemas/RunnableJobScheduledSearch"
+      title: RunnableJob
     TaskErrorInfo:
       type: object
       additionalProperties: true
@@ -33647,6 +33759,7 @@ components:
       description: Serialized error object that describes why a job entered its
         current <code>state</code>. Includes <code>message</code> and may
         include a nested <code>reason</code> for wrapped errors.
+      title: TaskErrorInfo
     TaskErrorDetail:
       type: object
       properties:
@@ -33666,6 +33779,7 @@ components:
         - message
       description: Task error details. May include a nested <code>reason</code> for
         wrapped errors and additional properties from the original error.
+      title: TaskErrorDetail
     JobStatus:
       type: object
       properties:
@@ -33703,6 +33817,7 @@ components:
       required:
         - state
       description: Status of a job, including its current state and failure reason.
+      title: JobStatus
     JobInfo:
       type: object
       properties:
@@ -33738,6 +33853,7 @@ components:
         - status
       description: Detailed information about a job, including its configuration,
         status, and statistics.
+      title: JobInfo
     CountedInputResponse:
       type: object
       required:
@@ -33871,6 +33987,9 @@ components:
               type: array
               minItems: 1
               description: Template and target pairs for direct Notification delivery.
+              items:
+                $ref: "#/components/schemas/TemplateTargetPairConfFunctionConfSchemaNotificatio\
+                  nPolicies"
           required:
             - mode
             - templateTargetPairs
@@ -33882,10 +34001,14 @@ components:
               type: array
               maxItems: 0
               description: Template and target pairs for direct Notification delivery.
+              items:
+                $ref: "#/components/schemas/TemplateTargetPairConfFunctionConfSchemaNotificatio\
+                  nPolicies"
           required:
             - mode
         - properties:
             mode: {}
+      title: Notification
     StatusError:
       type: object
       properties:
@@ -33898,6 +34021,7 @@ components:
           description: Human-readable message that describes the error.
       required:
         - message
+      title: StatusError
     WorkerPQStatus:
       type: object
       properties:
@@ -33914,6 +34038,7 @@ components:
         - health
         - metrics
         - timestamp
+      title: WorkerPQStatus
     InputResponse:
       allOf:
         - $ref: "#/components/schemas/Input"
@@ -33929,10 +34054,12 @@ components:
               description: "Runtime status: health, metrics, and optional persistent-queue
                 info. Fields may be absent when data is unavailable."
       description: Source configuration with optional Notifications and runtime status.
+      title: InputResponse
     SourceType:
       type: array
       items:
         type: string
+      title: SourceType
     PaginatedInputResponse:
       type: object
       required:
@@ -33979,6 +34106,7 @@ components:
             tagging, categorization, or providing additional context. Each item
             in the array is an object with a <code>name</code> and a
             <code>value</code>.
+      title: UpdateHecTokenRequest
     OutputDefault:
       type: object
       required:
@@ -34028,6 +34156,7 @@ components:
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: OutputDefault
     OutputWebhook:
       type: object
       required:
@@ -34526,6 +34655,7 @@ components:
             - url
         - required:
             - urls
+      title: OutputWebhook
     OutputSentinel:
       type: object
       required:
@@ -34943,6 +35073,7 @@ components:
           description: Binds 'streamName' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamName' at runtime.
+      title: OutputSentinel
     OutputDevnull:
       type: object
       properties:
@@ -34984,6 +35115,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: OutputDevnull
     OutputSyslog:
       type: object
       properties:
@@ -35360,6 +35492,7 @@ components:
             runtime.
       required:
         - type
+      title: OutputSyslog
     OutputSplunk:
       type: object
       required:
@@ -35582,6 +35715,7 @@ components:
           description: Binds 'compress' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'compress' at runtime.
+      title: OutputSplunk
     OutputSplunkLb:
       type: object
       required:
@@ -35899,6 +36033,7 @@ components:
           description: Binds 'compress' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'compress' at runtime.
+      title: OutputSplunkLb
     OutputSplunkHec:
       type: object
       properties:
@@ -36203,6 +36338,7 @@ components:
             (group-scoped). Variable value overrides 'url' at runtime.
       required:
         - type
+      title: OutputSplunkHec
     OutputWizHec:
       type: object
       required:
@@ -36464,6 +36600,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputWizHec
     OutputTcpjson:
       type: object
       properties:
@@ -36693,6 +36830,7 @@ components:
             (group-scoped). Variable value overrides 'port' at runtime.
       required:
         - type
+      title: OutputTcpjson
     OutputWavefront:
       type: object
       required:
@@ -36923,6 +37061,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputWavefront
     OutputSignalfx:
       type: object
       required:
@@ -37155,6 +37294,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputSignalfx
     OutputFilesystem:
       type: object
       required:
@@ -37434,6 +37574,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputFilesystem
     OutputS3:
       type: object
       required:
@@ -37874,6 +38015,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputS3
     OutputAzureBlob:
       type: object
       required:
@@ -38189,7 +38331,7 @@ components:
           title: Client secret (text secret)
           description: Select or create a stored text secret
         certificate:
-          $ref: "#/components/schemas/CertificateTypeAzureBlobAuthTypeClientCert"
+          $ref: "#/components/schemas/CertificateType"
         __template_streamtags:
           type: string
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
@@ -38269,6 +38411,7 @@ components:
           description: Binds 'azureCloud' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'azureCloud' at runtime.
+      title: OutputAzureBlob
     OutputAzureDataExplorer:
       type: object
       required:
@@ -38900,6 +39043,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'fileNameSuffix' at
             runtime.
+      title: OutputAzureDataExplorer
     OutputAzureLogs:
       type: object
       required:
@@ -39171,6 +39315,7 @@ components:
           description: Binds 'workspaceKey' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'workspaceKey' at runtime.
+      title: OutputAzureLogs
     OutputKinesis:
       type: object
       required:
@@ -39438,6 +39583,7 @@ components:
           description: Binds 'awsApiKey' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'awsApiKey' at runtime.
+      title: OutputKinesis
     OutputHoneycomb:
       type: object
       required:
@@ -39666,6 +39812,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputHoneycomb
     OutputAzureEventhub:
       type: object
       required:
@@ -39914,6 +40061,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputAzureEventhub
     OutputGoogleBigquery:
       type: object
       required:
@@ -40121,6 +40269,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputGoogleBigquery
     OutputGoogleChronicle:
       type: object
       required:
@@ -40471,6 +40620,7 @@ components:
           description: Binds 'customerId' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'customerId' at runtime.
+      title: OutputGoogleChronicle
     OutputGoogleCloudStorage:
       type: object
       required:
@@ -40860,6 +41010,7 @@ components:
           description: Binds 'awsSecretKey' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'awsSecretKey' at runtime.
+      title: OutputGoogleCloudStorage
     OutputGoogleCloudLogging:
       type: object
       required:
@@ -41397,6 +41548,7 @@ components:
             resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
             prefixed ID (group-scoped). Variable value overrides
             'payloadExpression' at runtime.
+      title: OutputGoogleCloudLogging
     OutputGoogleCloudObservability:
       type: object
       required:
@@ -41468,6 +41620,11 @@ components:
             - Auto
             - Secret
           x-speakeasy-unknown-values: allow
+        preserveNativeAnyValue:
+          type: boolean
+          title: Preserve native AnyValue wrappers
+          description: 'Values already in OTLP AnyValue form (e.g. {string_value: "..."})
+            are serialized directly instead of being wrapped as key-value maps'
         metadata:
           type: array
           title: Metadata
@@ -41634,6 +41791,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputGoogleCloudObservability
     OutputGooglePubsub:
       type: object
       required:
@@ -41839,6 +41997,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputGooglePubsub
     OutputExabeam:
       type: object
       required:
@@ -42064,6 +42223,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputExabeam
     OutputKafka:
       type: object
       required:
@@ -42326,6 +42486,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputKafka
     OutputConfluentCloud:
       type: object
       required:
@@ -42592,6 +42753,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputConfluentCloud
     OutputMsk:
       type: object
       required:
@@ -42940,6 +43102,7 @@ components:
           description: Binds 'awsApiKey' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'awsApiKey' at runtime.
+      title: OutputMsk
     OutputElastic:
       type: object
       required:
@@ -43289,6 +43452,7 @@ components:
           description: Binds 'url' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'url' at runtime.
+      title: OutputElastic
     OutputElasticCloud:
       type: object
       required:
@@ -43539,6 +43703,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputElasticCloud
     OutputNewrelic:
       type: object
       properties:
@@ -43827,6 +43992,7 @@ components:
             runtime.
       required:
         - type
+      title: OutputNewrelic
     OutputNewrelicEvents:
       type: object
       properties:
@@ -44088,6 +44254,7 @@ components:
         - type
         - accountId
         - eventType
+      title: OutputNewrelicEvents
     OutputInfluxdb:
       type: object
       required:
@@ -44407,6 +44574,7 @@ components:
           description: Binds 'bucket' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'bucket' at runtime.
+      title: OutputInfluxdb
     OutputCloudwatch:
       type: object
       required:
@@ -44659,6 +44827,7 @@ components:
           description: Binds 'awsApiKey' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'awsApiKey' at runtime.
+      title: OutputCloudwatch
     OutputMinio:
       type: object
       required:
@@ -45055,6 +45224,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputMinio
     OutputStatsd:
       type: object
       required:
@@ -45232,6 +45402,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputStatsd
     OutputStatsdExt:
       type: object
       required:
@@ -45409,6 +45580,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputStatsdExt
     OutputGraphite:
       type: object
       required:
@@ -45586,6 +45758,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputGraphite
     OutputRouter:
       type: object
       required:
@@ -45660,6 +45833,7 @@ components:
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: OutputRouter
     OutputSns:
       type: object
       required:
@@ -45907,6 +46081,7 @@ components:
           description: Binds 'awsApiKey' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'awsApiKey' at runtime.
+      title: OutputSns
     OutputSqs:
       type: object
       required:
@@ -46200,6 +46375,7 @@ components:
           description: Binds 'awsApiKey' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'awsApiKey' at runtime.
+      title: OutputSqs
     OutputSnmp:
       type: object
       required:
@@ -46296,6 +46472,7 @@ components:
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: OutputSnmp
     OutputSumoLogic:
       type: object
       required:
@@ -46549,6 +46726,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputSumoLogic
     OutputDatadog:
       type: object
       properties:
@@ -46889,6 +47067,7 @@ components:
             runtime.
       required:
         - type
+      title: OutputDatadog
     OutputGrafanaCloud:
       type: object
       properties:
@@ -47176,6 +47355,7 @@ components:
             - prometheusUrl
       required:
         - type
+      title: OutputGrafanaCloud
     OutputLoki:
       type: object
       required:
@@ -47466,6 +47646,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputLoki
     OutputAmazonManagedPrometheus:
       type: object
       required:
@@ -47773,6 +47954,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputAmazonManagedPrometheus
     OutputPrometheus:
       type: object
       required:
@@ -48113,6 +48295,7 @@ components:
             resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
             prefixed ID (group-scoped). Variable value overrides
             'assumeRoleExternalId' at runtime.
+      title: OutputPrometheus
     OutputRing:
       type: object
       properties:
@@ -48199,6 +48382,7 @@ components:
             runtime.
       required:
         - type
+      title: OutputRing
     OutputOpenTelemetry:
       type: object
       required:
@@ -48259,6 +48443,11 @@ components:
             - 0.10.0
             - 1.3.1
           x-speakeasy-unknown-values: allow
+        preserveNativeAnyValue:
+          type: boolean
+          title: Preserve native AnyValue wrappers
+          description: 'Values already in OTLP AnyValue form (e.g. {string_value: "..."})
+            are serialized directly instead of being wrapped as key-value maps'
         compress:
           $ref: "#/components/schemas/CompressionOptionsDeflateGzip"
           description: Type of compression to apply to messages sent to the OpenTelemetry
@@ -48583,6 +48772,7 @@ components:
           description: Binds 'loginUrl' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'loginUrl' at runtime.
+      title: OutputOpenTelemetry
     OutputServiceNow:
       type: object
       required:
@@ -48650,6 +48840,11 @@ components:
         protocol:
           $ref: "#/components/schemas/ProtocolOptions"
           description: Select a transport option for OpenTelemetry
+        preserveNativeAnyValue:
+          type: boolean
+          title: Preserve native AnyValue wrappers
+          description: 'Values already in OTLP AnyValue form (e.g. {string_value: "..."})
+            are serialized directly instead of being wrapped as key-value maps'
         compress:
           $ref: "#/components/schemas/CompressionOptionsDeflateGzip"
           description: Type of compression to apply to messages sent to the OpenTelemetry
@@ -48873,6 +49068,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputServiceNow
     OutputDataset:
       type: object
       properties:
@@ -49172,6 +49368,7 @@ components:
             (group-scoped). Variable value overrides 'customUrl' at runtime.
       required:
         - type
+      title: OutputDataset
     OutputCriblTcp:
       type: object
       properties:
@@ -49398,6 +49595,7 @@ components:
             (group-scoped). Variable value overrides 'port' at runtime.
       required:
         - type
+      title: OutputCriblTcp
     OutputCriblHttp:
       type: object
       properties:
@@ -49684,6 +49882,7 @@ components:
             (group-scoped). Variable value overrides 'url' at runtime.
       required:
         - type
+      title: OutputCriblHttp
     OutputCriblSearchEngine:
       type: object
       properties:
@@ -49970,6 +50169,7 @@ components:
             (group-scoped). Variable value overrides 'url' at runtime.
       required:
         - type
+      title: OutputCriblSearchEngine
     OutputHumioHec:
       type: object
       required:
@@ -50213,6 +50413,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputHumioHec
     OutputCrowdstrikeNextGenSiem:
       type: object
       required:
@@ -50456,6 +50657,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputCrowdstrikeNextGenSiem
     OutputDlS3:
       type: object
       required:
@@ -50900,6 +51102,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputDlS3
     OutputSecurityLake:
       type: object
       required:
@@ -51308,6 +51511,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputSecurityLake
     OutputCriblLake:
       type: object
       properties:
@@ -51592,6 +51796,7 @@ components:
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
       required:
         - type
+      title: OutputCriblLake
     OutputDiskSpool:
       type: object
       properties:
@@ -51663,6 +51868,7 @@ components:
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       required:
         - type
+      title: OutputDiskSpool
     OutputClickHouse:
       type: object
       required:
@@ -51982,6 +52188,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputClickHouse
     OutputCustomerMetricsStorage:
       type: object
       required:
@@ -52301,6 +52508,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputCustomerMetricsStorage
     OutputLocalSearchStorage:
       type: object
       required:
@@ -52667,6 +52875,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputLocalSearchStorage
     OutputXsiam:
       type: object
       properties:
@@ -52956,6 +53165,7 @@ components:
             (group-scoped). Variable value overrides 'url' at runtime.
       required:
         - type
+      title: OutputXsiam
     OutputNetflow:
       type: object
       required:
@@ -53053,6 +53263,7 @@ components:
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: OutputNetflow
     OutputDynatraceHttp:
       type: object
       required:
@@ -53361,6 +53572,7 @@ components:
           description: Binds 'url' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'url' at runtime.
+      title: OutputDynatraceHttp
     OutputDynatraceOtlp:
       type: object
       required:
@@ -53421,6 +53633,11 @@ components:
           $ref: "#/components/schemas/OtlpVersionOptions"
           description: The version of OTLP Protobuf definitions to use when structuring
             data to send
+        preserveNativeAnyValue:
+          type: boolean
+          title: Preserve native AnyValue wrappers
+          description: 'Values already in OTLP AnyValue form (e.g. {string_value: "..."})
+            are serialized directly instead of being wrapped as key-value maps'
         compress:
           $ref: "#/components/schemas/CompressionOptionsDeflateGzip"
           description: Type of compression to apply to messages sent to the OpenTelemetry
@@ -53668,6 +53885,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputDynatraceOtlp
     OutputSentinelOneAiSiem:
       type: object
       required:
@@ -54011,6 +54229,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputSentinelOneAiSiem
     OutputChronicle:
       type: object
       required:
@@ -54353,6 +54572,7 @@ components:
           description: Binds 'endpoint' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'endpoint' at runtime.
+      title: OutputChronicle
     OutputDatabricks:
       type: object
       required:
@@ -54679,6 +54899,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputDatabricks
     OutputSnowflakeStreaming:
       type: object
       required:
@@ -54982,6 +55203,7 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
+      title: OutputSnowflakeStreaming
     OutputMicrosoftFabric:
       type: object
       required:
@@ -55302,6 +55524,7 @@ components:
             resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
             prefixed ID (group-scoped). Variable value overrides
             'bootstrap_server' at runtime.
+      title: OutputMicrosoftFabric
     OutputCloudflareR2:
       type: object
       required:
@@ -55671,6 +55894,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputCloudflareR2
     OutputNutanixObjects:
       type: object
       required:
@@ -56029,6 +56253,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputNutanixObjects
     OutputStorjS3:
       type: object
       required:
@@ -56377,6 +56602,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputStorjS3
     OutputAlphasocS3:
       type: object
       required:
@@ -56719,6 +56945,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputAlphasocS3
     OutputDellS3:
       type: object
       required:
@@ -57085,6 +57312,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputDellS3
     OutputCloudianS3:
       type: object
       required:
@@ -57476,6 +57704,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputCloudianS3
     OutputScalityS3:
       type: object
       required:
@@ -57833,6 +58062,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputScalityS3
     OutputAlibabaCloudS3:
       type: object
       required:
@@ -58234,6 +58464,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputAlibabaCloudS3
     OutputIbmCloudS3:
       type: object
       required:
@@ -58583,6 +58814,7 @@ components:
           description: Binds 'parquetSchema' to a variable for dynamic value resolution.
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputIbmCloudS3
     Output:
       oneOf:
         - $ref: "#/components/schemas/OutputDefault"
@@ -58756,6 +58988,7 @@ components:
           scality_s3: "#/components/schemas/OutputScalityS3"
           alibaba_cloud_s3: "#/components/schemas/OutputAlibabaCloudS3"
           ibm_cloud_s3: "#/components/schemas/OutputIbmCloudS3"
+      title: Output
     CountedOutputResponse:
       type: object
       required:
@@ -58785,6 +59018,7 @@ components:
               description: "Runtime status: health, metrics, and optional persistent-queue
                 info. Fields may be absent when data is unavailable."
       description: Destination configuration with optional Notifications and runtime status.
+      title: OutputResponse
     DestinationType:
       type: string
       enum:
@@ -58872,6 +59106,7 @@ components:
         - alibaba_cloud_s3
         - snowflake_streaming
         - ibm_cloud_s3
+      title: DestinationType
       x-speakeasy-unknown-values: allow
     PaginatedOutputResponse:
       type: object
@@ -58922,6 +59157,7 @@ components:
       required:
         - events
       description: Sample events from a Destination.
+      title: OutputSamplesResponse
     CountedOutputTestResponse:
       type: object
       required:
@@ -58960,6 +59196,7 @@ components:
       required:
         - outputId
         - success
+      title: OutputTestResponse
     OutputTestRequest:
       type: object
       properties:
@@ -58972,6 +59209,7 @@ components:
       required:
         - events
       description: Request body for testing a Destination by sending sample events.
+      title: OutputTestRequest
     CountedPipeline:
       type: object
       required:
@@ -58987,7 +59225,7 @@ components:
           items:
             $ref: "#/components/schemas/Pipeline"
     Pipeline:
-      title: Pipeline Settings
+      title: Pipeline
       type: object
       required:
         - conf
@@ -59113,16 +59351,19 @@ components:
         - comment
         - id
         - index
+      title: RouteComment
     RouteCloneConf:
       type: object
       additionalProperties:
         type: string
       description: Key-value pairs to set or overwrite in the cloned event.
+      title: RouteCloneConf
     TargetContext:
       type: string
       enum:
         - group
         - pack
+      title: TargetContext
       x-speakeasy-unknown-values: allow
     RouteConf:
       type: object
@@ -59193,6 +59434,7 @@ components:
         - id
         - name
         - pipeline
+      title: RouteConf
     Routes:
       type: object
       properties:
@@ -59219,6 +59461,7 @@ components:
       required:
         - id
         - routes
+      title: Routes
     RoutesInput:
       type: object
       properties:
@@ -59245,10 +59488,12 @@ components:
       required:
         - id
         - routes
+      title: RoutesInput
     RouteDefinitions:
       type: array
       items:
         $ref: "#/components/schemas/RouteConfInput"
+      title: RouteDefinitions
     CountedInputStatus:
       type: object
       required:
@@ -59278,6 +59523,7 @@ components:
         Yellow:
           type: integer
           description: Number of Worker Processes reporting a degraded (Yellow) status.
+      title: HealthCountType
     AggregatedPQStatus:
       type: object
       properties:
@@ -59310,6 +59556,7 @@ components:
         - health
         - healthCounts
         - timestamp
+      title: AggregatedPQStatus
     AggregatedInputOutputStatusBody:
       type: object
       properties:
@@ -59344,6 +59591,7 @@ components:
         - health
         - healthCounts
         - timestamp
+      title: AggregatedInputOutputStatusBody
     InputStatus:
       type: object
       properties:
@@ -59361,6 +59609,7 @@ components:
         - id
         - status
       description: Status of the Source, aggregated across all Worker Processes.
+      title: InputStatus
     PaginatedInputStatus:
       type: object
       required:
@@ -59415,6 +59664,7 @@ components:
         - id
         - status
       description: Status of a Destination, aggregated across all Worker Processes.
+      title: OutputStatus
     PaginatedOutputStatus:
       type: object
       required:
@@ -59465,6 +59715,7 @@ components:
           items:
             $ref: "#/components/schemas/Notification"
           description: Notification targets.
+      title: SavedJobResponseEnrichedFields
     SavedJobResponseCollection:
       required:
         - collector
@@ -59533,12 +59784,17 @@ components:
           $ref: "#/components/schemas/Collector"
         input:
           $ref: "#/components/schemas/InputTypeRunnableJobCollection"
+          description: Input settings for a collection job, including event breaking,
+            routing, and preprocessing options.
         __template_streamtags:
           type: string
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       type: object
+      description: Configuration for a saved collection job, including Collector,
+        input, and optional run settings.
+      title: SavedJobResponseCollection
     SavedJobResponseExecutor:
       required:
         - executor
@@ -59601,12 +59857,16 @@ components:
             type: string
         executor:
           $ref: "#/components/schemas/ExecutorTypeRunnableJobExecutor"
+          description: Executor configuration, including the executor type and its settings.
         __template_streamtags:
           type: string
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       type: object
+      description: Configuration for a saved executor job, including executor type and
+        run settings.
+      title: SavedJobResponseExecutor
     SavedJobResponseScheduledSearch:
       required:
         - savedQueryId
@@ -59677,6 +59937,9 @@ components:
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       type: object
+      description: Configuration for a saved scheduled search job, including the
+        search query to run.
+      title: SavedJobResponseScheduledSearch
     SavedJobResponse:
       allOf:
         - $ref: "#/components/schemas/SavedJobResponseEnrichedFields"
@@ -59684,6 +59947,7 @@ components:
             - $ref: "#/components/schemas/SavedJobResponseCollection"
             - $ref: "#/components/schemas/SavedJobResponseExecutor"
             - $ref: "#/components/schemas/SavedJobResponseScheduledSearch"
+      title: SavedJobResponse
     SavedJobCollection:
       required:
         - collector
@@ -59752,12 +60016,17 @@ components:
           $ref: "#/components/schemas/Collector"
         input:
           $ref: "#/components/schemas/InputTypeRunnableJobCollection"
+          description: Input settings for a collection job, including event breaking,
+            routing, and preprocessing options.
         __template_streamtags:
           type: string
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       type: object
+      description: Configuration for a saved collection job, including Collector,
+        input, and optional run settings.
+      title: SavedJobCollection
     SavedJobExecutor:
       required:
         - executor
@@ -59820,12 +60089,16 @@ components:
             type: string
         executor:
           $ref: "#/components/schemas/ExecutorTypeRunnableJobExecutor"
+          description: Executor configuration, including the executor type and its settings.
         __template_streamtags:
           type: string
           description: Binds 'streamtags' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       type: object
+      description: Configuration for a saved executor job, including executor type and
+        run settings.
+      title: SavedJobExecutor
     SavedJobScheduledSearch:
       required:
         - savedQueryId
@@ -59896,11 +60169,15 @@ components:
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       type: object
+      description: Configuration for a saved scheduled search job, including the
+        search query to run.
+      title: SavedJobScheduledSearch
     SavedJob:
       oneOf:
         - $ref: "#/components/schemas/SavedJobCollection"
         - $ref: "#/components/schemas/SavedJobExecutor"
         - $ref: "#/components/schemas/SavedJobScheduledSearch"
+      title: SavedJob
     CollectorType:
       type: string
       enum:
@@ -59914,6 +60191,7 @@ components:
         - s3
         - script
         - splunk
+      title: CollectorType
       x-speakeasy-unknown-values: allow
     PaginatedSavedJobResponse:
       type: object
@@ -59946,6 +60224,7 @@ components:
         - aws
         - azure
         - null
+      title: CloudProvider
       x-speakeasy-unknown-values: allow
     ConfigGroupCloud:
       type: object
@@ -59959,6 +60238,7 @@ components:
       required:
         - provider
         - region
+      title: ConfigGroupCloud
     Commit:
       type: object
       properties:
@@ -59985,6 +60265,7 @@ components:
         - hash
         - message
         - short
+      title: Commit
     ConfigGroupLookups:
       type: object
       properties:
@@ -60012,6 +60293,7 @@ components:
       required:
         - context
         - lookups
+      title: ConfigGroupLookups
     ConfigGroup:
       type: object
       properties:
@@ -60156,6 +60438,7 @@ components:
         - id
       description: Configuration settings and dynamic status for a Worker Group,
         Outpost Group, or Edge Fleet.
+      title: ConfigGroup
     PaginatedConfigGroup:
       type: object
       required:
@@ -60283,6 +60566,7 @@ components:
         - id
       description: Request body for creating a new Worker Group, Outpost Group, or
         Edge Fleet. Do not include automatically populated fields.
+      title: GroupCreateRequest
     DeployRequestLookups:
       type: object
       properties:
@@ -60308,6 +60592,7 @@ components:
       required:
         - context
         - lookups
+      title: DeployRequestLookups
     DeployRequest:
       type: object
       properties:
@@ -60323,6 +60608,7 @@ components:
             Fleet.
       required:
         - version
+      title: DeployRequest
     CountedUserAccessControlList:
       type: object
       required:
@@ -60343,6 +60629,7 @@ components:
         - stream
         - edge
         - outpost
+      title: ProductsCore
       x-speakeasy-unknown-values: allow
     CountedTeamAccessControlList:
       type: object
@@ -60358,23 +60645,12 @@ components:
           description: List of items in this response.
           items:
             $ref: "#/components/schemas/TeamAccessControlList"
-    TeamAccessControlList:
-      type: object
-      properties:
-        perms:
-          type: array
-          items:
-            $ref: "#/components/schemas/ResourcePolicy"
-        team:
-          type: string
-      required:
-        - perms
-        - team
     ProductsBase:
       type: string
       enum:
         - stream
         - edge
+      title: ProductsBase
       x-speakeasy-unknown-values: allow
     EmptyObject:
       type: object
@@ -60403,6 +60679,7 @@ components:
       enum:
         - cache
         - zeroPoint
+      title: LakehouseConnectionType
       x-speakeasy-unknown-values: allow
     CacheConnection:
       type: object
@@ -60435,6 +60712,7 @@ components:
         - cacheRef
         - createdAt
         - retentionInDays
+      title: CacheConnection
     LakeDatasetMetrics:
       type: object
       properties:
@@ -60448,6 +60726,7 @@ components:
       required:
         - currentSizeBytes
         - metricsDate
+      title: LakeDatasetMetrics
     DatasetMetadataRunInfo:
       type: object
       properties:
@@ -60467,6 +60746,7 @@ components:
           type: integer
           description: Number of objects on the acceleration manifest after the scan
             completed.
+      title: DatasetMetadataRunInfo
     DatasetMetadata:
       type: object
       properties:
@@ -60502,11 +60782,13 @@ components:
         - enableAcceleration
         - fieldList
         - scanMode
+      title: DatasetMetadata
     PathFilterDataFormat:
       type: string
       enum:
         - ndjson
         - parquet
+      title: PathFilterDataFormat
       x-speakeasy-unknown-values: allow
     ObjectStorageFilter:
       type: object
@@ -60529,11 +60811,13 @@ components:
       required:
         - dataTypeId
         - filter
+      title: ObjectStorageFilter
     SearchVersion:
       type: string
       enum:
         - v1
         - v2
+      title: SearchVersion
       x-speakeasy-unknown-values: allow
     LakeDatasetSearchConfig:
       type: object
@@ -60564,6 +60848,7 @@ components:
         tags:
           type: string
           description: Comma-separated tags for the Dataset search configuration.
+      title: LakeDatasetSearchConfig
     CriblLakeDataset:
       type: object
       properties:
@@ -60618,6 +60903,7 @@ components:
           description: Name of the ClickHouse view for the Dataset on the Lakehouse.
       required:
         - id
+      title: CriblLakeDataset
     PaginatedCriblLakeDataset:
       type: object
       required:
@@ -60694,9 +60980,7 @@ components:
         viewName:
           type: string
           description: Name of the ClickHouse view for the Dataset on the Lakehouse.
-    BrokenEventProcessor:
-      type: object
-      properties: {}
+      title: CriblLakeDatasetUpdate
     AuthToken:
       type: object
       properties:
@@ -60707,6 +60991,7 @@ components:
       required:
         - forcePasswordChange
         - token
+      title: AuthToken
     LoginInfo:
       type: object
       properties:
@@ -60717,6 +61002,7 @@ components:
       required:
         - password
         - username
+      title: LoginInfo
     CapturedEvent:
       type: object
       additionalProperties: true
@@ -60727,6 +61013,7 @@ components:
         _time:
           type: number
           description: Timestamp of the event.
+      title: CapturedEvent
     CaptureLevel:
       type: integer
       enum:
@@ -60748,6 +61035,7 @@ components:
         - BeforeRoutes
         - BeforePostProcessingPipeline
         - BeforeDestination
+      title: CaptureLevel
       x-speakeasy-unknown-values: allow
     CaptureParamsReq:
       type: object
@@ -60788,6 +61076,7 @@ components:
           description: Maximum number of Workers that can capture initially. A value of
             <code>0</code> means unlimited (all available Workers can capture).
             If not provided, the default is 50.
+      title: CaptureParamsReq
     CountedNumber:
       type: object
       required:
@@ -60822,12 +61111,14 @@ components:
         - tcp
         - tls
         - http2
+      title: ConnectionProtocol
       x-speakeasy-unknown-values: allow
     ApiScheme:
       type: string
       enum:
         - http
         - https
+      title: ApiScheme
       x-speakeasy-unknown-values: allow
     TagsMapHeartbeatMetadata:
       type: object
@@ -60835,6 +61126,7 @@ components:
         type: string
       description: String-keyed tag map. Each property name is a tag key and the
         corresponding value is the tag's string value.
+      title: TagsMapHeartbeatMetadata
     AwsTypeHeartbeatMetadata:
       type: object
       properties:
@@ -60863,6 +61155,7 @@ components:
         - region
         - type
         - zone
+      title: AwsTypeHeartbeatMetadata
     AzureTypeHeartbeatMetadata:
       type: object
       properties:
@@ -60902,6 +61195,7 @@ components:
           description: Azure availability zone.
       required:
         - enabled
+      title: AzureTypeHeartbeatMetadata
     LookupVersions:
       type: object
       additionalProperties:
@@ -60909,6 +61203,7 @@ components:
         additionalProperties:
           type: string
       description: Objects that map Lookup files to deployment versions.
+      title: LookupVersions
     HBLeaderInfo:
       type: object
       properties:
@@ -60929,6 +61224,7 @@ components:
         - port
       description: Connection parameters for the Leader Node, as reported in a Worker
         heartbeat.
+      title: HBLeaderInfo
     HBCriblInfo:
       type: object
       properties:
@@ -61035,6 +61331,7 @@ components:
         - group
         - guid
         - startTime
+      title: HBCriblInfo
     HostOsTypeHeartbeatMetadata:
       type: object
       properties:
@@ -61058,6 +61355,7 @@ components:
         - enabled
         - id
         - version
+      title: HostOsTypeHeartbeatMetadata
     OwnerTypeHeartbeatMetadataKube:
       type: object
       properties:
@@ -61070,6 +61368,7 @@ components:
       required:
         - kind
         - name
+      title: OwnerTypeHeartbeatMetadataKube
     KubeTypeHeartbeatMetadata:
       type: object
       properties:
@@ -61098,6 +61397,7 @@ components:
         - node
         - pod
         - source
+      title: KubeTypeHeartbeatMetadata
     OsTypeHeartbeatMetadata:
       type: object
       properties:
@@ -61140,6 +61440,7 @@ components:
         os:
           $ref: "#/components/schemas/OsTypeHeartbeatMetadata"
           description: Operating system metadata collected from the node.
+      title: HeartbeatMetadata
     NodeOsInfo:
       type: object
       properties:
@@ -61168,6 +61469,7 @@ components:
         - host
       description: Node information for the Outpost through which a Worker connects to
         the Leader.
+      title: OutpostNodeInfo
     NodeProvidedInfo:
       type: object
       properties:
@@ -61266,12 +61568,14 @@ components:
         - platform
         - release
         - totalmem
+      title: NodeProvidedInfo
     NodeActiveUpgradeStatus:
       type: integer
       enum:
         - 0
         - 1
         - 2
+      title: NodeActiveUpgradeStatus
       x-speakeasy-unknown-values: allow
       x-speakeasy-enums:
         - Pending
@@ -61282,6 +61586,7 @@ components:
       enum:
         - 0
         - 1
+      title: NodeFailedUpgradeStatus
       x-speakeasy-unknown-values: allow
       x-speakeasy-enums:
         - UpgradeErrorOnNode
@@ -61293,6 +61598,7 @@ components:
         - 1
         - 2
         - 3
+      title: NodeSkippedUpgradeStatus
       x-speakeasy-unknown-values: allow
       x-speakeasy-enums:
         - DownloadError
@@ -61306,6 +61612,7 @@ components:
         - 1
         - 2
         - 3
+      title: NodeUpgradeState
       x-speakeasy-unknown-values: allow
       x-speakeasy-enums:
         - Active
@@ -61337,6 +61644,7 @@ components:
       required:
         - state
         - timestamp
+      title: NodeUpgradeStatus
     MasterWorkerProcesses:
       type: object
       properties:
@@ -61345,6 +61653,7 @@ components:
           description: Number of Worker Processes represented by the node entry.
       required:
         - count
+      title: MasterWorkerProcesses
     MasterWorkerEntry:
       type: object
       properties:
@@ -61422,12 +61731,14 @@ components:
         - workerProcesses
       description: Worker or Edge Node entry returned by Distributed Management worker
         and outpost endpoints.
+      title: MasterWorkerEntry
     WorkerFilterExpression:
       type: string
       description: Filter expression to evaluate against Nodes for inclusion in the
         response.
       examples:
         - group=="default"
+      title: WorkerFilterExpression
     WorkerFilterJson:
       type: string
       description: JSON-stringified filter object to evaluate against Nodes for
@@ -61435,6 +61746,7 @@ components:
       examples:
         - "%7B%22field%22%3A%22group%22%2C%22op%22%3A%22is%22%2C%22value%22%3A%\
           22default%22%7D"
+      title: WorkerFilterJson
     PaginatedMasterWorkerEntry:
       type: object
       required:
@@ -61493,6 +61805,7 @@ components:
         - id
         - status
       description: Result of a restart request for a Worker or Edge Node.
+      title: RestartResponse
     RestartRequest:
       type: object
       properties:
@@ -61503,6 +61816,7 @@ components:
           description: GUIDs of the Worker or Edge Nodes to restart.
       required:
         - guids
+      title: RestartRequest
     PaginatedDistributedSummary:
       type: object
       required:
@@ -61606,6 +61920,7 @@ components:
         - groups
       description: Summary of the deployment for the specified Cribl product (Stream
         or Edge).
+      title: DistributedSummary
     ActiveHealthOverlayStatus:
       type: object
       properties:
@@ -61634,6 +61949,7 @@ components:
       oneOf:
         - $ref: "#/components/schemas/ActiveHealthOverlayStatus"
         - $ref: "#/components/schemas/NoActiveHealthOverlayStatus"
+      title: HealthOverlayStatus
     HealthServerStatus:
       type: object
       properties:
@@ -61668,6 +61984,7 @@ components:
         - startTime
         - status
       description: Health status of the Leader or Worker Node.
+      title: HealthServerStatus
     CountedPackInstallInfo:
       type: object
       required:
@@ -61712,10 +62029,12 @@ components:
             - - aws
               - splunk
       description: Categorization tags for the Pack.
+      title: TagsTypePackInstallInfo
     InstallWarnings:
       type: array
       items:
         type: string
+      title: InstallWarnings
     PackInstallInfo:
       type: object
       properties:
@@ -61783,6 +62102,7 @@ components:
       required:
         - id
         - source
+      title: PackInstallInfo
     PackRequestBody:
       type: object
       properties:
@@ -61860,6 +62180,7 @@ components:
             - id
         - required:
             - source
+      title: PackRequestBody
     CountedPackUninstallInfo:
       type: object
       required:
@@ -61886,6 +62207,7 @@ components:
       required:
         - id
         - source
+      title: PackUninstallInfo
     CountedPackInfo:
       type: object
       required:
@@ -61964,6 +62286,7 @@ components:
       required:
         - id
         - source
+      title: PackInfo
     PaginatedPackInfo:
       type: object
       required:
@@ -62011,6 +62334,7 @@ components:
             install.
       required:
         - source
+      title: PackUpgradeRequest
     UploadPackResponse:
       type: object
       properties:
@@ -62021,6 +62345,7 @@ components:
             <code>POST /packs</code> request to install the Pack.
       required:
         - source
+      title: UploadPackResponse
     CountedGitCommitSummary:
       type: object
       required:
@@ -62047,6 +62372,7 @@ components:
       required:
         - from
         - to
+      title: GitFileRename
     GitCommitSummary:
       type: object
       properties:
@@ -62115,6 +62441,7 @@ components:
         - branch
         - commit
         - summary
+      title: GitCommitSummary
     CountedGitCountResult:
       type: object
       required:
@@ -62137,6 +62464,7 @@ components:
           description: Number of files that changed since the specified commit.
       required:
         - count
+      title: GitCountResult
     CountedGitDiffResult:
       type: object
       required:
@@ -62153,6 +62481,7 @@ components:
             $ref: "#/components/schemas/GitDiffResult"
     GitDiffLines:
       $ref: "#/components/schemas/DiffLine"
+      title: GitDiffLines
     DiffFiles:
       type: array
       items:
@@ -62284,6 +62613,7 @@ components:
           - language
           - newName
           - oldName
+      title: DiffFiles
     GitDiffResult:
       type: object
       properties:
@@ -62293,6 +62623,7 @@ components:
             structured format.
       required:
         - diffJson
+      title: GitDiffResult
     CountedGitFilesResponse:
       type: object
       required:
@@ -62331,6 +62662,7 @@ components:
             <code>A</code> for added, or <code>D</code> for deleted."
       required:
         - name
+      title: GitFile
     GitFilesResponse:
       type: object
       properties:
@@ -62348,6 +62680,7 @@ components:
       required:
         - count
         - items
+      title: GitFilesResponse
     CountedGitRevertResult:
       type: object
       required:
@@ -62410,6 +62743,7 @@ components:
       required:
         - audit
         - reverted
+      title: GitRevertResult
     GitRevertParams:
       type: object
       properties:
@@ -62426,6 +62760,7 @@ components:
             message is generated.
       required:
         - commit
+      title: GitRevertParams
     CountedGitShowResult:
       type: object
       required:
@@ -62452,6 +62787,7 @@ components:
       required:
         - commitMessage
         - diffJson
+      title: GitShowResult
     CountedSystemSettingsConf:
       type: object
       required:
@@ -62481,6 +62817,7 @@ components:
             - backupPersistence
             - backupsDirectory
         - $ref: "#/components/schemas/EmptyObject"
+      title: BackupsSettings
     PiiSettings:
       oneOf:
         - type: object
@@ -62492,6 +62829,7 @@ components:
           required:
             - enablePiiDetection
         - $ref: "#/components/schemas/EmptyObject"
+      title: PiiSettings
     RollbackSettings:
       oneOf:
         - type: object
@@ -62510,6 +62848,7 @@ components:
           required:
             - rollbackEnabled
         - $ref: "#/components/schemas/EmptyObject"
+      title: RollbackSettings
     SniSettings:
       oneOf:
         - type: object
@@ -62521,6 +62860,7 @@ components:
           required:
             - disableSNIRouting
         - $ref: "#/components/schemas/EmptyObject"
+      title: SniSettings
     TlsSettings:
       oneOf:
         - type: object
@@ -62551,6 +62891,7 @@ components:
             - minVersion
             - rejectUnauthorized
         - $ref: "#/components/schemas/EmptyObject"
+      title: TlsSettings
     UpgradeGroupSettings:
       type: object
       properties:
@@ -62582,6 +62923,7 @@ components:
           description: URL of the upgrade package file.
       required:
         - packageUrl
+      title: UpgradePackageUrls
     UpgradeSettings:
       type: object
       properties:
@@ -62606,6 +62948,7 @@ components:
           type: string
           description: "Upgrade source: <code>cribl</code> for official Cribl packages or
             <code>custom</code> for a custom package URL."
+      title: UpgradeSettings
     SystemSettingsConf:
       type: object
       properties:
@@ -62674,6 +63017,154 @@ components:
         - upgradeGroupSettings
         - upgradeSettings
         - workers
+      title: SystemSettingsConf
+    CountedSystemSettingsConfResponse:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        count:
+          type: integer
+          description: number of items present in the items array
+        items:
+          type: array
+          description: List of items in this response.
+          items:
+            $ref: "#/components/schemas/SystemSettingsConfResponse"
+    SystemSettingsConfResponse:
+      type: object
+      properties:
+        api:
+          type: object
+          properties:
+            baseUrl:
+              type: string
+              description: Base URL for the API server. Used when the server is behind a
+                reverse proxy.
+            disableApiCache:
+              type: boolean
+              description: If <code>true</code>, disable the API response cache. Otherwise,
+                <code>false</code>.
+            disabled:
+              type: boolean
+              description: If <code>true</code>, the API server is disabled. Otherwise,
+                <code>false</code>.
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+              description: Custom HTTP response headers to include in every API response.
+            host:
+              type: string
+              description: Hostname or IP address the API server listens on.
+            idleSessionTTL:
+              type: integer
+              description: Idle session timeout in seconds. Sessions are invalidated after the
+                specified seconds of inactivity.
+            listenOnPort:
+              type: boolean
+              description: If <code>true</code>, bind to the configured port as the server
+                listen port. Otherwise, <code>false</code>.
+            loginRateLimit:
+              type: string
+              description: Rate limit for login attempts. Value is a string such as
+                <code>100/min</code>.
+            port:
+              type: integer
+              description: Port number the API server listens on.
+            protocol:
+              type: string
+              description: "API protocol: <code>http</code> or <code>https</code>."
+            scripts:
+              type: boolean
+              description: If <code>true</code>, enable JavaScript scripting support in the
+                API. Otherwise, <code>false</code>.
+            sensitiveFields:
+              type: array
+              items:
+                type: string
+              description: List of field names whose values are redacted in API responses and
+                logs.
+            ssl:
+              $ref: "#/components/schemas/SslTypeSystemSettingsConfApi"
+              description: TLS configuration for the API server.
+            ssoRateLimit:
+              type: string
+              description: Rate limit for SSO authentication attempts. Value is a string such
+                as <code>100/min</code>.
+            workerRemoteAccess:
+              type: boolean
+              description: If <code>true</code>, enable remote access (teleporting) to Worker
+                Processes via the API. Otherwise, <code>false</code>.
+          required:
+            - disabled
+            - host
+            - port
+        apps:
+          $ref: "#/components/schemas/AppsTypeSystemSettingsConf"
+          description: App configuration.
+        backups:
+          $ref: "#/components/schemas/BackupsSettings"
+          description: Configuration backup settings, including storage location and
+            retention period.
+        customLogo:
+          $ref: "#/components/schemas/CustomLogoTypeSystemSettingsConf"
+          description: Custom logo configuration for the Cribl UI login page and
+            navigation bar.
+        pii:
+          $ref: "#/components/schemas/PiiSettings"
+          description: Personally identifiable information (PII) detection configuration.
+        proxy:
+          $ref: "#/components/schemas/ProxyTypeSystemSettingsConf"
+          description: HTTP proxy configuration for outbound connections.
+        rollback:
+          $ref: "#/components/schemas/RollbackSettings"
+          description: Automatic rollback settings applied when an upgrade fails.
+        shutdown:
+          $ref: "#/components/schemas/ShutdownTypeSystemSettingsConf"
+          description: Graceful shutdown configuration.
+        sni:
+          $ref: "#/components/schemas/SniSettings"
+          description: Server Name Indication (SNI) routing configuration.
+        sockets:
+          $ref: "#/components/schemas/SocketsTypeSystemSettingsConf"
+          description: Unix domain socket configuration.
+        support:
+          $ref: "#/components/schemas/SupportTypeSystemSettingsConf"
+          description: Support and diagnostics settings.
+        system:
+          type: object
+          properties:
+            intercom:
+              type: boolean
+              description: If <code>true</code>, enable Intercom integration for in-product
+                messaging. Otherwise, <code>false</code>.
+            upgrade:
+              $ref: "#/components/schemas/UpgradeOptionsSystemSettingsConfSystem"
+              description: "Upgrade permission policy: <code>api</code> to allow upgrades from
+                the UI or API or <code>false</code> to disable."
+          required:
+            - intercom
+            - upgrade
+        tls:
+          $ref: "#/components/schemas/TlsSettings"
+          description: Global TLS/SSL settings applied to all outbound connections that do
+            not specify their own TLS configuration.
+        upgradeGroupSettings:
+          $ref: "#/components/schemas/UpgradeGroupSettings"
+          description: Rolling upgrade group settings that control how many nodes are
+            upgraded at a time.
+        upgradeSettings:
+          $ref: "#/components/schemas/UpgradeSettings"
+          description: Automatic upgrade scheduling and package source configuration.
+        workers:
+          $ref: "#/components/schemas/WorkersTypeSystemSettingsConf"
+          description: Worker Process configuration.
+      required:
+        - api
+        - system
+      title: SystemSettingsConfResponse
     SystemSettingsConfUpdate:
       type: object
       properties:
@@ -62729,6 +63220,7 @@ components:
         workers:
           $ref: "#/components/schemas/WorkersTypeSystemSettingsConf"
           description: Worker Process configuration.
+      title: SystemSettingsConfUpdate
     CountedSystemRestartResponse:
       type: object
       required:
@@ -62752,6 +63244,7 @@ components:
           description: Restart operation initiated.
       required:
         - restart
+      title: SystemRestartResponse
     CountedBranchInfo:
       type: object
       required:
@@ -62774,6 +63267,7 @@ components:
           description: Unique identifier.
       required:
         - id
+      title: BranchInfo
     GitCommitBody:
       type: object
       properties:
@@ -62792,6 +63286,7 @@ components:
           description: Commit message to use for the new Git commit.
       required:
         - message
+      title: GitCommitBody
     CurrentBranchResult:
       type: object
       properties:
@@ -62801,6 +63296,7 @@ components:
             checked out to.
       required:
         - branch
+      title: CurrentBranchResult
     CountedGitInfo:
       type: object
       required:
@@ -62833,6 +63329,7 @@ components:
       required:
         - remote
         - versioning
+      title: GitInfo
     PaginatedGitLogResult:
       type: object
       required:
@@ -62880,6 +63377,7 @@ components:
         refs:
           type: string
           description: Git refs (branches, tags) pointing to this commit.
+      title: GitLogResult
     CountedGitStatusResult:
       type: object
       required:
@@ -62989,6 +63487,7 @@ components:
         - not_added
         - renamed
         - staged
+      title: GitStatusResult
     CountedBoolean:
       type: object
       required:
@@ -63170,6 +63669,7 @@ components:
       description: Discriminator value.
     CertificateTypeAzureBlobAuthTypeClientCert:
       type: object
+      description: Certificate credentials for the service principal.
       required:
         - certificateName
       properties:
@@ -63594,6 +64094,8 @@ components:
       x-speakeasy-unknown-values: allow
     PreprocessType:
       type: object
+      description: Optional preprocessing step that pipes collected data through an
+        external command before ingestion.
       required:
         - disabled
       properties:
@@ -63734,6 +64236,16 @@ components:
         - clientAssertion_rpc
       description: Authentication method
       x-speakeasy-unknown-values: allow
+    CertificateType:
+      type: object
+      required:
+        - certificateName
+      properties:
+        certificateName:
+          type: string
+          title: Certificate
+          description: The certificate you registered as credentials for your app in the
+            Azure portal
     TypeOptionsAzureblob:
       type: string
       enum:
@@ -64250,6 +64762,11 @@ components:
         - debug
         - silly
       x-speakeasy-unknown-values: allow
+    TimeWarningTypeRunnableJobCollectionScheduleRun:
+      type: object
+      description: Warning state used when the collection time range is unset for
+        time-sensitive Collectors.
+      properties: {}
     TypeOptionsRunnableJobCollectionInput:
       type: string
       enum:
@@ -64259,8 +64776,8 @@ components:
     ExecutorSpecificSettingsTypeRunnableJobExecutorExecutor:
       type: object
       title: Executor-specific settings
+      description: Executor-type-specific settings object. Shape varies by executor type.
       properties: {}
-      description: Executor-specific settings
     AdditionalPropertiesTypeJobInfoStats:
       oneOf:
         - type: number
@@ -65482,6 +65999,8 @@ components:
           description: Maximum TLS version to use when connecting
     PaginationTypeRestDiscoveryDiscoverTypeHttp:
       type: object
+      description: Settings that control how the Collector paginates through Discover
+        results.
       required:
         - type
       properties:
@@ -66278,9 +66797,14 @@ components:
             - string
           title: Latest
           description: Latest time to collect data for the selected timezone
-        timestampTimezone: {}
+        timestampTimezone:
+          type: string
+          description: IANA timezone name for interpreting timestamp values in the
+            collection time range.
         timeWarning:
-          $ref: "#/components/schemas/BrokenEventProcessor"
+          $ref: "#/components/schemas/TimeWarningTypeRunnableJobCollectionScheduleRun"
+          description: Warning state used when the collection time range is unset for
+            time-sensitive Collectors.
         expression:
           type: string
           title: Filter
@@ -66305,6 +66829,8 @@ components:
           pattern: ^((\d*\.?\d+)((KB|MB|GB|TB|PB|EB|ZB|YB|kb|mb|gb|tb|pb|eb|zb|yb){1}))$
     InputTypeRunnableJobCollection:
       type: object
+      description: Input settings for a collection job, including event breaking,
+        routing, and preprocessing options.
       properties:
         type:
           $ref: "#/components/schemas/TypeOptionsRunnableJobCollectionInput"
@@ -66331,6 +66857,8 @@ components:
             select a specific Pipeline/Destination combination.
         preprocess:
           $ref: "#/components/schemas/PreprocessType"
+          description: Optional preprocessing step that pipes collected data through an
+            external command before ingestion.
         throttleRatePerSec:
           type: string
           title: Throttling
@@ -66354,6 +66882,7 @@ components:
           description: Destination to send results to
     ExecutorTypeRunnableJobExecutor:
       type: object
+      description: Executor configuration, including the executor type and its settings.
       required:
         - type
       properties:
@@ -66368,7 +66897,8 @@ components:
         conf:
           $ref: "#/components/schemas/ExecutorSpecificSettingsTypeRunnableJobExecutorExec\
             utor"
-          description: Executor-specific settings
+          description: Executor-type-specific settings object. Shape varies by executor
+            type.
     StatusType:
       type: object
       properties:
@@ -66739,10 +67269,11 @@ components:
     RunSettingsTypeRunnableJobCollectionSchedule:
       type: object
       title: Run settings
+      description: Run settings that control how the scheduled job executes, including
+        log level, task sizing, and timeout.
       allOf:
         - $ref: "#/components/schemas/RunnableJobCollectionTypeCollectionConstraint"
         - $ref: "#/components/schemas/RunnableJobCollectionScheduleRunType"
-      description: Run settings
     KafkaSchemaRegistryAuthenticationTypeTemplateschemaRegistryUrlAuth:
       type: object
       title: Kafka Schema Registry Authentication
@@ -66805,10 +67336,11 @@ components:
     RunSettingsTypeSavedJobResponseCollectionSchedule:
       type: object
       title: Run settings
+      description: Run settings that control how the scheduled job executes, including
+        log level, task sizing, and timeout.
       allOf:
         - $ref: "#/components/schemas/RunnableJobCollectionTypeCollectionConstraint"
         - $ref: "#/components/schemas/RunnableJobCollectionScheduleRunType"
-      description: Run settings
     ScheduleTypeRunnableJobCollection:
       type: object
       title: Schedule
@@ -66840,7 +67372,8 @@ components:
           minimum: 1
         run:
           $ref: "#/components/schemas/RunSettingsTypeRunnableJobCollectionSchedule"
-          description: Run settings
+          description: Run settings that control how the scheduled job executes, including
+            log level, task sizing, and timeout.
     ScheduleTypeSavedJobResponseCollection:
       type: object
       title: Schedule
@@ -66872,7 +67405,8 @@ components:
           minimum: 1
         run:
           $ref: "#/components/schemas/RunSettingsTypeSavedJobResponseCollectionSchedule"
-          description: Run settings
+          description: Run settings that control how the scheduled job executes, including
+            log level, task sizing, and timeout.
   examples:
     DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
       summary: Get a Database Connection
@@ -75255,6 +75789,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -75311,6 +75848,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -75385,6 +75925,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -75480,6 +76023,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -75566,6 +76112,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -75643,6 +76192,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -75719,6 +76271,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -75814,6 +76369,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -75874,6 +76432,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -75945,6 +76506,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76011,6 +76575,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76063,6 +76630,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76135,6 +76705,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76183,6 +76756,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76258,6 +76834,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76394,6 +76973,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76457,6 +77039,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76598,6 +77183,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76652,6 +77240,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76700,6 +77291,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76768,6 +77362,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76846,6 +77443,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -76924,6 +77524,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77162,6 +77765,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77217,6 +77823,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77437,6 +78046,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77494,6 +78106,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77551,6 +78166,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77619,6 +78237,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77692,6 +78313,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77745,6 +78369,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -77804,6 +78431,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78065,6 +78695,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78121,6 +78754,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78361,6 +78997,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78421,6 +79060,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78479,6 +79121,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78529,6 +79174,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78585,6 +79233,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78642,6 +79293,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78712,6 +79366,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78802,6 +79459,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78875,6 +79535,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -78965,6 +79628,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79040,6 +79706,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79096,6 +79765,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79171,6 +79843,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79228,6 +79903,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79281,6 +79959,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79337,6 +80018,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79386,6 +80070,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79455,6 +80142,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79584,6 +80274,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79631,6 +80324,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79687,6 +80383,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79822,6 +80521,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -79905,12 +80607,30 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
         "409":
           description: Request conflicts with current resource state — duplicate group ID
             or duplicate group name.
+        "429":
+          description: Config helper cannot be booted due to insufficient memory or system
+            load; retry after the Retry-After interval.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
+          headers:
+            retry-after:
+              description: Number of seconds the client should wait before retrying the
+                request
+              schema:
+                type: integer
+                examples:
+                  - 60
         "500":
           description: Unexpected server error.
           content:
@@ -79971,6 +80691,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80051,6 +80774,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80116,6 +80842,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80169,6 +80898,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80230,6 +80962,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80293,6 +81028,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80348,6 +81086,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80420,6 +81161,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80498,6 +81242,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80558,6 +81305,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80662,6 +81412,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80724,6 +81477,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80780,6 +81536,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80809,6 +81568,7 @@ paths:
           required: false
           schema:
             type: string
+            title: DatasetFormatFilter
             enum:
               - ddss
             x-speakeasy-unknown-values: allow
@@ -80904,6 +81664,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -80961,6 +81724,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81019,6 +81785,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81081,6 +81850,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81136,6 +81908,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81177,6 +81952,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81238,6 +82016,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81309,6 +82090,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81380,6 +82164,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81441,6 +82228,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81673,6 +82463,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81721,6 +82514,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81934,6 +82730,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -81985,6 +82784,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82035,6 +82837,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82097,6 +82902,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82164,6 +82972,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82210,6 +83021,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82263,6 +83077,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82518,6 +83335,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82567,6 +83387,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82801,6 +83624,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82855,6 +83681,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82906,6 +83735,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -82950,6 +83782,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83000,6 +83835,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83051,6 +83889,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83109,6 +83950,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83141,7 +83985,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedSystemSettingsConf"
+                $ref: "#/components/schemas/CountedSystemSettingsConfResponse"
               examples:
                 UpdateSystemSettingsResponseExamplesUpdateApiSettings:
                   $ref: "#/components/examples/UpdateSystemSettingsResponseExamplesUpdateApiSetti\
@@ -83158,6 +84002,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83217,6 +84064,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83265,6 +84115,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83348,6 +84201,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83414,6 +84270,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83497,6 +84356,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83559,6 +84421,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83633,6 +84498,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83686,6 +84554,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83738,6 +84609,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83786,6 +84660,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83825,6 +84702,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83886,6 +84766,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83933,6 +84816,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -83975,6 +84861,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84017,6 +84906,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84069,6 +84961,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84132,6 +85027,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
@@ -84176,6 +85074,9 @@ paths:
                 $ref: "#/components/schemas/Error"
               examples:
                 authenticationFailed:
+                  summary: Reject a request with invalid credentials
+                  description: Example response for rejecting an API request with missing or
+                    invalid credentials.
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
