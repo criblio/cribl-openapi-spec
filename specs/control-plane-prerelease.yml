@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.19.1-alpha.1785836750097-c3be39f8
+  version: 4.19.1-alpha.1785931702412-dc88d2cc
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -5490,12 +5490,30 @@ components:
     FunctionConfSchemaOtlpMetrics:
       type: object
       properties:
+        resourceAttributes:
+          type: array
+          title: Resource attributes
+          description: Top-level attributes to add as resource attributes. Wildcards and !
+            (not) operators are supported; entries without a wildcard match
+            exactly, so `cluster` matches only `cluster`, while `cluster*` also
+            matches `cluster_id`. List ! entries before the broader patterns
+            they narrow, for example `!k8s.internal.*`, `k8s.*`. Matching
+            applies to whole top-level attribute names and does not descend into
+            nested objects, so `k8s.*` matches an attribute named
+            `k8s.cluster.name`. Use Eval to copy nested attributes to the top
+            level for matching.
+          items:
+            type: string
         resourceAttributePrefixes:
           type: array
-          title: Resource attribute prefixes
+          title: Resource attribute prefixes (deprecated)
           description: The prefixes of top-level attributes to add as resource attributes.
             Each attribute must match the regex pattern `^[a-zA-Z0-9_\.]+$`. Use
             Eval to copy nested attributes to the top level for matching.
+            Deprecated because every entry is treated as a prefix, with no way
+            to match an attribute name exactly. Use 'Resource attributes'
+            instead, which supports both; this field applies only when 'Resource
+            attributes' is empty.
           items:
             type: string
             pattern: ^[a-zA-Z0-9_\.]+$
@@ -63169,30 +63187,135 @@ components:
       type: object
       properties:
         api:
-          $ref: "#/components/schemas/ApiTypeSystemSettingsConf"
+          type: object
+          properties:
+            baseUrl:
+              type: string
+              description: Base URL for the API server. Used when the server is behind a
+                reverse proxy.
+            disableApiCache:
+              type: boolean
+              description: If <code>true</code>, disable the API response cache. Otherwise,
+                <code>false</code>.
+            disabled:
+              type: boolean
+              description: If <code>true</code>, the API server is disabled. Otherwise,
+                <code>false</code>.
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+              description: Custom HTTP response headers to include in every API response.
+            host:
+              type: string
+              description: Hostname or IP address the API server listens on.
+            idleSessionTTL:
+              type: integer
+              description: Idle session timeout in seconds. Sessions are invalidated after the
+                specified seconds of inactivity.
+            listenOnPort:
+              type: boolean
+              description: If <code>true</code>, bind to the configured port as the server
+                listen port. Otherwise, <code>false</code>.
+            loginRateLimit:
+              type: string
+              description: Rate limit for login attempts. Value is a string such as
+                <code>100/min</code>.
+            port:
+              type: integer
+              description: Port number the API server listens on.
+            protocol:
+              type: string
+              description: "API protocol: <code>http</code> or <code>https</code>."
+            scripts:
+              type: boolean
+              description: If <code>true</code>, enable JavaScript scripting support in the
+                API. Otherwise, <code>false</code>.
+            sensitiveFields:
+              type: array
+              items:
+                type: string
+              description: List of field names whose values are redacted in API responses and
+                logs.
+            ssl:
+              type: object
+              properties:
+                caPath:
+                  type: string
+                  description: Filesystem path to the PEM-encoded Certificate Authority (CA)
+                    certificate for client authentication.
+                certPath:
+                  type: string
+                  description: Filesystem path to the PEM-encoded TLS certificate.
+                disabled:
+                  type: boolean
+                  description: If <code>true</code>, TLS is disabled for the API server.
+                    Otherwise, <code>false</code>.
+                passphrase:
+                  type: string
+                  description: Passphrase to decrypt the TLS private key, if encrypted.
+                privKeyPath:
+                  type: string
+                  description: Filesystem path to the PEM-encoded TLS private key.
+              description: TLS configuration for the API server.
+            ssoRateLimit:
+              type: string
+              description: Rate limit for SSO authentication attempts. Value is a string such
+                as <code>100/min</code>.
+            workerRemoteAccess:
+              type: boolean
+              description: If <code>true</code>, enable remote access (teleporting) to Worker
+                Processes via the API. Otherwise, <code>false</code>.
           description: API server configuration for the Cribl instance.
         apps:
-          $ref: "#/components/schemas/AppsTypeSystemSettingsConf"
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              description: If <code>true</code>, enable Apps. Otherwise, <code>false</code>.
           description: App configuration.
         backups:
           $ref: "#/components/schemas/BackupsSettings"
           description: Configuration backup settings, including storage location and
             retention period.
         customLogo:
-          $ref: "#/components/schemas/CustomLogoTypeSystemSettingsConf"
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              description: If <code>true</code>, display the custom logo in the UI. Otherwise,
+                <code>false</code>.
+            logoDescription:
+              type: string
+              description: Description text displayed alongside the custom logo.
+            logoImage:
+              type: string
+              description: Custom logo image as a base64-encoded data URI (PNG or JPEG,
+                maximum 2 MB).
           description: Custom logo configuration for the Cribl UI login page and
             navigation bar.
         pii:
           $ref: "#/components/schemas/PiiSettings"
           description: Personally identifiable information (PII) detection configuration.
         proxy:
-          $ref: "#/components/schemas/ProxyTypeSystemSettingsConf"
+          type: object
+          properties:
+            useEnvVars:
+              type: boolean
+              description: If <code>true</code>, use proxy settings from environment variables
+                (<code>HTTP_PROXY</code>, <code>HTTPS_PROXY</code>,
+                <code>NO_PROXY</code>). Otherwise, <code>false</code>.
           description: HTTP proxy configuration for outbound connections.
         rollback:
           $ref: "#/components/schemas/RollbackSettings"
           description: Automatic rollback settings applied when an upgrade fails.
         shutdown:
-          $ref: "#/components/schemas/ShutdownTypeSystemSettingsConf"
+          type: object
+          properties:
+            drainTimeout:
+              type: integer
+              description: Maximum time in milliseconds to wait for in-flight events to drain
+                before forcing a shutdown.
           description: Graceful shutdown configuration.
         sni:
           $ref: "#/components/schemas/SniSettings"
@@ -63201,10 +63324,40 @@ components:
           $ref: "#/components/schemas/SocketsTypeSystemSettingsConf"
           description: Unix domain socket configuration.
         support:
-          $ref: "#/components/schemas/SupportTypeSystemSettingsConf"
+          type: object
+          properties:
+            featureFlagOverrides:
+              type: array
+              items:
+                type: object
+                properties:
+                  disabled:
+                    type: boolean
+                    description: If <code>true</code>, the feature flag is disabled. Otherwise,
+                      <code>false</code>.
+                  flagId:
+                    type: string
+                    description: Unique identifier of the feature flag to override.
+              description: List of feature flag overrides applied to this Cribl instance.
+            logFileMaxFiles:
+              type: integer
+              description: Maximum number of log files to retain before rotating.
+            logFileMaxSize:
+              type: string
+              description: Maximum size of each log file. Value is a numeral and unit such as
+                <code>10 MB</code>.
           description: Support and diagnostics settings.
         system:
-          $ref: "#/components/schemas/SystemTypeSystemSettingsConf"
+          type: object
+          properties:
+            intercom:
+              type: boolean
+              description: If <code>true</code>, enable Intercom integration for in-product
+                messaging. Otherwise, <code>false</code>.
+            upgrade:
+              $ref: "#/components/schemas/UpgradeOptionsSystemSettingsConfSystem"
+              description: "Upgrade permission policy: <code>api</code> to allow upgrades from
+                the UI or API or <code>false</code> to disable."
           description: System-level operational settings for the Cribl instance.
         tls:
           $ref: "#/components/schemas/TlsSettings"
@@ -63218,7 +63371,54 @@ components:
           $ref: "#/components/schemas/UpgradeSettings"
           description: Automatic upgrade scheduling and package source configuration.
         workers:
-          $ref: "#/components/schemas/WorkersTypeSystemSettingsConf"
+          type: object
+          properties:
+            count:
+              type: integer
+              description: Number of Worker Processes to spawn. Set to <code>0</code> to use
+                the number of available CPU cores.
+            enableHeapSnapshots:
+              type: boolean
+              description: If <code>true</code>, enable V8 heap snapshot generation on
+                out-of-memory errors. Otherwise, <code>false</code>.
+            loadThrottlePerc:
+              type: integer
+              description: CPU load percentage threshold above which new connections are
+                throttled.
+            memory:
+              type: integer
+              description: Maximum memory (in MB) per Worker Process. Set to <code>0</code>
+                for no limit.
+            minimum:
+              type: integer
+              description: Minimum number of Worker Processes to keep running.
+            restartUnresponsiveProcesses:
+              type: boolean
+              description: If <code>true</code>, automatically restart Worker Processes that
+                become unresponsive. Otherwise, <code>false</code>.
+            startupMaxConns:
+              type: integer
+              description: Maximum number of connections to accept during Worker Process
+                startup before throttling begins.
+            startupThrottleTimeout:
+              type: integer
+              description: Timeout in milliseconds to wait for Worker Processes to reach idle
+                before ending the startup throttle period.
+            v8SingleThread:
+              type: boolean
+              description: If <code>true</code>, run all worker threads in a single V8
+                isolate. Otherwise, <code>false</code>.
+            workerProcessConfigUpdateConcurrency:
+              type: integer
+              description: Maximum number of Worker Processes that can reload configuration
+                concurrently.
+            workerProcessReloadTimeout:
+              type: integer
+              description: Timeout in milliseconds to wait for a Worker Process to reload
+                configuration before treating the reload as failed.
+            workerThreadPoolSize:
+              type: integer
+              description: Size of the Worker thread pool used for CPU-bound tasks.
           description: Worker Process configuration.
       title: SystemSettingsConfUpdate
     CountedSystemRestartResponse:
@@ -64038,6 +64238,12 @@ components:
         sourceArn:
           type: string
           description: ARN of the AWS resource that produces the logs.
+        accountId:
+          type: string
+          minLength: 1
+          description: Cloud tenant or scope id the Source was configured for (for example
+            an AWS account id, GCP project or folder id, or Azure subscription
+            or resource group id).
       readOnly: true
     ConnectionConfInputCollection:
       type: object
@@ -83971,14 +84177,12 @@ paths:
       x-cribl-internal: false
       x-cribl-availability: both
       summary: Update system settings
-      description: Update the specified Cribl system settings.<br/><br/>This endpoint
-        supports partial updates — provide only the top-level sections
-        (<code>api</code>, <code>workers</code>, <code>tls</code>,
-        <code>proxy</code>, etc.) that you want to change. Omitted top-level
-        sections are preserved unchanged.<br/><br/><b>Important:</b> while
-        top-level sections are optional, nested objects within a section must be
-        complete. For example, if you include <code>api</code>, you must provide
-        its required fields (<code>host</code> and <code>port</code>).
+      description: Update the specified Cribl system settings.<br/><br/>Provide only
+        the top-level sections (<code>api</code>, <code>workers</code>,
+        <code>tls</code>, <code>proxy</code>, etc.) you want to change. Omitted
+        sections stay unchanged. Each provided section fully replaces the
+        existing one — send the complete section object, not only the changed
+        fields.
       responses:
         "200":
           description: The updated system settings.
