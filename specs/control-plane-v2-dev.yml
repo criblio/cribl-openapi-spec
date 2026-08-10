@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.20.0-alpha.1786230435818-bf2ef347
+  version: 4.20.0-alpha.1786403466625-050f41c9
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -42688,6 +42688,45 @@ components:
           type: string
           title: Timezone offset
           description: Timezone offset
+        hostname:
+          type: string
+          title: Hostname
+          description: JavaScript expression for the host from which the log was ingested
+            into the SIEM, evaluated per event. Static values must be quoted or
+            backticked (for example, 'collector-1.example.com'); unquoted text
+            is evaluated as JavaScript, not as a literal. To reference an event
+            field use an expression, such as `${host}`. Emitted as the
+            "hostname" metadata field; omitted when empty or not a usable
+            scalar.
+        forwarder:
+          type: string
+          title: Forwarder
+          description: JavaScript expression for the host that forwarded the log,
+            evaluated per event. Static values must be quoted or backticked (for
+            example, 'fwd-1'); unquoted text is evaluated as JavaScript, not as
+            a literal. To reference an event field use an expression, such as
+            `${__forwarder}`. Emitted as the "forwarder" metadata field; omitted
+            when empty or not a usable scalar.
+        origin:
+          type: string
+          title: Origin
+          description: "JavaScript expression that must resolve to an object describing
+            the interim agent collector, such as {hostname: origin_host,
+            '@timestamp': _time, path: source}. Evaluated per event. Unquoted
+            text is evaluated as JavaScript, not as a literal. Emitted as the
+            \"origin\" metadata field; omitted when the result is not a
+            non-empty object."
+        logtags:
+          type: string
+          title: Log tags
+          description: 'JavaScript expression that must resolve to an object of custom
+            metadata key/value pairs (searchable in Exabeam as
+            m_c_logtags_<name>). Assemble the object upstream and reference it
+            here (example: __exabeam_logtags), or build it inline (example:
+            {department: dept, servertype: stype}). Evaluated per event.
+            Unquoted text is evaluated as JavaScript, not as a literal. Emitted
+            as the "logtags" metadata field; omitted when the result is not a
+            non-empty object.'
         awsApiKey:
           type: string
           title: Access key
@@ -61269,6 +61308,11 @@ components:
             type: string
           description: Accelerated fields for the Dataset. Data is partitioned by these
             fields in storage to improve query performance.
+        allowRecordErasure:
+          type: boolean
+          description: If <code>true</code>, the Dataset is opted in to Lake Record
+            Erasure. Off by default; only settable when the
+            <code>feature-lake-record-erasure</code> flag is enabled.
         bucketName:
           type: string
           description: Name of the legacy Cribl Lake bucket that backs the Dataset.
@@ -61351,6 +61395,11 @@ components:
             type: string
           description: Accelerated fields for the Dataset. Data is partitioned by these
             fields in storage to improve query performance.
+        allowRecordErasure:
+          type: boolean
+          description: If <code>true</code>, the Dataset is opted in to Lake Record
+            Erasure. Off by default; only settable when the
+            <code>feature-lake-record-erasure</code> flag is enabled.
         bucketName:
           type: string
           description: Name of the legacy Cribl Lake bucket that backs the Dataset.
@@ -75691,8 +75740,8 @@ components:
         overlay:
           state: inactive
     PackInstallResponseExamplesInstalledFromURL:
-      summary: Pack installed from URL response
-      description: Example response for a Pack successfully installed from a URL.
+      summary: Return a Pack installed from a URL
+      description: Example response for returning a Pack successfully installed from a URL.
       value:
         id: cribl-palo-alto-networks
         displayName: Palo Alto Networks
@@ -75747,14 +75796,14 @@ components:
         source: git+https://github.com/criblio/cribl_ocsf_postprocessing
         allowCustomFunctions: false
     PackDeleteResponseExamplesUninstalled:
-      summary: Pack uninstalled response
-      description: Example response after successfully uninstalling a Pack.
+      summary: Return an uninstalled Pack
+      description: Example response for returning a successfully uninstalled Pack.
       value:
         id: cribl-palo-alto-networks
         source: https://github.com/criblpacks/cribl-palo-alto-networks/releases/download/1.1.4/cribl-palo-alto-networks-a3e5a19d-1.1.4.crbl
     PackGetResponseExamplesInstalledPack:
-      summary: Installed Pack response
-      description: Example response for getting a Pack installed from a Git repository.
+      summary: Return an installed Pack
+      description: Example response for returning a Pack installed from a Git repository.
       value:
         id: cribl-palo-alto-networks
         displayName: Palo Alto Networks
@@ -75766,8 +75815,8 @@ components:
           - pipelines
           - inputs
     PackGetResponseExamplesEmptyPack:
-      summary: Empty Pack response
-      description: Example response for getting an empty Pack.
+      summary: Return an empty Pack
+      description: Example response for returning an empty Pack.
       value:
         id: testPackFoo
         displayName: testPackFoo
@@ -75801,8 +75850,8 @@ components:
         offset: 0
         limit: 20
     PackUpgradeResponseExamplesUpgraded:
-      summary: Pack upgraded response
-      description: Example response for upgrading a Pack to a newer version.
+      summary: Return an upgraded Pack
+      description: Example response for returning a Pack upgraded to a newer version.
       value:
         id: cribl-palo-alto-networks
         displayName: Palo Alto Networks
@@ -75820,9 +75869,9 @@ components:
       value:
         source: https://github.com/criblpacks/cribl-palo-alto-networks/releases/download/1.1.4/cribl-palo-alto-networks-a3e5a19d-1.1.4.crbl
     PackUploadResponseExamplesUploadedPack:
-      summary: Pack file uploaded response
-      description: Example response after successfully uploading a Pack file. Use the
-        returned <code>source</code> value in a subsequent <code>POST
+      summary: Return a Pack upload result
+      description: Example response for returning a successful Pack upload result. Use
+        the returned <code>source</code> value in a subsequent <code>POST
         /packs</code> request to install the Pack.
       value:
         source: cribl-palo-alto-networks-1.1.4.AbCdEfGh.crbl
@@ -80498,7 +80547,8 @@ paths:
               type: string
               format: binary
               contentMediaType: application/octet-stream
-              description: Pack file upload
+              description: Binary contents of the <code>.crbl</code> Pack file to stage for
+                installation
       parameters:
         - name: filename
           in: query
@@ -80548,6 +80598,10 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "409":
+          description: Request conflicts with current resource state — Pack
+            <code>id</code> is ambiguous because multiple Packs differ only by
+            case; specify the exact stored Pack Id
         "500":
           description: Unexpected server error.
           content:
@@ -80608,6 +80662,10 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "409":
+          description: Request conflicts with current resource state — Pack
+            <code>id</code> is ambiguous because multiple Packs differ only by
+            case; specify the exact stored Pack Id
         "500":
           description: Unexpected server error.
           content:
@@ -80671,6 +80729,10 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "409":
+          description: Request conflicts with current resource state — Pack
+            <code>id</code> is ambiguous because multiple Packs differ only by
+            case; specify the exact stored Pack Id
         "500":
           description: Unexpected server error.
           content:
