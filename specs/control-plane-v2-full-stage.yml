@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.19.1-alpha.1786576513456-4c6cf714
+    version: 4.19.1-alpha.1786662849117-0868c7ca
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -50814,6 +50814,10 @@ components:
                     type: string
                     description: Maximum time a job is allowed to run. Units are seconds if not specified.
                     pattern: \d+[sm]?$
+                maxReplaySlots:
+                    type: integer
+                    description: Maximum number of missed cron slots replayed synchronously on restart. Beyond this cap iterators jump forward to prevent unbounded memory usage.
+                    minimum: 1
                 maxTaskPerc:
                     type: number
                     description: Percentage of total tasks within the system a job may consume (0 to 1).
@@ -61211,6 +61215,10 @@ components:
         DirectAccessAuthToken:
             type: object
             properties:
+                brand:
+                    type: string
+                    const: zscaler
+                    description: Branded variant of the Direct Access item this token belongs to. Populated at deploy time from the source's brand.
                 datasetIds:
                     type: array
                     items:
@@ -75487,14 +75495,14 @@ components:
                     maxLength: 12
                 assumedRoleName:
                     type: string
-                    description: Assumed Role Name. IAM role name Cribl assumes in member accounts. This role should not already exist and will be created by the CloudFormation stack template provided on the next page.
+                    description: IAM role name Cribl assumes in member accounts. This role should not already exist; it is created by the connection CloudFormation template.
                     pattern: ^[\w+=,.@/-]+$
                     minLength: 1
                     maxLength: 2048
                 cloud:
                     type: string
                     const: AWS
-                    description: Cloud or future data plane id (S3 key segment, API <code>cloud</code> field).
+                    description: Cloud provider.
                 connectedAt:
                     type: integer
                     description: Milliseconds since Unix epoch when the connection was created.
@@ -75515,7 +75523,7 @@ components:
                     description: Member accounts discovered under an organization connection, keyed by account id.
                 displayName:
                     type: string
-                    description: Display Name. Optional user-visible label; omitted when unset. Not used for machine identity.
+                    description: Optional user-visible label.
                     maxLength: 256
                 excludeAccountIds:
                     type: array
@@ -75553,10 +75561,10 @@ components:
                     type:
                         - "null"
                         - integer
-                    description: "Run folder id for the in-flight org-inventory run: Unix epoch milliseconds (S3 path segment and merge correlation). Set after invoke, cleared on merge or timeout. Organization connections only."
+                    description: Id of the in-flight organization inventory run. Organization connections only.
                 scanComputeMode:
                     $ref: "#/components/schemas/DsdScanComputeMode"
-                    description: "Preferred compute for data scans on this connection: <code>lambda</code>, <code>fargate</code>, or <code>auto</code> (default). Fargate selection additionally requires the <code>feature-dsd-fargate-compute</code> flag."
+                    description: "Preferred compute for data scans on this connection: <code>lambda</code>, <code>fargate</code>, or <code>auto</code> (default)."
                 scope:
                     $ref: "#/components/schemas/DsdConnectionScope"
                     description: Connection Level. Use <code>awsAccount</code> for a single AWS account or <code>awsOrganization</code> for organization root.
@@ -75708,7 +75716,7 @@ components:
                     maxLength: 12
                 assumedRoleName:
                     type: string
-                    description: Assumed Role Name. IAM role name Cribl assumes in member accounts. This role should not already exist and will be created by the CloudFormation stack template provided on the next page.
+                    description: IAM role name Cribl assumes in member accounts. This role should not already exist; it is created by the connection CloudFormation template.
                     pattern: ^[\w+=,.@/-]+$
                     minLength: 1
                     maxLength: 2048
@@ -75722,7 +75730,7 @@ components:
                     maxLength: 256
                 scanComputeMode:
                     $ref: "#/components/schemas/DsdScanComputeMode"
-                    description: "Preferred compute for data scans on this connection: <code>lambda</code>, <code>fargate</code>, or <code>auto</code> (default). Fargate selection additionally requires the <code>feature-dsd-fargate-compute</code> flag."
+                    description: "Preferred compute for data scans on this connection: <code>lambda</code>, <code>fargate</code>, or <code>auto</code> (default)."
                 scope:
                     type: string
                     const: awsAccount
@@ -75754,7 +75762,7 @@ components:
                     maxLength: 12
                 assumedRoleName:
                     type: string
-                    description: Assumed Role Name. IAM role name Cribl assumes in member accounts. This role should not already exist and will be created by the CloudFormation stack template provided on the next page.
+                    description: IAM role name Cribl assumes in member accounts. This role should not already exist; it is created by the connection CloudFormation template.
                     pattern: ^[\w+=,.@/-]+$
                     minLength: 1
                     maxLength: 2048
@@ -75785,7 +75793,7 @@ components:
                     maxItems: 50
                 scanComputeMode:
                     $ref: "#/components/schemas/DsdScanComputeMode"
-                    description: "Preferred compute for data scans on this connection: <code>lambda</code>, <code>fargate</code>, or <code>auto</code> (default). Fargate selection additionally requires the <code>feature-dsd-fargate-compute</code> flag."
+                    description: "Preferred compute for data scans on this connection: <code>lambda</code>, <code>fargate</code>, or <code>auto</code> (default)."
                 scope:
                     type: string
                     const: awsOrganization
@@ -75841,7 +75849,7 @@ components:
                     pattern: ^[0-9]{12}$
                 forceLongRunning:
                     type: boolean
-                    description: Request a long-running scan. When true and the connection compute mode is <code>auto</code>, the leader invokes the scan on ECS Fargate instead of Lambda (escape hatch for accounts that exceed the Lambda timeout). Requires the <code>feature-dsd-fargate-compute</code> flag; ignored when the flag is off.
+                    description: When true and scan compute mode is <code>auto</code>, run a long-running scan on Fargate instead of Lambda.
                 regions:
                     type: array
                     items:
@@ -75997,21 +76005,14 @@ components:
             type: object
             properties:
                 computeKind:
-                    type: string
-                    enum:
-                        - fargate
-                        - lambda
-                    description: Compute backend that ran the latest scan (<code>fargate</code> when the scanner ran on ECS Fargate, else <code>lambda</code>). Present only while the Fargate compute feature is enabled.
-                    examples:
-                        - lambda
-                        - fargate
-                    x-speakeasy-unknown-values: allow
+                    $ref: "#/components/schemas/ComputeKindOptionsDsdStatusApiResponse"
+                    description: "Compute that ran the scan: <code>lambda</code> or <code>fargate</code>."
                 error:
                     type: string
-                    description: Optional diagnostic when present and phase is not the filtered failure payload.
+                    description: Optional error detail when present.
                 estimatedTimeRemainingSeconds:
                     type: integer
-                    description: Estimated seconds remaining until all slices finish (heuristic from the leader).
+                    description: Estimated seconds remaining until the scan finishes.
                 percentComplete:
                     type: number
                     description: Approximate completion percentage for the latest run.
@@ -76023,7 +76024,7 @@ components:
                         - complete
                 runTimestamp:
                     type: integer
-                    description: Milliseconds since Unix epoch for the latest run folder (S3 path segment).
+                    description: Milliseconds since Unix epoch for the latest scan run.
             required:
                 - estimatedTimeRemainingSeconds
                 - percentComplete
@@ -76033,18 +76034,11 @@ components:
             type: object
             properties:
                 computeKind:
-                    type: string
-                    enum:
-                        - fargate
-                        - lambda
-                    description: Compute backend that ran the failed scan (<code>fargate</code> when the scanner ran on ECS Fargate, else <code>lambda</code>). Present only while the Fargate compute feature is enabled.
-                    examples:
-                        - lambda
-                        - fargate
-                    x-speakeasy-unknown-values: allow
+                    $ref: "#/components/schemas/ComputeKindOptionsDsdStatusApiResponse"
+                    description: "Compute that ran the scan: <code>lambda</code> or <code>fargate</code>."
                 error:
                     type: string
-                    description: Static user-facing guidance; internal failure details from status.json are not returned.
+                    description: User-facing error message for the failed scan.
                 phase:
                     type: string
                     const: failed
@@ -76075,7 +76069,7 @@ components:
                     maxLength: 256
                 scanComputeMode:
                     $ref: "#/components/schemas/DsdScanComputeMode"
-                    description: "Preferred compute for data scans on this connection: <code>lambda</code>, <code>fargate</code>, or <code>auto</code>. Fargate selection additionally requires the <code>feature-dsd-fargate-compute</code> flag."
+                    description: "Preferred compute for data scans on this connection: <code>lambda</code>, <code>fargate</code>, or <code>auto</code> (default)."
                 scope:
                     type: string
                     const: awsAccount
@@ -76130,7 +76124,7 @@ components:
                     maxItems: 50
                 scanComputeMode:
                     $ref: "#/components/schemas/DsdScanComputeMode"
-                    description: "Preferred compute for data scans on this connection: <code>lambda</code>, <code>fargate</code>, or <code>auto</code>. Fargate selection additionally requires the <code>feature-dsd-fargate-compute</code> flag."
+                    description: "Preferred compute for data scans on this connection: <code>lambda</code>, <code>fargate</code>, or <code>auto</code> (default)."
                 scope:
                     type: string
                     const: awsOrganization
@@ -78199,29 +78193,264 @@ components:
                 - wiz_webhook
             title: SupportedLocalSearchSourceType
             x-speakeasy-unknown-values: allow
+        LocalSearchSourceDocsBlockBlockquote:
+            type: object
+            properties:
+                blocks:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/LocalSearchSourceDocsBlock"
+                    description: Nested content blocks rendered inside the blockquote.
+                type:
+                    type: string
+                    const: blockquote
+                    description: Resource type identifier.
+            required:
+                - blocks
+                - type
+            description: Blockquote block extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsBlockBlockquote
+        LocalSearchSourceDocsBlockCode:
+            type: object
+            properties:
+                language:
+                    type: string
+                    description: Optional language hint for syntax highlighting.
+                text:
+                    type: string
+                    description: Code block text content.
+                type:
+                    type: string
+                    const: code
+                    description: Resource type identifier.
+            required:
+                - text
+                - type
+            description: Fenced code block extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsBlockCode
+        LocalSearchSourceDocsBlockHeading:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Unique identifier for the rendered heading.
+                level:
+                    type: integer
+                    description: HTML heading level from the source documentation page.
+                text:
+                    type: string
+                    description: Display text for the heading.
+                type:
+                    type: string
+                    const: heading
+                    description: Resource type identifier.
+            required:
+                - id
+                - level
+                - text
+                - type
+            description: Heading block extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsBlockHeading
+        LocalSearchSourceDocsBlockHorizontalRule:
+            type: object
+            properties:
+                type:
+                    type: string
+                    const: horizontalRule
+                    description: Resource type identifier.
+            required:
+                - type
+            description: Horizontal rule block extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsBlockHorizontalRule
+        LocalSearchSourceDocsInlineText:
+            type: object
+            properties:
+                text:
+                    type: string
+                    description: Plain text content.
+                type:
+                    type: string
+                    const: text
+                    description: Resource type identifier.
+            required:
+                - text
+                - type
+            description: Plain text inline node extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsInlineText
+        LocalSearchSourceDocsInlineBreak:
+            type: object
+            properties:
+                type:
+                    type: string
+                    const: break
+                    description: Resource type identifier.
+            required:
+                - type
+            description: Line-break inline node extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsInlineBreak
+        LocalSearchSourceDocsInlineCode:
+            type: object
+            properties:
+                text:
+                    type: string
+                    description: Code text content.
+                type:
+                    type: string
+                    const: code
+                    description: Resource type identifier.
+            required:
+                - text
+                - type
+            description: Inline code node extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsInlineCode
+        LocalSearchSourceDocsInlineEmphasis:
+            type: object
+            properties:
+                children:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/LocalSearchSourceDocsInline"
+                    description: Nested inline content rendered with emphasis.
+                type:
+                    type: string
+                    const: emphasis
+                    description: Resource type identifier.
+            required:
+                - children
+                - type
+            description: Emphasized inline node extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsInlineEmphasis
+        LocalSearchSourceDocsInlineLink:
+            type: object
+            properties:
+                children:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/LocalSearchSourceDocsInline"
+                    description: Nested inline content rendered as the link label.
+                href:
+                    type: string
+                    description: Destination URL or same-page fragment for the link.
+                type:
+                    type: string
+                    const: link
+                    description: Resource type identifier.
+            required:
+                - children
+                - href
+                - type
+            description: Hyperlink inline node extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsInlineLink
+        LocalSearchSourceDocsInlineStrong:
+            type: object
+            properties:
+                children:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/LocalSearchSourceDocsInline"
+                    description: Nested inline content rendered with strong emphasis.
+                type:
+                    type: string
+                    const: strong
+                    description: Resource type identifier.
+            required:
+                - children
+                - type
+            description: Strong (bold) inline node extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsInlineStrong
         LocalSearchSourceDocsInline:
             oneOf:
-                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineTypeTextWithTextConstraint"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineTypeBreakConstraint"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineTypeEmphasisWithChildrenConstraint"
-                - type: object
-                  properties:
-                    children:
-                        type: array
-                        items:
-                            $ref: "#/components/schemas/LocalSearchSourceDocsInline"
-                    href:
-                        type: string
-                    type:
-                        type: string
-                        const: link
-                        description: Resource type identifier.
-                  required:
-                    - children
-                    - href
-                    - type
-            description: Inline content extracted from a Local Search source documentation page.
+                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineText"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineBreak"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineCode"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineEmphasis"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineLink"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineStrong"
+            description: Inline content extracted from a lakehouse engine source documentation page.
             title: LocalSearchSourceDocsInline
+        LocalSearchSourceDocsListItem:
+            type: array
+            items:
+                $ref: "#/components/schemas/LocalSearchSourceDocsInline"
+            description: One list item rendered as a sequence of inline nodes.
+            title: LocalSearchSourceDocsListItem
+        LocalSearchSourceDocsBlockList:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/LocalSearchSourceDocsListItem"
+                    description: List items, each rendered as a sequence of inline nodes.
+                ordered:
+                    type: boolean
+                    description: If <code>true</code>, render an ordered list. Otherwise, <code>false</code>.
+                type:
+                    type: string
+                    const: list
+                    description: Resource type identifier.
+            required:
+                - items
+                - ordered
+                - type
+            description: Ordered or unordered list block extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsBlockList
+        LocalSearchSourceDocsBlockParagraph:
+            type: object
+            properties:
+                children:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/LocalSearchSourceDocsInline"
+                    description: Inline content rendered inside the paragraph.
+                type:
+                    type: string
+                    const: paragraph
+                    description: Resource type identifier.
+            required:
+                - children
+                - type
+            description: Paragraph block extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsBlockParagraph
+        LocalSearchSourceDocsTableCell:
+            type: object
+            properties:
+                children:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/LocalSearchSourceDocsInline"
+                    description: Inline content rendered inside the table cell.
+                header:
+                    type: boolean
+                    description: If <code>true</code>, render the cell as a table header. Otherwise, <code>false</code>.
+            required:
+                - children
+                - header
+            description: Table cell extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsTableCell
+        LocalSearchSourceDocsTableRow:
+            type: array
+            items:
+                $ref: "#/components/schemas/LocalSearchSourceDocsTableCell"
+            description: One table row rendered as a sequence of cells.
+            title: LocalSearchSourceDocsTableRow
+        LocalSearchSourceDocsBlockTable:
+            type: object
+            properties:
+                rows:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/LocalSearchSourceDocsTableRow"
+                    description: Table rows, each rendered as a sequence of cells.
+                type:
+                    type: string
+                    const: table
+                    description: Resource type identifier.
+            required:
+                - rows
+                - type
+            description: Table block extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsBlockTable
         LocalSearchSourceDocsTab:
             type: object
             properties:
@@ -78236,94 +78465,36 @@ components:
             required:
                 - blocks
                 - label
-            description: A single tab within a tabbed content block extracted from a Local Search source documentation page.
+            description: A single tab within a tabbed content block extracted from a lakehouse engine source documentation page.
             title: LocalSearchSourceDocsTab
+        LocalSearchSourceDocsBlockTabs:
+            type: object
+            properties:
+                tabs:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/LocalSearchSourceDocsTab"
+                    description: Tabs rendered in the tabbed content block.
+                type:
+                    type: string
+                    const: tabs
+                    description: Resource type identifier.
+            required:
+                - tabs
+                - type
+            description: Tabbed content block extracted from a lakehouse engine source documentation page.
+            title: LocalSearchSourceDocsBlockTabs
         LocalSearchSourceDocsBlock:
             oneOf:
-                - type: object
-                  properties:
-                    blocks:
-                        type: array
-                        items:
-                            $ref: "#/components/schemas/LocalSearchSourceDocsBlock"
-                    type:
-                        type: string
-                        const: blockquote
-                        description: Resource type identifier.
-                  required:
-                    - blocks
-                    - type
-                - type: object
-                  properties:
-                    language:
-                        type: string
-                    text:
-                        type: string
-                    type:
-                        type: string
-                        const: code
-                        description: Resource type identifier.
-                  required:
-                    - text
-                    - type
-                - type: object
-                  properties:
-                    id:
-                        type: string
-                    level:
-                        type: number
-                    text:
-                        type: string
-                    type:
-                        type: string
-                        const: heading
-                        description: Resource type identifier.
-                  required:
-                    - id
-                    - level
-                    - text
-                    - type
-                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineTypeBreakConstraint"
-                - type: object
-                  properties:
-                    items:
-                        type: array
-                    ordered:
-                        type: boolean
-                    type:
-                        type: string
-                        const: list
-                        description: Resource type identifier.
-                  required:
-                    - items
-                    - ordered
-                    - type
-                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineTypeEmphasisWithChildrenConstraint"
-                - type: object
-                  properties:
-                    rows:
-                        type: array
-                    type:
-                        type: string
-                        const: table
-                        description: Resource type identifier.
-                  required:
-                    - rows
-                    - type
-                - type: object
-                  properties:
-                    tabs:
-                        type: array
-                        items:
-                            $ref: "#/components/schemas/LocalSearchSourceDocsTab"
-                    type:
-                        type: string
-                        const: tabs
-                        description: Resource type identifier.
-                  required:
-                    - tabs
-                    - type
-            description: Block content extracted from a Local Search source documentation page.
+                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockBlockquote"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockCode"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockHeading"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockHorizontalRule"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockList"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockParagraph"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockTable"
+                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockTabs"
+            description: Block content extracted from a lakehouse engine source documentation page.
             title: LocalSearchSourceDocsBlock
         LocalSearchSourceDocsHeading:
             type: object
@@ -78332,7 +78503,7 @@ components:
                     type: string
                     description: Unique identifier for the rendered heading.
                 level:
-                    type: number
+                    type: integer
                     description: HTML heading level from the source documentation page.
                 text:
                     type: string
@@ -78341,7 +78512,7 @@ components:
                 - id
                 - level
                 - text
-            description: Heading extracted from a Local Search source documentation page.
+            description: Heading extracted from a lakehouse engine source documentation page.
             title: LocalSearchSourceDocsHeading
         LocalSearchSourceDocs:
             type: object
@@ -78375,14 +78546,14 @@ components:
                         - tcpjson
                         - wef
                         - wiz_webhook
-                    description: Local Search source type that the documentation content describes.
+                    description: Lakehouse engine source type that the documentation content describes.
                     x-speakeasy-unknown-values: allow
             required:
                 - blocks
                 - canonicalUrl
                 - headings
                 - sourceType
-            description: Structured documentation content for a Local Search source type.
+            description: Structured documentation content for a lakehouse engine source type.
             title: LocalSearchSourceDocs
         TLSConfig:
             type: object
@@ -81395,6 +81566,16 @@ components:
                 - s3
                 - firehose
             x-speakeasy-unknown-values: allow
+        ComputeKindOptionsDsdStatusApiResponse:
+            type: string
+            enum:
+                - fargate
+                - lambda
+            description: "Compute that ran the scan: <code>lambda</code> or <code>fargate</code>."
+            examples:
+                - lambda
+                - fargate
+            x-speakeasy-unknown-values: allow
         PreviewResponseBodyEventsItemsType:
             type: object
             properties:
@@ -81460,41 +81641,6 @@ components:
                 - objectsSearched
                 - objectsSkipped
                 - startTime
-        LocalSearchSourceDocsInlineTypeTextWithTextConstraint:
-            type: object
-            properties:
-                text:
-                    type: string
-                type:
-                    type: string
-                    const: text
-                    description: Resource type identifier.
-            required:
-                - text
-                - type
-        LocalSearchSourceDocsInlineTypeBreakConstraint:
-            type: object
-            properties:
-                type:
-                    type: string
-                    const: break
-                    description: Resource type identifier.
-            required:
-                - type
-        LocalSearchSourceDocsInlineTypeEmphasisWithChildrenConstraint:
-            type: object
-            properties:
-                children:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsInline"
-                type:
-                    type: string
-                    const: emphasis
-                    description: Resource type identifier.
-            required:
-                - children
-                - type
         TimestampFormatTypeEventBreakerExistingOrNewNew:
             type: object
             required:
@@ -99750,6 +99896,42 @@ components:
                       source: applog
                     - _raw: 2026-05-19T12:00:01Z WARN  High memory usage detected
                       source: applog
+        LocalSearchSourceDocsResponseExamplesCriblHttpDocs:
+            summary: Return Cribl HTTP source documentation
+            description: Example response for getting structured lakehouse engine source documentation for a Cribl HTTP source.
+            value:
+                sourceType: cribl_http
+                canonicalUrl: https://docs.cribl.io/search/source-cribl-http/
+                blocks:
+                    - type: heading
+                      id: use-cases
+                      level: 1
+                      text: Use Cases
+                    - type: paragraph
+                      children:
+                        - type: text
+                          text: "Embedded source docs. "
+                        - type: link
+                          href: https://docs.cribl.io/search/source-cribl-http/#configuration
+                          children:
+                            - type: text
+                              text: Read more
+                headings:
+                    - id: use-cases
+                      level: 1
+                      text: Use Cases
+        LocalSearchSourceDocsUnsupportedTypeExamplesUnsupportedSourceType:
+            summary: Reject an unsupported source type
+            description: Example response for rejecting a lakehouse engine source documentation request when the source type is not supported.
+            value:
+                status: error
+                message: Source type "unsupported_source" is not supported
+        LocalSearchSourceDocsFetchFailedExamplesDocsUnavailable:
+            summary: Reject when public docs are unavailable
+            description: Example response for rejecting a lakehouse engine source documentation request when the public Cribl Docs page could not be fetched or parsed.
+            value:
+                status: error
+                message: Failed to fetch source docs
         LocalSearchSourceCountedResponseExamplesSingleSource:
             summary: Single lakehouse engine source
             description: Example response for listing a single lakehouse engine source.
@@ -128420,7 +128602,7 @@ paths:
             x-cribl-internal: false
             x-cribl-availability: both
             summary: Create a secret store
-            description: Create a new secret store that is backed by an external provider for global secrets. The built-in <code>cribl</code> secret store is automatically provisioned.
+            description: Create a new secret store that is backed by an external provider for global secrets. The built-in <code>cribl</code> secret store is automatically provisioned.<br/><br/><b>Deprecated:</b> a <code>config.tls.rejectUnauthorized</code> value supplied through the API is ignored — Cribl enforces HashiCorp Vault server-certificate validation.
             responses:
                 "201":
                     description: The created SecretStoreWithRuntimeState object.
@@ -128637,7 +128819,7 @@ paths:
             x-cribl-internal: false
             x-cribl-availability: both
             summary: Update a secret store
-            description: 'Update the specified secret store. Cribl does not support updates to the built-in <code>cribl</code> secret store.<br/><br/>This endpoint supports partial updates. Include only the fields you want to change. Omitted fields keep their current values.<br/><br/>If you change the <code>auth.provider</code>, you must send a complete <code>auth</code> object with the correct configuration for the provider. As long as you do not change the <code>auth.provider</code>, you can update a single setting in <code>auth</code> without resending the entire object.<br/><br/>Secret values (such as <code>auth.token</code>) are returned masked as an empty string by <code>GET</code>, so a read-modify-write is safe: a secret sent as an empty string is treated as "keep the stored value" and is ignored, rather than clearing the secret or failing validation. To change a secret, send its new value. There is no way to clear a secret through this endpoint.<br/><br/>For Vault stores, omitting <code>config.healthCheckEndpoint</code> preserves the current value. Send an empty string (<code>""</code>) to clear it and disable health checks.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration.'
+            description: 'Update the specified secret store. Cribl does not support updates to the built-in <code>cribl</code> secret store.<br/><br/>This endpoint supports partial updates. Include only the fields you want to change. Omitted fields keep their current values.<br/><br/>If you change the <code>auth.provider</code>, you must send a complete <code>auth</code> object with the correct configuration for the provider. As long as you do not change the <code>auth.provider</code>, you can update a single setting in <code>auth</code> without resending the entire object.<br/><br/>Secret values (such as <code>auth.token</code>) are returned masked as an empty string by <code>GET</code>, so a read-modify-write is safe: a secret sent as an empty string is treated as "keep the stored value" and is ignored, rather than clearing the secret or failing validation. To change a secret, send its new value. There is no way to clear a secret through this endpoint.<br/><br/>For Vault stores, omitting <code>config.healthCheckEndpoint</code> preserves the current value. Send an empty string (<code>""</code>) to clear it and disable health checks.<br/><br/><b>Deprecated:</b> a <code>config.tls.rejectUnauthorized</code> value supplied through the API is ignored — Cribl enforces HashiCorp Vault server-certificate validation.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration.'
             responses:
                 "200":
                     description: The updated SecretStoreWithRuntimeState object.
@@ -134129,7 +134311,7 @@ paths:
             x-cribl-internal: false
             x-cribl-availability: cloud
             summary: Delete a lakehouse engine (Cribl.Cloud only)
-            description: Delete the specified lakehouse engine (Cribl.Cloud only). If the engine owns the main Dataset and other engines exist, use <code>mainDatasetDestinationEngine</code> to reassign the main Dataset to another engine before deletion.
+            description: Delete the specified lakehouse engine (Cribl.Cloud only).<br/><br/>If the engine owns the main Dataset and other engines exist, use <code>mainDatasetDestinationEngine</code> to reassign the main Dataset to another engine before deletion.<br/><br/>The engine's Metrics Dataset is deleted with it rather than moved, so use <code>metricsDestinationDataset</code> to choose which remaining Metrics Dataset receives future metrics. It defaults to the Metrics Dataset on the engine receiving the main Dataset.
             responses:
                 "200":
                     description: The engine marked for deletion
@@ -134172,6 +134354,12 @@ paths:
                   schema:
                     type: string
                   description: Target lakehouse engine <code>id</code> to receive the main Dataset from the engine that is being deleted.
+                - name: metricsDestinationDataset
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Target Metrics Dataset <code>id</code> that should receive future metrics. Must be a Metrics Dataset on a surviving engine. Defaults to the one on the engine receiving the main Dataset.
         get:
             operationId: getLocalSearchEngineById
             tags:
@@ -148754,7 +148942,7 @@ paths:
             x-cribl-internal: false
             x-cribl-availability: cloud
             summary: Generate CloudFormation template for Data Source Discovery read permissions (Cribl.Cloud only)
-            description: Generate a CloudFormation template that provisions the IAM roles required for a Data Source Discovery (DSD) connection (Cribl.Cloud only). Send the connection id from registration; the leader loads the stored connection record and the STS external id from secure storage. For AWS Organizations, the template includes a StackSet for member account access.
+            description: Generate a CloudFormation template that provisions the IAM roles required for a Data Source Discovery (DSD) connection (Cribl.Cloud only). Send the connection id from registration. For AWS Organizations, the template includes a StackSet for member account access.
             responses:
                 "200":
                     description: (e.g. IAM role name collisions)
@@ -149697,7 +149885,7 @@ paths:
             x-cribl-internal: false
             x-cribl-availability: cloud
             summary: List all Data Source Discovery connections (Cribl.Cloud only)
-            description: Get a list of all registered Data Source Discovery (DSD) connections (Cribl.Cloud only). The response matches persisted connection fields only; <code>stsExternalId</code> is never included. External IDs are stored server-side for scans and CloudFormation bootstrap flows.
+            description: Get a list of all registered Data Source Discovery (DSD) connections (Cribl.Cloud only). STS External IDs are never included.
             responses:
                 "200":
                     description: Registered connections (paginated)
@@ -150124,7 +150312,7 @@ paths:
             x-cribl-internal: false
             x-cribl-availability: cloud
             summary: Start an account inventory scan for an AWS Organizations connection (Cribl.Cloud only)
-            description: Start an inventory scan to discover member AWS accounts in an AWS Organization (Cribl.Cloud only). The connection is identified by <code>connectionId</code> in the path; the leader loads the STS External ID for that connection from secure storage before invoking the scanner.
+            description: Start an inventory scan to discover member AWS accounts for an organization connection (Cribl.Cloud only).
             responses:
                 "202":
                     description: AWS Organizations inventory scan accepted
@@ -150643,7 +150831,7 @@ paths:
             x-cribl-internal: false
             x-cribl-availability: cloud
             summary: Start a Data Source Discovery data scan (Cribl.Cloud only)
-            description: Start a Data Source Discovery (DSD) scan for log sources for the connection identified by <code>connectionId</code> (Cribl.Cloud only). The request body carries scan options only; the leader loads the connection record and resolves the STS External ID from secure storage before invoking the scanner.
+            description: Start a Data Source Discovery (DSD) scan for log sources for the connection identified by <code>connectionId</code> (Cribl.Cloud only).
             responses:
                 "202":
                     description: Scan request accepted
@@ -151420,7 +151608,7 @@ paths:
             x-cribl-internal: false
             x-cribl-availability: cloud
             summary: Validate Data Source Discovery connection access (Cribl.Cloud only)
-            description: "Synchronously verify that Cribl can assume the connection's IAM role and inventory the account, without starting a full data scan (Cribl.Cloud only). The leader loads the connection record and resolves the STS External ID from secure storage, then runs a healthcheck. Returns HTTP <code>200</code> with <code>success: false</code> when validation fails (the connection could not be validated); malformed requests return <code>4xx</code> and unexpected server faults return <code>5xx</code>."
+            description: "Verify that Cribl can assume the connection's IAM role and inventory the account, without starting a full data scan (Cribl.Cloud only). Returns <code>200</code> with <code>success: false</code> when validation fails."
             responses:
                 "200":
                     description: "Validation result (<code>success: true</code> when access is confirmed; <code>success: false</code> with a safe <code>failureReason</code> and actionable <code>message</code> otherwise)"
@@ -154082,20 +154270,26 @@ paths:
             x-cribl-internal: true
             x-cribl-availability: cloud
             summary: Get lakehouse engine source documentation (Cribl.Cloud only)
-            description: Get documentation content for the specified lakehouse engine source type (Cribl.Cloud only).
+            description: Get the specified lakehouse engine source documentation (Cribl.Cloud only).
             responses:
                 "200":
-                    description: Structured lakehouse engine source documentation content
+                    description: Structured lakehouse engine source documentation content.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/LocalSearchSourceDocs"
+                            examples:
+                                LocalSearchSourceDocsResponseExamplesCriblHttpDocs:
+                                    $ref: "#/components/examples/LocalSearchSourceDocsResponseExamplesCriblHttpDocs"
                 "400":
                     description: Failed validation or malformed input — The lakehouse engine source type is not supported.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/LocalSearchApiErrorBody"
+                            examples:
+                                LocalSearchSourceDocsUnsupportedTypeExamplesUnsupportedSourceType:
+                                    $ref: "#/components/examples/LocalSearchSourceDocsUnsupportedTypeExamplesUnsupportedSourceType"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -154121,13 +154315,16 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/LocalSearchApiErrorBody"
+                            examples:
+                                LocalSearchSourceDocsFetchFailedExamplesDocsUnavailable:
+                                    $ref: "#/components/examples/LocalSearchSourceDocsFetchFailedExamplesDocsUnavailable"
             parameters:
                 - name: sourceType
                   in: path
                   required: true
                   schema:
                     $ref: "#/components/schemas/SupportedLocalSearchSourceType"
-                  description: The lakehouse engine source type whose documentation content to get.
+                  description: The <code>sourceType</code> of the lakehouse engine source documentation to get.
     /search/local_search/sources/{id}/hectoken:
         post:
             operationId: createSearchLocalSearchSourcesHecTokenById
