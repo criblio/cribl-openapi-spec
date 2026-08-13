@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.0-alpha.1786576504239-5d910756
+    version: 4.20.0-alpha.1786662853033-21668698
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -50785,6 +50785,8 @@ components:
                     description: Entity type.
                     examples:
                         - inputs
+                        - outputs
+                        - savedJobs
             required:
                 - id
                 - type
@@ -52422,6 +52424,24 @@ components:
                             type: string
                             description: Error message if the task has failed.
                             readOnly: true
+                deploy:
+                    type: object
+                    title: Deployment
+                    description: Optional automatic deployment settings for lookups in distributed Worker Groups. Ignored unless lookup automatic deployment is enabled in this deployment. When omitted, lookups require manual group deploy.
+                    properties:
+                        mode:
+                            type: string
+                            title: Auto Deploy
+                            enum:
+                                - manual
+                                - auto
+                            description: Deployment mode. When set to "auto", the leader automatically deploys this lookup to Worker Groups after content changes. When set to "manual", the lookup is only deployed during a manual group deployment. Only applies to lookups in distributed deployments.
+                            x-speakeasy-unknown-values: allow
+                        delay:
+                            type: number
+                            title: Delay
+                            minimum: 0
+                            description: Minutes to wait after the lookup is modified before triggering automatic deployment. Helps batch rapid edits into a single deploy.
             anyOf:
                 - properties:
                     fileInfo:
@@ -58852,6 +58872,13 @@ components:
                     items:
                         type: object
                         properties:
+                            deployMode:
+                                type: string
+                                enum:
+                                    - auto
+                                    - manual
+                                description: Deploy mode configured on the lookup file.
+                                x-speakeasy-unknown-values: allow
                             deployedVersion:
                                 type: string
                                 description: Version of the lookup file currently deployed on the Worker or Node.
@@ -73052,6 +73079,8 @@ components:
                     description: Entity type.
                     examples:
                         - inputs
+                        - outputs
+                        - savedJobs
             required:
                 - id
                 - refs
@@ -81992,6 +82021,8 @@ components:
                 - keypair
                 - text
             description: Type of the secret. Use <code>text</code> for an arbitrary value, <code>keypair</code> for an API key and secret key, or <code>credentials</code> for a username and password.
+            examples:
+                - text
             x-speakeasy-unknown-values: allow
         ApplyModeOptionsChartElementConfig:
             type: string
@@ -90565,6 +90596,13 @@ components:
                 id: user-activity-schema
                 description: JSON schema for validating user activity log entries
                 schema: '{"type":"object","properties":{"userId":{"type":"string"},"action":{"type":"string"},"timestamp":{"type":"string","format":"date-time"},"metadata":{"type":"object"}},"required":["userId","action","timestamp"]}'
+        SecretCreateResponseExamplesSecret:
+            summary: Create a secret
+            description: Example response that contains the new secret.
+            value:
+                id: my-api-key
+                secretType: text
+                description: API key for external service
         CreateSecretExamplesTextSecret:
             summary: Create a text secret
             description: Example request body for creating a secret that stores a single text value.
@@ -90591,6 +90629,57 @@ components:
                 apiKey: AKIAIOSFODNN7EXAMPLE
                 secretKey: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
                 description: AWS access credentials
+        SecretDeleteResponseExamplesSecretDeleted:
+            summary: Delete a secret
+            description: Example response for deleting a secret.
+            value:
+                id: my-api-key
+                secretType: text
+        SecretGetResponseExamplesSecret:
+            summary: Get a secret
+            description: Example response that contains the specified secret.
+            value:
+                id: my-api-key
+                secretType: text
+                description: API key for external service
+        SecretListResponseExamplesSecretList:
+            summary: List all secrets
+            description: Example response for listing all secrets, including both global secrets and legacy secrets.
+            value:
+                count: 4
+                items:
+                    - id: my-api-key
+                      secretType: text
+                      description: API key for external service
+                    - id: db-credentials
+                      secretType: credentials
+                      username: db_user
+                      description: Database credentials
+                    - id: aws-keypair
+                      secretType: keypair
+                      apiKey: AKIAIOSFODNN7EXAMPLE
+                      description: AWS access credentials
+                    - id: prod/service-account
+                      folderId: prod
+                      secretType: credentials
+                      description: Global service account credentials
+                      readOnly: true
+                      username: svc_account
+                offset: 0
+                limit: 20
+        SecretRefsResponseExamplesSecretRefs:
+            summary: List references to a secret
+            description: Example response for listing entities that reference the specified secret.
+            value:
+                type: inputs
+                id: splunk-hec-in
+        SecretUpdateResponseExamplesSecret:
+            summary: Update a secret
+            description: Example response that contains the updated secret.
+            value:
+                id: my-api-key
+                secretType: text
+                description: API key for external service
         UpdateSecretExamplesUpdateTextSecret:
             summary: Update a text secret
             description: "Example request body for updating the value of an existing text secret.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
@@ -112943,8 +113032,8 @@ paths:
                 - group
                 - node
                 - single
-            summary: Create a secret
-            description: Create a new secret.
+            summary: Create a legacy secret
+            description: Create a new legacy secret.<br/><br/>Use <code>POST /system/secret-folders/{folderId}/secrets</code> to create a new global secret.
             responses:
                 "201":
                     description: The created RestSecret object.
@@ -112952,6 +113041,9 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/RestSecret"
+                            examples:
+                                SecretCreateResponseExamplesSecret:
+                                    $ref: "#/components/examples/SecretCreateResponseExamplesSecret"
                 "400":
                     description: Failed validation or malformed input — invalid request body or validation error
                 "401":
@@ -113000,7 +113092,7 @@ paths:
                 - node
                 - single
             summary: List all secrets
-            description: Get a list of all secrets.
+            description: Get a list of all secrets, including both global secrets and legacy secrets.
             responses:
                 "200":
                     description: List of RestSecret objects.
@@ -113008,6 +113100,9 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/PaginatedRestSecret"
+                            examples:
+                                SecretListResponseExamplesSecretList:
+                                    $ref: "#/components/examples/SecretListResponseExamplesSecretList"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -113033,21 +113128,19 @@ paths:
                   required: false
                   schema:
                     $ref: "#/components/schemas/SecretType"
-                  description: Filter by secret type.
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Pagination offset
+                  description: The type of secrets to include in the response.
                 - name: limit
                   in: query
                   required: false
                   schema:
                     type: integer
-                    minimum: 0
-                  description: Maximum number of items to return
+                  description: Maximum number of secrets to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches.
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches.
             x-speakeasy-pagination:
                 type: offsetLimit
                 inputs:
@@ -113070,8 +113163,8 @@ paths:
                 - group
                 - node
                 - single
-            summary: Delete a secret
-            description: Delete the specified secret.
+            summary: Delete a legacy secret
+            description: Delete the specified legacy secret.<br/><br/>Use <code>DELETE /system/secret-folders/{folderId}/secrets/{id}</code> to delete a global secret.
             responses:
                 "200":
                     description: The deleted RestSecret object.
@@ -113079,6 +113172,9 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/RestSecret"
+                            examples:
+                                SecretDeleteResponseExamplesSecretDeleted:
+                                    $ref: "#/components/examples/SecretDeleteResponseExamplesSecretDeleted"
                 "400":
                     description: Failed validation or malformed input — Secret is in use by other configurations
                 "401":
@@ -113120,7 +113216,7 @@ paths:
                 - node
                 - single
             summary: Get a secret
-            description: Get the specified secret.
+            description: Get the specified global secret or legacy secret.
             responses:
                 "200":
                     description: The requested RestSecret object.
@@ -113128,6 +113224,9 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/RestSecret"
+                            examples:
+                                SecretGetResponseExamplesSecret:
+                                    $ref: "#/components/examples/SecretGetResponseExamplesSecret"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -113172,8 +113271,8 @@ paths:
                 - group
                 - node
                 - single
-            summary: Update a secret
-            description: "Update the specified secret.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            summary: Update a legacy secret
+            description: "Update the specified legacy secret.<br/><br/>Use <code>PATCH /system/secret-folders/{folderId}/secrets/{id}</code> to update a global secret.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated RestSecret object.
@@ -113181,6 +113280,9 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/RestSecret"
+                            examples:
+                                SecretUpdateResponseExamplesSecret:
+                                    $ref: "#/components/examples/SecretUpdateResponseExamplesSecret"
                 "400":
                     description: Failed validation or malformed input — invalid request body or validation error
                 "401":
@@ -113235,14 +113337,17 @@ paths:
                 - node
                 - single
             summary: List references to a secret
-            description: Get a list of the entities that reference the specified secret.
+            description: Get a list of the entities that reference the specified global secret or legacy secret.
             responses:
                 "200":
-                    description: The requested ReferencedEntity object.
+                    description: List of entities that reference the specified secret.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/ReferencedEntity"
+                            examples:
+                                SecretRefsResponseExamplesSecretRefs:
+                                    $ref: "#/components/examples/SecretRefsResponseExamplesSecretRefs"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -113268,7 +113373,7 @@ paths:
                   required: true
                   schema:
                     type: string
-                  description: The <code>id</code> of the secret.
+                  description: The <code>id</code> of the secret. For a global secret, URL-encode the composite <code>{folderId}/{secretId}</code> value so that the slash separator is <code>%2F</code>.
     /system/status/inputs/{id}:
         get:
             operationId: getInputStatusById
