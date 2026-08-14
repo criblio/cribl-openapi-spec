@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.0-alpha.1786662853033-21668698
+    version: 4.20.0-alpha.1786749315622-3ccb594d
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -61885,17 +61885,6 @@ components:
                     type: string
                     description: Name of the ClickHouse view for the Dataset on the Lakehouse.
             title: CriblLakeDatasetUpdate
-        LakeDatasetBulkDeleteRequest:
-            type: object
-            properties:
-                ids:
-                    type: array
-                    items:
-                        type: string
-                    description: The <code>id</code> of each Lake Dataset to delete.
-            required:
-                - ids
-            title: LakeDatasetBulkDeleteRequest
         ElasticsearchAuthTokenMetadata:
             type: object
             properties:
@@ -65835,7 +65824,7 @@ components:
                     x-speakeasy-unknown-values: allow
                 cssEnabled:
                     type: boolean
-                    description: When <code>true</code>, this lakehouse engine uses Cribl Simple Storage (CSS). Set at create time from the <code>feature-search-cribl-simple-storage</code> feature flag; immutable after create.
+                    description: When <code>true</code>, this lakehouse engine uses Cribl Simple Storage (CSS). Set at create time only; immutable after create. Omitted from public GET/LIST responses. Defaults to <code>false</code>.
                 datasets:
                     type: array
                     items:
@@ -74727,6 +74716,9 @@ components:
                                 certPath:
                                     type: string
                                     description: Filesystem path to the PEM-encoded TLS certificate.
+                                certificateName:
+                                    type: string
+                                    description: Name of a predefined Certificate stored in Cribl.
                                 disabled:
                                     type: boolean
                                     description: If <code>true</code>, TLS is disabled for the API server. Otherwise, <code>false</code>.
@@ -79267,7 +79259,7 @@ components:
             properties:
                 cssEnabled:
                     type: boolean
-                    description: When true, provision Cribl Simple Storage (CSS) for this engine. Stamped on the engine at create time from <code>feature-search-cribl-simple-storage</code>; omitted for engines created before that field existed.
+                    description: When true, provision Cribl Simple Storage (CSS) for this engine. Stamped on the engine at create time; omitted for engines created before that field existed.
                 engineId:
                     type: string
                     description: Engine <code>id</code> this storage row applies to.
@@ -82566,6 +82558,9 @@ components:
                 certPath:
                     type: string
                     description: Filesystem path to the PEM-encoded TLS certificate.
+                certificateName:
+                    type: string
+                    description: Name of a predefined Certificate stored in Cribl.
                 disabled:
                     type: boolean
                     description: If <code>true</code>, TLS is disabled for the API server. Otherwise, <code>false</code>.
@@ -95847,13 +95842,6 @@ components:
                 acceleratedFields:
                     - host
                     - status
-        LakeDatasetBulkDeleteExamplesBulkDeleteDatasets:
-            summary: Bulk delete Lake Datasets
-            description: Example request body for soft-deleting multiple Lake Datasets in the Lake that is specified in the request URL.<br/><br/>The request body must be an object with an <code>ids</code> array listing the <code>id</code> of each Lake Dataset to delete. The response is <code>{ items, errors }</code> — <code>items</code> contains the deleted/soft-deleted Lake Datasets, and <code>errors</code> contains <code>{ id, reason }</code> entries for any ids that failed (e.g. not found, or still connected to a Stream destination).
-            value:
-                ids:
-                    - web_access_logs
-                    - security_events
         LakeDirectAccessCreateExamplesNdjsonToken:
             summary: Create a Direct Access HTTP Source for NDJSON ingest
             description: Example request body for creating a Direct Access HTTP Source for NDJSON ingest in Cribl Lake.
@@ -97020,6 +97008,20 @@ components:
                 created_by: admin@example.com
                 begins_at: 1710000000000
                 expires_at: 1710003600000
+        MonitorStateHistoryResponseExamplesStateHistory:
+            summary: Monitor state history entries
+            description: One entry per monitor with activity in the time window.
+            value:
+                monitor_id: mon_cpu_saturation
+                timestamp: 1720454400000
+                status: critical
+                fingerprint: abc123def456
+                labels:
+                    host: worker-07
+                    region: us-east-1
+                monitor_name: CPU Saturation > 90%
+                product: metrics
+                value: 94.2
         MetricActivityResponseExamplesActivity:
             summary: Per-metric activity feed
             description: Example response showing recent lifecycle events for a metric.
@@ -99340,8 +99342,9 @@ components:
                     disabled: false
                     ssl:
                         disabled: false
-                        privKeyPath: /opt/cribl/local/cribl/auth/cribl.key
-                        certPath: /opt/cribl/local/cribl/auth/cribl.crt
+                        certificateName: myApiCert
+                        privKeyPath: /opt/cribl/local/cribl/auth/myApiCert.key
+                        certPath: /opt/cribl/local/cribl/auth/myApiCert.crt
                         passphrase: ""
                 system:
                     upgrade: api
@@ -99439,8 +99442,9 @@ components:
                     disabled: false
                     ssl:
                         disabled: false
-                        privKeyPath: /opt/cribl/local/cribl/auth/cribl.key
-                        certPath: /opt/cribl/local/cribl/auth/cribl.crt
+                        certificateName: myApiCert
+                        privKeyPath: /opt/cribl/local/cribl/auth/myApiCert.key
+                        certPath: /opt/cribl/local/cribl/auth/myApiCert.crt
                         passphrase: ""
                 system:
                     upgrade: api
@@ -99477,8 +99481,9 @@ components:
                     disabled: false
                     ssl:
                         disabled: false
-                        privKeyPath: /opt/cribl/local/cribl/auth/cribl.key
-                        certPath: /opt/cribl/local/cribl/auth/cribl.crt
+                        certificateName: myApiCert
+                        privKeyPath: /opt/cribl/local/cribl/auth/myApiCert.key
+                        certPath: /opt/cribl/local/cribl/auth/myApiCert.crt
                         passphrase: ""
                 system:
                     upgrade: api
@@ -135023,61 +135028,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Lake to create the Lake Datasets in.
-        delete:
-            operationId: deleteCriblLakeDatasetByLakeId
-            tags:
-                - lake
-            x-speakeasy-group: lakes.datasets
-            x-speakeasy-name-override: bulkDelete
-            x-cribl-internal: false
-            x-cribl-availability: cloud
-            x-cribl-api-context:
-                - leader
-            summary: Bulk delete Lake Datasets (Cribl.Cloud only)
-            description: "Soft-deletes a list of Lake Datasets in the specified Lake in a single transaction (Cribl.Cloud only). Accepts <code>{ ids: string[] }</code> in the request body. Returns <code>{ items, errors }</code> — <code>items</code> contains the deleted/soft-deleted Lake Datasets, and <code>errors</code> contains an entry (<code>{ id, reason }</code>) for each id that failed (e.g. not found, or still connected to a Stream destination). A per-id failure does not fail the rest of the batch."
-            responses:
-                "200":
-                    description: The deleted CriblLakeDataset object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/CriblLakeDataset"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            requestBody:
-                description: LakeDatasetBulkDeleteRequest object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/LakeDatasetBulkDeleteRequest"
-                        examples:
-                            LakeDatasetBulkDeleteExamplesBulkDeleteDatasets:
-                                $ref: "#/components/examples/LakeDatasetBulkDeleteExamplesBulkDeleteDatasets"
-            parameters:
-                - name: lakeId
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: The <code>id</code> of the Lake that contains the Lake Datasets to delete.
     /products/lake/lakes/{lakeId}/datasets/{id}:
         delete:
             operationId: deleteCriblLakeDatasetByLakeIdAndId
@@ -140125,6 +140075,77 @@ paths:
                   schema:
                     type: string
                   description: Repeatable; restrict to these monitor IDs. Omit for all monitors in the dataset.
+    /products/lakehouse_engine_metrics/engines/{engineId}/datasets/{datasetId}/alert_activity/state:
+        get:
+            operationId: getProductsLakehouseEngineMetricsEnginesDatasetsAlertActivityStateByEngineIdAndDatasetId
+            tags:
+                - alertActivity
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: Monitor state history (windowed)
+            description: Returns, for each monitor with activity in the window, its representative latest-timestamp evaluation row plus (if present) one prior row where the monitor's confirmed <code>status</code> last changed.
+            responses:
+                "200":
+                    description: One entry per monitor with activity in the window.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/MonitorAlertHistoryEntry"
+                            examples:
+                                MonitorStateHistoryResponseExamplesStateHistory:
+                                    $ref: "#/components/examples/MonitorStateHistoryResponseExamplesStateHistory"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: engineId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The Local Search engine id.
+                - name: datasetId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The metrics dataset id within the engine.
+                - name: earliest
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Window start, epoch milliseconds. Defaults to <code>latest - 24h</code>.
+                - name: latest
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Window end, epoch milliseconds. Defaults to "now".
+                - name: monitor_ids
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Repeatable; restrict results to these monitor IDs.
     /products/lakehouse_engine_metrics/engines/{engineId}/datasets/{datasetId}/alert_activity/stats:
         get:
             operationId: getProductsLakehouseEngineMetricsEnginesDatasetsAlertActivityStatsByEngineIdAndDatasetId
