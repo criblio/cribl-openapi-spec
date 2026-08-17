@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.0-alpha.1786835326597-0e8b6784
+    version: 4.20.0-alpha.1787008485918-49393e65
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -27821,6 +27821,129 @@ components:
                     type: string
                     description: Binds 'clientId' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'clientId' at runtime.
             title: InputServicenowTable
+        InputProofpointPod:
+            type: object
+            required:
+                - type
+                - clusterId
+                - feedType
+                - textSecret
+            properties:
+                id:
+                    type: string
+                    title: Input ID
+                    description: Unique ID for this input
+                type:
+                    type: string
+                    enum:
+                        - proofpoint_pod
+                    description: Connector type identifier.
+                disabled:
+                    type: boolean
+                    title: Disabled
+                    description: If true, the Source is disabled and will not collect data.
+                pipeline:
+                    type: string
+                    title: Pipeline
+                    description: Pipeline to process data from this Source before sending it through the Routes
+                sendToRoutes:
+                    type: boolean
+                    description: Select whether to send data to Routes, or directly to Destinations.
+                environment:
+                    type: string
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                pqEnabled:
+                    type: boolean
+                    title: Enable persistent queue
+                    description: Use a disk queue to minimize data loss when connected services block. See [Cribl Docs](https://docs.cribl.io/stream/persistent-queues) for PQ defaults (Cribl-managed Cloud Workers) and configuration options (on-prem and hybrid Workers).
+                streamtags:
+                    type: array
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    items:
+                        type: string
+                criblSourceProvenance:
+                    $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestinationArnConstraint"
+                    description: Read-only metadata that records how the Source was created. Preserved on update when omitted from the request body. Cannot be set on create.
+                connections:
+                    type: array
+                    title: Use QuickConnect
+                    description: Direct connections to Destinations, and optionally via a Pipeline or a Pack
+                    items:
+                        $ref: "#/components/schemas/ConnectionConfInputCollection"
+                pq:
+                    $ref: "#/components/schemas/PqType"
+                clusterId:
+                    type: string
+                    title: Cluster ID
+                    description: Proofpoint on Demand cluster ID.
+                feedType:
+                    type: string
+                    title: Feed type
+                    description: Proofpoint on Demand feed to ingest.
+                    enum:
+                        - message
+                        - maillog
+                        - audit
+                    x-speakeasy-enum-descriptions:
+                        - Message
+                        - Mail log
+                        - Audit
+                    x-speakeasy-unknown-values: allow
+                textSecret:
+                    type: string
+                    title: Token (text secret)
+                    description: Select or create a stored text secret
+                tls:
+                    $ref: "#/components/schemas/TlsSettingsClientSideTypeCaPathCertPath"
+                    description: TLS settings (client side)
+                compress:
+                    type: boolean
+                    title: Compress
+                    description: Compress the feed connection.
+                handshakeTimeout:
+                    type: number
+                    title: Handshake timeout (ms)
+                    description: Maximum time to wait for the connection handshake to complete.
+                    minimum: 1000
+                    maximum: 60000
+                keepAliveIntervalSec:
+                    type: number
+                    title: Keepalive ping interval (seconds)
+                    description: How often to send a keepalive ping while the feed is idle. Use 0 to disable keepalive pings.
+                    minimum: 0
+                    maximum: 3600
+                maxMissedKeepAlives:
+                    type: number
+                    title: Max missed keepalives
+                    description: Maximum number of consecutive keepalive pings that can go unanswered before reconnecting.
+                    minimum: 1
+                    maximum: 100
+                maxMessageSize:
+                    type: string
+                    title: Maximum message size
+                    description: The maximum size of a single feed message. Enter a numeral with units of KB, MB, etc.
+                    pattern: ^\d+\s*(?:\w{2})?$
+                readBufferSize:
+                    type: string
+                    title: Read buffer size
+                    description: The maximum size to hold in memory before applying backpressure. Enter a numeral with units of KB, MB, etc.
+                    pattern: ^\d+\s*(?:\w{2})?$
+                description:
+                    type: string
+                    title: Description
+                    description: Optional description for this configuration.
+                __template_environment:
+                    type: string
+                    description: Binds 'environment' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'environment' at runtime.
+                __template_streamtags:
+                    type: string
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                __template_clusterId:
+                    type: string
+                    description: Binds 'clusterId' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'clusterId' at runtime.
+            title: InputProofpointPod
         InputZscalerHec:
             type: object
             required:
@@ -29456,6 +29579,7 @@ components:
                 - $ref: "#/components/schemas/InputSecurityLake"
                 - $ref: "#/components/schemas/InputBedrockS3"
                 - $ref: "#/components/schemas/InputServicenowTable"
+                - $ref: "#/components/schemas/InputProofpointPod"
                 - $ref: "#/components/schemas/InputZscalerHec"
                 - $ref: "#/components/schemas/InputCloudflareHec"
                 - $ref: "#/components/schemas/InputSysdigHec"
@@ -29531,6 +29655,7 @@ components:
                     security_lake: "#/components/schemas/InputSecurityLake"
                     bedrock_s3: "#/components/schemas/InputBedrockS3"
                     servicenow_table: "#/components/schemas/InputServicenowTable"
+                    proofpoint_pod: "#/components/schemas/InputProofpointPod"
                     zscaler_hec: "#/components/schemas/InputZscalerHec"
                     cloudflare_hec: "#/components/schemas/InputCloudflareHec"
                     sysdig_hec: "#/components/schemas/InputSysdigHec"
@@ -30038,10 +30163,10 @@ components:
             properties:
                 name:
                     type: string
-                    description: Name of the metadata tag.
+                    description: Name of the metadata field.
                 value:
                     type: string
-                    description: Value of the metadata tag.
+                    description: JavaScript expression to compute the metadata field's value, enclosed in quotes or backticks. Can evaluate to a constant.
             required:
                 - name
                 - value
@@ -50868,6 +50993,26 @@ components:
                 - id
                 - routes
             title: Routes
+        PaginatedRoutes:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/Routes"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
         RoutesInput:
             type: object
             properties:
@@ -52078,6 +52223,26 @@ components:
                 - name
                 - protobuf
             title: MDTDeviceConfig
+        PaginatedMdtDeviceConfig:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/MDTDeviceConfig"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
         GrokFile:
             type: object
             additionalProperties: false
@@ -52926,6 +53091,26 @@ components:
                 - id
                 - name
             title: ProtobufLibraryConfig
+        PaginatedProtobufLibraryConfig:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/ProtobufLibraryConfig"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
         PaginatedProtobufEncodingConfig:
             type: object
             required:
@@ -53444,14 +53629,17 @@ components:
             properties:
                 query:
                     type: string
+                    description: The search query string to run.
                 queryId:
                     type: string
+                    description: The <code>id</code> of the saved search query to run.
                 runMode:
                     $ref: "#/components/schemas/SavesSearchRunMode"
+                    description: Whether to start a new search (<code>newSearch</code>) or reuse the results of the last run (<code>lastRun</code>).
                 type:
                     type: string
                     const: saved
-                    description: Resource type identifier.
+                    description: Search query discriminator for a saved search query.
             required:
                 - queryId
                 - type
@@ -53471,27 +53659,34 @@ components:
                         - string
                         - number
                         - "null"
+                    description: Lower bound of the search time window; a relative string or Unix time in seconds.
                 expectedOutputType:
                     $ref: "#/components/schemas/ExpectedOutputType"
+                    description: The expected output type of the search query results.
                 latest:
                     type:
                         - string
                         - number
                         - "null"
+                    description: Upper bound of the search time window; a relative string or Unix time in seconds.
                 parentSearchId:
                     type: string
+                    description: The <code>id</code> of the parent search panel (input or visualization) that this query depends on.
                 query:
                     type:
                         - string
                         - "null"
+                    description: The search query string to run inline.
                 sampleRate:
                     type: number
+                    description: A number between <code>0</code> and <code>1</code> that indicates the percentage of events to sample during the search.
                 timezone:
                     type: string
+                    description: IANA timezone for interpreting relative bounds and timestamps.
                 type:
                     type: string
                     const: inline
-                    description: Resource type identifier.
+                    description: Search query discriminator for an inline search query.
             required:
                 - earliest
                 - latest
@@ -53504,11 +53699,12 @@ components:
                 type:
                     type: string
                     const: values
-                    description: Resource type identifier.
+                    description: Search query discriminator for a static list of values.
                 values:
                     type: array
                     items:
                         type: string
+                    description: The list of static values used by the visualization.
             required:
                 - type
                 - values
@@ -53519,7 +53715,7 @@ components:
                 type:
                     type: string
                     const: empty
-                    description: Resource type identifier.
+                    description: Search query discriminator for an empty (unconfigured) search query.
             required:
                 - type
             title: EmptySearchQuery
@@ -54898,6 +55094,26 @@ components:
                 - id
                 - name
             title: SearchDashboardInput
+        CountedListSearchDashboard:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/SearchDashboard"
+                offset:
+                    type: integer
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
+                limit:
+                    type: integer
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
         FieldMappingType:
             type: object
             properties:
@@ -58871,6 +59087,26 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        CountedListGlobalSecretReference:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/GlobalSecretReference"
+                offset:
+                    type: integer
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
+                limit:
+                    type: integer
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
         GlobalSecretReferenceEntityType:
             type: string
             enum:
@@ -62607,6 +62843,26 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        CountedListNotebook:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/Notebook"
+                offset:
+                    type: integer
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
+                limit:
+                    type: integer
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
         NotebookActivityResult:
             type: object
             properties:
@@ -72595,6 +72851,26 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        CountedListLoggerConfig:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/LoggerConfig"
+                offset:
+                    type: integer
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
+                limit:
+                    type: integer
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
         LogEventFilterExpression:
             type: string
             description: Filter expression (JavaScript) evaluated against each retrieved log event.
@@ -73464,16 +73740,6 @@ components:
                     - string
                     - number
             title: TelemetryMetricsPayload
-        TelemetryMetricsExtendedResponse:
-            type: array
-            items:
-                $ref: "#/components/schemas/TelemetryMetricsPayload"
-            title: TelemetryMetricsExtendedResponse
-        TelemetryMetricsResponse:
-            oneOf:
-                - $ref: "#/components/schemas/TelemetryMetricsPayload"
-                - $ref: "#/components/schemas/TelemetryMetricsExtendedResponse"
-            title: TelemetryMetricsResponse
         CaptureFunctions:
             type: object
             properties:
@@ -79337,6 +79603,26 @@ components:
                 - id
                 - policy
             title: TrustPolicy
+        PaginatedTrustPolicy:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/TrustPolicy"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
         DatasetFavoritesResponse:
             type: array
             items:
@@ -86420,6 +86706,17 @@ components:
                 sendToRoutes: true
                 pqEnabled: false
             description: Example request body for creating a Prometheus Remote Write Source.
+        InputCreateExamplesProofpointPod:
+            summary: Proofpoint on Demand
+            value:
+                id: proofpoint-pod-source
+                type: proofpoint_pod
+                clusterId: my-pod-cluster
+                feedType: message
+                textSecret: proofpoint-pod-token-secret
+                sendToRoutes: true
+                pqEnabled: false
+            description: Example request body for creating a Proofpoint on Demand Source.
         InputCreateExamplesRawUdp:
             summary: Raw UDP
             value:
@@ -87230,6 +87527,17 @@ components:
                 sendToRoutes: true
                 pqEnabled: false
             description: "Example request body for updating a Prometheus Remote Write Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+        UpdateInputExamplesProofpointPod:
+            summary: Proofpoint on Demand
+            value:
+                id: proofpoint-pod-source
+                type: proofpoint_pod
+                clusterId: my-pod-cluster
+                feedType: message
+                textSecret: proofpoint-pod-token-secret
+                sendToRoutes: true
+                pqEnabled: false
+            description: "Example request body for updating a Proofpoint on Demand Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
         UpdateInputExamplesRawUdp:
             summary: Raw UDP
             value:
@@ -92766,15 +93074,28 @@ components:
             summary: List Protobuf libraries
             description: Example response for listing Protobuf libraries in the <code>items</code> array.
             value:
-                id: google-protobuf
-                name: Google Protobuf
-                description: Google Protocol Buffers library with common message types
-                dependsOn: []
-                availableEncodings:
-                    - id: log-entry
-                      name: LogEntry
-                      eventModel: google.logging.v2.LogEntry
-                tags: google,protobuf
+                count: 2
+                items:
+                    - id: google-protobuf
+                      name: Google Protobuf
+                      description: Google Protocol Buffers library with common message types
+                      dependsOn: []
+                      availableEncodings:
+                        - id: log-entry
+                          name: LogEntry
+                          eventModel: google.logging.v2.LogEntry
+                      tags: google,protobuf
+                    - id: opentelemetry
+                      name: OpenTelemetry
+                      description: OpenTelemetry protocol buffer definitions for traces, metrics, and logs
+                      dependsOn: []
+                      availableEncodings:
+                        - id: logs-data
+                          name: LogsData
+                          eventModel: opentelemetry.proto.logs.v1.LogsData
+                      tags: otel,opentelemetry
+                offset: 0
+                limit: 20
         ProtobufEncodingListResponseExamplesProtobufEncodingList:
             summary: List Protobuf encodings
             description: Example response for listing Protobuf encodings for a library in the <code>items</code> array.
@@ -93032,6 +93353,30 @@ components:
             value:
                 items: []
                 count: 0
+        DashboardResponseExampleDashboard:
+            summary: Dashboard with one Chart
+            description: Example response for a Dashboard with a single line-chart element.
+            value:
+                id: search_activity_overview
+                name: Search Activity Overview
+                created: 1700000000000
+                createdBy: jdoe@example.com
+                modified: 1700086400000
+                modifiedBy: jdoe@example.com
+                elements:
+                    - id: element_0
+                      type: chart.line
+                      title: Events over time
+                      layout:
+                        x: 0
+                        y: 0
+                        w: 12
+                        h: 4
+                      search:
+                        type: inline
+                        query: top 10 source | chart count() over _time by source
+                        earliest: -24h
+                        latest: now
         CreateDashboardExamplesSimpleDashboard:
             summary: Create a Dashboard with one Chart
             description: Example request body for creating a Dashboard with one Chart.
@@ -93052,6 +93397,12 @@ components:
                         query: top 10 source | chart count() over _time by source
                         earliest: -24h
                         latest: now
+        InvalidateDashboardCacheResponseExampleCacheInvalidated:
+            summary: Cache invalidated
+            description: The Dashboard list cache was flushed. The response is an empty list.
+            value:
+                items: []
+                count: 0
         MoveDashboardExamplesMoveToPack:
             summary: Move a Dashboard to a Pack
             description: Example request body for moving a Dashboard to the specified Pack.
@@ -94729,12 +95080,20 @@ components:
             summary: List references to a global secret
             description: Example response for listing the entities that reference a global secret.
             value:
-                entityType: inputs
-                entityId: splunk-hec-in
-                productContext:
-                    product: stream
-                    id: default
-                fieldName: credentialsSecret
+                count: 2
+                items:
+                    - entityType: inputs
+                      entityId: splunk-hec-in
+                      productContext:
+                        product: stream
+                        id: default
+                      fieldName: credentialsSecret
+                    - entityType: outputs
+                      entityId: s3-prod
+                      productContext:
+                        product: stream
+                        id: default
+                      fieldName: awsSecret
         UpdateGlobalSecretExamplesCriblBackedCredentialsSecret:
             summary: Rotate a credentials global secret in the Cribl-managed store
             description: "Example request body for rotating the password of an existing credentials global secret.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
@@ -96808,6 +97167,12 @@ components:
                         query: error OR fail | chart count() by source
                         earliest: -24h
                         latest: now
+        InvalidateNotebookCacheResponseExampleCacheInvalidated:
+            summary: Cache invalidated
+            description: The Notebook list cache was flushed. The response is an empty list.
+            value:
+                items: []
+                count: 0
         UpdateNotebookExamplesUpdateNotebook:
             summary: Update a Notebook
             description: "Example request body for updating an existing Notebook.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
@@ -102373,22 +102738,54 @@ components:
             summary: List Trust Policies for cross-account access
             description: Example response for listing IAM Trust Policies used to establish cross-account trust relationships.
             value:
-                id: default
-                policy:
-                    Version: 2012-10-17
-                    Statement:
-                        - Effect: Allow
-                          Principal:
-                            AWS: arn:aws:iam::123456789012:role/CriblSearchRole
-                          Action: sts:AssumeRole
-                        - Effect: Allow
-                          Principal:
-                            AWS: arn:aws:iam::123456789012:role/CriblSearchRole
-                          Action: sts:TagSession
-                        - Effect: Allow
-                          Principal:
-                            AWS: arn:aws:iam::123456789012:role/CriblSearchRole
-                          Action: sts:SetSourceIdentity
+                count: 2
+                items:
+                    - id: default
+                      policy:
+                        Version: 2012-10-17
+                        Statement:
+                            - Effect: Allow
+                              Principal:
+                                AWS: arn:aws:iam::123456789012:role/CriblSearchRole
+                              Action: sts:AssumeRole
+                            - Effect: Allow
+                              Principal:
+                                AWS: arn:aws:iam::123456789012:role/CriblSearchRole
+                              Action: sts:TagSession
+                            - Effect: Allow
+                              Principal:
+                                AWS: arn:aws:iam::123456789012:role/CriblSearchRole
+                              Action: sts:SetSourceIdentity
+                    - id: stream
+                      policy:
+                        Version: 2012-10-17
+                        Statement:
+                            - Effect: Allow
+                              Principal:
+                                AWS: arn:aws:iam::123456789012:role/CriblSearchRole
+                              Action: sts:AssumeRole
+                            - Effect: Allow
+                              Principal:
+                                AWS: arn:aws:iam::123456789012:role/CriblSearchRole
+                              Action: sts:TagSession
+                            - Effect: Allow
+                              Principal:
+                                AWS: arn:aws:iam::123456789012:role/CriblSearchRole
+                              Action: sts:SetSourceIdentity
+                            - Effect: Allow
+                              Principal:
+                                AWS: arn:aws:iam::987654321098:role/CriblStreamRole
+                              Action: sts:AssumeRole
+                            - Effect: Allow
+                              Principal:
+                                AWS: arn:aws:iam::987654321098:role/CriblStreamRole
+                              Action: sts:TagSession
+                            - Effect: Allow
+                              Principal:
+                                AWS: arn:aws:iam::987654321098:role/CriblStreamRole
+                              Action: sts:SetSourceIdentity
+                offset: 0
+                limit: 20
         DatasetDataClearError400ExamplesUnsupportedDataset:
             summary: Clear data from a non-Lakehouse Dataset
             description: Example response for clearing data from a Dataset that does not support data clearing, such as a non-Lakehouse Dataset.
@@ -107748,6 +108145,8 @@ paths:
                                 $ref: "#/components/examples/InputCreateExamplesPrometheus"
                             InputCreateExamplesPrometheusRw:
                                 $ref: "#/components/examples/InputCreateExamplesPrometheusRw"
+                            InputCreateExamplesProofpointPod:
+                                $ref: "#/components/examples/InputCreateExamplesProofpointPod"
                             InputCreateExamplesRawUdp:
                                 $ref: "#/components/examples/InputCreateExamplesRawUdp"
                             InputCreateExamplesBedrockS3:
@@ -108012,6 +108411,8 @@ paths:
                                 $ref: "#/components/examples/UpdateInputExamplesPrometheus"
                             UpdateInputExamplesPrometheusRw:
                                 $ref: "#/components/examples/UpdateInputExamplesPrometheusRw"
+                            UpdateInputExamplesProofpointPod:
+                                $ref: "#/components/examples/UpdateInputExamplesProofpointPod"
                             UpdateInputExamplesRawUdp:
                                 $ref: "#/components/examples/UpdateInputExamplesRawUdp"
                             UpdateInputExamplesBedrockS3:
@@ -108590,6 +108991,8 @@ paths:
                                 $ref: "#/components/examples/InputCreateExamplesPrometheus"
                             InputCreateExamplesPrometheusRw:
                                 $ref: "#/components/examples/InputCreateExamplesPrometheusRw"
+                            InputCreateExamplesProofpointPod:
+                                $ref: "#/components/examples/InputCreateExamplesProofpointPod"
                             InputCreateExamplesRawUdp:
                                 $ref: "#/components/examples/InputCreateExamplesRawUdp"
                             InputCreateExamplesBedrockS3:
@@ -108867,6 +109270,8 @@ paths:
                                 $ref: "#/components/examples/UpdateInputExamplesPrometheus"
                             UpdateInputExamplesPrometheusRw:
                                 $ref: "#/components/examples/UpdateInputExamplesPrometheusRw"
+                            UpdateInputExamplesProofpointPod:
+                                $ref: "#/components/examples/UpdateInputExamplesProofpointPod"
                             UpdateInputExamplesRawUdp:
                                 $ref: "#/components/examples/UpdateInputExamplesRawUdp"
                             UpdateInputExamplesBedrockS3:
@@ -113051,7 +113456,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Routes"
+                                $ref: "#/components/schemas/PaginatedRoutes"
                             examples:
                                 RoutesResponseExamplesDefaultRoutingTable:
                                     $ref: "#/components/examples/RoutesResponseExamplesDefaultRoutingTable"
@@ -113076,6 +113481,32 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+            parameters:
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Pagination offset
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Maximum number of items to return
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /routes/{id}/append:
         post:
             operationId: createRoutesAppendById
@@ -113309,7 +113740,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Routes"
+                                $ref: "#/components/schemas/PaginatedRoutes"
                             examples:
                                 RoutesResponseExamplesDefaultRoutingTable:
                                     $ref: "#/components/examples/RoutesResponseExamplesDefaultRoutingTable"
@@ -113335,12 +113766,37 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/Error"
             parameters:
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Pagination offset
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Maximum number of items to return
                 - name: pack
                   in: path
                   required: true
                   schema:
                     type: string
                   description: The <code>id</code> of the Pack.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /p/{pack}/routes/{id}/append:
         post:
             operationId: createRoutesAppendByPackAndId
@@ -116092,7 +116548,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/MDTDeviceConfig"
+                                $ref: "#/components/schemas/PaginatedMdtDeviceConfig"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -116112,6 +116568,32 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+            parameters:
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Pagination offset
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Maximum number of items to return
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /lib/grok:
         post:
             operationId: createGrokfile
@@ -119022,7 +119504,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/ProtobufLibraryConfig"
+                                $ref: "#/components/schemas/PaginatedProtobufLibraryConfig"
                             examples:
                                 ProtobufLibraryListResponseExamplesProtobufLibraryList:
                                     $ref: "#/components/examples/ProtobufLibraryListResponseExamplesProtobufLibraryList"
@@ -119052,6 +119534,31 @@ paths:
                   schema:
                     type: string
                   description: Set to <code>true</code> to return only Protobuf libraries that have at least one encoding. Otherwise, <code>false</code> (default).
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Pagination offset
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Maximum number of items to return
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /lib/protobuf-libraries/{id}/encodings:
         get:
             operationId: getProtobufLibraryConfigEncodingsById
@@ -121197,11 +121704,14 @@ paths:
             description: Get a list of all Dashboards.
             responses:
                 "200":
-                    description: List of SearchDashboard objects.
+                    description: The list of Dashboards
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/PaginatedSearchDashboard"
+                            examples:
+                                DashboardResponseExampleDashboard:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -121284,11 +121794,14 @@ paths:
                                 $ref: "#/components/examples/CreateDashboardExamplesSimpleDashboard"
             responses:
                 "201":
-                    description: The created SearchDashboard object.
+                    description: The created Dashboard
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/SearchDashboard"
+                            examples:
+                                DashboardResponseExampleDashboard:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -121322,11 +121835,14 @@ paths:
             description: Get the specified Dashboard.
             responses:
                 "200":
-                    description: The requested SearchDashboard object.
+                    description: The requested Dashboard
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/SearchDashboard"
+                            examples:
+                                DashboardResponseExampleDashboard:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -121384,11 +121900,14 @@ paths:
                                 $ref: "#/components/examples/UpdateDashboardExamplesUpdateDashboard"
             responses:
                 "200":
-                    description: The updated SearchDashboard object.
+                    description: The updated Dashboard
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/SearchDashboard"
+                            examples:
+                                DashboardResponseExampleDashboard:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -121699,7 +122218,7 @@ paths:
             operationId: deleteSearchDashboard
             tags:
                 - dashboards
-            x-cribl-internal: true
+            x-cribl-internal: false
             x-cribl-availability: both
             x-cribl-api-context:
                 - searchGroup
@@ -121707,11 +122226,14 @@ paths:
             description: Force the next Dashboard list or get request to re-read from disk, bypassing the in-memory cache.
             responses:
                 "200":
-                    description: The deleted SearchDashboard object.
+                    description: An empty list, confirming the cache was invalidated
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/SearchDashboard"
+                                $ref: "#/components/schemas/CountedListSearchDashboard"
+                            examples:
+                                InvalidateDashboardCacheResponseExampleCacheInvalidated:
+                                    $ref: "#/components/examples/InvalidateDashboardCacheResponseExampleCacheInvalidated"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -121745,11 +122267,14 @@ paths:
             description: Move the specified Dashboard from the global context to a Pack.<br/><br/>To move a Dashboard from one Pack to another or from a Pack to the global context, use <code>PUT /p/{pack}/search/dashboards/{id}/move</code>.
             responses:
                 "200":
-                    description: The updated SearchDashboard object.
+                    description: The moved Dashboard
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/SearchDashboard"
+                            examples:
+                                DashboardResponseExampleDashboard:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -121801,11 +122326,14 @@ paths:
             description: Get a list of all Dashboards within the specified Pack.
             responses:
                 "200":
-                    description: List of SearchDashboard objects.
+                    description: The list of Dashboards
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/PaginatedSearchDashboard"
+                            examples:
+                                DashboardResponseExampleDashboard:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -121895,11 +122423,14 @@ paths:
                                 $ref: "#/components/examples/CreateDashboardExamplesSimpleDashboard"
             responses:
                 "201":
-                    description: The created SearchDashboard object.
+                    description: The created Dashboard
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/SearchDashboard"
+                            examples:
+                                DashboardResponseExampleDashboard:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -121941,11 +122472,14 @@ paths:
             description: Get the specified Dashboard within the specified Pack.
             responses:
                 "200":
-                    description: The requested SearchDashboard object.
+                    description: The requested Dashboard
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/SearchDashboard"
+                            examples:
+                                DashboardResponseExampleDashboard:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -122010,11 +122544,14 @@ paths:
                                 $ref: "#/components/examples/UpdateDashboardExamplesUpdateDashboard"
             responses:
                 "200":
-                    description: The updated SearchDashboard object.
+                    description: The updated Dashboard
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/SearchDashboard"
+                            examples:
+                                DashboardResponseExampleDashboard:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -122367,7 +122904,7 @@ paths:
             operationId: deleteSearchDashboardSearchCacheByPack
             tags:
                 - dashboards
-            x-cribl-internal: true
+            x-cribl-internal: false
             x-cribl-availability: both
             x-cribl-api-context:
                 - searchGroup
@@ -122375,11 +122912,14 @@ paths:
             description: Force the next Dashboard list or get request to re-read from disk, bypassing the in-memory cache within the specified Pack.
             responses:
                 "200":
-                    description: The deleted SearchDashboard object.
+                    description: An empty list, confirming the cache was invalidated
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/SearchDashboard"
+                                $ref: "#/components/schemas/CountedListSearchDashboard"
+                            examples:
+                                InvalidateDashboardCacheResponseExampleCacheInvalidated:
+                                    $ref: "#/components/examples/InvalidateDashboardCacheResponseExampleCacheInvalidated"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -122421,11 +122961,14 @@ paths:
             description: Move the specified Dashboard from the specified Pack to another Pack or to the global context.<br/><br/>To move a Dashboard from the global context to a Pack, use <code>PUT /search/dashboards/{id}/move</code>.
             responses:
                 "200":
-                    description: The updated SearchDashboard object.
+                    description: The moved Dashboard
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/SearchDashboard"
+                            examples:
+                                DashboardResponseExampleDashboard:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -129072,11 +129615,11 @@ paths:
             description: Get a list of the Cribl resources that reference the specified global secret in the specified secret folder.
             responses:
                 "200":
-                    description: The requested GlobalSecretReference object.
+                    description: List of GlobalSecretReference objects.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/GlobalSecretReference"
+                                $ref: "#/components/schemas/CountedListGlobalSecretReference"
                             examples:
                                 GlobalSecretRefsResponseExamplesGlobalSecretRefs:
                                     $ref: "#/components/examples/GlobalSecretRefsResponseExamplesGlobalSecretRefs"
@@ -137744,7 +138287,7 @@ paths:
             operationId: deleteNotebook
             tags:
                 - notebooks
-            x-cribl-internal: true
+            x-cribl-internal: false
             x-cribl-availability: both
             x-cribl-api-context:
                 - searchGroup
@@ -137752,11 +138295,14 @@ paths:
             description: Force the next Notebook list or get request to re-read from disk, bypassing the in-memory cache.
             responses:
                 "200":
-                    description: The deleted Notebook object.
+                    description: An empty list, confirming the cache was invalidated
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Notebook"
+                                $ref: "#/components/schemas/CountedListNotebook"
+                            examples:
+                                InvalidateNotebookCacheResponseExampleCacheInvalidated:
+                                    $ref: "#/components/examples/InvalidateNotebookCacheResponseExampleCacheInvalidated"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -149735,11 +150281,11 @@ paths:
             description: "Update one or more Logger configurations.<br/><br/>Supports partial updates: omitted fields are left unchanged, and channel entries are merged with the existing configuration.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
-                    description: The updated LoggerConfig object.
+                    description: The updated LoggerConfig object in a single-item list.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/LoggerConfig"
+                                $ref: "#/components/schemas/CountedListLoggerConfig"
                             examples:
                                 UpdateLoggerConfigResponseExamplesLoggerConfig:
                                     $ref: "#/components/examples/UpdateLoggerConfigResponseExamplesLoggerConfig"
@@ -151345,7 +151891,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/TelemetryMetricsResponse"
+                                $ref: "#/components/schemas/TelemetryMetricsPayload"
                             examples:
                                 SystemMetricsTelemetryResponseExamplesPhoneHomeWindow:
                                     $ref: "#/components/examples/SystemMetricsTelemetryResponseExamplesPhoneHomeWindow"
@@ -160861,7 +161407,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/TrustPolicy"
+                                $ref: "#/components/schemas/PaginatedTrustPolicy"
                             examples:
                                 TrustPolicyListResponseExamplesListTrustPolicies:
                                     $ref: "#/components/examples/TrustPolicyListResponseExamplesListTrustPolicies"
@@ -160893,6 +161439,32 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+            parameters:
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Pagination offset
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Maximum number of items to return
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /search/datasets/{id}/data:
         delete:
             operationId: deleteSearchDatasetsDataById
