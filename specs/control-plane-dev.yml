@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.20.0-alpha.1786835156487-0e8b6784
+  version: 4.20.0-alpha.1787008043536-49393e65
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -31865,6 +31865,149 @@ components:
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'clientId' at runtime.
       title: InputServicenowTable
+    InputProofpointPod:
+      type: object
+      required:
+        - type
+        - clusterId
+        - feedType
+        - textSecret
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          enum:
+            - proofpoint_pod
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestina\
+            tionArnConstraint"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        clusterId:
+          type: string
+          title: Cluster ID
+          description: Proofpoint on Demand cluster ID.
+        feedType:
+          type: string
+          title: Feed type
+          description: Proofpoint on Demand feed to ingest.
+          enum:
+            - message
+            - maillog
+            - audit
+          x-speakeasy-enum-descriptions:
+            - Message
+            - Mail log
+            - Audit
+          x-speakeasy-unknown-values: allow
+        textSecret:
+          type: string
+          title: Token (text secret)
+          description: Select or create a stored text secret
+        tls:
+          $ref: "#/components/schemas/TlsSettingsClientSideTypeCaPathCertPath"
+          description: TLS settings (client side)
+        compress:
+          type: boolean
+          title: Compress
+          description: Compress the feed connection.
+        handshakeTimeout:
+          type: number
+          title: Handshake timeout (ms)
+          description: Maximum time to wait for the connection handshake to complete.
+          minimum: 1000
+          maximum: 60000
+        keepAliveIntervalSec:
+          type: number
+          title: Keepalive ping interval (seconds)
+          description: How often to send a keepalive ping while the feed is idle. Use 0 to
+            disable keepalive pings.
+          minimum: 0
+          maximum: 3600
+        maxMissedKeepAlives:
+          type: number
+          title: Max missed keepalives
+          description: Maximum number of consecutive keepalive pings that can go
+            unanswered before reconnecting.
+          minimum: 1
+          maximum: 100
+        maxMessageSize:
+          type: string
+          title: Maximum message size
+          description: The maximum size of a single feed message. Enter a numeral with
+            units of KB, MB, etc.
+          pattern: ^\d+\s*(?:\w{2})?$
+        readBufferSize:
+          type: string
+          title: Read buffer size
+          description: The maximum size to hold in memory before applying backpressure.
+            Enter a numeral with units of KB, MB, etc.
+          pattern: ^\d+\s*(?:\w{2})?$
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_clusterId:
+          type: string
+          description: Binds 'clusterId' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'clusterId' at runtime.
+      title: InputProofpointPod
     InputZscalerHec:
       type: object
       required:
@@ -33852,6 +33995,7 @@ components:
         - $ref: "#/components/schemas/InputSecurityLake"
         - $ref: "#/components/schemas/InputBedrockS3"
         - $ref: "#/components/schemas/InputServicenowTable"
+        - $ref: "#/components/schemas/InputProofpointPod"
         - $ref: "#/components/schemas/InputZscalerHec"
         - $ref: "#/components/schemas/InputCloudflareHec"
         - $ref: "#/components/schemas/InputSysdigHec"
@@ -33927,6 +34071,7 @@ components:
           security_lake: "#/components/schemas/InputSecurityLake"
           bedrock_s3: "#/components/schemas/InputBedrockS3"
           servicenow_table: "#/components/schemas/InputServicenowTable"
+          proofpoint_pod: "#/components/schemas/InputProofpointPod"
           zscaler_hec: "#/components/schemas/InputZscalerHec"
           cloudflare_hec: "#/components/schemas/InputCloudflareHec"
           sysdig_hec: "#/components/schemas/InputSysdigHec"
@@ -34513,10 +34658,11 @@ components:
       properties:
         name:
           type: string
-          description: Name of the metadata tag.
+          description: Name of the metadata field.
         value:
           type: string
-          description: Value of the metadata tag.
+          description: JavaScript expression to compute the metadata field's value,
+            enclosed in quotes or backticks. Can evaluate to a constant.
       required:
         - name
         - value
@@ -60501,6 +60647,33 @@ components:
         - id
         - routes
       title: Routes
+    PaginatedRoutes:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          description: The items returned in this response, after any offset/limit
+            pagination has been applied.
+          items:
+            $ref: "#/components/schemas/Routes"
+        count:
+          type: integer
+          description: Number of items returned in the items array.
+        offset:
+          type: integer
+          description: Pagination offset. Returned when offset/limit query parameters are
+            provided.
+        limit:
+          type: integer
+          description: Pagination limit. Returned when offset/limit query parameters are
+            provided.
+        totalCount:
+          type: integer
+          description: Total number of items available. Returned when offset/limit query
+            parameters are provided.
     RoutesInput:
       type: object
       properties:
@@ -69851,6 +70024,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Prometheus Remote Write Source.
+    InputCreateExamplesProofpointPod:
+      summary: Proofpoint on Demand
+      value:
+        id: proofpoint-pod-source
+        type: proofpoint_pod
+        clusterId: my-pod-cluster
+        feedType: message
+        textSecret: proofpoint-pod-token-secret
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Proofpoint on Demand Source.
     InputCreateExamplesRawUdp:
       summary: Raw UDP
       value:
@@ -70783,6 +70967,20 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for updating a Prometheus Remote Write
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
+    UpdateInputExamplesProofpointPod:
+      summary: Proofpoint on Demand
+      value:
+        id: proofpoint-pod-source
+        type: proofpoint_pod
+        clusterId: my-pod-cluster
+        feedType: message
+        textSecret: proofpoint-pod-token-secret
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Proofpoint on Demand
         Source.<br/><br/>The request body must include a complete representation
         of the Source that you want to update. This endpoint does not support
         partial updates.
@@ -78831,7 +79029,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedRoutes"
+                $ref: "#/components/schemas/PaginatedRoutes"
               examples:
                 RoutesResponseExamplesDefaultRoutingTable:
                   $ref: "#/components/examples/RoutesResponseExamplesDefaultRoutingTable"
@@ -78859,12 +79057,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       parameters:
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
         - name: pack
           in: path
           required: true
           schema:
             type: string
           description: The <code>id</code> of the Pack.
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
   /p/{pack}/routes/{id}:
     get:
       operationId: getRoutesByPackAndId
@@ -79317,6 +79540,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesPrometheus"
               InputCreateExamplesPrometheusRw:
                 $ref: "#/components/examples/InputCreateExamplesPrometheusRw"
+              InputCreateExamplesProofpointPod:
+                $ref: "#/components/examples/InputCreateExamplesProofpointPod"
               InputCreateExamplesRawUdp:
                 $ref: "#/components/examples/InputCreateExamplesRawUdp"
               InputCreateExamplesBedrockS3:
@@ -79608,6 +79833,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesPrometheus"
               UpdateInputExamplesPrometheusRw:
                 $ref: "#/components/examples/UpdateInputExamplesPrometheusRw"
+              UpdateInputExamplesProofpointPod:
+                $ref: "#/components/examples/UpdateInputExamplesProofpointPod"
               UpdateInputExamplesRawUdp:
                 $ref: "#/components/examples/UpdateInputExamplesRawUdp"
               UpdateInputExamplesBedrockS3:
@@ -83723,7 +83950,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CountedRoutes"
+                $ref: "#/components/schemas/PaginatedRoutes"
               examples:
                 RoutesResponseExamplesDefaultRoutingTable:
                   $ref: "#/components/examples/RoutesResponseExamplesDefaultRoutingTable"
@@ -83750,6 +83977,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of items to return
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: offset
+            in: parameters
+            type: offset
+          - name: limit
+            in: parameters
+            type: limit
+        outputs:
+          results: $.items
   /routes/{id}:
     get:
       operationId: getRoutesById
@@ -84243,6 +84496,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesPrometheus"
               InputCreateExamplesPrometheusRw:
                 $ref: "#/components/examples/InputCreateExamplesPrometheusRw"
+              InputCreateExamplesProofpointPod:
+                $ref: "#/components/examples/InputCreateExamplesProofpointPod"
               InputCreateExamplesRawUdp:
                 $ref: "#/components/examples/InputCreateExamplesRawUdp"
               InputCreateExamplesBedrockS3:
@@ -84520,6 +84775,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesPrometheus"
               UpdateInputExamplesPrometheusRw:
                 $ref: "#/components/examples/UpdateInputExamplesPrometheusRw"
+              UpdateInputExamplesProofpointPod:
+                $ref: "#/components/examples/UpdateInputExamplesProofpointPod"
               UpdateInputExamplesRawUdp:
                 $ref: "#/components/examples/UpdateInputExamplesRawUdp"
               UpdateInputExamplesBedrockS3:
