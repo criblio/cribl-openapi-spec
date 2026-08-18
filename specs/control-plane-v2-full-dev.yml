@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.0-alpha.1787008485918-49393e65
+    version: 4.20.0-alpha.1787094432707-f215561f
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -20308,6 +20308,36 @@ components:
                     description: Fields to add to events from this input
                     items:
                         $ref: "#/components/schemas/MetadataConfInputCollection"
+                authTokensExt:
+                    type: array
+                    title: Auth tokens
+                    description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+                    items:
+                        type: object
+                        required:
+                            - token
+                        properties:
+                            authType:
+                                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensItems"
+                                description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                            tokenSecret:
+                                type: string
+                                title: Token secret (text secret)
+                                description: Select or create a stored text secret
+                            token:
+                                type: string
+                                title: Token
+                                description: "Shared secret to be provided by any client (Authorization: <token>)"
+                            description:
+                                type: string
+                                title: Description
+                                description: Description
+                            metadata:
+                                type: array
+                                title: Fields
+                                description: Fields to add to events referencing this token
+                                items:
+                                    $ref: "#/components/schemas/MetadataConfInputCollection"
                 description:
                     type: string
                     title: Description
@@ -25527,9 +25557,11 @@ components:
                     enum:
                         - clientCert
                         - kerberos
+                        - negotiate
                     x-speakeasy-enum-descriptions:
                         - Client certificate
                         - Kerberos
+                        - Negotiate (SPNEGO)
                     x-speakeasy-unknown-values: allow
                 tls:
                     type: object
@@ -58609,6 +58641,29 @@ components:
                             type: number
                         failed:
                             type: number
+                applyDurationMs:
+                    type: number
+                    description: Wall-clock duration of the latest apply pass, in milliseconds (telemetry, MON-1223).
+                assessAttempts:
+                    type: number
+                    description: Consecutive assessment-worker crashes for the pending pass. Cleared when a pass completes; bounds how long a run that cannot make progress keeps being re-kicked by the background loop before it goes terminal.
+                assessAuthorizedDatasets:
+                    type: array
+                    items:
+                        type: string
+                    description: Cribl dataset ids the pending assessment pass is authorized to query — the run's mapping resolved to its dataset set (datasource mappings plus the default dataset) at request time, after verifying the requester's DatasetRead on each. Persisted atomically with and enforced by the assessment worker (a pass resumed after a leader restart carries no request identity, so this persisted set is the security boundary). Cleared when the pass publishes or fails. Absent on runs whose pass was requested before the field existed (those are allowed through unchecked).
+                assessDurationMs:
+                    type: number
+                    description: Wall-clock duration of the latest assessment pass, in milliseconds (telemetry, MON-1223).
+                assessRequested:
+                    type: boolean
+                    description: "Set when an assessment pass has been requested (POST assess) and has not yet produced a plan revision. The background assessment loop only picks up -state runs with this set — a run freshly out of discovery waits in for the user to request a pass. Cleared when the run reaches , and also when a pass fails (/): the run then stays in with / set and a new POST assess is accepted. While this is set, the run's mapping and selection are frozen (writes return 409)."
+                assessRequestedBy:
+                    type: string
+                    description: Username that requested the pending assessment pass — recorded as the resulting plan revision's .
+                assessWindow:
+                    type: string
+                    description: Validation window requested for the pending assessment pass (relative , e.g. ). Persisted so a pass resumed after a leader restart runs with the window the caller asked for; stamped on the resulting revision as .
                 availabilityCounts:
                     type: object
                     properties:
@@ -58625,6 +58680,9 @@ components:
                 cancelRequested:
                     type: boolean
                     description: Set when the caller requested cancellation; the orchestrator transitions the run to at the next safe point. Completed work is never rolled back.
+                connectionFingerprint:
+                    type: string
+                    description: Fingerprint (sha256) of the bound connection's security-relevant fields (base URL, secret reference, TLS/transport settings), stamped when discovery is authorized at request time. Background discovery ticks re-read the connection record, so the orchestrator compares this against the CURRENT record before contacting the source and fails the run () on mismatch — an edit to the connection mid-run must not let in-flight ticks use a configuration the initiating request never authorized. Absent on upload runs and on runs persisted before the field existed (those are allowed through unchecked).
                 connectionId:
                     type: string
                     description: Connection used for live runs. Absent for upload-only runs.
@@ -58657,6 +58715,10 @@ components:
                 createdBy:
                     type: string
                     description: Username that created the run.
+                deniedKinds:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/SourceResourceKind"
                 discoveryAttempts:
                     type: number
                     description: Consecutive retryable discovery failures at the current cursor. Reset on forward progress; bounds how long a transient source failure keeps the run resumable before it goes terminal.
@@ -58665,7 +58727,7 @@ components:
                     description: Adapter-opaque cursor marking how far discovery has walked the source. Persisted per page so a run resumes from the last completed page after a leader restart.
                 errorSummary:
                     type: string
-                    description: Redacted summary of the terminal error, when the run failed. Carries the error class and reason only — never source credentials or response payloads.
+                    description: Redacted summary of the most recent failure. Carries the error class and reason only — never source credentials or response payloads. Present on terminal failures AND on a failed assessment pass (which parks the run back in rather than failing it); cleared when a new assessment pass is requested.
                 id:
                     type: string
                     description: Unique id of the migration run.
@@ -58682,7 +58744,7 @@ components:
                     $ref: "#/components/schemas/MigrationProvider"
                 reasonCode:
                     type: string
-                    description: Stable, machine-readable reason code for the terminal state (for example ), suitable for branching on without parsing the message.
+                    description: Stable, machine-readable reason code for the most recent failure (for example , or / for a failed assessment pass), suitable for branching on without parsing the message. For assessment failures the run stays in with cleared — POST assess again to retry; the code is cleared when a new pass is requested.
                 retryNotBefore:
                     type: string
                     description: ISO-8601 time before which the run should not be retried, set after a retryable discovery failure so the retry budget is spread over a backoff instead of being spent at the service-tick rate. Cleared on forward progress.
@@ -60704,7 +60766,8 @@ components:
                     description: Mount path where AWS authentication is enabled in HashiCorp Vault, if different from the default <code>aws</code>.
                 durationSeconds:
                     type: integer
-                    description: Duration of the assumed role session, in seconds.
+                    description: Legacy assumed-role session duration. Accepted for backward compatibility but ignored; Vault AssumeRole sessions always use 900 seconds (15 minutes).
+                    deprecated: true
                 enableAssumeRole:
                     type: boolean
                     description: If <code>true</code>, assume a different IAM role through AWS STS before authenticating to HashiCorp Vault. Use when the Cribl instance IAM role does not have direct Vault access, such as for cross-account access. Otherwise, <code>false</code>.
@@ -60933,7 +60996,8 @@ components:
                     description: Mount path where AWS authentication is enabled in HashiCorp Vault, if different from the default <code>aws</code>.
                 durationSeconds:
                     type: integer
-                    description: Duration of the assumed role session, in seconds.
+                    description: Legacy assumed-role session duration. Accepted for backward compatibility but ignored; Vault AssumeRole sessions always use 900 seconds (15 minutes).
+                    deprecated: true
                 enableAssumeRole:
                     type: boolean
                     description: If <code>true</code>, assume a different IAM role through AWS STS before authenticating to HashiCorp Vault. Use when the Cribl instance IAM role does not have direct Vault access, such as for cross-account access. Otherwise, <code>false</code>.
@@ -67770,6 +67834,88 @@ components:
                 - defaultDatasetId
                 - folderToCollection
             title: MigrationMapping
+        AlertRuleClass:
+            type: string
+            enum:
+                - reducer-threshold
+                - multi-query-threshold
+                - expression-dag
+                - classic-conditions
+                - recording
+                - unsupported-comparator
+                - shape-unrecognized
+            title: AlertRuleClass
+            x-speakeasy-unknown-values: allow
+        AlertRuleSemantics:
+            type: object
+            properties:
+                cadenceSec:
+                    type: number
+                    description: Evaluation cadence in seconds (rule group interval), when known.
+                cadenceUnavailable:
+                    type: boolean
+                    description: True when the rule belongs to a group but its evaluation cadence could not be read at discovery — distinguishes "cadence unknown" from "no group".
+                comparator:
+                    type: string
+                    description: Threshold comparator (Grafana evaluator type, e.g. , , ).
+                datasourceRef:
+                    type: string
+                    description: Source datasource ref the query ran against (uid or ).
+                execErrState:
+                    type: string
+                    description: Grafana behavior on execution error (not migrated).
+                forDurationSec:
+                    type: number
+                    description: How long the condition must hold before firing, in seconds.
+                isPaused:
+                    type: boolean
+                    description: Whether the source rule is paused (not migrated — a manual re-creation would alert).
+                noDataState:
+                    type: string
+                    description: Grafana behavior when the query returns no data (not migrated).
+                queryShape:
+                    type: string
+                    const: single-promql
+                    description: Discriminator value.
+                queryText:
+                    type: string
+                    description: The rule's query text, verbatim (never rewritten).
+                queryWindow:
+                    type: object
+                    properties:
+                        fromSec:
+                            type: number
+                        toSec:
+                            type: number
+                    required:
+                        - fromSec
+                        - toSec
+                    description: Relative evaluation window the query ran over, in seconds (not migrated).
+                recoverySemantics:
+                    type: string
+                    const: auto-resolve-on-condition-false
+                    description: Discriminator value.
+                reducer:
+                    type: string
+                    description: Reduce step (e.g. , ). Absent for instant-query→threshold rules.
+                thresholdParams:
+                    type: array
+                    items:
+                        type: number
+            required:
+                - queryShape
+                - recoverySemantics
+            title: AlertRuleSemantics
+        AlertRuleCompatibilityDetail:
+            type: object
+            properties:
+                ruleClass:
+                    $ref: "#/components/schemas/AlertRuleClass"
+                semantics:
+                    $ref: "#/components/schemas/AlertRuleSemantics"
+            required:
+                - ruleClass
+            title: AlertRuleCompatibilityDetail
         QueryValidationDetail:
             type: object
             properties:
@@ -67787,6 +67933,10 @@ components:
                 refId:
                     type: string
                     description: Local query row id (e.g. Grafana refId).
+                renamedMetrics:
+                    type: array
+                    items:
+                        type: string
                 searchJobId:
                     type: string
                     description: Search job id () for the preflight, for support correlation.
@@ -67801,6 +67951,10 @@ components:
                     type: array
                     items:
                         type: string
+                validation:
+                    type: string
+                    const: unresolved-datasource
+                    description: "Set when the row was NOT validated and the empty metric arrays must not read as \"everything matched\". Currently only : the row's datasource type never resolved, so no analysis, catalog check, or preflight ran (the text may not be PromQL at all). Absent for validated rows — empty arrays there mean the query genuinely references no metrics."
             required:
                 - matchedMetrics
                 - metricNames
@@ -67821,10 +67975,13 @@ components:
         CompatibilityResult:
             type: object
             properties:
-                affectedDependentKeys:
+                alertRuleDetail:
+                    $ref: "#/components/schemas/AlertRuleCompatibilityDetail"
+                blockingDependencyKeys:
                     type: array
                     items:
                         type: string
+                    description: values of the unavailable dependencies (e.g. a permission-denied datasource) blocking this resource from importing.
                 consequence:
                     type: string
                     description: Human-readable consequence — what importing would do, shown on Review so the outcome is explicit before anything is written.
@@ -67970,6 +68127,10 @@ components:
         PersistedPlan:
             type: object
             properties:
+                alertRuleCompatibility:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CompatibilityResult"
                 compatibility:
                     type: array
                     items:
@@ -72557,6 +72718,9 @@ components:
                 quota:
                     type: integer
                     description: Allowed throughput (GB per day) under the license.
+                registeredEmail:
+                    type: string
+                    description: Email from product registration; separate from JWT license email. Present on the aggregate <code>_TOTAL_</code> license record.
                 sub:
                     type: string
                     description: Identifier for the license owner or customer.
@@ -74143,7 +74307,7 @@ components:
             properties:
                 email:
                     type: string
-                    description: Email address associated with the license.
+                    description: "Legacy contact email on system info: JWT license email when present, otherwise the registration email. Prefer <code>registeredEmail</code> for the address from product registration."
                 isRegistered:
                     type: boolean
                     description: If <code>true</code>, the license is registered.
@@ -74153,6 +74317,9 @@ components:
                 limits:
                     $ref: "#/components/schemas/LicenseLimits"
                     description: License-based feature and resource limits.
+                registeredEmail:
+                    type: string
+                    description: Email from product registration. Separate from the JWT license email used in license aggregation.
                 type:
                     $ref: "#/components/schemas/LicenseType"
                     description: License type.
@@ -94803,6 +94970,35 @@ components:
                 createdBy: jdoe@example.com
                 createdAt: 2026-08-06T12:00:00.000Z
                 modifiedAt: 2026-08-06T12:04:31.000Z
+        MigrationRunResponseExamplesAssessmentStarted:
+            summary: Assessment started
+            description: "The assessment request is recorded (202 Accepted) and the pass runs on the leader in the background. Poll the run: <code>review</code> means the new plan revision is readable on the <code>plan</code> route; <code>failed</code> carries <code>errorSummary</code> and <code>reasonCode</code>."
+            value:
+                id: mig_01HQ8V3X2K
+                provider: grafana
+                sourceKind: live
+                connectionId: grafana-prod
+                state: assessment
+                orgIdentity: 1:Main Org.
+                counts:
+                    dashboard: 12
+                    folder: 3
+                    datasource: 2
+                availabilityCounts:
+                    accessible: 15
+                    permission-denied: 2
+                selectedSourceKeys:
+                    - grafana|1:Main Org.|dashboard|a1b2c3d4
+                snapshotRefs:
+                    - inventory.jsonl
+                    - edges.jsonl
+                    - graph.json
+                createdBy: jdoe@example.com
+                createdAt: 2026-08-06T12:00:00.000Z
+                modifiedAt: 2026-08-06T12:04:31.000Z
+                assessRequested: true
+                assessWindow: -24h
+                assessRequestedBy: jdoe@example.com
         MigrationRunResponseExamplesApplying:
             summary: Import started
             description: The reviewed plan is now being applied. Poll <code>apply-results</code> for per-item outcomes.
@@ -128054,10 +128250,10 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Request cancellation of a migration run
-            description: Draft runs cancel immediately. Active runs stop scheduling new work at the next safe point; completed work is never rolled back.
+            description: Idle runs (draft, or assessment/review with no assessment pass in flight) cancel immediately. Active runs stop scheduling new work at the next safe point; completed work is never rolled back.
             responses:
                 "200":
-                    description: The run with cancellation recorded (already terminal for a draft).
+                    description: The run with cancellation recorded (already terminal when idle).
                     content:
                         application/json:
                             schema:
@@ -128069,6 +128265,8 @@ paths:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesCancelRequested"
                                 MigrationRunResponseExamplesSelectionSaved:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesSelectionSaved"
+                                MigrationRunResponseExamplesAssessmentStarted:
+                                    $ref: "#/components/examples/MigrationRunResponseExamplesAssessmentStarted"
                                 MigrationRunResponseExamplesApplying:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesApplying"
                 "401":
@@ -128107,7 +128305,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Start or resume discovery for a migration run
-            description: Transitions a draft run into discovery (no-op when already discovering). For live runs, an optional <code>connectionId</code> in the body binds the connection chosen on the Connect step. Discovery executes on the leader in the background and is resumable across restarts.
+            description: "Transitions a draft run into discovery (no-op when already discovering). For live runs, an optional <code>connectionId</code> in the body binds the connection chosen on the Connect step. Discovery executes on the leader in the background and is resumable across restarts. Resuming never rebinds: supplying a different <code>connectionId</code>, or resuming after the bound connection was edited, returns 409 — start a new run to use the changed connection."
             responses:
                 "200":
                     description: The run after it entered (or resumed) discovery.
@@ -128122,6 +128320,8 @@ paths:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesCancelRequested"
                                 MigrationRunResponseExamplesSelectionSaved:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesSelectionSaved"
+                                MigrationRunResponseExamplesAssessmentStarted:
+                                    $ref: "#/components/examples/MigrationRunResponseExamplesAssessmentStarted"
                                 MigrationRunResponseExamplesApplying:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesApplying"
                 "401":
@@ -128200,7 +128400,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Set the dashboards selected for migration
-            description: Persists the Discover step's dashboard selection (source uids). Assessment plans only selected dashboards; an empty list selects everything. Not allowed once the run is applying or terminal.
+            description: Persists the Discover step's dashboard selection (source uids). Assessment plans only selected dashboards; an empty list selects everything. Not allowed once the run is applying or terminal, nor while an assessment pass is pending (409 — the pass plans against the selection it started with; wait for it to finish, then change the selection and re-assess).
             responses:
                 "200":
                     description: The run with the persisted selection.
@@ -128215,6 +128415,8 @@ paths:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesCancelRequested"
                                 MigrationRunResponseExamplesSelectionSaved:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesSelectionSaved"
+                                MigrationRunResponseExamplesAssessmentStarted:
+                                    $ref: "#/components/examples/MigrationRunResponseExamplesAssessmentStarted"
                                 MigrationRunResponseExamplesApplying:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesApplying"
                 "401":
@@ -142274,7 +142476,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Apply a migration run's reviewed plan
-            description: Starts importing the plan's dashboards into the Metric Store. Requires the run to be in <code>review</code>; only one run may apply at a time. The optional <code>overwrite</code> array lists the source uids whose conflicts the user chose to overwrite. The optional <code>expectedRevision</code> pins the request to the plan revision the caller reviewed — the request 409s when the run's plan has advanced past it, so a concurrent re-assessment can never make apply import an unreviewed plan. Work runs on the leader in the background with durable per-item results and is resumable across restarts; poll the run and <code>apply-results</code> for progress.
+            description: Starts importing the plan's dashboards into the Metric Store. Requires the run to be in <code>review</code>; only one run may apply at a time. The optional <code>resolutions</code> object maps a source uid to how its conflict should be resolved — <code>keep</code> (leave the existing dashboard), <code>replace</code> (overwrite it), or <code>copy</code> (import under a fresh id). The legacy <code>overwrite</code> array of source uids is still accepted and treated as <code>replace</code>. The optional <code>expectedRevision</code> pins the request to the plan revision the caller reviewed — the request 409s when the run's plan has advanced past it, so a concurrent re-assessment can never make apply import an unreviewed plan. Work runs on the leader in the background with durable per-item results and is resumable across restarts; poll the run and <code>apply-results</code> for progress.
             responses:
                 "200":
                     description: The run after it entered the apply phase.
@@ -142289,6 +142491,8 @@ paths:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesCancelRequested"
                                 MigrationRunResponseExamplesSelectionSaved:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesSelectionSaved"
+                                MigrationRunResponseExamplesAssessmentStarted:
+                                    $ref: "#/components/examples/MigrationRunResponseExamplesAssessmentStarted"
                                 MigrationRunResponseExamplesApplying:
                                     $ref: "#/components/examples/MigrationRunResponseExamplesApplying"
                 "401":
@@ -142467,7 +142671,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Replace a migration run's mapping
-            description: Persists the datasource→dataset and folder→Collection mapping. Re-run assessment afterward to produce a new plan revision that reflects the change.
+            description: Persists the datasource→dataset and folder→Collection mapping. Re-run assessment afterward to produce a new plan revision that reflects the change. Returns 409 while an assessment pass is pending (the pass reads the mapping it was authorized against — wait for it to finish) and once the run is applying or terminal (the mapping can no longer change).
             responses:
                 "200":
                     description: The persisted mapping.
@@ -142513,18 +142717,26 @@ paths:
             x-cribl-availability: both
             x-cribl-api-context:
                 - leader
-            summary: Assess a migration run and build a new plan revision
-            description: Translates discovered dashboards, validates their queries against the metric catalog and a Search preflight, classifies compatibility, and produces a new immutable plan revision. Advances the run from <code>assessment</code> to <code>review</code>. The optional <code>window</code> sets the relative-time <code>earliest</code> (for example <code>-24h</code>) that every query preflight runs with; it is stamped on the revision as <code>validationWindow</code>.
+            summary: Start assessing a migration run into a new plan revision
+            description: "Records the assessment request and returns 202 with the run — the pass itself (translate discovered dashboards, validate queries against the metric catalog and a Search preflight, classify compatibility, build an immutable plan revision) runs on the leader in the background and is resumable across restarts. Requires the run to be in <code>assessment</code> or <code>review</code> (re-assessing a reviewed run produces the NEXT revision), and requires read access to every dataset the run's mapping targets (403 otherwise). Poll the run: <code>review</code> means the new revision is ready on the <code>plan</code> route; a FAILED pass returns the run to <code>assessment</code> with <code>assessRequested</code> cleared and <code>reasonCode</code> (<code>ASSESS_FORBIDDEN</code> or <code>ASSESS_CRASH_LOOP</code>) plus <code>errorSummary</code> set — POST assess again to retry once the cause is fixed (the new request clears the stale error). A repeated POST while a pass is pending is an idempotent 202 that changes nothing about the pending pass; while a pass is pending the run's mapping and selection are frozen (409). Cancellation stays terminal (<code>cancelled</code>). The optional <code>window</code> sets the relative-time <code>earliest</code> (for example <code>-24h</code>) that every query preflight runs with; it is stamped on the revision as <code>validationWindow</code>."
             responses:
-                "200":
-                    description: The newly built immutable plan revision and its compatibility results.
+                "202":
+                    description: The run with the assessment request recorded (state <code>assessment</code>, <code>assessRequested</code> set).
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/PersistedPlan"
+                                $ref: "#/components/schemas/MigrationRunMeta"
                             examples:
-                                MigrationPlanResponseExamplesPlan:
-                                    $ref: "#/components/examples/MigrationPlanResponseExamplesPlan"
+                                MigrationRunResponseExamplesDiscovering:
+                                    $ref: "#/components/examples/MigrationRunResponseExamplesDiscovering"
+                                MigrationRunResponseExamplesCancelRequested:
+                                    $ref: "#/components/examples/MigrationRunResponseExamplesCancelRequested"
+                                MigrationRunResponseExamplesSelectionSaved:
+                                    $ref: "#/components/examples/MigrationRunResponseExamplesSelectionSaved"
+                                MigrationRunResponseExamplesAssessmentStarted:
+                                    $ref: "#/components/examples/MigrationRunResponseExamplesAssessmentStarted"
+                                MigrationRunResponseExamplesApplying:
+                                    $ref: "#/components/examples/MigrationRunResponseExamplesApplying"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
