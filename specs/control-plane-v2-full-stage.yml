@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.19.1-alpha.1786662849117-0868c7ca
+    version: 4.19.2-alpha.1787180844288-b661b37c
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -52120,6 +52120,46 @@ components:
                 - context
                 - newId
             title: LookupCloneBody
+        LookupContent:
+            type: object
+            required:
+                - fields
+                - items
+                - count
+                - totalCount
+            additionalProperties: false
+            properties:
+                fields:
+                    type: array
+                    description: Column field names for the Lookup, including the virtual <code>__id</code> field as the first entry.
+                    items:
+                        type: string
+                        description: Name of a column field in the Lookup file.
+                items:
+                    type: array
+                    description: Rows returned for this page of Lookup content. Each row is an array of cell values aligned to <code>fields</code>.
+                    items:
+                        type: array
+                        description: Single Lookup row as an ordered list of cell values.
+                        items:
+                            type:
+                                - string
+                                - number
+                            description: Cell value. The first entry is the virtual row <code>__id</code> (row number).
+                count:
+                    type: integer
+                    description: Number of rows included in <code>items</code> for this response.
+                totalCount:
+                    type: integer
+                    description: Total number of rows that match the request filter across the Lookup file.
+            title: LookupContent
+        LookupFieldsResponse:
+            type: array
+            description: Column field names from the Lookup file header, excluding the virtual <code>__id</code> field.
+            items:
+                type: string
+                description: Name of a column field in the Lookup file.
+            title: LookupFieldsResponse
         LookupFileInfoResponse:
             type: object
             properties:
@@ -52167,6 +52207,49 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        LookupFilePatch:
+            type: object
+            required:
+                - op
+                - rowId
+            additionalProperties: false
+            properties:
+                op:
+                    $ref: "#/components/schemas/OpOptionsLookupFilePatch"
+                    description: Patch operation to apply. Use <code>add</code> to append a row, <code>replace</code> to replace an existing row, or <code>remove</code> to delete a row.
+                value:
+                    type: array
+                    description: Full set of cell values for the row, in column order and without the virtual <code>__id</code> column. Required for <code>add</code> and <code>replace</code>. Omitted for <code>remove</code>.
+                    items:
+                        type: string
+                        description: Value for a single Lookup column in the patched row.
+                rowId:
+                    type: integer
+                    description: One-based row number in the Lookup file to target. For <code>add</code>, the new row is appended and this value is ignored for placement.
+            title: LookupFilePatch
+        LookupFilePatchList:
+            type: array
+            description: List of patch operations to apply to rows in the Lookup file.
+            items:
+                type: object
+                required:
+                    - op
+                    - rowId
+                additionalProperties: false
+                properties:
+                    op:
+                        $ref: "#/components/schemas/OpOptionsLookupFilePatch"
+                        description: Patch operation to apply. Use <code>add</code> to append a row, <code>replace</code> to replace an existing row, or <code>remove</code> to delete a row.
+                    value:
+                        type: array
+                        description: Full set of cell values for the row, in column order and without the virtual <code>__id</code> column. Required for <code>add</code> and <code>replace</code>. Omitted for <code>remove</code>.
+                        items:
+                            type: string
+                            description: Value for a single Lookup column in the patched row.
+                    rowId:
+                        type: integer
+                        description: One-based row number in the Lookup file to target. For <code>add</code>, the new row is appended and this value is ignored for placement.
+            title: LookupFilePatchList
         ParserLibEntry:
             type: object
             additionalProperties: true
@@ -80892,6 +80975,14 @@ components:
                 - text
             description: Type of the secret. Use <code>text</code> for an arbitrary value, <code>keypair</code> for an API key and secret key, or <code>credentials</code> for a username and password.
             x-speakeasy-unknown-values: allow
+        OpOptionsLookupFilePatch:
+            type: string
+            enum:
+                - add
+                - replace
+                - remove
+            description: Patch operation to apply. Use <code>add</code> to append a row, <code>replace</code> to replace an existing row, or <code>remove</code> to delete a row.
+            x-speakeasy-unknown-values: allow
         ApplyModeOptionsChartElementConfig:
             type: string
             enum:
@@ -90597,6 +90688,33 @@ components:
                 id: ip-reputation.csv
                 description: IP reputation Lookup table
                 size: 128
+        LookupContentResponseExamplesPaginatedRows:
+            summary: Get Lookup file content
+            description: Example response for getting Lookup file content.
+            value:
+                fields:
+                    - __id
+                    - ip
+                    - reputation
+                    - source
+                items:
+                    - - 1
+                      - 203.0.113.10
+                      - high
+                      - threat-feed
+                    - - 2
+                      - 198.51.100.22
+                      - medium
+                      - threat-feed
+                count: 2
+                totalCount: 1000
+        LookupFieldsResponseExamplesCsvFields:
+            summary: Get Lookup field names
+            description: Example response for getting Lookup field names.
+            value:
+                - ip
+                - reputation
+                - source
         LookupUploadResponseExamplesUploadedFile:
             summary: Upload a Lookup file
             description: Example response for uploading a Lookup file. Use the returned <code>filename</code> value in a subsequent <code>POST /system/lookups</code> request to create the Lookup.
@@ -90609,6 +90727,18 @@ components:
             description: Example request body for canceling an in-progress lookup file upload by referencing the temporary upload filename. You must also add <code>?cancel=true</code> (the <code>cancel</code> query parameter) to the request URL when you send the request.
             value:
                 filename: temp_upload_12345.csv
+        MoveLookupContextExamplesIntoPack:
+            summary: Move a Lookup to a Pack
+            description: Example request body for moving a Lookup from the global context to a Pack.
+            value:
+                context:
+                    type: pack
+                    id: destination_pack
+        MoveLookupContextExamplesToGlobal:
+            summary: Move a Lookup to the global context
+            description: Example request body for moving a Lookup from a Pack to the global context by passing null as the context.
+            value:
+                context: null
         LookupUpdateResponseExamplesCsvLookup:
             summary: Update a CSV Lookup
             description: Example response for updating a CSV Lookup.
@@ -90623,6 +90753,26 @@ components:
                 id: ip-reputation.csv
                 description: IP reputation Lookup
                 size: 1024
+        UpdateLookupContentResponseExamplesAppliedPatches:
+            summary: Update Lookup file content
+            description: Example response for updating Lookup file content.
+            value:
+                op: replace
+                rowId: 2
+                value:
+                    - 198.51.100.22
+                    - high
+                    - threat-feed
+        UpdateLookupContentExamplesReplaceRow:
+            summary: Replace a Lookup row
+            description: Example request body for replacing an existing Lookup row.
+            value:
+                - op: replace
+                  rowId: 2
+                  value:
+                    - 198.51.100.22
+                    - high
+                    - threat-feed
         ParserGetResponseExamplesCsvParser:
             summary: Get a Parser
             description: Example response for getting a CSV Parser.
@@ -113798,6 +113948,252 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Lookup to update.
+    /system/lookups/{id}/content:
+        get:
+            operationId: getLookupFileContentById
+            tags:
+                - lookups
+            x-speakeasy-group: lookups
+            x-speakeasy-name-override: getContent
+            x-cribl-internal: false
+            x-cribl-availability: both
+            summary: Get Lookup file content
+            description: Get rows from the specified Lookup file as JSON.<br/><br/>When <code>raw=true</code>, Cribl streams the underlying Lookup file bytes instead of returning JSON rows (<code>text/csv</code>, <code>application/gzip</code>, or <code>application/octet-stream</code> depending on the file type).
+            responses:
+                "200":
+                    description: Paginated Lookup file content, including field names and rows.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LookupContent"
+                            examples:
+                                LookupContentResponseExamplesPaginatedRows:
+                                    $ref: "#/components/examples/LookupContentResponseExamplesPaginatedRows"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lookup whose file content to get.
+                - name: raw
+                  in: query
+                  required: false
+                  schema:
+                    type: boolean
+                  description: If <code>true</code>, stream the raw Lookup file bytes. Otherwise, <code>false</code> (default) to return paginated JSON rows.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: number
+                  description: Maximum number of Lookup rows to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches.
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: number
+                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches.
+                - name: q
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Case-insensitive wildcard filter applied to each Lookup row. Matching uses the stringified row values.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
+        patch:
+            operationId: updateLookupFileContentById
+            tags:
+                - lookups
+            x-speakeasy-group: lookups
+            x-speakeasy-name-override: updateContent
+            x-cribl-internal: false
+            x-cribl-availability: both
+            summary: Update Lookup file content
+            description: Apply row-level patch operations to the specified Lookup file content.<br/><br/>Use this endpoint to add, replace, or remove rows in CSV Lookup files. Database Lookup files cannot be modified through this endpoint.
+            responses:
+                "200":
+                    description: The applied patch operations.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LookupFilePatch"
+                            examples:
+                                UpdateLookupContentResponseExamplesAppliedPatches:
+                                    $ref: "#/components/examples/UpdateLookupContentResponseExamplesAppliedPatches"
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: LookupFilePatchList object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LookupFilePatchList"
+                        examples:
+                            UpdateLookupContentExamplesReplaceRow:
+                                $ref: "#/components/examples/UpdateLookupContentExamplesReplaceRow"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lookup whose file content to update.
+    /system/lookups/{id}/fields:
+        get:
+            operationId: getLookupFileFieldsById
+            tags:
+                - lookups
+            x-speakeasy-group: lookups
+            x-speakeasy-name-override: getFields
+            x-cribl-internal: false
+            x-cribl-availability: both
+            summary: Get Lookup field names
+            description: Get the column field names from the specified Lookup file header.
+            responses:
+                "200":
+                    description: Column field names from the Lookup file header.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LookupFieldsResponse"
+                            examples:
+                                LookupFieldsResponseExamplesCsvFields:
+                                    $ref: "#/components/examples/LookupFieldsResponseExamplesCsvFields"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lookup whose field names to get.
+    /system/lookups/{id}/move:
+        put:
+            operationId: updateLookupFileMoveById
+            tags:
+                - lookups
+            x-speakeasy-group: lookups
+            x-speakeasy-name-override: move
+            x-cribl-internal: false
+            x-cribl-availability: both
+            summary: Move a Lookup
+            description: Move the specified Lookup from the global context into a Pack.<br/><br/>To move a Lookup from one Pack to another or from a Pack to the global context, use <code>PUT /p/{pack}/system/lookups/{id}/move</code>.
+            responses:
+                "200":
+                    description: The Lookup object after the move in a single-item list.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedLookupFile"
+                            examples:
+                                LookupGetResponseExamplesCsvLookup:
+                                    $ref: "#/components/examples/LookupGetResponseExamplesCsvLookup"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: ContextMoveRequestBody object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ContextMoveRequestBody"
+                        examples:
+                            MoveLookupContextExamplesIntoPack:
+                                $ref: "#/components/examples/MoveLookupContextExamplesIntoPack"
+                            MoveLookupContextExamplesToGlobal:
+                                $ref: "#/components/examples/MoveLookupContextExamplesToGlobal"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lookup to move.
     /p/{pack}/system/lookups/{id}/clone:
         put:
             operationId: updateLookupFileSystemLookupsCloneByPackAndId
@@ -114247,6 +114643,276 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Lookup to update.
+                - name: pack
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Pack.
+    /p/{pack}/system/lookups/{id}/content:
+        get:
+            operationId: getLookupFileSystemLookupsContentByPackAndId
+            tags:
+                - lookups
+            x-speakeasy-group: packs.lookups
+            x-speakeasy-name-override: getContent
+            x-cribl-internal: false
+            x-cribl-availability: both
+            summary: Get Lookup file content within a Pack
+            description: Get rows from the specified Lookup file as JSON.<br/><br/>When <code>raw=true</code>, Cribl streams the underlying Lookup file bytes instead of returning JSON rows (<code>text/csv</code>, <code>application/gzip</code>, or <code>application/octet-stream</code> depending on the file type) within the specified Pack.
+            responses:
+                "200":
+                    description: Paginated Lookup file content, including field names and rows.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LookupContent"
+                            examples:
+                                LookupContentResponseExamplesPaginatedRows:
+                                    $ref: "#/components/examples/LookupContentResponseExamplesPaginatedRows"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lookup whose file content to get.
+                - name: raw
+                  in: query
+                  required: false
+                  schema:
+                    type: boolean
+                  description: If <code>true</code>, stream the raw Lookup file bytes. Otherwise, <code>false</code> (default) to return paginated JSON rows.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: number
+                  description: Maximum number of Lookup rows to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches.
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: number
+                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches.
+                - name: q
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Case-insensitive wildcard filter applied to each Lookup row. Matching uses the stringified row values.
+                - name: pack
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Pack.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
+        patch:
+            operationId: updateLookupFileSystemLookupsContentByPackAndId
+            tags:
+                - lookups
+            x-speakeasy-group: packs.lookups
+            x-speakeasy-name-override: updateContent
+            x-cribl-internal: false
+            x-cribl-availability: both
+            summary: Update Lookup file content within a Pack
+            description: Apply row-level patch operations to the specified Lookup file content.<br/><br/>Use this endpoint to add, replace, or remove rows in CSV Lookup files. Database Lookup files cannot be modified through this endpoint within the specified Pack.
+            responses:
+                "200":
+                    description: The applied patch operations.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LookupFilePatch"
+                            examples:
+                                UpdateLookupContentResponseExamplesAppliedPatches:
+                                    $ref: "#/components/examples/UpdateLookupContentResponseExamplesAppliedPatches"
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: LookupFilePatchList object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LookupFilePatchList"
+                        examples:
+                            UpdateLookupContentExamplesReplaceRow:
+                                $ref: "#/components/examples/UpdateLookupContentExamplesReplaceRow"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lookup whose file content to update.
+                - name: pack
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Pack.
+    /p/{pack}/system/lookups/{id}/fields:
+        get:
+            operationId: getLookupFileSystemLookupsFieldsByPackAndId
+            tags:
+                - lookups
+            x-speakeasy-group: packs.lookups
+            x-speakeasy-name-override: getFields
+            x-cribl-internal: false
+            x-cribl-availability: both
+            summary: Get Lookup field names within a Pack
+            description: Get the column field names from the specified Lookup file header within the specified Pack.
+            responses:
+                "200":
+                    description: Column field names from the Lookup file header.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LookupFieldsResponse"
+                            examples:
+                                LookupFieldsResponseExamplesCsvFields:
+                                    $ref: "#/components/examples/LookupFieldsResponseExamplesCsvFields"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lookup whose field names to get.
+                - name: pack
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Pack.
+    /p/{pack}/system/lookups/{id}/move:
+        put:
+            operationId: updateLookupFileSystemLookupsMoveByPackAndId
+            tags:
+                - lookups
+            x-speakeasy-group: packs.lookups
+            x-speakeasy-name-override: move
+            x-cribl-internal: false
+            x-cribl-availability: both
+            summary: Move a Lookup from a Pack
+            description: Move the specified Lookup from the given Pack to another Pack or to the global context.<br/><br/>To move a Lookup from the global context into a Pack, use <code>PUT /system/lookups/{id}/move</code>.
+            responses:
+                "200":
+                    description: The Lookup object after the move in a single-item list.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedLookupFile"
+                            examples:
+                                LookupGetResponseExamplesCsvLookup:
+                                    $ref: "#/components/examples/LookupGetResponseExamplesCsvLookup"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: ContextMoveRequestBody object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ContextMoveRequestBody"
+                        examples:
+                            MoveLookupContextExamplesIntoPack:
+                                $ref: "#/components/examples/MoveLookupContextExamplesIntoPack"
+                            MoveLookupContextExamplesToGlobal:
+                                $ref: "#/components/examples/MoveLookupContextExamplesToGlobal"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lookup to move.
                 - name: pack
                   in: path
                   required: true
