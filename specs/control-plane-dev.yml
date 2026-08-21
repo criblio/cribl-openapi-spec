@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.20.0-alpha.1787267287408-c34ba952
+  version: 4.20.0-alpha.1787353592885-a67f7d66
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -33123,6 +33123,437 @@ components:
             prefixed ID (group-scoped). Variable value overrides
             'accessControlAllowHeaders' at runtime.
       title: InputUpwindHec
+    InputSailpointHec:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - hecAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - sailpoint_hec
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestina\
+            tionArnConstraint"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization:
+            <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokenConfInputCloudflareHec"
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set
+            to 0 for unlimited. Caution: Increasing the limit above the default
+            value, or setting it to unlimited, may degrade performance and
+            reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        enableProxyHeader:
+          type: boolean
+          title: Show originating IP
+          description: Extract the client IP and port from PROXY protocol v1/v2. When
+            enabled, the X-Forwarded-For header is ignored. Disable to use the
+            X-Forwarded-For header for client IP extraction.
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        captureHeadersWarning:
+          type: string
+          readOnly: true
+          const: ""
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        hecAPI:
+          type: string
+          title: HEC endpoint
+          description: Absolute path on which to listen for SailPoint Virtual Appliance
+            HTTP Event Collector requests. This source uses the
+            /services/collector endpoint.
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to every event. May be overridden by fields added at
+            the token or request level.
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_hecAPI:
+          type: string
+          description: Binds 'hecAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'hecAPI' at runtime.
+      title: InputSailpointHec
+    InputAquaSecurityHec:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - hecAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - aqua_security_hec
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestina\
+            tionArnConstraint"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization:
+            <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokenConfInputCloudflareHec"
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set
+            to 0 for unlimited. Caution: Increasing the limit above the default
+            value, or setting it to unlimited, may degrade performance and
+            reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        captureHeadersWarning:
+          type: string
+          readOnly: true
+          const: ""
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        hecAPI:
+          type: string
+          title: HEC endpoint
+          description: Absolute path on which to listen for Aqua Security HTTP Event
+            Collector API requests. This input supports event, raw, and
+            acknowledgement endpoints.
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to every event. May be overridden by fields added at
+            the token or request level.
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        allowedIndexes:
+          type: array
+          title: Allowed indexes
+          description: List values allowed in HEC event index field. Leave blank to skip
+            validation. Supports wildcards. The values here can expand index
+            validation at the token level.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        hecAcks:
+          type: boolean
+          title: HEC Acks
+          description: Whether to enable HEC indexer acknowledgements
+        accessControlAllowOrigin:
+          title: CORS allowed origins
+          type: array
+          description: HTTP origins to which @{product} should send CORS (cross-origin
+            resource sharing) Access-Control-Allow-* headers. Supports
+            wildcards.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowHeaders:
+          title: CORS allowed headers
+          type: array
+          description: HTTP headers that @{product} will send to allowed origins as
+            "Access-Control-Allow-Headers" in a CORS preflight response. Use "*"
+            to allow all headers.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        emitTokenMetrics:
+          type: boolean
+          title: Emit per-token request metrics
+          description: Emit per-token (<prefix>.http.perToken) and summary
+            (<prefix>.http.summary) request metrics
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_hecAPI:
+          type: string
+          description: Binds 'hecAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'hecAPI' at runtime.
+        __template_allowedIndexes:
+          type: string
+          description: Binds 'allowedIndexes' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'allowedIndexes' at
+            runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
+      title: InputAquaSecurityHec
     InputOpenaiComplianceLogs:
       type: object
       required:
@@ -33963,6 +34394,200 @@ components:
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'oktaDomain' at runtime.
       title: InputOkta
+    InputAkamaiHec:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - hecAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - akamai_hec
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestina\
+            tionArnConstraint"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization:
+            <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokenConfInputCloudflareHec"
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set
+            to 0 for unlimited. Caution: Increasing the limit above the default
+            value, or setting it to unlimited, may degrade performance and
+            reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        enableProxyHeader:
+          type: boolean
+          title: Show originating IP
+          description: Extract the client IP and port from PROXY protocol v1/v2. When
+            enabled, the X-Forwarded-For header is ignored. Disable to use the
+            X-Forwarded-For header for client IP extraction.
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        captureHeadersWarning:
+          type: string
+          readOnly: true
+          const: ""
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        hecAPI:
+          type: string
+          title: HEC endpoint
+          description: Absolute path on which to listen for Akamai DataStream 2 HTTP Event
+            Collector API requests. Akamai delivers to the /raw endpoint beneath
+            this path.
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to every event. May be overridden by fields added at
+            the token or request level.
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        hecAcks:
+          type: boolean
+          title: HEC Acks
+          description: Whether to enable HEC indexer acknowledgements
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_hecAPI:
+          type: string
+          description: Binds 'hecAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'hecAPI' at runtime.
+      title: InputAkamaiHec
     InputVectraAiHec:
       type: object
       required:
@@ -34277,9 +34902,12 @@ components:
         - $ref: "#/components/schemas/InputCloudflareHec"
         - $ref: "#/components/schemas/InputSysdigHec"
         - $ref: "#/components/schemas/InputUpwindHec"
+        - $ref: "#/components/schemas/InputSailpointHec"
+        - $ref: "#/components/schemas/InputAquaSecurityHec"
         - $ref: "#/components/schemas/InputOpenaiComplianceLogs"
         - $ref: "#/components/schemas/InputAnthropicCompliance"
         - $ref: "#/components/schemas/InputOkta"
+        - $ref: "#/components/schemas/InputAkamaiHec"
         - $ref: "#/components/schemas/InputVectraAiHec"
       discriminator:
         propertyName: type
@@ -34354,9 +34982,12 @@ components:
           cloudflare_hec: "#/components/schemas/InputCloudflareHec"
           sysdig_hec: "#/components/schemas/InputSysdigHec"
           upwind_hec: "#/components/schemas/InputUpwindHec"
+          sailpoint_hec: "#/components/schemas/InputSailpointHec"
+          aqua_security_hec: "#/components/schemas/InputAquaSecurityHec"
           openai_compliance_logs: "#/components/schemas/InputOpenaiComplianceLogs"
           anthropic_compliance: "#/components/schemas/InputAnthropicCompliance"
           okta: "#/components/schemas/InputOkta"
+          akamai_hec: "#/components/schemas/InputAkamaiHec"
           vectra_ai_hec: "#/components/schemas/InputVectraAiHec"
       title: Input
     CountedInputSplunkHec:
@@ -34502,6 +35133,7 @@ components:
             routing, and preprocessing options.
         run:
           type: object
+          description: Run settings that control how and when the Collection job runs.
           required:
             - mode
           properties:
@@ -34697,6 +35329,7 @@ components:
           description: Executor configuration, including the executor type and its settings.
         run:
           type: object
+          description: Run settings that control how and when the Executor job runs.
           properties:
             rescheduleDroppedTasks:
               type: boolean
@@ -68839,6 +69472,7 @@ components:
             $ref: "#/components/schemas/MetadataConfInputCollection"
     RunnableJobCollectionScheduleRunType:
       type: object
+      description: Run settings that control how and when the Collection job runs.
       required:
         - mode
       properties:
@@ -70015,6 +70649,17 @@ components:
             sendToRoutes: true
             pqEnabled: false
         count: 1
+    InputCreateExamplesAkamaiHec:
+      summary: Akamai HEC
+      value:
+        id: akamai-hec-source
+        type: akamai_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Akamai HEC Source.
     InputCreateExamplesAnthropicCompliance:
       summary: Anthropic Compliance
       value:
@@ -70036,6 +70681,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Anthropic Compliance Source.
+    InputCreateExamplesAquaSecurityHec:
+      summary: Aqua Security
+      value:
+        id: aqua-security-hec-source
+        type: aqua_security_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Aqua Security Source.
     InputCreateExamplesAppleUnifiedLogs:
       summary: Apple Unified Logs
       value:
@@ -70581,6 +71237,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a S3 Inventory Source.
+    InputCreateExamplesSailpointHec:
+      summary: SailPoint
+      value:
+        id: sailpoint-hec-source
+        type: sailpoint_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a SailPoint Source.
     InputCreateExamplesSecurityLake:
       summary: Security Lake
       value:
@@ -70833,6 +71500,19 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Zscaler Cloud NSS Source.
+    UpdateInputExamplesAkamaiHec:
+      summary: Akamai HEC
+      value:
+        id: akamai-hec-source
+        type: akamai_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Akamai HEC Source.<br/><br/>The
+        request body must include a complete representation of the Source that
+        you want to update. This endpoint does not support partial updates.
     UpdateInputExamplesAnthropicCompliance:
       summary: Anthropic Compliance
       value:
@@ -70854,6 +71534,20 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for updating a Anthropic Compliance
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
+    UpdateInputExamplesAquaSecurityHec:
+      summary: Aqua Security
+      value:
+        id: aqua-security-hec-source
+        type: aqua_security_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Aqua Security
         Source.<br/><br/>The request body must include a complete representation
         of the Source that you want to update. This endpoint does not support
         partial updates.
@@ -71550,6 +72244,19 @@ components:
         Source.<br/><br/>The request body must include a complete representation
         of the Source that you want to update. This endpoint does not support
         partial updates.
+    UpdateInputExamplesSailpointHec:
+      summary: SailPoint
+      value:
+        id: sailpoint-hec-source
+        type: sailpoint_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a SailPoint Source.<br/><br/>The
+        request body must include a complete representation of the Source that
+        you want to update. This endpoint does not support partial updates.
     UpdateInputExamplesSecurityLake:
       summary: Security Lake
       value:
@@ -76947,6 +77654,34 @@ components:
           - lake-data-processing
         destinations:
           - analytics-platform
+    AclGetUsersResponseGroupExamplesSuccess:
+      summary: List user ACL for a Group
+      description: Example response for listing the user access control list (ACL) for
+        a Group.<br/><br/>The response includes only users with explicit access
+        assignments on the Group, not access granted through Team membership or
+        inheritance.
+      value:
+        count: 1
+        items:
+          - user: user1@example.com
+            perms:
+              - type: groups
+                gid: group1
+                policy: GroupRead
+    AclGetTeamsResponseGroupExamplesSuccess:
+      summary: List Team ACL for a Group
+      description: Example response for listing the Team access control list (ACL) for
+        a Group.<br/><br/>The response includes only Teams with explicit access
+        assignments on the Group, not access granted individually to Team
+        Members or through inheritance.
+      value:
+        count: 1
+        items:
+          - team: engineering-team
+            perms:
+              - type: groups
+                gid: group1
+                policy: GroupRead
     CreateGroupExamplesCloudWg:
       summary: Create a Worker Group in Cribl.Cloud
       description: Example request body for creating a Worker Group on Cribl.Cloud
@@ -80043,8 +80778,12 @@ paths:
                   required:
                     - id
             examples:
+              InputCreateExamplesAkamaiHec:
+                $ref: "#/components/examples/InputCreateExamplesAkamaiHec"
               InputCreateExamplesAnthropicCompliance:
                 $ref: "#/components/examples/InputCreateExamplesAnthropicCompliance"
+              InputCreateExamplesAquaSecurityHec:
+                $ref: "#/components/examples/InputCreateExamplesAquaSecurityHec"
               InputCreateExamplesAppleUnifiedLogs:
                 $ref: "#/components/examples/InputCreateExamplesAppleUnifiedLogs"
               InputCreateExamplesAppscope:
@@ -80145,6 +80884,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesS3"
               InputCreateExamplesS3Inventory:
                 $ref: "#/components/examples/InputCreateExamplesS3Inventory"
+              InputCreateExamplesSailpointHec:
+                $ref: "#/components/examples/InputCreateExamplesSailpointHec"
               InputCreateExamplesSecurityLake:
                 $ref: "#/components/examples/InputCreateExamplesSecurityLake"
               InputCreateExamplesServiceNowTable:
@@ -80334,8 +81075,12 @@ paths:
             schema:
               $ref: "#/components/schemas/Input"
             examples:
+              UpdateInputExamplesAkamaiHec:
+                $ref: "#/components/examples/UpdateInputExamplesAkamaiHec"
               UpdateInputExamplesAnthropicCompliance:
                 $ref: "#/components/examples/UpdateInputExamplesAnthropicCompliance"
+              UpdateInputExamplesAquaSecurityHec:
+                $ref: "#/components/examples/UpdateInputExamplesAquaSecurityHec"
               UpdateInputExamplesAppleUnifiedLogs:
                 $ref: "#/components/examples/UpdateInputExamplesAppleUnifiedLogs"
               UpdateInputExamplesAppscope:
@@ -80440,6 +81185,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesS3"
               UpdateInputExamplesS3Inventory:
                 $ref: "#/components/examples/UpdateInputExamplesS3Inventory"
+              UpdateInputExamplesSailpointHec:
+                $ref: "#/components/examples/UpdateInputExamplesSailpointHec"
               UpdateInputExamplesSecurityLake:
                 $ref: "#/components/examples/UpdateInputExamplesSecurityLake"
               UpdateInputExamplesServiceNowTable:
@@ -83498,10 +84245,16 @@ paths:
       x-cribl-availability: both
       x-cribl-api-context:
         - leader
-      summary: Get the Access Control List for a Worker Group, Outpost Group, or Edge
-        Fleet
-      description: Get the Access Control List (ACL) for the specified Worker Group,
-        Outpost Group, or Edge Fleet.
+      summary: Get the user access control list for a Worker Group, Outpost Group, or
+        Edge Fleet
+      description: Get the user access control list (ACL) for the specified Worker
+        Group, Outpost Group, or Edge Fleet.<br/><br/>This endpoint lists users
+        with explicit access assignments on the Group or Fleet. The response
+        does not include access granted through Team membership or inherited
+        based on a user's Permissions and Roles at the Organization/Global,
+        Workspace, or product level.<br/><br/>To list the Team ACL for a product
+        and Group or Fleet, use <code>GET
+        /products/{product}/groups/{id}/acl/teams</code>.
       responses:
         "200":
           description: The requested UserAccessControlList object in a single-item list.
@@ -83509,6 +84262,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedUserAccessControlList"
+              examples:
+                AclGetUsersResponseGroupExamplesSuccess:
+                  $ref: "#/components/examples/AclGetUsersResponseGroupExamplesSuccess"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -83524,6 +84280,8 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: Worker Group, Outpost Group, or Edge Fleet not found.
         "500":
           description: Unexpected server error.
           content:
@@ -83536,8 +84294,8 @@ paths:
           required: true
           schema:
             $ref: "#/components/schemas/ProductsCore"
-          description: Name of the Cribl product to get the Worker Groups or Edge Fleets
-            for.
+          description: Name of the Cribl product that contains the Worker Group, Outpost
+            Group, or Edge Fleet.
         - name: id
           in: path
           required: true
@@ -83563,11 +84321,16 @@ paths:
       x-cribl-availability: both
       x-cribl-api-context:
         - leader
-      summary: Get the Access Control List for teams with permissions on a Worker
-        Group, Outpost Group, or Edge Fleet for the specified Cribl product
-      description: Get the Access Control List (ACL) for teams that have permissions
-        on a Worker Group, Outpost Group, or Edge Fleet for the specified Cribl
-        product.
+      summary: Get the team access control list for a Worker Group, Outpost Group, or
+        Edge Fleet
+      description: Get the Team access control list (ACL) for the specified Worker
+        Group, Outpost Group, or Edge Fleet.<br/><br/>This endpoint lists Teams
+        with explicit access assignments on the Group or Fleet. The response
+        does not include access granted to individual Team Members through
+        direct user assignments or inherited based on Team Permissions and Roles
+        at the Organization/Global, Workspace, or product level.<br/><br/>To
+        list the user ACL for a Group or Fleet, use <code>GET
+        /products/{product}/groups/{id}/acl</code>.
       responses:
         "200":
           description: The requested TeamAccessControlList object in a single-item list.
@@ -83575,6 +84338,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedTeamAccessControlList"
+              examples:
+                AclGetTeamsResponseGroupExamplesSuccess:
+                  $ref: "#/components/examples/AclGetTeamsResponseGroupExamplesSuccess"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -83610,7 +84376,7 @@ paths:
           schema:
             type: string
           description: The <code>id</code> of the Worker Group, Outpost Group, or Edge
-            Fleet to get the team ACL for.
+            Fleet to get the Team ACL for.
         - name: type
           in: query
           required: false
@@ -85050,8 +85816,12 @@ paths:
                   required:
                     - id
             examples:
+              InputCreateExamplesAkamaiHec:
+                $ref: "#/components/examples/InputCreateExamplesAkamaiHec"
               InputCreateExamplesAnthropicCompliance:
                 $ref: "#/components/examples/InputCreateExamplesAnthropicCompliance"
+              InputCreateExamplesAquaSecurityHec:
+                $ref: "#/components/examples/InputCreateExamplesAquaSecurityHec"
               InputCreateExamplesAppleUnifiedLogs:
                 $ref: "#/components/examples/InputCreateExamplesAppleUnifiedLogs"
               InputCreateExamplesAppscope:
@@ -85152,6 +85922,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesS3"
               InputCreateExamplesS3Inventory:
                 $ref: "#/components/examples/InputCreateExamplesS3Inventory"
+              InputCreateExamplesSailpointHec:
+                $ref: "#/components/examples/InputCreateExamplesSailpointHec"
               InputCreateExamplesSecurityLake:
                 $ref: "#/components/examples/InputCreateExamplesSecurityLake"
               InputCreateExamplesServiceNowTable:
@@ -85327,8 +86099,12 @@ paths:
             schema:
               $ref: "#/components/schemas/Input"
             examples:
+              UpdateInputExamplesAkamaiHec:
+                $ref: "#/components/examples/UpdateInputExamplesAkamaiHec"
               UpdateInputExamplesAnthropicCompliance:
                 $ref: "#/components/examples/UpdateInputExamplesAnthropicCompliance"
+              UpdateInputExamplesAquaSecurityHec:
+                $ref: "#/components/examples/UpdateInputExamplesAquaSecurityHec"
               UpdateInputExamplesAppleUnifiedLogs:
                 $ref: "#/components/examples/UpdateInputExamplesAppleUnifiedLogs"
               UpdateInputExamplesAppscope:
@@ -85433,6 +86209,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesS3"
               UpdateInputExamplesS3Inventory:
                 $ref: "#/components/examples/UpdateInputExamplesS3Inventory"
+              UpdateInputExamplesSailpointHec:
+                $ref: "#/components/examples/UpdateInputExamplesSailpointHec"
               UpdateInputExamplesSecurityLake:
                 $ref: "#/components/examples/UpdateInputExamplesSecurityLake"
               UpdateInputExamplesServiceNowTable:
