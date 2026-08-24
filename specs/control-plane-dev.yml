@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.20.0-alpha.1787440364848-554e6081
+  version: 4.20.0-alpha.1787612966582-9b336a5d
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -5191,9 +5191,9 @@ components:
                         title: Operator
                         description: Comparison operator
                         enum:
-                          - =
+                          - "="
                           - "!="
-                          - =~
+                          - "=~"
                           - "!~"
                         x-speakeasy-enums:
                           - Equal
@@ -5429,11 +5429,11 @@ components:
           description: Operation to be applied over the results count
           enum:
             - ">"
-            - <
-            - ===
+            - "<"
+            - "==="
             - "!=="
             - ">="
-            - <=
+            - "<="
           x-speakeasy-enum-descriptions:
             - greater than
             - less than
@@ -27640,8 +27640,9 @@ components:
         authMethodsExt:
           type: array
           title: Auth methods
-          description: Shared secrets to authenticate clients. Supports Bearer tokens and
-            Basic auth. If empty, unauthenticated access is permitted.
+          description: Shared secrets to authenticate clients. Supports Bearer tokens,
+            Basic auth, and OAuth (JWKS-backed JWT) methods. If empty,
+            unauthenticated access is permitted.
           minItems: 0
           items:
             type: object
@@ -27656,11 +27657,13 @@ components:
                   - tokenSecret
                   - basic
                   - basicSecret
+                  - oauth
                 x-speakeasy-enum-descriptions:
                   - Token
                   - Token (secret)
                   - Basic
                   - Basic (credentials secret)
+                  - OAuth
                 description: Authentication type
                 x-speakeasy-unknown-values: allow
               token:
@@ -27705,6 +27708,30 @@ components:
                 title: Credentials secret
                 description: Select or create a secret that references your credentials
                 minLength: 1
+              issuer:
+                type: string
+                minLength: 1
+                pattern: .*\S.*
+                title: Issuer
+                description: Expected token issuer (iss claim)
+              jwksUri:
+                type: string
+                minLength: 1
+                pattern: .*\S.*
+                title: JWKS URI
+                description: URL of the JWKS endpoint used to fetch signing keys
+              audience:
+                type: string
+                minLength: 1
+                pattern: .*\S.*
+                title: Audience
+                description: Expected token audience (aud claim)
+              scopes:
+                type: array
+                items:
+                  type: string
+                title: Required scopes
+                description: Scopes the token must grant (optional)
         metadata:
           type: array
           title: Fields
@@ -30670,7 +30697,71 @@ components:
           description: "Shared secrets to be provided by any client (Authorization:
             <token>). If empty, unauthorized access is permitted."
           items:
-            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+            type: object
+            anyOf:
+              - required:
+                  - token
+              - required:
+                  - tokenSecret
+            properties:
+              authType:
+                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensItems"
+                description: Select Manual to enter an auth token directly, or select Secret to
+                  use a text secret to authenticate
+              tokenSecret:
+                type: string
+                title: Token secret (text secret)
+                description: Select or create a stored text secret
+              token:
+                type: string
+                title: Token
+                description: "Shared secret to be provided by any client (Authorization:
+                  <token>)"
+              description:
+                type: string
+                title: Description
+                description: Description
+              metadata:
+                type: array
+                title: Fields
+                description: Fields to add to events referencing this token
+                items:
+                  $ref: "#/components/schemas/MetadataConfInputCollection"
+        authTokensSecrets:
+          type: array
+          title: Secret auth tokens (internal)
+          description: Persisted secret-backed token rows — split from authTokensExt for
+            downgrade safety.
+          items:
+            type: object
+            anyOf:
+              - required:
+                  - token
+              - required:
+                  - tokenSecret
+            properties:
+              authType:
+                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensSecretsItems"
+                description: Select Secret to use a text secret to authenticate
+              tokenSecret:
+                type: string
+                title: Token secret (text secret)
+                description: Select or create a stored text secret
+              token:
+                type: string
+                title: Token
+                description: "Shared secret to be provided by any client (Authorization:
+                  <token>)"
+              description:
+                type: string
+                title: Description
+                description: Description
+              metadata:
+                type: array
+                title: Fields
+                description: Fields to add to events referencing this token
+                items:
+                  $ref: "#/components/schemas/MetadataConfInputCollection"
         description:
           type: string
           title: Description
@@ -32131,8 +32222,11 @@ components:
             <token>). If empty, unauthorized access is permitted."
           items:
             type: object
-            required:
-              - token
+            anyOf:
+              - required:
+                  - token
+              - required:
+                  - tokenSecret
             properties:
               authType:
                 $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensItems"
@@ -32151,10 +32245,6 @@ components:
                 type: boolean
                 title: Enable token
                 description: Enable token
-              description:
-                type: string
-                title: Description
-                description: Description
               allowedIndexesAtToken:
                 type: array
                 title: Allowed indexes
@@ -32165,6 +32255,10 @@ components:
                 items:
                   type: string
                   minLength: 1
+              description:
+                type: string
+                title: Description
+                description: Description
               metadata:
                 type: array
                 title: Fields
@@ -32430,6 +32524,11 @@ components:
               title: Authenticate client (mutual auth)
               description: Require clients to present their certificates. Used to perform
                 client authentication using SSL certs.
+            caPath:
+              type: string
+              title: CA certificate path
+              description: Path on server containing CA certificates to use. PEM format. Can
+                reference $ENV_VARS.
             rejectUnauthorized:
               type: boolean
               title: Validate client certificates
@@ -32460,11 +32559,6 @@ components:
               description: Path on server containing certificates to use. PEM format. Can
                 reference $ENV_VARS. Defaults to the built-in Cribl certificate
                 when TLS is enabled.
-            caPath:
-              type: string
-              title: CA certificate path
-              description: Path on server containing CA certificates to use. PEM format. Can
-                reference $ENV_VARS.
             minVersion:
               $ref: "#/components/schemas/MinimumTlsVersionOptionsTls"
               description: Minimum TLS version
@@ -45137,7 +45231,7 @@ components:
           description: Optional Elasticsearch version, used to format events. If not
             specified, will auto-discover version.
           enum:
-            - auto
+            - "auto"
             - "6"
             - "7"
           x-speakeasy-enum-descriptions:
@@ -67346,6 +67440,13 @@ components:
         - silly
       description: Collector runtime log level
       x-speakeasy-unknown-values: allow
+    AuthenticationMethodOptionsAuthTokensSecretsItems:
+      title: Authentication method
+      type: string
+      enum:
+        - secret
+      description: Select Secret to use a text secret to authenticate
+      x-speakeasy-unknown-values: allow
     TypeOptionsNetflow:
       type: string
       enum:
@@ -67384,13 +67485,6 @@ components:
           type: string
           title: Value
           description: OAuth header value
-    AuthenticationMethodOptionsAuthTokensItemsSecret:
-      title: Authentication method
-      type: string
-      enum:
-        - secret
-      description: Select Secret to use a text secret to authenticate
-      x-speakeasy-unknown-values: allow
     MetadataConfAddHecTokenRequest:
       type: object
       properties:
@@ -69125,6 +69219,11 @@ components:
           title: Authenticate client (mutual auth)
           description: Require clients to present their certificates. Used to perform
             client authentication using SSL certs.
+        caPath:
+          type: string
+          title: CA certificate path
+          description: Path on server containing CA certificates to use. PEM format. Can
+            reference $ENV_VARS.
         rejectUnauthorized:
           type: boolean
           title: Validate client certificates
@@ -69152,11 +69251,6 @@ components:
           type: string
           title: Certificate path
           description: Path on server containing certificates to use. PEM format. Can
-            reference $ENV_VARS.
-        caPath:
-          type: string
-          title: CA certificate path
-          description: Path on server containing CA certificates to use. PEM format. Can
             reference $ENV_VARS.
         minVersion:
           $ref: "#/components/schemas/MinimumTlsVersionOptionsTls"
@@ -69443,9 +69537,14 @@ components:
           description: Generate full GPU metrics
     AuthTokenConfInputCloudflareHec:
       type: object
+      anyOf:
+        - required:
+            - token
+        - required:
+            - tokenSecret
       properties:
         authType:
-          $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensItemsSecret"
+          $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensSecretsItems"
           description: Select Secret to use a text secret to authenticate
         tokenSecret:
           type: string
@@ -69459,10 +69558,6 @@ components:
           type: boolean
           title: Enable token
           description: Enable token
-        description:
-          type: string
-          title: Description
-          description: Description
         allowedIndexesAtToken:
           type: array
           title: Allowed indexes
@@ -69473,6 +69568,10 @@ components:
           items:
             type: string
             minLength: 1
+        description:
+          type: string
+          title: Description
+          description: Description
         metadata:
           type: array
           title: Fields
@@ -83168,6 +83267,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       requestBody:
+        description: Binary contents of the <code>.crbl</code> Pack file to stage for
+          installation
         required: true
         content:
           application/octet-stream:
