@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.0-alpha.1787839881042-6134bb3d
+    version: 4.20.0-alpha.1787872851889-93bc8175
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -38274,6 +38274,17 @@ components:
                     description: >
                         ID of the Exabeam Collector where data should be sent. Example: 11112222-3333-4444-5555-666677778888
 
+                awsAuthenticationMethod:
+                    type: string
+                    title: Authentication method
+                    enum:
+                        - manual
+                        - secret
+                    x-speakeasy-enum-descriptions:
+                        - Manual
+                        - Secret
+                    description: Authentication method
+                    x-speakeasy-unknown-values: allow
                 siteName:
                     type: string
                     title: Site name
@@ -38333,6 +38344,10 @@ components:
                     title: Retry limit
                     description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
                     minimum: 1
+                awsSecret:
+                    type: string
+                    title: Secret key pair
+                    description: Select or create a stored secret that references your access key and secret key
                 __template_streamtags:
                     type: string
                     description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
@@ -44864,7 +44879,7 @@ components:
                 rejectUnauthorized:
                     type: boolean
                     title: Validate server certs
-                    description: "Reject certificates not authorized by a CA in the CA certificate path or by another trusted CA (such as the system's). \n        Enabled by default. When this setting is also present in TLS Settings (Client Side), \n        that value will take precedence."
+                    description: "Always enabled for the Metric Store: server certificates must be authorized by a CA in the CA certificate path or by another trusted CA, such as the system's. Not configurable."
                 timeoutSec:
                     type: number
                     minimum: 1
@@ -44916,12 +44931,16 @@ components:
                 authTokens:
                     type: array
                     title: Connected environment tokens
-                    description: Shared secrets to be used by connected environments to authorize connections. These tokens should also be installed in the Cribl HTTP Source on the Cribl Metrics.
+                    description: Shared secrets to be used by connected environments to authorize connections. These tokens should also be installed in the Cribl HTTP Source of the target Cribl Search workspace.
                     items:
                         $ref: "#/components/schemas/AuthTokenConfOutputCriblHttp"
                 onBackpressure:
                     $ref: "#/components/schemas/BackpressureBehaviorOptions"
                     description: How to handle events when all receivers are exerting backpressure
+                useRoundRobinDns:
+                    type: boolean
+                    title: Round-robin DNS
+                    description: Enable round-robin DNS lookup. When a DNS server returns multiple addresses, @{product} will cycle through them in the order returned. For optimal performance, consider enabling this setting for non-load balanced destinations.
                 description:
                     type: string
                     title: Description
@@ -44931,10 +44950,6 @@ components:
                     title: Cribl endpoint
                     description: URL of a Cribl Worker to send events to, such as http://localhost:10200
                     pattern: ^https?://.*
-                useRoundRobinDns:
-                    type: boolean
-                    title: Round-robin DNS
-                    description: Enable round-robin DNS lookup. When a DNS server returns multiple addresses, @{product} will cycle through them in the order returned. For optimal performance, consider enabling this setting for non-load balanced destinations.
                 excludeSelf:
                     type: boolean
                     title: Exclude current host IPs
@@ -56703,6 +56718,7 @@ components:
                 - notebooks
                 - notebook-templates
                 - apps
+                - secret-folders
             title: RbacResource
             x-speakeasy-unknown-values: allow
         ResourcePolicy:
@@ -62402,6 +62418,54 @@ components:
                     description: List of the <code>id</code> values for Worker Groups to share the secret folder with. Use <code>'*'</code> to share the secret folder with all Worker Groups. All global secrets within the secret folder become available to the Worker Groups that it is shared with.
             description: Sharing configuration for a secret folder.
             title: SharingConfig
+        SecretFolder:
+            type: object
+            properties:
+                description:
+                    type: string
+                    description: Brief description of the secret folder.
+                    examples:
+                        - Shared credentials for finance systems
+                id:
+                    type: string
+                    description: Unique identifier for the secret folder.
+                    examples:
+                        - finance
+                    pattern: ^[a-zA-Z0-9_\-]+$
+                secretStoreId:
+                    type: string
+                    description: Unique identifier for the backing secret store for the secret folder.
+                    examples:
+                        - cribl
+                    pattern: ^[a-zA-Z0-9_\-]+$
+                sharing:
+                    $ref: "#/components/schemas/SharingConfig"
+                    description: Sharing configuration for the secret folder.
+            required:
+                - id
+                - secretStoreId
+            description: A secret folder that is mapped to a backing secret store.
+            title: SecretFolder
+        PaginatedSecretFolder:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/SecretFolder"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
         SecretFolderWithRuntimeState:
             type: object
             properties:
@@ -76831,6 +76895,9 @@ components:
                 isFipsEnabled:
                     type: boolean
                     description: If <code>true</code>, FIPS compliance mode is enabled.
+                isHighside:
+                    type: boolean
+                    description: If <code>true</code>, this instance runs in the Highside deployment mode (air-gapped Cribl Search and Lake).
                 license:
                     $ref: "#/components/schemas/LicenseInfo"
                     description: License information for the Cribl instance.
@@ -84829,89 +84896,86 @@ components:
             discriminator:
                 propertyName: type
                 mapping:
-                    collection: "#/components/schemas/InputCollectionPartialRequest"
-                    kafka: "#/components/schemas/InputKafkaPartialRequest"
-                    msk: "#/components/schemas/InputMskPartialRequest"
-                    http: "#/components/schemas/InputHttpPartialRequest"
-                    splunk: "#/components/schemas/InputSplunkPartialRequest"
-                    splunk_search: "#/components/schemas/InputSplunkSearchPartialRequest"
-                    splunk_hec: "#/components/schemas/InputSplunkHecPartialRequest"
-                    azure_blob: "#/components/schemas/InputAzureBlobPartialRequest"
-                    azure_vnet_flow_log: "#/components/schemas/InputAzureVnetFlowLogPartialRequest"
-                    elastic: "#/components/schemas/InputElasticPartialRequest"
-                    confluent_cloud: "#/components/schemas/InputConfluentCloudPartialRequest"
-                    grafana: "#/components/schemas/InputGrafanaPartialRequest"
-                    loki: "#/components/schemas/InputLokiPartialRequest"
-                    prometheus_rw: "#/components/schemas/InputPrometheusRwPartialRequest"
-                    prometheus: "#/components/schemas/InputPrometheusPartialRequest"
-                    edge_prometheus: "#/components/schemas/InputEdgePrometheusPartialRequest"
-                    office365_mgmt: "#/components/schemas/InputOffice365MgmtPartialRequest"
-                    office365_service: "#/components/schemas/InputOffice365ServicePartialRequest"
-                    office365_msg_trace: "#/components/schemas/InputOffice365MsgTracePartialRequest"
-                    microsoft_graph: "#/components/schemas/InputMicrosoftGraphPartialRequest"
-                    eventhub: "#/components/schemas/InputEventhubPartialRequest"
-                    eventhub_amqp: "#/components/schemas/InputEventhubAmqpPartialRequest"
-                    exec: "#/components/schemas/InputExecPartialRequest"
-                    firehose: "#/components/schemas/InputFirehosePartialRequest"
-                    google_pubsub: "#/components/schemas/InputGooglePubsubPartialRequest"
-                    cribl: "#/components/schemas/InputCriblPartialRequest"
-                    cribl_tcp: "#/components/schemas/InputCriblTcpPartialRequest"
-                    cribl_http: "#/components/schemas/InputCriblHttpPartialRequest"
-                    cribl_lake_http: "#/components/schemas/InputCriblLakeHttpPartialRequest"
-                    tcpjson: "#/components/schemas/InputTcpjsonPartialRequest"
-                    system_metrics: "#/components/schemas/InputSystemMetricsPartialRequest"
-                    system_state: "#/components/schemas/InputSystemStatePartialRequest"
-                    kube_metrics: "#/components/schemas/InputKubeMetricsPartialRequest"
-                    kube_logs: "#/components/schemas/InputKubeLogsPartialRequest"
-                    kube_events: "#/components/schemas/InputKubeEventsPartialRequest"
-                    windows_metrics: "#/components/schemas/InputWindowsMetricsPartialRequest"
-                    crowdstrike: "#/components/schemas/InputCrowdstrikePartialRequest"
-                    datadog_agent: "#/components/schemas/InputDatadogAgentPartialRequest"
-                    datagen: "#/components/schemas/InputDatagenPartialRequest"
-                    http_raw: "#/components/schemas/InputHttpRawPartialRequest"
-                    kinesis: "#/components/schemas/InputKinesisPartialRequest"
-                    criblmetrics: "#/components/schemas/InputCriblmetricsPartialRequest"
-                    metrics: "#/components/schemas/InputMetricsPartialRequest"
-                    s3: "#/components/schemas/InputS3PartialRequest"
-                    s3_inventory: "#/components/schemas/InputS3InventoryPartialRequest"
-                    snmp: "#/components/schemas/InputSnmpPartialRequest"
-                    open_telemetry: "#/components/schemas/InputOpenTelemetryPartialRequest"
-                    model_driven_telemetry: "#/components/schemas/InputModelDrivenTelemetryPartialRequest"
-                    sqs: "#/components/schemas/InputSqsPartialRequest"
-                    syslog: "#/components/schemas/InputSyslogPartialRequest"
-                    file: "#/components/schemas/InputFilePartialRequest"
-                    tcp: "#/components/schemas/InputTcpPartialRequest"
-                    appscope: "#/components/schemas/InputAppscopePartialRequest"
-                    wef: "#/components/schemas/InputWefPartialRequest"
-                    win_event_logs: "#/components/schemas/InputWinEventLogsPartialRequest"
-                    apple_unified_logs: "#/components/schemas/InputAppleUnifiedLogsPartialRequest"
-                    raw_udp: "#/components/schemas/InputRawUdpPartialRequest"
-                    journal_files: "#/components/schemas/InputJournalFilesPartialRequest"
-                    wiz: "#/components/schemas/InputWizPartialRequest"
-                    openai: "#/components/schemas/InputOpenaiPartialRequest"
-                    wiz_webhook: "#/components/schemas/InputWizWebhookPartialRequest"
-                    netflow: "#/components/schemas/InputNetflowPartialRequest"
-                    security_lake: "#/components/schemas/InputSecurityLakePartialRequest"
-                    bedrock_s3: "#/components/schemas/InputBedrockS3PartialRequest"
-                    servicenow_table: "#/components/schemas/InputServicenowTablePartialRequest"
-                    proofpoint_pod: "#/components/schemas/InputProofpointPodPartialRequest"
-                    zscaler_hec: "#/components/schemas/InputZscalerHecPartialRequest"
-                    cloudflare_hec: "#/components/schemas/InputCloudflareHecPartialRequest"
-                    sysdig_hec: "#/components/schemas/InputSysdigHecPartialRequest"
-                    upwind_hec: "#/components/schemas/InputUpwindHecPartialRequest"
-                    sailpoint_hec: "#/components/schemas/InputSailpointHecPartialRequest"
-                    aqua_security_hec: "#/components/schemas/InputAquaSecurityHecPartialRequest"
-                    openai_compliance_logs: "#/components/schemas/InputOpenaiComplianceLogsPartialRequest"
-                    anthropic_compliance: "#/components/schemas/InputAnthropicCompliancePartialRequest"
-                    microsoft_copilot: "#/components/schemas/InputMicrosoftCopilotPartialRequest"
-                    okta: "#/components/schemas/InputOktaPartialRequest"
-                    akamai_hec: "#/components/schemas/InputAkamaiHecPartialRequest"
-                    vectra_ai_hec: "#/components/schemas/InputVectraAiHecPartialRequest"
-                    beyondtrust_hec: "#/components/schemas/InputBeyondtrustHecPartialRequest"
+                    collection: "#/components/schemas/InputCollection"
+                    kafka: "#/components/schemas/InputKafka"
+                    msk: "#/components/schemas/InputMsk"
+                    http: "#/components/schemas/InputHttp"
+                    splunk: "#/components/schemas/InputSplunk"
+                    splunk_search: "#/components/schemas/InputSplunkSearch"
+                    splunk_hec: "#/components/schemas/InputSplunkHec"
+                    azure_blob: "#/components/schemas/InputAzureBlob"
+                    azure_vnet_flow_log: "#/components/schemas/InputAzureVnetFlowLog"
+                    elastic: "#/components/schemas/InputElastic"
+                    confluent_cloud: "#/components/schemas/InputConfluentCloud"
+                    grafana: "#/components/schemas/InputGrafana"
+                    loki: "#/components/schemas/InputLoki"
+                    prometheus_rw: "#/components/schemas/InputPrometheusRw"
+                    prometheus: "#/components/schemas/InputPrometheus"
+                    edge_prometheus: "#/components/schemas/InputEdgePrometheus"
+                    office365_mgmt: "#/components/schemas/InputOffice365Mgmt"
+                    office365_service: "#/components/schemas/InputOffice365Service"
+                    office365_msg_trace: "#/components/schemas/InputOffice365MsgTrace"
+                    microsoft_graph: "#/components/schemas/InputMicrosoftGraph"
+                    eventhub: "#/components/schemas/InputEventhub"
+                    eventhub_amqp: "#/components/schemas/InputEventhubAmqp"
+                    exec: "#/components/schemas/InputExec"
+                    firehose: "#/components/schemas/InputFirehose"
+                    google_pubsub: "#/components/schemas/InputGooglePubsub"
+                    cribl: "#/components/schemas/InputCribl"
+                    cribl_tcp: "#/components/schemas/InputCriblTcp"
+                    cribl_http: "#/components/schemas/InputCriblHttp"
+                    cribl_lake_http: "#/components/schemas/InputCriblLakeHttp"
+                    tcpjson: "#/components/schemas/InputTcpjson"
+                    system_metrics: "#/components/schemas/InputSystemMetrics"
+                    system_state: "#/components/schemas/InputSystemState"
+                    kube_metrics: "#/components/schemas/InputKubeMetrics"
+                    kube_logs: "#/components/schemas/InputKubeLogs"
+                    kube_events: "#/components/schemas/InputKubeEvents"
+                    windows_metrics: "#/components/schemas/InputWindowsMetrics"
+                    crowdstrike: "#/components/schemas/InputCrowdstrike"
+                    datadog_agent: "#/components/schemas/InputDatadogAgent"
+                    datagen: "#/components/schemas/InputDatagen"
+                    http_raw: "#/components/schemas/InputHttpRaw"
+                    kinesis: "#/components/schemas/InputKinesis"
+                    criblmetrics: "#/components/schemas/InputCriblmetrics"
+                    metrics: "#/components/schemas/InputMetrics"
+                    s3: "#/components/schemas/InputS3"
+                    s3_inventory: "#/components/schemas/InputS3Inventory"
+                    snmp: "#/components/schemas/InputSnmp"
+                    open_telemetry: "#/components/schemas/InputOpenTelemetry"
+                    model_driven_telemetry: "#/components/schemas/InputModelDrivenTelemetry"
+                    sqs: "#/components/schemas/InputSqs"
+                    syslog: "#/components/schemas/InputSyslog"
+                    file: "#/components/schemas/InputFile"
+                    tcp: "#/components/schemas/InputTcp"
+                    appscope: "#/components/schemas/InputAppscope"
+                    wef: "#/components/schemas/InputWef"
+                    win_event_logs: "#/components/schemas/InputWinEventLogs"
+                    apple_unified_logs: "#/components/schemas/InputAppleUnifiedLogs"
+                    raw_udp: "#/components/schemas/InputRawUdp"
+                    journal_files: "#/components/schemas/InputJournalFiles"
+                    wiz: "#/components/schemas/InputWiz"
+                    openai: "#/components/schemas/InputOpenai"
+                    wiz_webhook: "#/components/schemas/InputWizWebhook"
+                    netflow: "#/components/schemas/InputNetflow"
+                    security_lake: "#/components/schemas/InputSecurityLake"
+                    bedrock_s3: "#/components/schemas/InputBedrockS3"
+                    servicenow_table: "#/components/schemas/InputServicenowTable"
+                    proofpoint_pod: "#/components/schemas/InputProofpointPod"
+                    zscaler_hec: "#/components/schemas/InputZscalerHec"
+                    cloudflare_hec: "#/components/schemas/InputCloudflareHec"
+                    sysdig_hec: "#/components/schemas/InputSysdigHec"
+                    upwind_hec: "#/components/schemas/InputUpwindHec"
+                    sailpoint_hec: "#/components/schemas/InputSailpointHec"
+                    aqua_security_hec: "#/components/schemas/InputAquaSecurityHec"
+                    openai_compliance_logs: "#/components/schemas/InputOpenaiComplianceLogs"
+                    anthropic_compliance: "#/components/schemas/InputAnthropicCompliance"
+                    microsoft_copilot: "#/components/schemas/InputMicrosoftCopilot"
+                    okta: "#/components/schemas/InputOkta"
+                    akamai_hec: "#/components/schemas/InputAkamaiHec"
+                    vectra_ai_hec: "#/components/schemas/InputVectraAiHec"
+                    beyondtrust_hec: "#/components/schemas/InputBeyondtrustHec"
             title: InputPartialRequest
-            properties:
-                type:
-                    type: string
         InputCollectionPartialRequest:
             type: object
             description: Input settings for a collection job, including event breaking, routing, and preprocessing options.
@@ -84923,9 +84987,7 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    type: string
-                    enum:
-                        - collection
+                    $ref: "#/components/schemas/TypeOptionsRunnableJobCollectionInput"
                     description: Resource type identifier.
                 disabled:
                     title: Disabled
@@ -85179,8 +85241,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptions"
+                    type: string
+                    enum:
+                        - kafka
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -85996,8 +86061,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsMsk"
+                    type: string
+                    enum:
+                        - msk
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -86774,6 +86842,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - http
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -87224,8 +87293,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsSplunk"
+                    type: string
+                    enum:
+                        - splunk
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -87674,6 +87746,7 @@ components:
                     enum:
                         - splunk_search
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -88179,6 +88252,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - splunk_hec
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -88690,8 +88764,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsAzureblob"
+                    type: string
+                    enum:
+                        - azure_blob
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -89081,6 +89158,7 @@ components:
                     enum:
                         - azure_vnet_flow_log
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -89444,6 +89522,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - elastic
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -89992,8 +90071,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsConfluentcloud"
+                    type: string
+                    enum:
+                        - confluent_cloud
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -90813,6 +90895,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - grafana
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -91336,6 +91419,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - loki
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -91786,6 +91870,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - prometheus_rw
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -92237,8 +92322,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsPrometheus"
+                    type: string
+                    enum:
+                        - prometheus
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -92801,6 +92889,7 @@ components:
                     enum:
                         - edge_prometheus
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -93419,6 +93508,7 @@ components:
                     enum:
                         - office365_mgmt
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -93828,6 +93918,7 @@ components:
                     enum:
                         - office365_service
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -94232,6 +94323,7 @@ components:
                     enum:
                         - office365_msg_trace
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -94725,6 +94817,7 @@ components:
                     enum:
                         - microsoft_graph
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -95223,6 +95316,7 @@ components:
                     enum:
                         - eventhub
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -95786,6 +95880,7 @@ components:
                     enum:
                         - eventhub_amqp
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -96290,6 +96385,7 @@ components:
                     enum:
                         - exec
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: Disabled
@@ -96554,6 +96650,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - firehose
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -96986,8 +97083,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsGooglepubsub"
+                    type: string
+                    enum:
+                        - google_pubsub
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -97298,6 +97398,7 @@ components:
                     enum:
                         - cribl
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -97506,8 +97607,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsCribltcp"
+                    type: string
+                    enum:
+                        - cribl_tcp
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -97868,6 +97972,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - cribl_http
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -98267,6 +98372,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - cribl_lake_http
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -98756,8 +98862,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsTcpjson"
+                    type: string
+                    enum:
+                        - tcpjson
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -99134,6 +99243,7 @@ components:
                     enum:
                         - system_metrics
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -99742,6 +99852,7 @@ components:
                     enum:
                         - system_state
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -100164,6 +100275,7 @@ components:
                     enum:
                         - kube_metrics
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -100448,6 +100560,7 @@ components:
                     enum:
                         - kube_logs
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -100765,6 +100878,7 @@ components:
                     enum:
                         - kube_events
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -100981,6 +101095,7 @@ components:
                     enum:
                         - windows_metrics
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -101504,6 +101619,7 @@ components:
                     enum:
                         - crowdstrike
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -102064,6 +102180,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - datadog_agent
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -102515,6 +102632,7 @@ components:
                     enum:
                         - datagen
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -102743,6 +102861,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - http_raw
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -103253,8 +103372,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsKinesis"
+                    type: string
+                    enum:
+                        - kinesis
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -103679,6 +103801,7 @@ components:
                     enum:
                         - criblmetrics
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -103899,6 +104022,7 @@ components:
                     enum:
                         - metrics
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -104248,8 +104372,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsS3"
+                    type: string
+                    enum:
+                        - s3
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -104828,6 +104955,7 @@ components:
                     enum:
                         - s3_inventory
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -105413,8 +105541,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsSnmp"
+                    type: string
+                    enum:
+                        - snmp
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -105827,6 +105958,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - open_telemetry
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -106404,6 +106536,7 @@ components:
                     enum:
                         - model_driven_telemetry
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -106726,8 +106859,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsSqs"
+                    type: string
+                    enum:
+                        - sqs
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -107121,8 +107257,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsSyslog"
+                    type: string
+                    enum:
+                        - syslog
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -107565,6 +107704,7 @@ components:
                     enum:
                         - file
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -107915,6 +108055,7 @@ components:
                     enum:
                         - tcp
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -108331,6 +108472,7 @@ components:
                     enum:
                         - appscope
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -108825,6 +108967,7 @@ components:
                     enum:
                         - wef
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -109361,6 +109504,7 @@ components:
                     enum:
                         - win_event_logs
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -109656,6 +109800,7 @@ components:
                     enum:
                         - apple_unified_logs
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -109882,6 +110027,7 @@ components:
                     enum:
                         - raw_udp
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -110141,6 +110287,7 @@ components:
                     enum:
                         - journal_files
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -110403,6 +110550,7 @@ components:
                     enum:
                         - wiz
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -110844,6 +110992,7 @@ components:
                     enum:
                         - openai
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -111311,6 +111460,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - wiz_webhook
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -111820,8 +111970,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsNetflow"
+                    type: string
+                    enum:
+                        - netflow
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -112097,8 +112250,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsSecuritylake"
+                    type: string
+                    enum:
+                        - security_lake
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -112675,6 +112831,7 @@ components:
                     enum:
                         - bedrock_s3
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -113251,6 +113408,7 @@ components:
                     enum:
                         - servicenow_table
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -113787,6 +113945,7 @@ components:
                     enum:
                         - proofpoint_pod
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -114136,6 +114295,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - zscaler_hec
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -114635,6 +114795,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - cloudflare_hec
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -115105,6 +115266,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - sysdig_hec
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -115559,6 +115721,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - upwind_hec
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -116013,6 +116176,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - sailpoint_hec
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -116416,6 +116580,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - aqua_security_hec
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -116870,6 +117035,7 @@ components:
                     enum:
                         - openai_compliance_logs
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -117316,6 +117482,7 @@ components:
                     enum:
                         - anthropic_compliance
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -118050,6 +118217,7 @@ components:
                     enum:
                         - microsoft_copilot
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -118505,6 +118673,7 @@ components:
                     enum:
                         - okta
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -118857,6 +119026,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - akamai_hec
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -119266,6 +119436,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - vectra_ai_hec
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -119720,6 +119891,7 @@ components:
                     description: Source type identifier.
                     enum:
                         - beyondtrust_hec
+                    x-speakeasy-unknown-values: allow
                 disabled:
                     title: Disabled
                     description: If true, the Source is disabled and will not collect data.
@@ -120417,95 +120589,92 @@ components:
             discriminator:
                 propertyName: type
                 mapping:
-                    default: "#/components/schemas/OutputDefaultPartialRequest"
-                    webhook: "#/components/schemas/OutputWebhookPartialRequest"
-                    sentinel: "#/components/schemas/OutputSentinelPartialRequest"
-                    devnull: "#/components/schemas/OutputDevnullPartialRequest"
-                    syslog: "#/components/schemas/OutputSyslogPartialRequest"
-                    splunk: "#/components/schemas/OutputSplunkPartialRequest"
-                    splunk_lb: "#/components/schemas/OutputSplunkLbPartialRequest"
-                    splunk_hec: "#/components/schemas/OutputSplunkHecPartialRequest"
-                    wiz_hec: "#/components/schemas/OutputWizHecPartialRequest"
-                    tcpjson: "#/components/schemas/OutputTcpjsonPartialRequest"
-                    wavefront: "#/components/schemas/OutputWavefrontPartialRequest"
-                    signalfx: "#/components/schemas/OutputSignalfxPartialRequest"
-                    filesystem: "#/components/schemas/OutputFilesystemPartialRequest"
-                    s3: "#/components/schemas/OutputS3PartialRequest"
-                    azure_blob: "#/components/schemas/OutputAzureBlobPartialRequest"
-                    azure_data_explorer: "#/components/schemas/OutputAzureDataExplorerPartialRequest"
-                    azure_logs: "#/components/schemas/OutputAzureLogsPartialRequest"
-                    kinesis: "#/components/schemas/OutputKinesisPartialRequest"
-                    honeycomb: "#/components/schemas/OutputHoneycombPartialRequest"
-                    azure_eventhub: "#/components/schemas/OutputAzureEventhubPartialRequest"
-                    google_bigquery: "#/components/schemas/OutputGoogleBigqueryPartialRequest"
-                    google_chronicle: "#/components/schemas/OutputGoogleChroniclePartialRequest"
-                    google_cloud_storage: "#/components/schemas/OutputGoogleCloudStoragePartialRequest"
-                    google_cloud_logging: "#/components/schemas/OutputGoogleCloudLoggingPartialRequest"
-                    google_cloud_observability: "#/components/schemas/OutputGoogleCloudObservabilityPartialRequest"
-                    google_pubsub: "#/components/schemas/OutputGooglePubsubPartialRequest"
-                    exabeam: "#/components/schemas/OutputExabeamPartialRequest"
-                    kafka: "#/components/schemas/OutputKafkaPartialRequest"
-                    confluent_cloud: "#/components/schemas/OutputConfluentCloudPartialRequest"
-                    msk: "#/components/schemas/OutputMskPartialRequest"
-                    elastic: "#/components/schemas/OutputElasticPartialRequest"
-                    elastic_cloud: "#/components/schemas/OutputElasticCloudPartialRequest"
-                    newrelic: "#/components/schemas/OutputNewrelicPartialRequest"
-                    newrelic_events: "#/components/schemas/OutputNewrelicEventsPartialRequest"
-                    influxdb: "#/components/schemas/OutputInfluxdbPartialRequest"
-                    cloudwatch: "#/components/schemas/OutputCloudwatchPartialRequest"
-                    minio: "#/components/schemas/OutputMinioPartialRequest"
-                    statsd: "#/components/schemas/OutputStatsdPartialRequest"
-                    statsd_ext: "#/components/schemas/OutputStatsdExtPartialRequest"
-                    graphite: "#/components/schemas/OutputGraphitePartialRequest"
-                    router: "#/components/schemas/OutputRouterPartialRequest"
-                    sns: "#/components/schemas/OutputSnsPartialRequest"
-                    sqs: "#/components/schemas/OutputSqsPartialRequest"
-                    snmp: "#/components/schemas/OutputSnmpPartialRequest"
-                    sumo_logic: "#/components/schemas/OutputSumoLogicPartialRequest"
-                    datadog: "#/components/schemas/OutputDatadogPartialRequest"
-                    grafana_cloud: "#/components/schemas/OutputGrafanaCloudPartialRequest"
-                    loki: "#/components/schemas/OutputLokiPartialRequest"
-                    amazon_managed_prometheus: "#/components/schemas/OutputAmazonManagedPrometheusPartialRequest"
-                    prometheus: "#/components/schemas/OutputPrometheusPartialRequest"
-                    ring: "#/components/schemas/OutputRingPartialRequest"
-                    open_telemetry: "#/components/schemas/OutputOpenTelemetryPartialRequest"
-                    service_now: "#/components/schemas/OutputServiceNowPartialRequest"
-                    dataset: "#/components/schemas/OutputDatasetPartialRequest"
-                    cribl_tcp: "#/components/schemas/OutputCriblTcpPartialRequest"
-                    cribl_http: "#/components/schemas/OutputCriblHttpPartialRequest"
-                    cribl_search_engine: "#/components/schemas/OutputCriblSearchEnginePartialRequest"
-                    cribl_metrics: "#/components/schemas/OutputCriblMetricsPartialRequest"
-                    humio_hec: "#/components/schemas/OutputHumioHecPartialRequest"
-                    crowdstrike_next_gen_siem: "#/components/schemas/OutputCrowdstrikeNextGenSiemPartialRequest"
-                    dl_s3: "#/components/schemas/OutputDlS3PartialRequest"
-                    security_lake: "#/components/schemas/OutputSecurityLakePartialRequest"
-                    cribl_lake: "#/components/schemas/OutputCriblLakePartialRequest"
-                    disk_spool: "#/components/schemas/OutputDiskSpoolPartialRequest"
-                    click_house: "#/components/schemas/OutputClickHousePartialRequest"
-                    customer_metrics_storage: "#/components/schemas/OutputCustomerMetricsStoragePartialRequest"
-                    local_search_storage: "#/components/schemas/OutputLocalSearchStoragePartialRequest"
-                    xsiam: "#/components/schemas/OutputXsiamPartialRequest"
-                    netflow: "#/components/schemas/OutputNetflowPartialRequest"
-                    dynatrace_http: "#/components/schemas/OutputDynatraceHttpPartialRequest"
-                    dynatrace_otlp: "#/components/schemas/OutputDynatraceOtlpPartialRequest"
-                    sentinel_one_ai_siem: "#/components/schemas/OutputSentinelOneAiSiemPartialRequest"
-                    chronicle: "#/components/schemas/OutputChroniclePartialRequest"
-                    databricks: "#/components/schemas/OutputDatabricksPartialRequest"
-                    snowflake_streaming: "#/components/schemas/OutputSnowflakeStreamingPartialRequest"
-                    microsoft_fabric: "#/components/schemas/OutputMicrosoftFabricPartialRequest"
-                    cloudflare_r2: "#/components/schemas/OutputCloudflareR2PartialRequest"
-                    nutanix_objects: "#/components/schemas/OutputNutanixObjectsPartialRequest"
-                    storj_s3: "#/components/schemas/OutputStorjS3PartialRequest"
-                    alphasoc_s3: "#/components/schemas/OutputAlphasocS3PartialRequest"
-                    dell_s3: "#/components/schemas/OutputDellS3PartialRequest"
-                    cloudian_s3: "#/components/schemas/OutputCloudianS3PartialRequest"
-                    scality_s3: "#/components/schemas/OutputScalityS3PartialRequest"
-                    alibaba_cloud_s3: "#/components/schemas/OutputAlibabaCloudS3PartialRequest"
-                    ibm_cloud_s3: "#/components/schemas/OutputIbmCloudS3PartialRequest"
+                    default: "#/components/schemas/OutputDefault"
+                    webhook: "#/components/schemas/OutputWebhook"
+                    sentinel: "#/components/schemas/OutputSentinel"
+                    devnull: "#/components/schemas/OutputDevnull"
+                    syslog: "#/components/schemas/OutputSyslog"
+                    splunk: "#/components/schemas/OutputSplunk"
+                    splunk_lb: "#/components/schemas/OutputSplunkLb"
+                    splunk_hec: "#/components/schemas/OutputSplunkHec"
+                    wiz_hec: "#/components/schemas/OutputWizHec"
+                    tcpjson: "#/components/schemas/OutputTcpjson"
+                    wavefront: "#/components/schemas/OutputWavefront"
+                    signalfx: "#/components/schemas/OutputSignalfx"
+                    filesystem: "#/components/schemas/OutputFilesystem"
+                    s3: "#/components/schemas/OutputS3"
+                    azure_blob: "#/components/schemas/OutputAzureBlob"
+                    azure_data_explorer: "#/components/schemas/OutputAzureDataExplorer"
+                    azure_logs: "#/components/schemas/OutputAzureLogs"
+                    kinesis: "#/components/schemas/OutputKinesis"
+                    honeycomb: "#/components/schemas/OutputHoneycomb"
+                    azure_eventhub: "#/components/schemas/OutputAzureEventhub"
+                    google_bigquery: "#/components/schemas/OutputGoogleBigquery"
+                    google_chronicle: "#/components/schemas/OutputGoogleChronicle"
+                    google_cloud_storage: "#/components/schemas/OutputGoogleCloudStorage"
+                    google_cloud_logging: "#/components/schemas/OutputGoogleCloudLogging"
+                    google_cloud_observability: "#/components/schemas/OutputGoogleCloudObservability"
+                    google_pubsub: "#/components/schemas/OutputGooglePubsub"
+                    exabeam: "#/components/schemas/OutputExabeam"
+                    kafka: "#/components/schemas/OutputKafka"
+                    confluent_cloud: "#/components/schemas/OutputConfluentCloud"
+                    msk: "#/components/schemas/OutputMsk"
+                    elastic: "#/components/schemas/OutputElastic"
+                    elastic_cloud: "#/components/schemas/OutputElasticCloud"
+                    newrelic: "#/components/schemas/OutputNewrelic"
+                    newrelic_events: "#/components/schemas/OutputNewrelicEvents"
+                    influxdb: "#/components/schemas/OutputInfluxdb"
+                    cloudwatch: "#/components/schemas/OutputCloudwatch"
+                    minio: "#/components/schemas/OutputMinio"
+                    statsd: "#/components/schemas/OutputStatsd"
+                    statsd_ext: "#/components/schemas/OutputStatsdExt"
+                    graphite: "#/components/schemas/OutputGraphite"
+                    router: "#/components/schemas/OutputRouter"
+                    sns: "#/components/schemas/OutputSns"
+                    sqs: "#/components/schemas/OutputSqs"
+                    snmp: "#/components/schemas/OutputSnmp"
+                    sumo_logic: "#/components/schemas/OutputSumoLogic"
+                    datadog: "#/components/schemas/OutputDatadog"
+                    grafana_cloud: "#/components/schemas/OutputGrafanaCloud"
+                    loki: "#/components/schemas/OutputLoki"
+                    amazon_managed_prometheus: "#/components/schemas/OutputAmazonManagedPrometheus"
+                    prometheus: "#/components/schemas/OutputPrometheus"
+                    ring: "#/components/schemas/OutputRing"
+                    open_telemetry: "#/components/schemas/OutputOpenTelemetry"
+                    service_now: "#/components/schemas/OutputServiceNow"
+                    dataset: "#/components/schemas/OutputDataset"
+                    cribl_tcp: "#/components/schemas/OutputCriblTcp"
+                    cribl_http: "#/components/schemas/OutputCriblHttp"
+                    cribl_search_engine: "#/components/schemas/OutputCriblSearchEngine"
+                    cribl_metrics: "#/components/schemas/OutputCriblMetrics"
+                    humio_hec: "#/components/schemas/OutputHumioHec"
+                    crowdstrike_next_gen_siem: "#/components/schemas/OutputCrowdstrikeNextGenSiem"
+                    dl_s3: "#/components/schemas/OutputDlS3"
+                    security_lake: "#/components/schemas/OutputSecurityLake"
+                    cribl_lake: "#/components/schemas/OutputCriblLake"
+                    disk_spool: "#/components/schemas/OutputDiskSpool"
+                    click_house: "#/components/schemas/OutputClickHouse"
+                    customer_metrics_storage: "#/components/schemas/OutputCustomerMetricsStorage"
+                    local_search_storage: "#/components/schemas/OutputLocalSearchStorage"
+                    xsiam: "#/components/schemas/OutputXsiam"
+                    netflow: "#/components/schemas/OutputNetflow"
+                    dynatrace_http: "#/components/schemas/OutputDynatraceHttp"
+                    dynatrace_otlp: "#/components/schemas/OutputDynatraceOtlp"
+                    sentinel_one_ai_siem: "#/components/schemas/OutputSentinelOneAiSiem"
+                    chronicle: "#/components/schemas/OutputChronicle"
+                    databricks: "#/components/schemas/OutputDatabricks"
+                    snowflake_streaming: "#/components/schemas/OutputSnowflakeStreaming"
+                    microsoft_fabric: "#/components/schemas/OutputMicrosoftFabric"
+                    cloudflare_r2: "#/components/schemas/OutputCloudflareR2"
+                    nutanix_objects: "#/components/schemas/OutputNutanixObjects"
+                    storj_s3: "#/components/schemas/OutputStorjS3"
+                    alphasoc_s3: "#/components/schemas/OutputAlphasocS3"
+                    dell_s3: "#/components/schemas/OutputDellS3"
+                    cloudian_s3: "#/components/schemas/OutputCloudianS3"
+                    scality_s3: "#/components/schemas/OutputScalityS3"
+                    alibaba_cloud_s3: "#/components/schemas/OutputAlibabaCloudS3"
+                    ibm_cloud_s3: "#/components/schemas/OutputIbmCloudS3"
             title: OutputPartialRequest
-            properties:
-                type:
-                    type: string
         OutputDefaultPartialRequest:
             type: object
             properties:
@@ -120520,6 +120689,7 @@ components:
                     enum:
                         - default
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -120574,6 +120744,7 @@ components:
                     enum:
                         - webhook
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -121270,6 +121441,7 @@ components:
                     enum:
                         - sentinel
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -121815,6 +121987,7 @@ components:
                     enum:
                         - devnull
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -121859,8 +122032,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsSyslog"
+                    type: string
+                    enum:
+                        - syslog
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -122386,8 +122562,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsSplunk"
+                    type: string
+                    enum:
+                        - splunk
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -122777,6 +122956,7 @@ components:
                     enum:
                         - splunk_lb
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -123262,6 +123442,7 @@ components:
                     enum:
                         - splunk_hec
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -123757,6 +123938,7 @@ components:
                     enum:
                         - wiz_hec
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -124218,8 +124400,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsTcpjson"
+                    type: string
+                    enum:
+                        - tcpjson
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -124611,6 +124796,7 @@ components:
                     enum:
                         - wavefront
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -124955,6 +125141,7 @@ components:
                     enum:
                         - signalfx
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -125299,6 +125486,7 @@ components:
                     enum:
                         - filesystem
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -125720,8 +125908,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsS3"
+                    type: string
+                    enum:
+                        - s3
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -126381,8 +126572,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsAzureblob"
+                    type: string
+                    enum:
+                        - azure_blob
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -126951,6 +127145,7 @@ components:
                     enum:
                         - azure_data_explorer
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -127812,6 +128007,7 @@ components:
                     enum:
                         - azure_logs
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -128180,8 +128376,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsKinesis"
+                    type: string
+                    enum:
+                        - kinesis
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -128535,6 +128734,7 @@ components:
                     enum:
                         - honeycomb
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -128879,6 +129079,7 @@ components:
                     enum:
                         - azure_eventhub
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -129364,6 +129565,7 @@ components:
                     enum:
                         - google_bigquery
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -129627,6 +129829,7 @@ components:
                     enum:
                         - google_chronicle
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -130104,6 +130307,7 @@ components:
                     enum:
                         - google_cloud_storage
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -130670,6 +130874,7 @@ components:
                     enum:
                         - google_cloud_logging
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -131235,6 +131440,7 @@ components:
                     enum:
                         - google_cloud_observability
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -131626,8 +131832,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsGooglepubsub"
+                    type: string
+                    enum:
+                        - google_pubsub
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -131908,6 +132117,7 @@ components:
                     enum:
                         - exabeam
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -132144,6 +132354,15 @@ components:
                     type: string
                     title: Collector instance ID
                     description: "ID of the Exabeam Collector where data should be sent. Example: 11112222-3333-4444-5555-666677778888"
+                awsAuthenticationMethod:
+                    title: Authentication method
+                    x-speakeasy-enum-descriptions:
+                        - Manual
+                        - Secret
+                    description: Authentication method
+                    anyOf:
+                        - $ref: "#/components/schemas/AuthKeyTypeOptionsV3UsersSecretsItems"
+                        - type: "null"
                 siteName:
                     title: Site name
                     description: Constant or JavaScript expression to create an Exabeam site name. Values that aren't successfully evaluated will be treated as string constants.
@@ -132231,6 +132450,12 @@ components:
                         - type: number
                           minimum: 1
                         - type: "null"
+                awsSecret:
+                    title: Secret key pair
+                    description: Select or create a stored secret that references your access key and secret key
+                    anyOf:
+                        - type: string
+                        - type: "null"
                 __template_streamtags:
                     description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
                     anyOf:
@@ -132272,8 +132497,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptions"
+                    type: string
+                    enum:
+                        - kafka
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -133067,8 +133295,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsConfluentcloud"
+                    type: string
+                    enum:
+                        - confluent_cloud
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -133867,8 +134098,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsMsk"
+                    type: string
+                    enum:
+                        - msk
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -134623,6 +134857,7 @@ components:
                     enum:
                         - elastic
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -135142,6 +135377,7 @@ components:
                     enum:
                         - elastic_cloud
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -135557,6 +135793,7 @@ components:
                     enum:
                         - newrelic
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -135978,6 +136215,7 @@ components:
                     enum:
                         - newrelic_events
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -136366,6 +136604,7 @@ components:
                     enum:
                         - influxdb
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -136814,6 +137053,7 @@ components:
                     enum:
                         - cloudwatch
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -137143,6 +137383,7 @@ components:
                     enum:
                         - minio
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -137737,6 +137978,7 @@ components:
                     enum:
                         - statsd
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -137967,6 +138209,7 @@ components:
                     enum:
                         - statsd_ext
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -138197,6 +138440,7 @@ components:
                     enum:
                         - graphite
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -138427,6 +138671,7 @@ components:
                     enum:
                         - router
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -138514,6 +138759,7 @@ components:
                     enum:
                         - sns
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -138825,8 +139071,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsSqs"
+                    type: string
+                    enum:
+                        - sqs
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -139196,8 +139445,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsSnmp"
+                    type: string
+                    enum:
+                        - snmp
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -139299,6 +139551,7 @@ components:
                     enum:
                         - sumo_logic
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -139663,6 +139916,7 @@ components:
                     enum:
                         - datadog
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -140130,6 +140384,7 @@ components:
                     enum:
                         - grafana_cloud
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -140618,6 +140873,7 @@ components:
                     enum:
                         - loki
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -141035,6 +141291,7 @@ components:
                     enum:
                         - amazon_managed_prometheus
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -141448,8 +141705,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsPrometheus"
+                    type: string
+                    enum:
+                        - prometheus
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -141931,6 +142191,7 @@ components:
                     enum:
                         - ring
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -142049,6 +142310,7 @@ components:
                     enum:
                         - open_telemetry
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -142664,6 +142926,7 @@ components:
                     enum:
                         - service_now
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -143158,6 +143421,7 @@ components:
                     enum:
                         - dataset
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -143575,8 +143839,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsCribltcp"
+                    type: string
+                    enum:
+                        - cribl_tcp
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -143960,6 +144227,7 @@ components:
                     enum:
                         - cribl_http
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -144447,6 +144715,7 @@ components:
                     enum:
                         - cribl_search_engine
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -144934,6 +145203,7 @@ components:
                     enum:
                         - cribl_metrics
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -145101,7 +145371,7 @@ components:
                         - type: "null"
                 rejectUnauthorized:
                     title: Validate server certs
-                    description: "Reject certificates not authorized by a CA in the CA certificate path or by another trusted CA (such as the system's). \n        Enabled by default. When this setting is also present in TLS Settings (Client Side), \n        that value will take precedence."
+                    description: "Always enabled for the Metric Store: server certificates must be authorized by a CA in the CA certificate path or by another trusted CA, such as the system's. Not configurable."
                     anyOf:
                         - type: boolean
                         - type: "null"
@@ -145214,7 +145484,7 @@ components:
                         - type: "null"
                 authTokens:
                     title: Connected environment tokens
-                    description: Shared secrets to be used by connected environments to authorize connections. These tokens should also be installed in the Cribl HTTP Source on the Cribl Metrics.
+                    description: Shared secrets to be used by connected environments to authorize connections. These tokens should also be installed in the Cribl HTTP Source of the target Cribl Search workspace.
                     anyOf:
                         - type: array
                           items:
@@ -145235,6 +145505,12 @@ components:
                             - queue
                           x-speakeasy-unknown-values: allow
                         - type: "null"
+                useRoundRobinDns:
+                    title: Round-robin DNS
+                    description: Enable round-robin DNS lookup. When a DNS server returns multiple addresses, @{product} will cycle through them in the order returned. For optimal performance, consider enabling this setting for non-load balanced destinations.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
                 description:
                     title: Description
                     description: Optional description for this configuration.
@@ -145247,12 +145523,6 @@ components:
                     anyOf:
                         - type: string
                           pattern: ^https?://.*
-                        - type: "null"
-                useRoundRobinDns:
-                    title: Round-robin DNS
-                    description: Enable round-robin DNS lookup. When a DNS server returns multiple addresses, @{product} will cycle through them in the order returned. For optimal performance, consider enabling this setting for non-load balanced destinations.
-                    anyOf:
-                        - type: boolean
                         - type: "null"
                 excludeSelf:
                     title: Exclude current host IPs
@@ -145421,6 +145691,7 @@ components:
                     enum:
                         - humio_hec
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -145774,6 +146045,7 @@ components:
                     enum:
                         - crowdstrike_next_gen_siem
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -146127,6 +146399,7 @@ components:
                     enum:
                         - dl_s3
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -146788,8 +147061,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsSecuritylake"
+                    type: string
+                    enum:
+                        - security_lake
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -147384,6 +147660,7 @@ components:
                     enum:
                         - cribl_lake
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -147821,6 +148098,7 @@ components:
                     enum:
                         - disk_spool
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -147911,6 +148189,7 @@ components:
                     enum:
                         - click_house
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -148449,6 +148728,7 @@ components:
                     enum:
                         - customer_metrics_storage
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -148987,6 +149267,7 @@ components:
                     enum:
                         - local_search_storage
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -149582,6 +149863,7 @@ components:
                     enum:
                         - xsiam
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -149990,8 +150272,11 @@ components:
                         - type: string
                         - type: "null"
                 type:
-                    $ref: "#/components/schemas/TypeOptionsNetflow"
+                    type: string
+                    enum:
+                        - netflow
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -150093,6 +150378,7 @@ components:
                     enum:
                         - dynatrace_http
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -150524,6 +150810,7 @@ components:
                     enum:
                         - dynatrace_otlp
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -150962,6 +151249,7 @@ components:
                     enum:
                         - sentinel_one_ai_siem
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -151408,6 +151696,7 @@ components:
                     enum:
                         - chronicle
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -151865,6 +152154,7 @@ components:
                     enum:
                         - databricks
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -152333,6 +152623,7 @@ components:
                     enum:
                         - snowflake_streaming
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -152739,6 +153030,7 @@ components:
                     enum:
                         - microsoft_fabric
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -153196,6 +153488,7 @@ components:
                     enum:
                         - cloudflare_r2
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -153738,6 +154031,7 @@ components:
                     enum:
                         - nutanix_objects
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -154249,6 +154543,7 @@ components:
                     enum:
                         - storj_s3
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -154749,6 +155044,7 @@ components:
                     enum:
                         - alphasoc_s3
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -155246,6 +155542,7 @@ components:
                     enum:
                         - dell_s3
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -155785,6 +156082,7 @@ components:
                     enum:
                         - cloudian_s3
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -156383,6 +156681,7 @@ components:
                     enum:
                         - scality_s3
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -156894,6 +157193,7 @@ components:
                     enum:
                         - alibaba_cloud_s3
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -157462,6 +157762,7 @@ components:
                     enum:
                         - ibm_cloud_s3
                     description: Connector type identifier.
+                    x-speakeasy-unknown-values: allow
                 pipeline:
                     title: Pipeline
                     description: Pipeline to process data before sending out to this output
@@ -163316,37 +163617,34 @@ components:
             discriminator:
                 propertyName: type
                 mapping:
-                    amazon_security_lake: "#/components/schemas/DatasetProviderAmazonSecurityLakePartialRequest"
-                    api_aws: "#/components/schemas/DatasetProviderApiAwsPartialRequest"
-                    api_azure: "#/components/schemas/DatasetProviderApiAzurePartialRequest"
-                    api_azure_data_explorer: "#/components/schemas/DatasetProviderApiAzureDataExplorerPartialRequest"
-                    api_elasticsearch: "#/components/schemas/DatasetProviderApiElasticsearchPartialRequest"
-                    api_gcp: "#/components/schemas/DatasetProviderApiGcpPartialRequest"
-                    api_google_workspace: "#/components/schemas/DatasetProviderApiGoogleWorkspacePartialRequest"
-                    api_http: "#/components/schemas/DatasetProviderApiHttpPartialRequest"
-                    api_log_analytics: "#/components/schemas/DatasetProviderApiLogAnalyticsPartialRequest"
-                    api_msgraph: "#/components/schemas/DatasetProviderApiMsgraphPartialRequest"
-                    api_ngsiem: "#/components/schemas/DatasetProviderApiNgsiemPartialRequest"
-                    api_okta: "#/components/schemas/DatasetProviderApiOktaPartialRequest"
-                    api_opensearch: "#/components/schemas/DatasetProviderApiOpensearchPartialRequest"
-                    api_tailscale: "#/components/schemas/DatasetProviderApiTailscalePartialRequest"
-                    api_zoom: "#/components/schemas/DatasetProviderApiZoomPartialRequest"
-                    azure_blob: "#/components/schemas/DatasetProviderAzureBlobPartialRequest"
-                    clickhouse: "#/components/schemas/DatasetProviderClickhousePartialRequest"
-                    cribl_edge: "#/components/schemas/DatasetProviderCriblEdgePartialRequest"
-                    cribl_lake: "#/components/schemas/DatasetProviderCriblLakePartialRequest"
-                    cribl_leader: "#/components/schemas/DatasetProviderCriblLeaderPartialRequest"
-                    cribl_local: "#/components/schemas/DatasetProviderCriblLocalPartialRequest"
-                    cribl_meta: "#/components/schemas/DatasetProviderCriblMetaPartialRequest"
-                    cribl_search: "#/components/schemas/DatasetProviderCriblSearchPartialRequest"
-                    gcs: "#/components/schemas/DatasetProviderGcsPartialRequest"
-                    prometheus: "#/components/schemas/DatasetProviderPrometheusPartialRequest"
-                    s3: "#/components/schemas/DatasetProviderS3PartialRequest"
-                    snowflake: "#/components/schemas/DatasetProviderSnowflakePartialRequest"
+                    amazon_security_lake: "#/components/schemas/DatasetProviderAmazonSecurityLake"
+                    api_aws: "#/components/schemas/DatasetProviderApiAws"
+                    api_azure: "#/components/schemas/DatasetProviderApiAzure"
+                    api_azure_data_explorer: "#/components/schemas/DatasetProviderApiAzureDataExplorer"
+                    api_elasticsearch: "#/components/schemas/DatasetProviderApiElasticsearch"
+                    api_gcp: "#/components/schemas/DatasetProviderApiGcp"
+                    api_google_workspace: "#/components/schemas/DatasetProviderApiGoogleWorkspace"
+                    api_http: "#/components/schemas/DatasetProviderApiHttp"
+                    api_log_analytics: "#/components/schemas/DatasetProviderApiLogAnalytics"
+                    api_msgraph: "#/components/schemas/DatasetProviderApiMsgraph"
+                    api_ngsiem: "#/components/schemas/DatasetProviderApiNgsiem"
+                    api_okta: "#/components/schemas/DatasetProviderApiOkta"
+                    api_opensearch: "#/components/schemas/DatasetProviderApiOpensearch"
+                    api_tailscale: "#/components/schemas/DatasetProviderApiTailscale"
+                    api_zoom: "#/components/schemas/DatasetProviderApiZoom"
+                    azure_blob: "#/components/schemas/DatasetProviderAzureBlob"
+                    clickhouse: "#/components/schemas/DatasetProviderClickhouse"
+                    cribl_edge: "#/components/schemas/DatasetProviderCriblEdge"
+                    cribl_lake: "#/components/schemas/DatasetProviderCriblLake"
+                    cribl_leader: "#/components/schemas/DatasetProviderCriblLeader"
+                    cribl_local: "#/components/schemas/DatasetProviderCriblLocal"
+                    cribl_meta: "#/components/schemas/DatasetProviderCriblMeta"
+                    cribl_search: "#/components/schemas/DatasetProviderCriblSearch"
+                    gcs: "#/components/schemas/DatasetProviderGcs"
+                    prometheus: "#/components/schemas/DatasetProviderPrometheus"
+                    s3: "#/components/schemas/DatasetProviderS3"
+                    snowflake: "#/components/schemas/DatasetProviderSnowflake"
             title: DatasetProviderPartialRequest
-            properties:
-                type:
-                    type: string
         DatasetProviderAmazonSecurityLakePartialRequest:
             type: object
             properties:
@@ -164408,37 +164706,34 @@ components:
             discriminator:
                 propertyName: type
                 mapping:
-                    amazon_security_lake: "#/components/schemas/DatasetAmazonSecurityLakePartialRequest"
-                    api_aws: "#/components/schemas/DatasetApiAwsPartialRequest"
-                    api_azure: "#/components/schemas/DatasetApiAzurePartialRequest"
-                    api_azure_data_explorer: "#/components/schemas/DatasetApiAzureDataExplorerPartialRequest"
-                    api_elasticsearch: "#/components/schemas/DatasetApiElasticsearchPartialRequest"
-                    api_gcp: "#/components/schemas/DatasetApiGcpPartialRequest"
-                    api_google_workspace: "#/components/schemas/DatasetApiGoogleWorkspacePartialRequest"
-                    api_http: "#/components/schemas/DatasetApiHttpPartialRequest"
-                    api_log_analytics: "#/components/schemas/DatasetApiLogAnalyticsPartialRequest"
-                    api_msgraph: "#/components/schemas/DatasetApiMsgraphPartialRequest"
-                    api_ngsiem: "#/components/schemas/DatasetApiNgsiemPartialRequest"
-                    api_okta: "#/components/schemas/DatasetApiOktaPartialRequest"
-                    api_opensearch: "#/components/schemas/DatasetApiOpensearchPartialRequest"
-                    api_tailscale: "#/components/schemas/DatasetApiTailscalePartialRequest"
-                    api_zoom: "#/components/schemas/DatasetApiZoomPartialRequest"
-                    azure_blob: "#/components/schemas/DatasetAzureBlobPartialRequest"
-                    clickhouse: "#/components/schemas/DatasetClickhousePartialRequest"
-                    cribl_edge: "#/components/schemas/DatasetCriblEdgePartialRequest"
-                    cribl_lake: "#/components/schemas/DatasetCriblLakePartialRequest"
-                    cribl_leader: "#/components/schemas/DatasetCriblLeaderPartialRequest"
-                    cribl_local: "#/components/schemas/DatasetCriblLocalPartialRequest"
-                    cribl_meta: "#/components/schemas/DatasetCriblMetaPartialRequest"
-                    cribl_search: "#/components/schemas/DatasetCriblSearchPartialRequest"
-                    gcs: "#/components/schemas/DatasetGcsPartialRequest"
-                    prometheus: "#/components/schemas/DatasetPrometheusPartialRequest"
-                    s3: "#/components/schemas/DatasetS3PartialRequest"
-                    snowflake: "#/components/schemas/DatasetSnowflakePartialRequest"
+                    amazon_security_lake: "#/components/schemas/DatasetAmazonSecurityLake"
+                    api_aws: "#/components/schemas/DatasetApiAws"
+                    api_azure: "#/components/schemas/DatasetApiAzure"
+                    api_azure_data_explorer: "#/components/schemas/DatasetApiAzureDataExplorer"
+                    api_elasticsearch: "#/components/schemas/DatasetApiElasticsearch"
+                    api_gcp: "#/components/schemas/DatasetApiGcp"
+                    api_google_workspace: "#/components/schemas/DatasetApiGoogleWorkspace"
+                    api_http: "#/components/schemas/DatasetApiHttp"
+                    api_log_analytics: "#/components/schemas/DatasetApiLogAnalytics"
+                    api_msgraph: "#/components/schemas/DatasetApiMsgraph"
+                    api_ngsiem: "#/components/schemas/DatasetApiNgsiem"
+                    api_okta: "#/components/schemas/DatasetApiOkta"
+                    api_opensearch: "#/components/schemas/DatasetApiOpensearch"
+                    api_tailscale: "#/components/schemas/DatasetApiTailscale"
+                    api_zoom: "#/components/schemas/DatasetApiZoom"
+                    azure_blob: "#/components/schemas/DatasetAzureBlob"
+                    clickhouse: "#/components/schemas/DatasetClickhouse"
+                    cribl_edge: "#/components/schemas/DatasetCriblEdge"
+                    cribl_lake: "#/components/schemas/DatasetCriblLake"
+                    cribl_leader: "#/components/schemas/DatasetCriblLeader"
+                    cribl_local: "#/components/schemas/DatasetCriblLocal"
+                    cribl_meta: "#/components/schemas/DatasetCriblMeta"
+                    cribl_search: "#/components/schemas/DatasetCriblSearch"
+                    gcs: "#/components/schemas/DatasetGcs"
+                    prometheus: "#/components/schemas/DatasetPrometheus"
+                    s3: "#/components/schemas/DatasetS3"
+                    snowflake: "#/components/schemas/DatasetSnowflake"
             title: DatasetPartialRequest
-            properties:
-                type:
-                    type: string
         DatasetAmazonSecurityLakePartialRequest:
             type: object
             properties:
@@ -173828,6 +174123,8 @@ components:
                 endpoint: https://storage.googleapis.com
                 stagePath: /tmp/staging
                 collectorInstanceId: 11112222-3333-4444-5555-666677778888
+                awsAuthenticationMethod: secret
+                awsSecret: my-secret-id
             description: Example request body for creating a Exabeam Destination.
         OutputCreateExamplesDiskSpool:
             summary: Disk Spool
@@ -178802,6 +179099,58 @@ components:
                 args:
                     - -c
                     - find /var/log -name "*.log" -mtime +60 -delete
+        AclGetUsersResponseSecretFolderExamplesSuccess:
+            summary: List user ACL for a SecretFolder
+            description: Example response for listing the user access control list (ACL) for a SecretFolder.<br/><br/>The response includes only users with explicit access assignments on the SecretFolder, not access granted through Team membership or inheritance.
+            value:
+                count: 1
+                items:
+                    - user: user1@example.com
+                      perms:
+                        - type: secret-folders
+                          gid: prod
+                          policy: FolderSecretsRead
+        AclGetTeamsResponseSecretFolderExamplesSuccess:
+            summary: List Team ACL for a SecretFolder
+            description: Example response for listing the Team access control list (ACL) for a SecretFolder.<br/><br/>The response includes only Teams with explicit access assignments on the SecretFolder, not access granted individually to Team Members or through inheritance.
+            value:
+                count: 1
+                items:
+                    - team: engineering-team
+                      perms:
+                        - type: secret-folders
+                          gid: prod
+                          policy: FolderSecretsRead
+        AclApplySecretFolderExamplesGrantAccess:
+            summary: Grant a Secret Folder policy to Members
+            description: Example request body for granting a Secret Folder policy to the specified Members.
+            value:
+                add:
+                    FolderSecretsRead:
+                        - user1@example.com
+                        - user2@example.com
+        AclApplySecretFolderExamplesRevokeAccess:
+            summary: Revoke a Secret Folder policy from Members
+            description: Example request body for revoking a Secret Folder policy from the specified Members.
+            value:
+                rm:
+                    FolderSecretsMaintain:
+                        - user3@example.com
+        AclTeamsApplySecretFolderExamplesGrantTeamAccess:
+            summary: Grant a Secret Folder policy to Teams
+            description: Example request body for granting a Secret Folder policy to the specified Teams.
+            value:
+                add:
+                    FolderSecretsRead:
+                        - engineering-team
+                        - data-team
+        AclTeamsApplySecretFolderExamplesRevokeTeamAccess:
+            summary: Revoke a Secret Folder policy from Teams
+            description: Example request body for revoking a Secret Folder policy from the specified Teams.
+            value:
+                rm:
+                    FolderSecretsMaintain:
+                        - former-team
         SecretFolderResponseExamplesSecretFolder:
             summary: Get a secret folder
             description: Example response for getting a secret folder.
@@ -188054,6 +188403,8 @@ components:
                 endpoint: https://storage.googleapis.com
                 stagePath: /tmp/staging
                 collectorInstanceId: 11112222-3333-4444-5555-666677778888
+                awsAuthenticationMethod: secret
+                awsSecret: my-secret-id
             description: "Example request body for updating a Exabeam Destination.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
         UpdateOutputExamplesDiskSpoolPartialRequest:
             summary: Disk Spool
@@ -221691,6 +222042,523 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the script to run.
+    /system/secret-folders:
+        get:
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            x-speakeasy-name-override: list
+            tags:
+                - secretFolders
+            summary: List all secret folders
+            description: Get a list of all configured secret folders.
+            responses:
+                "200":
+                    description: List of SecretFolderWithRuntimeState objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedSecretFolderWithRuntimeState"
+                            examples:
+                                SecretFolderListResponseExamplesSecretFolderList:
+                                    $ref: "#/components/examples/SecretFolderListResponseExamplesSecretFolderList"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            operationId: getSecretFolder
+            x-speakeasy-group: secrets.folders
+            parameters:
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Pagination offset
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Maximum number of items to return
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
+        post:
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            x-speakeasy-name-override: create
+            tags:
+                - secretFolders
+            summary: Create a secret folder
+            description: Create a new secret folder to contain global secrets.
+            requestBody:
+                description: SecretFolderCreate object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SecretFolderCreate"
+                        examples:
+                            CreateSecretFolderExamplesCriblBackedFolder:
+                                $ref: "#/components/examples/CreateSecretFolderExamplesCriblBackedFolder"
+            responses:
+                "201":
+                    description: The created SecretFolderWithRuntimeState object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
+                            examples:
+                                SecretFolderResponseExamplesSecretFolder:
+                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
+                "400":
+                    description: Failed validation or malformed input — invalid request body or unknown secret store
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            operationId: createSecretFolder
+            x-speakeasy-group: secrets.folders
+    /system/secret-folders/{id}:
+        get:
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            x-speakeasy-name-override: get
+            tags:
+                - secretFolders
+            summary: Get a secret folder
+            description: Get the specified secret folder.
+            responses:
+                "200":
+                    description: The requested SecretFolderWithRuntimeState object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
+                            examples:
+                                SecretFolderResponseExamplesSecretFolder:
+                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist — secret folder not found
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            operationId: getSecretFolderById
+            x-speakeasy-group: secrets.folders
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the secret folder to get.
+        patch:
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            x-speakeasy-name-override: update
+            tags:
+                - secretFolders
+            summary: Update a secret folder
+            description: "Update the specified secret folder.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            requestBody:
+                description: SecretFolderUpdate object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SecretFolderUpdatePartialRequest"
+                        examples:
+                            UpdateSecretFolderExamplesUpdateDescriptionAndSharing:
+                                $ref: "#/components/examples/UpdateSecretFolderExamplesUpdateDescriptionAndSharingPartialRequest"
+            responses:
+                "200":
+                    description: The updated SecretFolderWithRuntimeState object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
+                            examples:
+                                SecretFolderResponseExamplesSecretFolder:
+                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
+                "400":
+                    description: Failed validation or malformed input — invalid request body
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist — secret folder not found
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            operationId: updateSecretFolderById
+            x-speakeasy-group: secrets.folders
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the secret folder to update.
+        delete:
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            x-speakeasy-name-override: delete
+            tags:
+                - secretFolders
+            summary: Delete a secret folder
+            description: Delete the specified secret folder. The request will fail if the folder still contains secrets.
+            responses:
+                "204":
+                    description: No Content
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist — Secret folder not found
+                "409":
+                    description: Request conflicts with current resource state — folder still contains secrets; response body includes a <code>secretIds</code> array (up to 10) listing the secret IDs in the folder
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            operationId: deleteSecretFolderById
+            x-speakeasy-group: secrets.folders
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the secret folder to delete.
+    /system/secret-folders/{id}/acl:
+        get:
+            operationId: getSecretFolderAclById
+            responses:
+                "200":
+                    description: List of UserAccessControlList objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListUserAccessControlList"
+                            examples:
+                                AclGetUsersResponseSecretFolderExamplesSuccess:
+                                    $ref: "#/components/examples/AclGetUsersResponseSecretFolderExamplesSuccess"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The unique identifier of the SecretFolder to manage access control for.
+            description: List accesses to SecretFolder granted to users.
+            summary: Get SecretFolder ACL
+            tags:
+                - secretFolders
+    /system/secret-folders/{id}/acl/apply:
+        post:
+            operationId: createSecretFolderAclApplyById
+            requestBody:
+                description: AccessControlSchema object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/AccessControlSchema"
+                        examples:
+                            AclApplySecretFolderExamplesGrantAccess:
+                                $ref: "#/components/examples/AclApplySecretFolderExamplesGrantAccess"
+                            AclApplySecretFolderExamplesRevokeAccess:
+                                $ref: "#/components/examples/AclApplySecretFolderExamplesRevokeAccess"
+            responses:
+                "200":
+                    description: Successful ACL modification.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - items
+                                    - count
+                                properties:
+                                    items:
+                                        type: array
+                                        description: List of results.
+                                        items:
+                                            type: object
+                                            additionalProperties: false
+                                    count:
+                                        type: integer
+                                        description: Number of items present in the items array.
+                            examples:
+                                AclApplyResponseExamplesSuccess:
+                                    $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The unique identifier of the SecretFolder to manage access control for.
+            description: Add/remove accesses to SecretFolder for users.
+            summary: Modify SecretFolder ACL
+            tags:
+                - secretFolders
+    /system/secret-folders/{id}/acl/teams:
+        get:
+            operationId: getSecretFolderAclTeamsById
+            responses:
+                "200":
+                    description: List of TeamAccessControlList objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListTeamAccessControlList"
+                            examples:
+                                AclGetTeamsResponseSecretFolderExamplesSuccess:
+                                    $ref: "#/components/examples/AclGetTeamsResponseSecretFolderExamplesSuccess"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The unique identifier of the SecretFolder to manage access control for.
+            description: List accesses to SecretFolder granted to Teams.
+            summary: Get SecretFolder Teams
+            tags:
+                - secretFolders
+    /system/secret-folders/{id}/acl/teams/apply:
+        post:
+            operationId: createSecretFolderAclTeamsApplyById
+            requestBody:
+                description: AccessControlSchema object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/AccessControlSchema"
+                        examples:
+                            AclTeamsApplySecretFolderExamplesGrantTeamAccess:
+                                $ref: "#/components/examples/AclTeamsApplySecretFolderExamplesGrantTeamAccess"
+                            AclTeamsApplySecretFolderExamplesRevokeTeamAccess:
+                                $ref: "#/components/examples/AclTeamsApplySecretFolderExamplesRevokeTeamAccess"
+            responses:
+                "200":
+                    description: Successful ACL modification.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - items
+                                    - count
+                                properties:
+                                    items:
+                                        type: array
+                                        description: List of results.
+                                        items:
+                                            type: object
+                                            additionalProperties: false
+                                    count:
+                                        type: integer
+                                        description: Number of items present in the items array.
+                            examples:
+                                AclApplyResponseExamplesSuccess:
+                                    $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The unique identifier of the SecretFolder to manage access control for.
+            description: Add/remove accesses to SecretFolder for Teams.
+            summary: Modify SecretFolder Teams ACL
+            tags:
+                - secretFolders
     /system/secret-folders/{id}/clone:
         post:
             operationId: createSecretFolderCloneById
@@ -221756,285 +222624,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the source secret folder to clone.
-    /system/secret-folders:
-        post:
-            operationId: createSecretFolder
-            tags:
-                - secretFolders
-            x-speakeasy-group: secrets.folders
-            x-speakeasy-name-override: create
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Create a secret folder
-            description: Create a new secret folder to contain global secrets.
-            responses:
-                "201":
-                    description: The created SecretFolderWithRuntimeState object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
-                            examples:
-                                SecretFolderResponseExamplesSecretFolder:
-                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
-                "400":
-                    description: Failed validation or malformed input — invalid request body or unknown secret store
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            requestBody:
-                description: SecretFolderCreate object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/SecretFolderCreate"
-                        examples:
-                            CreateSecretFolderExamplesCriblBackedFolder:
-                                $ref: "#/components/examples/CreateSecretFolderExamplesCriblBackedFolder"
-        get:
-            operationId: getSecretFolder
-            tags:
-                - secretFolders
-            x-speakeasy-group: secrets.folders
-            x-speakeasy-name-override: list
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: List all secret folders
-            description: Get a list of all configured secret folders.
-            responses:
-                "200":
-                    description: List of SecretFolderWithRuntimeState objects.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/PaginatedSecretFolderWithRuntimeState"
-                            examples:
-                                SecretFolderListResponseExamplesSecretFolderList:
-                                    $ref: "#/components/examples/SecretFolderListResponseExamplesSecretFolderList"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Pagination offset
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Maximum number of items to return
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
-    /system/secret-folders/{id}:
-        delete:
-            operationId: deleteSecretFolderById
-            tags:
-                - secretFolders
-            x-speakeasy-group: secrets.folders
-            x-speakeasy-name-override: delete
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Delete a secret folder
-            description: Delete the specified secret folder. The request will fail if the folder still contains secrets.
-            responses:
-                "204":
-                    description: No Content
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "404":
-                    description: The requested resource does not exist — Secret folder not found
-                "409":
-                    description: Request conflicts with current resource state — folder still contains secrets; response body includes a <code>secretIds</code> array (up to 10) listing the secret IDs in the folder
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: The <code>id</code> of the secret folder to delete.
-        get:
-            operationId: getSecretFolderById
-            tags:
-                - secretFolders
-            x-speakeasy-group: secrets.folders
-            x-speakeasy-name-override: get
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Get a secret folder
-            description: Get the specified secret folder.
-            responses:
-                "200":
-                    description: The requested SecretFolderWithRuntimeState object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
-                            examples:
-                                SecretFolderResponseExamplesSecretFolder:
-                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "404":
-                    description: The requested resource does not exist — secret folder not found
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: The <code>id</code> of the secret folder to get.
-        patch:
-            operationId: updateSecretFolderById
-            tags:
-                - secretFolders
-            x-speakeasy-group: secrets.folders
-            x-speakeasy-name-override: update
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Update a secret folder
-            description: "Update the specified secret folder.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
-            responses:
-                "200":
-                    description: The updated SecretFolderWithRuntimeState object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
-                            examples:
-                                SecretFolderResponseExamplesSecretFolder:
-                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
-                "400":
-                    description: Failed validation or malformed input — invalid request body
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "404":
-                    description: The requested resource does not exist — secret folder not found
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            requestBody:
-                description: SecretFolderUpdate object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/SecretFolderUpdatePartialRequest"
-                        examples:
-                            UpdateSecretFolderExamplesUpdateDescriptionAndSharing:
-                                $ref: "#/components/examples/UpdateSecretFolderExamplesUpdateDescriptionAndSharingPartialRequest"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: The <code>id</code> of the secret folder to update.
     /system/secret-folders/{id}/reload:
         post:
             operationId: createSecretFolderReloadById
