@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.20.0-alpha.1787872350424-93bc8175
+  version: 4.20.0-alpha.1787958631446-f849d204
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -27394,8 +27394,28 @@ components:
           type: number
           title: Active connection limit
           description: Maximum number of active connections allowed per Worker Process.
-            Use 0 for unlimited.
+            Use 0 for unlimited. This does not limit concurrent HTTP/2 streams
+            on a connection; use Maximum concurrent streams and Maximum message
+            size for that bound.
           minimum: 0
+        maxMessageSizeKB:
+          type: number
+          title: Maximum message size (KB)
+          description: Maximum size, in KB, of a single received gRPC message (OTLP export
+            request). Requests exceeding this limit are rejected before
+            processing. Compressed requests are checked against their
+            decompressed size.
+          minimum: 1
+          maximum: 65536
+        maxConcurrentStreams:
+          type: number
+          title: Maximum concurrent streams
+          description: Maximum number of concurrent HTTP/2 streams allowed on a single
+            gRPC connection. Combined with Maximum message size, this bounds
+            per-connection receive and decompress state. Active connection limit
+            only bounds connections.
+          minimum: 1
+          maximum: 10000
         description:
           type: string
           title: Description
@@ -27540,6 +27560,24 @@ components:
           description: Maximum number of active connections allowed per Worker Process.
             Use 0 for unlimited.
           minimum: 0
+        maxMessageSizeKB:
+          type: number
+          title: Maximum message size (KB)
+          description: Maximum size, in KB, of a single received gRPC message. Messages
+            exceeding this limit are rejected before processing. Compressed
+            messages are checked against their decompressed size.
+          minimum: 1
+          maximum: 65536
+        maxConcurrentStreams:
+          type: number
+          title: Maximum concurrent streams
+          description: Maximum number of concurrent HTTP/2 streams allowed on a single
+            gRPC connection. Combined with Maximum message size, this bounds
+            per-connection receive and decompress state. Active connection limit
+            only bounds the number of connections, not the streams multiplexed
+            on each.
+          minimum: 1
+          maximum: 10000
         shutdownTimeoutMs:
           type: number
           title: Shutdown timeout
@@ -32956,6 +32994,244 @@ components:
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'hecAPI' at runtime.
       title: InputSailpointHec
+    InputExtrahopRevealx360:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - hecAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - extrahop_revealx_360
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestinationArnConstraint"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokenConfInputCloudflareHec"
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set to 0 for unlimited. Caution: Increasing the limit above the default value, or setting it to unlimited, may degrade performance and reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        enableProxyHeader:
+          type: boolean
+          title: Show originating IP
+          description: Extract the client IP and port from PROXY protocol v1/v2. When
+            enabled, the X-Forwarded-For header is ignored. Disable to use the
+            X-Forwarded-For header for client IP extraction.
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        captureHeadersWarning:
+          type: string
+          readOnly: true
+          const: ""
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        hecAPI:
+          type: string
+          title: HEC endpoint
+          description: Absolute path on which to listen for ExtraHop RevealX 360 Splunk
+            HTTP Event Collector requests. This input supports the /event
+            endpoint.
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to every event. May be overridden by fields added at
+            the token or request level.
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        allowedIndexes:
+          type: array
+          title: Allowed indexes
+          description: List values allowed in HEC event index field. Leave blank to skip
+            validation. Supports wildcards. The values here can expand index
+            validation at the token level.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowOrigin:
+          title: CORS allowed origins
+          type: array
+          description: HTTP origins to which @{product} should send CORS (cross-origin
+            resource sharing) Access-Control-Allow-* headers. Supports
+            wildcards.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowHeaders:
+          title: CORS allowed headers
+          type: array
+          description: HTTP headers that @{product} will send to allowed origins as
+            "Access-Control-Allow-Headers" in a CORS preflight response. Use "*"
+            to allow all headers.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        emitTokenMetrics:
+          type: boolean
+          title: Emit per-token request metrics
+          description: Emit per-token (<prefix>.http.perToken) and summary
+            (<prefix>.http.summary) request metrics
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_hecAPI:
+          type: string
+          description: Binds 'hecAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'hecAPI' at runtime.
+        __template_allowedIndexes:
+          type: string
+          description: Binds 'allowedIndexes' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'allowedIndexes' at
+            runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
+      title: InputExtrahopRevealx360
     InputAquaSecurityHec:
       type: object
       required:
@@ -33864,6 +34140,238 @@ components:
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'streamtags' at runtime.
       title: InputAnthropicCompliance
+    InputAnthropicEnterpriseAnalytics:
+      type: object
+      required:
+        - type
+        - contentConfig
+        - textSecret
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          enum:
+            - anthropic_enterprise_analytics
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestinationArnConstraint"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        apiKey:
+          type: string
+          title: API key
+          description: API key
+        textSecret:
+          type: string
+          title: API key (text secret)
+          description: Select or create a stored API key with read:analytics scope
+        contentConfig:
+          type: array
+          title: Content types
+          description: Analytics endpoints to collect from. Each content type runs on its
+            own schedule as a separate collection job.
+          items:
+            type: object
+            required:
+              - contentType
+              - cronSchedule
+            properties:
+              contentType:
+                type: string
+                title: Content type
+                enum:
+                  - Usage Report
+                  - Cost Report
+                description: Content type
+                x-speakeasy-unknown-values: allow
+              disabled:
+                type: boolean
+                title: Enabled
+                description: Enabled
+              stateTracking:
+                type: boolean
+                title: State tracking
+                description: Track collection progress between runs. When enabled, each run
+                  resumes from where the last one left off, preventing duplicate
+                  data. The API refreshes approximately every 4 hours; runs
+                  between refreshes produce zero events until new finalized data
+                  becomes available. This is expected behavior.
+              stateUpdateExpression:
+                type: string
+                title: State update expression
+                description: JavaScript expression evaluated per event to compute new state. The
+                  default tracks the data_refreshed_at watermark reported by the
+                  API.
+              stateMergeExpression:
+                type: string
+                title: State merge expression
+                description: JavaScript expression to merge state across distributed Workers.
+                  The default keeps the most recent watermark.
+              manageState:
+                type: boolean
+                title: Manage state
+                description: Manage state
+              bucketWidth:
+                type: string
+                title: Bucket width
+                description: Time bucket size for aggregated results. Smaller buckets yield more
+                  events per collection run.
+                enum:
+                  - 1d
+                  - 1h
+                  - 1m
+                x-speakeasy-enum-descriptions:
+                  - Daily (1d)
+                  - Hourly (1h)
+                  - Per-minute (1m)
+                x-speakeasy-unknown-values: allow
+              groupBy:
+                type: array
+                title: Group by
+                description: Dimensions for breaking down usage. Leave empty to collect a single
+                  summed row per time bucket.
+                uniqueItems: true
+                items:
+                  type: string
+                  enum:
+                    - model
+                    - product
+                    - context_window
+                    - inference_geo
+                    - speed
+                    - rbac_group_id
+                    - slack_channel_id
+                    - teams_channel_id
+                    - cost_type
+                    - token_type
+                  x-speakeasy-unknown-values: allow
+              cronSchedule:
+                type: string
+                title: Cron schedule
+                description: Cron schedule for collection runs. The API refreshes data
+                  approximately every 4 hours, so polling more frequently will
+                  not yield new results.
+              earliest:
+                type: string
+                title: Earliest
+                description: "Earliest time for data collection, relative to now. Used as the initial lower bound on first run before any state exists. Maximum 365 days (API limit). Examples: -7d@d, -24h, -30d."
+              jobTimeout:
+                type: string
+                title: Job timeout
+                description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+                pattern: ^\d+[sm]?$
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: HTTP request inactivity timeout. Use 0 to disable.
+          minimum: 0
+          maximum: 2400
+        breakerRulesets:
+          type: array
+          title: Event Breaker rulesets
+          description: A list of event-breaking rulesets that will be applied, in order,
+            to the input data stream
+          items:
+            type: string
+        staleChannelFlushMs:
+          type: number
+          title: Event Breaker buffer timeout (ms)
+          description: How long (in milliseconds) the Event Breaker will wait for new data
+            to be sent to a specific channel before flushing the data stream
+            out, as is, to the Pipelines
+          minimum: 10
+          maximum: 43200000
+        keepAliveTime:
+          type: number
+          title: Keep alive time (seconds)
+          description: How often workers should check in with the scheduler to keep job
+            subscription alive
+          minimum: 10
+        maxMissedKeepAlives:
+          type: number
+          title: Worker timeout (periods)
+          description: The number of Keep Alive Time periods before an inactive worker
+            will have its job subscription revoked.
+          minimum: 2
+        ttl:
+          type: string
+          title: Time to live
+          description: Time to keep the job's artifacts on disk after job completion. This
+            also affects how long a job is listed in the Job Inspector.
+          pattern: \d+[smh]$
+        ignoreGroupJobsLimit:
+          type: boolean
+          title: Ignore Worker Group job limits
+          description: When enabled, this job's artifacts are not counted toward the
+            Worker Group's finished job artifacts limit. Artifacts will be
+            removed only after the Collector's configured time to live.
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        retryRules:
+          $ref: "#/components/schemas/RetryRulesType"
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+      title: InputAnthropicEnterpriseAnalytics
     InputMicrosoftCopilot:
       type: object
       required:
@@ -33949,10 +34457,16 @@ components:
           description: Select authentication method.
           x-speakeasy-unknown-values: allow
         planType:
-          title: Microsoft 365 plan type
+          title: Subscription plan
           type: string
-          description: Select your Microsoft 365 plan type. This determines the
-            authentication and API endpoints used.
+          enum:
+            - enterprise_gcc
+            - gcc
+            - gcc_high
+            - dod
+          description: Microsoft 365 subscription plan for your organization, typically
+            Microsoft 365 Enterprise.
+          x-speakeasy-unknown-values: allow
         cronSchedule:
           type: string
           title: Schedule
@@ -34163,6 +34677,11 @@ components:
           description: Binds 'clientId' to a variable for dynamic value resolution. Set to
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'clientId' at runtime.
+        __template_planType:
+          type: string
+          description: Binds 'planType' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'planType' at runtime.
       title: InputMicrosoftCopilot
     InputOkta:
       type: object
@@ -34741,6 +35260,247 @@ components:
             prefixed ID (group-scoped). Variable value overrides
             'accessControlAllowHeaders' at runtime.
       title: InputVectraAiHec
+    InputF5BigIp:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - hecAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - f5_big_ip
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestinationArnConstraint"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokenConfInputCloudflareHec"
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set to 0 for unlimited. Caution: Increasing the limit above the default value, or setting it to unlimited, may degrade performance and reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        enableProxyHeader:
+          type: boolean
+          title: Show originating IP
+          description: Extract the client IP and port from PROXY protocol v1/v2. When
+            enabled, the X-Forwarded-For header is ignored. Disable to use the
+            X-Forwarded-For header for client IP extraction.
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        captureHeadersWarning:
+          type: string
+          readOnly: true
+          const: ""
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        hecAPI:
+          type: string
+          title: HEC endpoint
+          description: Absolute path on which to listen for F5 BIG-IP HTTP Event Collector
+            API requests. This input supports the /event and /raw endpoints.
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to every event. May be overridden by fields added at
+            the token or request level.
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        allowedIndexes:
+          type: array
+          title: Allowed indexes
+          description: List values allowed in HEC event index field. Leave blank to skip
+            validation. Supports wildcards. The values here can expand index
+            validation at the token level.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        hecAcks:
+          type: boolean
+          title: HEC Acks
+          description: Whether to enable HEC indexer acknowledgements
+        accessControlAllowOrigin:
+          title: CORS allowed origins
+          type: array
+          description: HTTP origins to which @{product} should send CORS (cross-origin
+            resource sharing) Access-Control-Allow-* headers. Supports
+            wildcards.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowHeaders:
+          title: CORS allowed headers
+          type: array
+          description: HTTP headers that @{product} will send to allowed origins as
+            "Access-Control-Allow-Headers" in a CORS preflight response. Use "*"
+            to allow all headers.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        emitTokenMetrics:
+          type: boolean
+          title: Emit per-token request metrics
+          description: Emit per-token (<prefix>.http.perToken) and summary
+            (<prefix>.http.summary) request metrics
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_hecAPI:
+          type: string
+          description: Binds 'hecAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'hecAPI' at runtime.
+        __template_allowedIndexes:
+          type: string
+          description: Binds 'allowedIndexes' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'allowedIndexes' at
+            runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
+      title: InputF5BigIp
     InputBeyondtrustHec:
       type: object
       required:
@@ -35036,13 +35796,16 @@ components:
         - $ref: "#/components/schemas/InputSysdigHec"
         - $ref: "#/components/schemas/InputUpwindHec"
         - $ref: "#/components/schemas/InputSailpointHec"
+        - $ref: "#/components/schemas/InputExtrahopRevealx360"
         - $ref: "#/components/schemas/InputAquaSecurityHec"
         - $ref: "#/components/schemas/InputOpenaiComplianceLogs"
         - $ref: "#/components/schemas/InputAnthropicCompliance"
+        - $ref: "#/components/schemas/InputAnthropicEnterpriseAnalytics"
         - $ref: "#/components/schemas/InputMicrosoftCopilot"
         - $ref: "#/components/schemas/InputOkta"
         - $ref: "#/components/schemas/InputAkamaiHec"
         - $ref: "#/components/schemas/InputVectraAiHec"
+        - $ref: "#/components/schemas/InputF5BigIp"
         - $ref: "#/components/schemas/InputBeyondtrustHec"
       discriminator:
         propertyName: type
@@ -35118,13 +35881,16 @@ components:
           sysdig_hec: "#/components/schemas/InputSysdigHec"
           upwind_hec: "#/components/schemas/InputUpwindHec"
           sailpoint_hec: "#/components/schemas/InputSailpointHec"
+          extrahop_revealx_360: "#/components/schemas/InputExtrahopRevealx360"
           aqua_security_hec: "#/components/schemas/InputAquaSecurityHec"
           openai_compliance_logs: "#/components/schemas/InputOpenaiComplianceLogs"
           anthropic_compliance: "#/components/schemas/InputAnthropicCompliance"
+          anthropic_enterprise_analytics: "#/components/schemas/InputAnthropicEnterpriseAnalytics"
           microsoft_copilot: "#/components/schemas/InputMicrosoftCopilot"
           okta: "#/components/schemas/InputOkta"
           akamai_hec: "#/components/schemas/InputAkamaiHec"
           vectra_ai_hec: "#/components/schemas/InputVectraAiHec"
+          f5_big_ip: "#/components/schemas/InputF5BigIp"
           beyondtrust_hec: "#/components/schemas/InputBeyondtrustHec"
       title: Input
     CountedInputSplunkHec:
@@ -66513,6 +67279,9 @@ components:
         sourceArn:
           type: string
           description: ARN of the AWS resource that produces the logs.
+        sourceService:
+          type: string
+          description: Resolved DSD source-service offering, when known.
         accountId:
           type: string
           minLength: 1
@@ -70495,6 +71264,26 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Anthropic Compliance Source.
+    InputCreateExamplesAnthropicEnterpriseAnalytics:
+      summary: Claude Enterprise Analytics
+      value:
+        id: anthropic-enterprise-analytics-source
+        type: anthropic_enterprise_analytics
+        textSecret: anthropic-api-key-secret
+        contentConfig:
+          - contentType: Usage Report
+            disabled: false
+            cronSchedule: 0 */4 * * *
+            earliest: -7d@d
+            bucketWidth: 1d
+            groupBy: []
+            jobTimeout: "300"
+            stateTracking: true
+            stateUpdateExpression: "data_refreshed_at && data_refreshed_at > (state.latestDataRefreshedAt || '') ? {latestDataRefreshedAt: data_refreshed_at} : state"
+            stateMergeExpression: "(prevState.latestDataRefreshedAt || '') >= (newState.latestDataRefreshedAt || '') ? prevState : newState"
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Claude Enterprise Analytics Source.
     InputCreateExamplesAquaSecurityHec:
       summary: Aqua Security
       value:
@@ -70554,6 +71343,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Cloudflare HEC Source.
+    InputCreateExamplesExtrahopRevealx360:
+      summary: ExtraHop RevealX 360
+      value:
+        id: extrahop-revealx-360-source
+        type: extrahop_revealx_360
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a ExtraHop RevealX 360 Source.
     InputCreateExamplesConfluentCloud:
       summary: Confluent Cloud
       value:
@@ -70661,6 +71461,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Elasticsearch Source.
+    InputCreateExamplesF5BigIp:
+      summary: F5 BIG-IP
+      value:
+        id: f5-big-ip-source
+        type: f5_big_ip
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a F5 BIG-IP Source.
     InputCreateExamplesEventhub:
       summary: Event Hubs
       value:
@@ -71379,6 +72190,29 @@ components:
         Source.<br/><br/>The request body must include a complete representation
         of the Source that you want to update. This endpoint does not support
         partial updates.
+    UpdateInputExamplesAnthropicEnterpriseAnalytics:
+      summary: Claude Enterprise Analytics
+      value:
+        id: anthropic-enterprise-analytics-source
+        type: anthropic_enterprise_analytics
+        textSecret: anthropic-api-key-secret
+        contentConfig:
+          - contentType: Usage Report
+            disabled: false
+            cronSchedule: 0 */4 * * *
+            earliest: -7d@d
+            bucketWidth: 1d
+            groupBy: []
+            jobTimeout: "300"
+            stateTracking: true
+            stateUpdateExpression: "data_refreshed_at && data_refreshed_at > (state.latestDataRefreshedAt || '') ? {latestDataRefreshedAt: data_refreshed_at} : state"
+            stateMergeExpression: "(prevState.latestDataRefreshedAt || '') >= (newState.latestDataRefreshedAt || '') ? prevState : newState"
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Claude Enterprise Analytics
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
     UpdateInputExamplesAquaSecurityHec:
       summary: Aqua Security
       value:
@@ -71451,6 +72285,20 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for updating a Cloudflare HEC
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
+    UpdateInputExamplesExtrahopRevealx360:
+      summary: ExtraHop RevealX 360
+      value:
+        id: extrahop-revealx-360-source
+        type: extrahop_revealx_360
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a ExtraHop RevealX 360
         Source.<br/><br/>The request body must include a complete representation
         of the Source that you want to update. This endpoint does not support
         partial updates.
@@ -71609,6 +72457,19 @@ components:
         Source.<br/><br/>The request body must include a complete representation
         of the Source that you want to update. This endpoint does not support
         partial updates.
+    UpdateInputExamplesF5BigIp:
+      summary: F5 BIG-IP
+      value:
+        id: f5-big-ip-source
+        type: f5_big_ip
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a F5 BIG-IP Source.<br/><br/>The
+        request body must include a complete representation of the Source that
+        you want to update. This endpoint does not support partial updates.
     UpdateInputExamplesEventhub:
       summary: Event Hubs
       value:
@@ -80582,6 +81443,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesBeyondTrustHec"
               InputCreateExamplesAnthropicCompliance:
                 $ref: "#/components/examples/InputCreateExamplesAnthropicCompliance"
+              InputCreateExamplesAnthropicEnterpriseAnalytics:
+                $ref: "#/components/examples/InputCreateExamplesAnthropicEnterpriseAnalytics"
               InputCreateExamplesAquaSecurityHec:
                 $ref: "#/components/examples/InputCreateExamplesAquaSecurityHec"
               InputCreateExamplesAppleUnifiedLogs:
@@ -80594,6 +81457,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesAzureVNetFlowLog"
               InputCreateExamplesCloudflareHec:
                 $ref: "#/components/examples/InputCreateExamplesCloudflareHec"
+              InputCreateExamplesExtrahopRevealx360:
+                $ref: "#/components/examples/InputCreateExamplesExtrahopRevealx360"
               InputCreateExamplesConfluentCloud:
                 $ref: "#/components/examples/InputCreateExamplesConfluentCloud"
               InputCreateExamplesCollection:
@@ -80614,6 +81479,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesEdgePrometheus"
               InputCreateExamplesElastic:
                 $ref: "#/components/examples/InputCreateExamplesElastic"
+              InputCreateExamplesF5BigIp:
+                $ref: "#/components/examples/InputCreateExamplesF5BigIp"
               InputCreateExamplesEventhub:
                 $ref: "#/components/examples/InputCreateExamplesEventhub"
               InputCreateExamplesEventhubAmqp:
@@ -80883,6 +81750,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesBeyondTrustHec"
               UpdateInputExamplesAnthropicCompliance:
                 $ref: "#/components/examples/UpdateInputExamplesAnthropicCompliance"
+              UpdateInputExamplesAnthropicEnterpriseAnalytics:
+                $ref: "#/components/examples/UpdateInputExamplesAnthropicEnterpriseAnalytics"
               UpdateInputExamplesAquaSecurityHec:
                 $ref: "#/components/examples/UpdateInputExamplesAquaSecurityHec"
               UpdateInputExamplesAppleUnifiedLogs:
@@ -80895,6 +81764,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesAzureVNetFlowLog"
               UpdateInputExamplesCloudflareHec:
                 $ref: "#/components/examples/UpdateInputExamplesCloudflareHec"
+              UpdateInputExamplesExtrahopRevealx360:
+                $ref: "#/components/examples/UpdateInputExamplesExtrahopRevealx360"
               UpdateInputExamplesConfluentCloud:
                 $ref: "#/components/examples/UpdateInputExamplesConfluentCloud"
               UpdateInputExamplesCollection:
@@ -80919,6 +81790,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesEdgePrometheus"
               UpdateInputExamplesElastic:
                 $ref: "#/components/examples/UpdateInputExamplesElastic"
+              UpdateInputExamplesF5BigIp:
+                $ref: "#/components/examples/UpdateInputExamplesF5BigIp"
               UpdateInputExamplesEventhub:
                 $ref: "#/components/examples/UpdateInputExamplesEventhub"
               UpdateInputExamplesEventhubAmqp:
@@ -85602,6 +86475,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesBeyondTrustHec"
               InputCreateExamplesAnthropicCompliance:
                 $ref: "#/components/examples/InputCreateExamplesAnthropicCompliance"
+              InputCreateExamplesAnthropicEnterpriseAnalytics:
+                $ref: "#/components/examples/InputCreateExamplesAnthropicEnterpriseAnalytics"
               InputCreateExamplesAquaSecurityHec:
                 $ref: "#/components/examples/InputCreateExamplesAquaSecurityHec"
               InputCreateExamplesAppleUnifiedLogs:
@@ -85614,6 +86489,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesAzureVNetFlowLog"
               InputCreateExamplesCloudflareHec:
                 $ref: "#/components/examples/InputCreateExamplesCloudflareHec"
+              InputCreateExamplesExtrahopRevealx360:
+                $ref: "#/components/examples/InputCreateExamplesExtrahopRevealx360"
               InputCreateExamplesConfluentCloud:
                 $ref: "#/components/examples/InputCreateExamplesConfluentCloud"
               InputCreateExamplesCollection:
@@ -85634,6 +86511,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesEdgePrometheus"
               InputCreateExamplesElastic:
                 $ref: "#/components/examples/InputCreateExamplesElastic"
+              InputCreateExamplesF5BigIp:
+                $ref: "#/components/examples/InputCreateExamplesF5BigIp"
               InputCreateExamplesEventhub:
                 $ref: "#/components/examples/InputCreateExamplesEventhub"
               InputCreateExamplesEventhubAmqp:
@@ -85889,6 +86768,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesBeyondTrustHec"
               UpdateInputExamplesAnthropicCompliance:
                 $ref: "#/components/examples/UpdateInputExamplesAnthropicCompliance"
+              UpdateInputExamplesAnthropicEnterpriseAnalytics:
+                $ref: "#/components/examples/UpdateInputExamplesAnthropicEnterpriseAnalytics"
               UpdateInputExamplesAquaSecurityHec:
                 $ref: "#/components/examples/UpdateInputExamplesAquaSecurityHec"
               UpdateInputExamplesAppleUnifiedLogs:
@@ -85901,6 +86782,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesAzureVNetFlowLog"
               UpdateInputExamplesCloudflareHec:
                 $ref: "#/components/examples/UpdateInputExamplesCloudflareHec"
+              UpdateInputExamplesExtrahopRevealx360:
+                $ref: "#/components/examples/UpdateInputExamplesExtrahopRevealx360"
               UpdateInputExamplesConfluentCloud:
                 $ref: "#/components/examples/UpdateInputExamplesConfluentCloud"
               UpdateInputExamplesCollection:
@@ -85925,6 +86808,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesEdgePrometheus"
               UpdateInputExamplesElastic:
                 $ref: "#/components/examples/UpdateInputExamplesElastic"
+              UpdateInputExamplesF5BigIp:
+                $ref: "#/components/examples/UpdateInputExamplesF5BigIp"
               UpdateInputExamplesEventhub:
                 $ref: "#/components/examples/UpdateInputExamplesEventhub"
               UpdateInputExamplesEventhubAmqp:
