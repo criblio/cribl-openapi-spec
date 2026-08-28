@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.0-alpha.1787839881042-6134bb3d
+    version: 4.20.0-alpha.1787880430301-2b8f3198
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -38274,6 +38274,17 @@ components:
                     description: >
                         ID of the Exabeam Collector where data should be sent. Example: 11112222-3333-4444-5555-666677778888
 
+                awsAuthenticationMethod:
+                    type: string
+                    title: Authentication method
+                    enum:
+                        - manual
+                        - secret
+                    x-speakeasy-enum-descriptions:
+                        - Manual
+                        - Secret
+                    description: Authentication method
+                    x-speakeasy-unknown-values: allow
                 siteName:
                     type: string
                     title: Site name
@@ -38333,6 +38344,10 @@ components:
                     title: Retry limit
                     description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
                     minimum: 1
+                awsSecret:
+                    type: string
+                    title: Secret key pair
+                    description: Select or create a stored secret that references your access key and secret key
                 __template_streamtags:
                     type: string
                     description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
@@ -44864,7 +44879,7 @@ components:
                 rejectUnauthorized:
                     type: boolean
                     title: Validate server certs
-                    description: "Reject certificates not authorized by a CA in the CA certificate path or by another trusted CA (such as the system's). \n        Enabled by default. When this setting is also present in TLS Settings (Client Side), \n        that value will take precedence."
+                    description: "Always enabled for the Metric Store: server certificates must be authorized by a CA in the CA certificate path or by another trusted CA, such as the system's. Not configurable."
                 timeoutSec:
                     type: number
                     minimum: 1
@@ -44916,12 +44931,16 @@ components:
                 authTokens:
                     type: array
                     title: Connected environment tokens
-                    description: Shared secrets to be used by connected environments to authorize connections. These tokens should also be installed in the Cribl HTTP Source on the Cribl Metrics.
+                    description: Shared secrets to be used by connected environments to authorize connections. These tokens should also be installed in the Cribl HTTP Source of the target Cribl Search workspace.
                     items:
                         $ref: "#/components/schemas/AuthTokenConfOutputCriblHttp"
                 onBackpressure:
                     $ref: "#/components/schemas/BackpressureBehaviorOptions"
                     description: How to handle events when all receivers are exerting backpressure
+                useRoundRobinDns:
+                    type: boolean
+                    title: Round-robin DNS
+                    description: Enable round-robin DNS lookup. When a DNS server returns multiple addresses, @{product} will cycle through them in the order returned. For optimal performance, consider enabling this setting for non-load balanced destinations.
                 description:
                     type: string
                     title: Description
@@ -44931,10 +44950,6 @@ components:
                     title: Cribl endpoint
                     description: URL of a Cribl Worker to send events to, such as http://localhost:10200
                     pattern: ^https?://.*
-                useRoundRobinDns:
-                    type: boolean
-                    title: Round-robin DNS
-                    description: Enable round-robin DNS lookup. When a DNS server returns multiple addresses, @{product} will cycle through them in the order returned. For optimal performance, consider enabling this setting for non-load balanced destinations.
                 excludeSelf:
                     type: boolean
                     title: Exclude current host IPs
@@ -56703,6 +56718,7 @@ components:
                 - notebooks
                 - notebook-templates
                 - apps
+                - secret-folders
             title: RbacResource
             x-speakeasy-unknown-values: allow
         ResourcePolicy:
@@ -60340,6 +60356,7 @@ components:
                 - version
                 - api-capability
                 - blocked
+                - unavailable
             title: ConnectionFailureClass
             x-speakeasy-unknown-values: allow
         ConnectionTestResult:
@@ -60575,6 +60592,52 @@ components:
                 - run
                 - warnings
             title: MigrationUploadResult
+        DatasetAccessMigration:
+            type: object
+            properties:
+                authType:
+                    type: string
+                    enum:
+                        - basic
+                        - none
+                        - token
+                    description: Authentication method used by the source Prometheus endpoint.
+                    x-speakeasy-unknown-values: allow
+                cutoverMs:
+                    type: number
+                    description: Explicit coverage watermark in epoch milliseconds; ranges starting before it route remotely.
+                enabled:
+                    type: boolean
+                    description: Whether source-Prometheus migration routing is enabled.
+                endpoint:
+                    type: string
+                    description: Resolved source Prometheus endpoint.
+                maxConcurrency:
+                    type: number
+                    description: Maximum number of concurrent source requests for this dataset.
+                password:
+                    type: string
+                    description: Encrypted password used for basic authentication.
+                policyRevision:
+                    type: string
+                    description: Opaque policy revision used to invalidate cached source adapters.
+                providerId:
+                    type: string
+                    description: Identifier of the referenced Prometheus Dataset Provider.
+                token:
+                    type: string
+                    description: Encrypted bearer token used for token authentication.
+                username:
+                    type: string
+                    description: Username used for basic authentication.
+            required:
+                - authType
+                - enabled
+                - endpoint
+                - maxConcurrency
+                - policyRevision
+                - providerId
+            title: DatasetAccessMigration
         DatasetAccess:
             type: object
             properties:
@@ -60590,6 +60653,8 @@ components:
                     type: boolean
                 id:
                     type: string
+                migration:
+                    $ref: "#/components/schemas/DatasetAccessMigration"
                 password:
                     type: string
                 username:
@@ -62402,6 +62467,54 @@ components:
                     description: List of the <code>id</code> values for Worker Groups to share the secret folder with. Use <code>'*'</code> to share the secret folder with all Worker Groups. All global secrets within the secret folder become available to the Worker Groups that it is shared with.
             description: Sharing configuration for a secret folder.
             title: SharingConfig
+        SecretFolder:
+            type: object
+            properties:
+                description:
+                    type: string
+                    description: Brief description of the secret folder.
+                    examples:
+                        - Shared credentials for finance systems
+                id:
+                    type: string
+                    description: Unique identifier for the secret folder.
+                    examples:
+                        - finance
+                    pattern: ^[a-zA-Z0-9_\-]+$
+                secretStoreId:
+                    type: string
+                    description: Unique identifier for the backing secret store for the secret folder.
+                    examples:
+                        - cribl
+                    pattern: ^[a-zA-Z0-9_\-]+$
+                sharing:
+                    $ref: "#/components/schemas/SharingConfig"
+                    description: Sharing configuration for the secret folder.
+            required:
+                - id
+                - secretStoreId
+            description: A secret folder that is mapped to a backing secret store.
+            title: SecretFolder
+        PaginatedSecretFolder:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/SecretFolder"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
         SecretFolderWithRuntimeState:
             type: object
             properties:
@@ -62805,15 +62918,42 @@ components:
                 - type
             description: A secret store backed by an external provider.
             title: VaultSecretStore
+        AzureKeyVaultClientSecretAuth:
+            type: object
+            properties:
+                authType:
+                    type: string
+                    const: clientSecret
+                    description: Authentication method. Always <code>clientSecret</code>.
+                clientId:
+                    type: string
+                    description: Microsoft Entra application (client) ID.
+                clientSecret:
+                    type: string
+                    description: Microsoft Entra client secret.
+                tenantId:
+                    type: string
+                    description: Microsoft Entra tenant ID.
+            required:
+                - authType
+                - clientId
+                - clientSecret
+                - tenantId
+            description: Client-secret authentication configuration for an Azure Key Vault store.
+            title: AzureKeyVaultClientSecretAuth
         AzureKeyVaultStoreConfig:
             type: object
             properties:
+                auth:
+                    $ref: "#/components/schemas/AzureKeyVaultClientSecretAuth"
+                    description: Authentication configuration for the Azure Key Vault store.
                 vaultUrl:
                     type: string
                     description: Azure Key Vault URI, e.g. <code>https://my-vault.vault.azure.net</code>.
                     examples:
                         - https://my-vault.vault.azure.net
             required:
+                - auth
                 - vaultUrl
             description: Configuration for an Azure Key Vault secret store.
             title: AzureKeyVaultStoreConfig
@@ -63024,11 +63164,23 @@ components:
         AzureKeyVaultStoreConfigUpdate:
             type: object
             properties:
-                vaultUrl:
-                    type: string
-                    description: Azure Key Vault URI, e.g. <code>https://my-vault.vault.azure.net</code>.
-                    examples:
-                        - https://my-vault.vault.azure.net
+                auth:
+                    type: object
+                    properties:
+                        authType:
+                            type: string
+                            const: clientSecret
+                            description: Authentication method. Always <code>clientSecret</code>.
+                        clientId:
+                            type: string
+                            description: Microsoft Entra application (client) ID.
+                        clientSecret:
+                            type: string
+                            description: Microsoft Entra client secret.
+                        tenantId:
+                            type: string
+                            description: Microsoft Entra tenant ID.
+                    description: Authentication fields to update for the Azure Key Vault store.
             description: Configuration for updating an Azure Key Vault secret store.
             title: AzureKeyVaultStoreConfigUpdate
         AzureKeyVaultSecretStoreUpdate:
@@ -76831,6 +76983,9 @@ components:
                 isFipsEnabled:
                     type: boolean
                     description: If <code>true</code>, FIPS compliance mode is enabled.
+                isHighside:
+                    type: boolean
+                    description: If <code>true</code>, this instance runs in the Highside deployment mode (air-gapped Cribl Search and Lake).
                 license:
                     $ref: "#/components/schemas/LicenseInfo"
                     description: License information for the Cribl instance.
@@ -132144,6 +132299,15 @@ components:
                     type: string
                     title: Collector instance ID
                     description: "ID of the Exabeam Collector where data should be sent. Example: 11112222-3333-4444-5555-666677778888"
+                awsAuthenticationMethod:
+                    title: Authentication method
+                    x-speakeasy-enum-descriptions:
+                        - Manual
+                        - Secret
+                    description: Authentication method
+                    anyOf:
+                        - $ref: "#/components/schemas/AuthKeyTypeOptionsV3UsersSecretsItems"
+                        - type: "null"
                 siteName:
                     title: Site name
                     description: Constant or JavaScript expression to create an Exabeam site name. Values that aren't successfully evaluated will be treated as string constants.
@@ -132230,6 +132394,12 @@ components:
                     anyOf:
                         - type: number
                           minimum: 1
+                        - type: "null"
+                awsSecret:
+                    title: Secret key pair
+                    description: Select or create a stored secret that references your access key and secret key
+                    anyOf:
+                        - type: string
                         - type: "null"
                 __template_streamtags:
                     description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
@@ -145101,7 +145271,7 @@ components:
                         - type: "null"
                 rejectUnauthorized:
                     title: Validate server certs
-                    description: "Reject certificates not authorized by a CA in the CA certificate path or by another trusted CA (such as the system's). \n        Enabled by default. When this setting is also present in TLS Settings (Client Side), \n        that value will take precedence."
+                    description: "Always enabled for the Metric Store: server certificates must be authorized by a CA in the CA certificate path or by another trusted CA, such as the system's. Not configurable."
                     anyOf:
                         - type: boolean
                         - type: "null"
@@ -145214,7 +145384,7 @@ components:
                         - type: "null"
                 authTokens:
                     title: Connected environment tokens
-                    description: Shared secrets to be used by connected environments to authorize connections. These tokens should also be installed in the Cribl HTTP Source on the Cribl Metrics.
+                    description: Shared secrets to be used by connected environments to authorize connections. These tokens should also be installed in the Cribl HTTP Source of the target Cribl Search workspace.
                     anyOf:
                         - type: array
                           items:
@@ -145235,6 +145405,12 @@ components:
                             - queue
                           x-speakeasy-unknown-values: allow
                         - type: "null"
+                useRoundRobinDns:
+                    title: Round-robin DNS
+                    description: Enable round-robin DNS lookup. When a DNS server returns multiple addresses, @{product} will cycle through them in the order returned. For optimal performance, consider enabling this setting for non-load balanced destinations.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
                 description:
                     title: Description
                     description: Optional description for this configuration.
@@ -145247,12 +145423,6 @@ components:
                     anyOf:
                         - type: string
                           pattern: ^https?://.*
-                        - type: "null"
-                useRoundRobinDns:
-                    title: Round-robin DNS
-                    description: Enable round-robin DNS lookup. When a DNS server returns multiple addresses, @{product} will cycle through them in the order returned. For optimal performance, consider enabling this setting for non-load balanced destinations.
-                    anyOf:
-                        - type: boolean
                         - type: "null"
                 excludeSelf:
                     title: Exclude current host IPs
@@ -161130,6 +161300,10 @@ components:
                         - type: "null"
                 id:
                     type: string
+                migration:
+                    anyOf:
+                        - $ref: "#/components/schemas/DatasetAccessMigrationPartialRequest"
+                        - type: "null"
                 password:
                     anyOf:
                         - type: string
@@ -161139,6 +161313,53 @@ components:
                         - type: string
                         - type: "null"
             title: DatasetAccessPartialRequest
+        DatasetAccessMigrationPartialRequest:
+            type: object
+            properties:
+                authType:
+                    type: string
+                    enum:
+                        - basic
+                        - none
+                        - token
+                    description: Authentication method used by the source Prometheus endpoint.
+                    x-speakeasy-unknown-values: allow
+                cutoverMs:
+                    description: Explicit coverage watermark in epoch milliseconds; ranges starting before it route remotely.
+                    anyOf:
+                        - type: number
+                        - type: "null"
+                enabled:
+                    type: boolean
+                    description: Whether source-Prometheus migration routing is enabled.
+                endpoint:
+                    type: string
+                    description: Resolved source Prometheus endpoint.
+                maxConcurrency:
+                    type: number
+                    description: Maximum number of concurrent source requests for this dataset.
+                password:
+                    description: Encrypted password used for basic authentication.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                policyRevision:
+                    type: string
+                    description: Opaque policy revision used to invalidate cached source adapters.
+                providerId:
+                    type: string
+                    description: Identifier of the referenced Prometheus Dataset Provider.
+                token:
+                    description: Encrypted bearer token used for token authentication.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                username:
+                    description: Username used for basic authentication.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+            title: DatasetAccessMigrationPartialRequest
         AppScheduledJobPartialRequest:
             type: object
             properties:
@@ -162228,12 +162449,32 @@ components:
         AzureKeyVaultStoreConfigUpdatePartialRequest:
             type: object
             properties:
-                vaultUrl:
-                    description: Azure Key Vault URI, e.g. <code>https://my-vault.vault.azure.net</code>.
-                    examples:
-                        - https://my-vault.vault.azure.net
+                auth:
+                    description: Authentication fields to update for the Azure Key Vault store.
                     anyOf:
-                        - type: string
+                        - type: object
+                          properties:
+                            authType:
+                                description: Authentication method. Always <code>clientSecret</code>.
+                                anyOf:
+                                    - type: string
+                                      const: clientSecret
+                                    - type: "null"
+                            clientId:
+                                description: Microsoft Entra application (client) ID.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            clientSecret:
+                                description: Microsoft Entra client secret.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            tenantId:
+                                description: Microsoft Entra tenant ID.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
                         - type: "null"
             description: Configuration for updating an Azure Key Vault secret store.
             title: AzureKeyVaultStoreConfigUpdatePartialRequest
@@ -173828,6 +174069,8 @@ components:
                 endpoint: https://storage.googleapis.com
                 stagePath: /tmp/staging
                 collectorInstanceId: 11112222-3333-4444-5555-666677778888
+                awsAuthenticationMethod: secret
+                awsSecret: my-secret-id
             description: Example request body for creating a Exabeam Destination.
         OutputCreateExamplesDiskSpool:
             summary: Disk Spool
@@ -178802,6 +179045,58 @@ components:
                 args:
                     - -c
                     - find /var/log -name "*.log" -mtime +60 -delete
+        AclGetUsersResponseSecretFolderExamplesSuccess:
+            summary: List user ACL for a SecretFolder
+            description: Example response for listing the user access control list (ACL) for a SecretFolder.<br/><br/>The response includes only users with explicit access assignments on the SecretFolder, not access granted through Team membership or inheritance.
+            value:
+                count: 1
+                items:
+                    - user: user1@example.com
+                      perms:
+                        - type: secret-folders
+                          gid: prod
+                          policy: FolderSecretsRead
+        AclGetTeamsResponseSecretFolderExamplesSuccess:
+            summary: List Team ACL for a SecretFolder
+            description: Example response for listing the Team access control list (ACL) for a SecretFolder.<br/><br/>The response includes only Teams with explicit access assignments on the SecretFolder, not access granted individually to Team Members or through inheritance.
+            value:
+                count: 1
+                items:
+                    - team: engineering-team
+                      perms:
+                        - type: secret-folders
+                          gid: prod
+                          policy: FolderSecretsRead
+        AclApplySecretFolderExamplesGrantAccess:
+            summary: Grant a Secret Folder policy to Members
+            description: Example request body for granting a Secret Folder policy to the specified Members.
+            value:
+                add:
+                    FolderSecretsRead:
+                        - user1@example.com
+                        - user2@example.com
+        AclApplySecretFolderExamplesRevokeAccess:
+            summary: Revoke a Secret Folder policy from Members
+            description: Example request body for revoking a Secret Folder policy from the specified Members.
+            value:
+                rm:
+                    FolderSecretsMaintain:
+                        - user3@example.com
+        AclTeamsApplySecretFolderExamplesGrantTeamAccess:
+            summary: Grant a Secret Folder policy to Teams
+            description: Example request body for granting a Secret Folder policy to the specified Teams.
+            value:
+                add:
+                    FolderSecretsRead:
+                        - engineering-team
+                        - data-team
+        AclTeamsApplySecretFolderExamplesRevokeTeamAccess:
+            summary: Revoke a Secret Folder policy from Teams
+            description: Example request body for revoking a Secret Folder policy from the specified Teams.
+            value:
+                rm:
+                    FolderSecretsMaintain:
+                        - former-team
         SecretFolderResponseExamplesSecretFolder:
             summary: Get a secret folder
             description: Example response for getting a secret folder.
@@ -179890,6 +180185,12 @@ components:
                 clientId: 00000000-0000-0000-0000-000000000000
                 clientSecret: "***************"
                 workspaceId: 550e8400-e29b-41d4-a716-446655440000
+        DatasetProviderConnectionTestResponseExamplesSuccess:
+            summary: Test a Prometheus Dataset Provider connection
+            description: Example response when the configured Prometheus endpoint is reachable and compatible.
+            value:
+                ok: true
+                sourceVersion: 2.53.0
         DatasetProviderDetailsResponseExamplesAmazonSecurityLake:
             summary: Get discovery data for an Amazon Security Lake provider
             description: Example response when the Dataset Provider type is amazon_security_lake. Returns the S3 bucket names associated with the provider.
@@ -183525,8 +183826,8 @@ components:
             value:
                 value: true
         CreateWorkflowRunResponseExamplesRunCreated:
-            summary: Run started
-            description: Returns immediately with the run metadata; orchestration happens asynchronously.
+            summary: Run created
+            description: Returns 201 with persisted run metadata. <code>status</code> is <code>running</code>; the walk is not started by this response.
             value:
                 runId: run_1724000000000_1
                 workflowId: investigate-spikes
@@ -183538,9 +183839,9 @@ components:
                 triggerInput: Investigate the traffic spike at 14:30 UTC
                 createdAt: 1724000000000
                 modifiedAt: 1724000000000
-        CreateWorkflowRunRequestExamplesStartRun:
-            summary: Start a workflow run
-            description: POST /ai/workflows/{id}/runs with optional trigger input.
+        CreateWorkflowRunRequestExamplesCreateRun:
+            summary: Create a workflow run
+            description: POST /ai/workflows/{id}/runs with optional trigger input. Empty or whitespace input is omitted from metadata.
             value:
                 input: Investigate the traffic spike at 14:30 UTC
         GetWorkflowRunResponseExamplesCompletedRun:
@@ -188054,6 +188355,8 @@ components:
                 endpoint: https://storage.googleapis.com
                 stagePath: /tmp/staging
                 collectorInstanceId: 11112222-3333-4444-5555-666677778888
+                awsAuthenticationMethod: secret
+                awsSecret: my-secret-id
             description: "Example request body for updating a Exabeam Destination.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
         UpdateOutputExamplesDiskSpoolPartialRequest:
             summary: Disk Spool
@@ -221691,6 +221994,523 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the script to run.
+    /system/secret-folders:
+        get:
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            x-speakeasy-name-override: list
+            tags:
+                - secretFolders
+            summary: List all secret folders
+            description: Get a list of all configured secret folders.
+            responses:
+                "200":
+                    description: List of SecretFolderWithRuntimeState objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedSecretFolderWithRuntimeState"
+                            examples:
+                                SecretFolderListResponseExamplesSecretFolderList:
+                                    $ref: "#/components/examples/SecretFolderListResponseExamplesSecretFolderList"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            operationId: getSecretFolder
+            x-speakeasy-group: secrets.folders
+            parameters:
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Pagination offset
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Maximum number of items to return
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
+        post:
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            x-speakeasy-name-override: create
+            tags:
+                - secretFolders
+            summary: Create a secret folder
+            description: Create a new secret folder to contain global secrets.
+            requestBody:
+                description: SecretFolderCreate object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SecretFolderCreate"
+                        examples:
+                            CreateSecretFolderExamplesCriblBackedFolder:
+                                $ref: "#/components/examples/CreateSecretFolderExamplesCriblBackedFolder"
+            responses:
+                "201":
+                    description: The created SecretFolderWithRuntimeState object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
+                            examples:
+                                SecretFolderResponseExamplesSecretFolder:
+                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
+                "400":
+                    description: Failed validation or malformed input — invalid request body or unknown secret store
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            operationId: createSecretFolder
+            x-speakeasy-group: secrets.folders
+    /system/secret-folders/{id}:
+        get:
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            x-speakeasy-name-override: get
+            tags:
+                - secretFolders
+            summary: Get a secret folder
+            description: Get the specified secret folder.
+            responses:
+                "200":
+                    description: The requested SecretFolderWithRuntimeState object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
+                            examples:
+                                SecretFolderResponseExamplesSecretFolder:
+                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist — secret folder not found
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            operationId: getSecretFolderById
+            x-speakeasy-group: secrets.folders
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the secret folder to get.
+        patch:
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            x-speakeasy-name-override: update
+            tags:
+                - secretFolders
+            summary: Update a secret folder
+            description: "Update the specified secret folder.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            requestBody:
+                description: SecretFolderUpdate object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SecretFolderUpdatePartialRequest"
+                        examples:
+                            UpdateSecretFolderExamplesUpdateDescriptionAndSharing:
+                                $ref: "#/components/examples/UpdateSecretFolderExamplesUpdateDescriptionAndSharingPartialRequest"
+            responses:
+                "200":
+                    description: The updated SecretFolderWithRuntimeState object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
+                            examples:
+                                SecretFolderResponseExamplesSecretFolder:
+                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
+                "400":
+                    description: Failed validation or malformed input — invalid request body
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist — secret folder not found
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            operationId: updateSecretFolderById
+            x-speakeasy-group: secrets.folders
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the secret folder to update.
+        delete:
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            x-speakeasy-name-override: delete
+            tags:
+                - secretFolders
+            summary: Delete a secret folder
+            description: Delete the specified secret folder. The request will fail if the folder still contains secrets.
+            responses:
+                "204":
+                    description: No Content
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist — Secret folder not found
+                "409":
+                    description: Request conflicts with current resource state — folder still contains secrets; response body includes a <code>secretIds</code> array (up to 10) listing the secret IDs in the folder
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            operationId: deleteSecretFolderById
+            x-speakeasy-group: secrets.folders
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the secret folder to delete.
+    /system/secret-folders/{id}/acl:
+        get:
+            operationId: getSecretFolderAclById
+            responses:
+                "200":
+                    description: List of UserAccessControlList objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListUserAccessControlList"
+                            examples:
+                                AclGetUsersResponseSecretFolderExamplesSuccess:
+                                    $ref: "#/components/examples/AclGetUsersResponseSecretFolderExamplesSuccess"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The unique identifier of the SecretFolder to manage access control for.
+            description: List accesses to SecretFolder granted to users.
+            summary: Get SecretFolder ACL
+            tags:
+                - secretFolders
+    /system/secret-folders/{id}/acl/apply:
+        post:
+            operationId: createSecretFolderAclApplyById
+            requestBody:
+                description: AccessControlSchema object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/AccessControlSchema"
+                        examples:
+                            AclApplySecretFolderExamplesGrantAccess:
+                                $ref: "#/components/examples/AclApplySecretFolderExamplesGrantAccess"
+                            AclApplySecretFolderExamplesRevokeAccess:
+                                $ref: "#/components/examples/AclApplySecretFolderExamplesRevokeAccess"
+            responses:
+                "200":
+                    description: Successful ACL modification.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - items
+                                    - count
+                                properties:
+                                    items:
+                                        type: array
+                                        description: List of results.
+                                        items:
+                                            type: object
+                                            additionalProperties: false
+                                    count:
+                                        type: integer
+                                        description: Number of items present in the items array.
+                            examples:
+                                AclApplyResponseExamplesSuccess:
+                                    $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The unique identifier of the SecretFolder to manage access control for.
+            description: Add/remove accesses to SecretFolder for users.
+            summary: Modify SecretFolder ACL
+            tags:
+                - secretFolders
+    /system/secret-folders/{id}/acl/teams:
+        get:
+            operationId: getSecretFolderAclTeamsById
+            responses:
+                "200":
+                    description: List of TeamAccessControlList objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListTeamAccessControlList"
+                            examples:
+                                AclGetTeamsResponseSecretFolderExamplesSuccess:
+                                    $ref: "#/components/examples/AclGetTeamsResponseSecretFolderExamplesSuccess"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The unique identifier of the SecretFolder to manage access control for.
+            description: List accesses to SecretFolder granted to Teams.
+            summary: Get SecretFolder Teams
+            tags:
+                - secretFolders
+    /system/secret-folders/{id}/acl/teams/apply:
+        post:
+            operationId: createSecretFolderAclTeamsApplyById
+            requestBody:
+                description: AccessControlSchema object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/AccessControlSchema"
+                        examples:
+                            AclTeamsApplySecretFolderExamplesGrantTeamAccess:
+                                $ref: "#/components/examples/AclTeamsApplySecretFolderExamplesGrantTeamAccess"
+                            AclTeamsApplySecretFolderExamplesRevokeTeamAccess:
+                                $ref: "#/components/examples/AclTeamsApplySecretFolderExamplesRevokeTeamAccess"
+            responses:
+                "200":
+                    description: Successful ACL modification.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - items
+                                    - count
+                                properties:
+                                    items:
+                                        type: array
+                                        description: List of results.
+                                        items:
+                                            type: object
+                                            additionalProperties: false
+                                    count:
+                                        type: integer
+                                        description: Number of items present in the items array.
+                            examples:
+                                AclApplyResponseExamplesSuccess:
+                                    $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The unique identifier of the SecretFolder to manage access control for.
+            description: Add/remove accesses to SecretFolder for Teams.
+            summary: Modify SecretFolder Teams ACL
+            tags:
+                - secretFolders
     /system/secret-folders/{id}/clone:
         post:
             operationId: createSecretFolderCloneById
@@ -221756,285 +222576,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the source secret folder to clone.
-    /system/secret-folders:
-        post:
-            operationId: createSecretFolder
-            tags:
-                - secretFolders
-            x-speakeasy-group: secrets.folders
-            x-speakeasy-name-override: create
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Create a secret folder
-            description: Create a new secret folder to contain global secrets.
-            responses:
-                "201":
-                    description: The created SecretFolderWithRuntimeState object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
-                            examples:
-                                SecretFolderResponseExamplesSecretFolder:
-                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
-                "400":
-                    description: Failed validation or malformed input — invalid request body or unknown secret store
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            requestBody:
-                description: SecretFolderCreate object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/SecretFolderCreate"
-                        examples:
-                            CreateSecretFolderExamplesCriblBackedFolder:
-                                $ref: "#/components/examples/CreateSecretFolderExamplesCriblBackedFolder"
-        get:
-            operationId: getSecretFolder
-            tags:
-                - secretFolders
-            x-speakeasy-group: secrets.folders
-            x-speakeasy-name-override: list
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: List all secret folders
-            description: Get a list of all configured secret folders.
-            responses:
-                "200":
-                    description: List of SecretFolderWithRuntimeState objects.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/PaginatedSecretFolderWithRuntimeState"
-                            examples:
-                                SecretFolderListResponseExamplesSecretFolderList:
-                                    $ref: "#/components/examples/SecretFolderListResponseExamplesSecretFolderList"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Pagination offset
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Maximum number of items to return
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
-    /system/secret-folders/{id}:
-        delete:
-            operationId: deleteSecretFolderById
-            tags:
-                - secretFolders
-            x-speakeasy-group: secrets.folders
-            x-speakeasy-name-override: delete
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Delete a secret folder
-            description: Delete the specified secret folder. The request will fail if the folder still contains secrets.
-            responses:
-                "204":
-                    description: No Content
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "404":
-                    description: The requested resource does not exist — Secret folder not found
-                "409":
-                    description: Request conflicts with current resource state — folder still contains secrets; response body includes a <code>secretIds</code> array (up to 10) listing the secret IDs in the folder
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: The <code>id</code> of the secret folder to delete.
-        get:
-            operationId: getSecretFolderById
-            tags:
-                - secretFolders
-            x-speakeasy-group: secrets.folders
-            x-speakeasy-name-override: get
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Get a secret folder
-            description: Get the specified secret folder.
-            responses:
-                "200":
-                    description: The requested SecretFolderWithRuntimeState object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
-                            examples:
-                                SecretFolderResponseExamplesSecretFolder:
-                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "404":
-                    description: The requested resource does not exist — secret folder not found
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: The <code>id</code> of the secret folder to get.
-        patch:
-            operationId: updateSecretFolderById
-            tags:
-                - secretFolders
-            x-speakeasy-group: secrets.folders
-            x-speakeasy-name-override: update
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Update a secret folder
-            description: "Update the specified secret folder.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
-            responses:
-                "200":
-                    description: The updated SecretFolderWithRuntimeState object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
-                            examples:
-                                SecretFolderResponseExamplesSecretFolder:
-                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
-                "400":
-                    description: Failed validation or malformed input — invalid request body
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "404":
-                    description: The requested resource does not exist — secret folder not found
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            requestBody:
-                description: SecretFolderUpdate object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/SecretFolderUpdatePartialRequest"
-                        examples:
-                            UpdateSecretFolderExamplesUpdateDescriptionAndSharing:
-                                $ref: "#/components/examples/UpdateSecretFolderExamplesUpdateDescriptionAndSharingPartialRequest"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: The <code>id</code> of the secret folder to update.
     /system/secret-folders/{id}/reload:
         post:
             operationId: createSecretFolderReloadById
@@ -227189,6 +227730,57 @@ paths:
             description: Add/remove accesses to DatasetProvider for Teams (Cribl.Cloud only).
             summary: Modify DatasetProvider Teams ACL (Cribl.Cloud only)
             tags: []
+    /search/dataset-providers/{id}/test:
+        post:
+            operationId: createDatasetProviderTestById
+            tags:
+                - datasets
+            x-speakeasy-group: search.datasets.providers
+            x-speakeasy-name-override: testConnection
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - searchGroup
+            summary: Test connectivity for a Prometheus Dataset Provider (Cribl.Cloud only)
+            description: "Probe the configured Prometheus endpoint: reachability, authentication, and API availability (Cribl.Cloud only). Only supported for Dataset Providers of type <code>prometheus</code>."
+            responses:
+                "200":
+                    description: Reachability/auth/capability outcome. Never contains secret values.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ConnectionTestResult"
+                            examples:
+                                DatasetProviderConnectionTestResponseExamplesSuccess:
+                                    $ref: "#/components/examples/DatasetProviderConnectionTestResponseExamplesSuccess"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist — Dataset Provider not found.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Dataset Provider to test.
     /search/dataset-providers/{id}/details:
         get:
             operationId: getDatasetProviderDetailsById
@@ -230768,6 +231360,12 @@ paths:
                   schema:
                     type: string
                   description: The metrics dataset id within the engine.
+                - name: query_id
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Caller-supplied query identifier for tracing.
     /products/lakehouse_engine_metrics/engines/{engineId}/datasets/{datasetId}/prom/api/v1/labels:
         get:
             operationId: getProductsLakehouseEngineMetricsEnginesDatasetsPromApiV1LabelsByEngineIdAndDatasetId
@@ -230816,6 +231414,12 @@ paths:
                   schema:
                     type: string
                   description: The metrics dataset id within the engine.
+                - name: query_id
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Caller-supplied query identifier for tracing.
     /products/lakehouse_engine_metrics/engines/{engineId}/datasets/{datasetId}/prom/api/v1/metadata:
         get:
             operationId: getProductsLakehouseEngineMetricsEnginesDatasetsPromApiV1MetadataByEngineIdAndDatasetId
@@ -230864,6 +231468,12 @@ paths:
                   schema:
                     type: string
                   description: The metrics dataset id within the engine.
+                - name: query_id
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Caller-supplied query identifier for tracing.
     /products/lakehouse_engine_metrics/engines/{engineId}/datasets/{datasetId}/prom/api/v1/query:
         get:
             operationId: getProductsLakehouseEngineMetricsEnginesDatasetsPromApiV1QueryByEngineIdAndDatasetId
@@ -231062,6 +231672,12 @@ paths:
                   schema:
                     type: string
                   description: Series selector expressions.
+                - name: query_id
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Caller-supplied query identifier for tracing.
     /edge/events/collectors:
         get:
             operationId: getEdgeEventsCollectors
@@ -243693,8 +244309,8 @@ paths:
             x-cribl-api-context:
                 - leader
                 - single
-            summary: Start a workflow run
-            description: Validates input, creates the run directory, kicks off the workflow, and returns 201 with the run metadata without waiting for the walk.
+            summary: Create a workflow run
+            description: Validates input, snapshots the published revision, persists the run, and returns 201 with run metadata. Does not wait for the run to finish.
             responses:
                 "201":
                     description: The created WorkflowRunMeta object.
@@ -243705,19 +244321,30 @@ paths:
                             examples:
                                 CreateWorkflowRunResponseExamplesRunCreated:
                                     $ref: "#/components/examples/CreateWorkflowRunResponseExamplesRunCreated"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                "400":
+                    description: Invalid request body
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authenticated user required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: Workflow not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: The workflow has no published revision to run
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -243732,8 +244359,8 @@ paths:
                         schema:
                             $ref: "#/components/schemas/CreateWorkflowRunRequest"
                         examples:
-                            CreateWorkflowRunRequestExamplesStartRun:
-                                $ref: "#/components/examples/CreateWorkflowRunRequestExamplesStartRun"
+                            CreateWorkflowRunRequestExamplesCreateRun:
+                                $ref: "#/components/examples/CreateWorkflowRunRequestExamplesCreateRun"
             parameters:
                 - name: id
                   in: path
@@ -243751,7 +244378,7 @@ paths:
                 - leader
                 - single
             summary: List workflow runs
-            description: Returns run metadata for the specified workflow.
+            description: Returns published-revision run metadata, newest first. Draft builder test-runs are excluded from history unless <code>revision=draft</code>. Filtering by <code>revision</code> and owner happens before <code>offset</code> and <code>limit</code>. A valid unknown workflow id returns an empty list; runs outlive the workflow config. HTTP POST creates published runs only. Callers see only their own runs unless they hold stream or workspace admin.
             responses:
                 "200":
                     description: List of WorkflowRunMeta objects.
@@ -243762,19 +244389,18 @@ paths:
                             examples:
                                 ListWorkflowRunsResponseExamplesRunList:
                                     $ref: "#/components/examples/ListWorkflowRunsResponseExamplesRunList"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                "400":
+                    description: Invalid query or workflow id
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authenticated user required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -243788,6 +244414,35 @@ paths:
                   schema:
                     type: string
                   description: The workflow id.
+                - name: revision
+                  in: query
+                  required: false
+                  schema:
+                    $ref: "#/components/schemas/WorkflowRunRevision"
+                  description: Filter by the snapshotted revision. Defaults to published.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of runs to return.
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Number of runs to skip, after filtering and newest-first sort.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /ai/workflows/{id}/runs/{runId}:
         delete:
             operationId: deleteAiWorkflowsRunsByIdAndRunId
