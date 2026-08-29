@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.20.0-alpha.1787958631446-f849d204
+  version: 4.20.0-alpha.1788044828820-8e1d0ff0
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -35723,6 +35723,243 @@ components:
             prefixed ID (group-scoped). Variable value overrides
             'accessControlAllowHeaders' at runtime.
       title: InputBeyondtrustHec
+    InputMimecastHec:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - hecAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - mimecast_hec
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestinationArnConstraint"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokenConfInputCloudflareHec"
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set to 0 for unlimited. Caution: Increasing the limit above the default value, or setting it to unlimited, may degrade performance and reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        enableProxyHeader:
+          type: boolean
+          title: Show originating IP
+          description: Extract the client IP and port from PROXY protocol v1/v2. When
+            enabled, the X-Forwarded-For header is ignored. Disable to use the
+            X-Forwarded-For header for client IP extraction.
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        captureHeadersWarning:
+          type: string
+          readOnly: true
+          const: ""
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        hecAPI:
+          type: string
+          title: HEC endpoint
+          description: Absolute path on which to listen for Mimecast HTTP Event Collector
+            API requests. This input supports the /event and /raw endpoints.
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to every event. May be overridden by fields added at
+            the token or request level.
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        allowedIndexes:
+          type: array
+          title: Allowed indexes
+          description: List values allowed in HEC event index field. Leave blank to skip
+            validation. Supports wildcards. The values here can expand index
+            validation at the token level.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowOrigin:
+          title: CORS allowed origins
+          type: array
+          description: HTTP origins to which @{product} should send CORS (cross-origin
+            resource sharing) Access-Control-Allow-* headers. Supports
+            wildcards.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowHeaders:
+          title: CORS allowed headers
+          type: array
+          description: HTTP headers that @{product} will send to allowed origins as
+            "Access-Control-Allow-Headers" in a CORS preflight response. Use "*"
+            to allow all headers.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        emitTokenMetrics:
+          type: boolean
+          title: Emit per-token request metrics
+          description: Emit per-token (<prefix>.http.perToken) and summary
+            (<prefix>.http.summary) request metrics
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_hecAPI:
+          type: string
+          description: Binds 'hecAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'hecAPI' at runtime.
+        __template_allowedIndexes:
+          type: string
+          description: Binds 'allowedIndexes' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'allowedIndexes' at
+            runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
+      title: InputMimecastHec
     Input:
       oneOf:
         - $ref: "#/components/schemas/InputCollection"
@@ -35807,6 +36044,7 @@ components:
         - $ref: "#/components/schemas/InputVectraAiHec"
         - $ref: "#/components/schemas/InputF5BigIp"
         - $ref: "#/components/schemas/InputBeyondtrustHec"
+        - $ref: "#/components/schemas/InputMimecastHec"
       discriminator:
         propertyName: type
         mapping:
@@ -35892,6 +36130,7 @@ components:
           vectra_ai_hec: "#/components/schemas/InputVectraAiHec"
           f5_big_ip: "#/components/schemas/InputF5BigIp"
           beyondtrust_hec: "#/components/schemas/InputBeyondtrustHec"
+          mimecast_hec: "#/components/schemas/InputMimecastHec"
       title: Input
     CountedInputSplunkHec:
       type: object
@@ -71645,6 +71884,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Metrics Source.
+    InputCreateExamplesMimecastHec:
+      summary: Mimecast HEC
+      value:
+        id: mimecast-hec-source
+        type: mimecast_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Mimecast HEC Source.
     InputCreateExamplesModelDrivenTelemetry:
       summary: Model Driven Telemetry
       value:
@@ -72684,6 +72934,20 @@ components:
       description: Example request body for updating a Metrics Source.<br/><br/>The
         request body must include a complete representation of the Source that
         you want to update. This endpoint does not support partial updates.
+    UpdateInputExamplesMimecastHec:
+      summary: Mimecast HEC
+      value:
+        id: mimecast-hec-source
+        type: mimecast_hec
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Mimecast HEC
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
     UpdateInputExamplesModelDrivenTelemetry:
       summary: Model Driven Telemetry
       value:
@@ -81515,6 +81779,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesLoki"
               InputCreateExamplesMetrics:
                 $ref: "#/components/examples/InputCreateExamplesMetrics"
+              InputCreateExamplesMimecastHec:
+                $ref: "#/components/examples/InputCreateExamplesMimecastHec"
               InputCreateExamplesModelDrivenTelemetry:
                 $ref: "#/components/examples/InputCreateExamplesModelDrivenTelemetry"
               InputCreateExamplesMsk:
@@ -81826,6 +82092,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesLoki"
               UpdateInputExamplesMetrics:
                 $ref: "#/components/examples/UpdateInputExamplesMetrics"
+              UpdateInputExamplesMimecastHec:
+                $ref: "#/components/examples/UpdateInputExamplesMimecastHec"
               UpdateInputExamplesModelDrivenTelemetry:
                 $ref: "#/components/examples/UpdateInputExamplesModelDrivenTelemetry"
               UpdateInputExamplesMsk:
@@ -86547,6 +86815,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesLoki"
               InputCreateExamplesMetrics:
                 $ref: "#/components/examples/InputCreateExamplesMetrics"
+              InputCreateExamplesMimecastHec:
+                $ref: "#/components/examples/InputCreateExamplesMimecastHec"
               InputCreateExamplesModelDrivenTelemetry:
                 $ref: "#/components/examples/InputCreateExamplesModelDrivenTelemetry"
               InputCreateExamplesMsk:
@@ -86844,6 +87114,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesLoki"
               UpdateInputExamplesMetrics:
                 $ref: "#/components/examples/UpdateInputExamplesMetrics"
+              UpdateInputExamplesMimecastHec:
+                $ref: "#/components/examples/UpdateInputExamplesMimecastHec"
               UpdateInputExamplesModelDrivenTelemetry:
                 $ref: "#/components/examples/UpdateInputExamplesModelDrivenTelemetry"
               UpdateInputExamplesMsk:
