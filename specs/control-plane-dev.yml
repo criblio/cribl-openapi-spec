@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.20.0-alpha.1788174389618-65a2ae15
+  version: 4.20.0-alpha.1788236385227-c5ef5ef0
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -17583,15 +17583,9 @@ components:
             unauthorized access is permitted.
           items:
             type: object
+            required:
+              - token
             properties:
-              authType:
-                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensItems"
-                description: Select Manual to enter an auth token directly, or select Secret to
-                  use a text secret to authenticate
-              tokenSecret:
-                type: string
-                title: Token secret (text secret)
-                description: Select or create a stored text secret
               token:
                 type: string
                 title: Token
@@ -22410,37 +22404,6 @@ components:
           description: Fields to add to events from this input
           items:
             $ref: "#/components/schemas/MetadataConfInputCollection"
-        authTokensExt:
-          type: array
-          title: Auth tokens
-          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
-          items:
-            type: object
-            required:
-              - token
-            properties:
-              authType:
-                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensItems"
-                description: Select Manual to enter an auth token directly, or select Secret to
-                  use a text secret to authenticate
-              tokenSecret:
-                type: string
-                title: Token secret (text secret)
-                description: Select or create a stored text secret
-              token:
-                type: string
-                title: Token
-                description: "Shared secret to be provided by any client (Authorization: <token>)"
-              description:
-                type: string
-                title: Description
-                description: Description
-              metadata:
-                type: array
-                title: Fields
-                description: Fields to add to events referencing this token
-                items:
-                  $ref: "#/components/schemas/MetadataConfInputCollection"
         description:
           type: string
           title: Description
@@ -26931,6 +26894,7 @@ components:
               type: array
               title: SNMP v3 users
               description: User credentials for receiving v3 traps
+              minItems: 1
               items:
                 type: object
                 required:
@@ -26962,23 +26926,10 @@ components:
                     title: Authentication protocol
                     description: Authentication protocol
                     x-speakeasy-unknown-values: allow
-                  authKeyType:
-                    enum:
-                      - manual
-                      - secret
-                    type: string
-                    title: V3 authentication key type
-                    description: Select Manual to enter the key directly, or Secret to use a stored
-                      text secret
-                    x-speakeasy-unknown-values: allow
                   authKey:
                     type: string
                     title: V3 authentication key
                     description: V3 authentication key
-                  authKeySecret:
-                    type: string
-                    title: V3 authentication key (text secret)
-                    description: Select or create a stored text secret
                   privProtocol:
                     enum:
                       - none
@@ -26996,71 +26947,10 @@ components:
                     title: Privacy protocol
                     description: Privacy protocol
                     x-speakeasy-unknown-values: allow
-                  privKeyType:
-                    enum:
-                      - manual
-                      - secret
-                    type: string
-                    title: V3 privacy key type
-                    description: Select Manual to enter the key directly, or Secret to use a stored
-                      text secret
-                    x-speakeasy-unknown-values: allow
                   privKey:
                     type: string
                     title: V3 privacy key
                     description: V3 privacy key
-                  privKeySecret:
-                    type: string
-                    title: V3 privacy key (text secret)
-                    description: Select or create a stored text secret
-        v3UsersSecrets:
-          type: array
-          title: Secret-backed v3 users (internal)
-          description: Persisted secret-backed v3 user rows — split from v3Users for
-            downgrade safety
-          items:
-            type: object
-            required:
-              - name
-              - authProtocol
-            properties:
-              name:
-                type: string
-              authProtocol:
-                type: string
-              authKeyType:
-                $ref: "#/components/schemas/AuthKeyTypeOptionsV3UsersSecretsItems"
-              authKey:
-                type: string
-              authKeySecret:
-                type: string
-                title: V3 authentication key (text secret)
-                description: Select or create a stored text secret
-              privProtocol:
-                type: string
-                enum:
-                  - none
-                description: Discriminator value.
-                x-speakeasy-unknown-values: allow
-              privKeyType:
-                $ref: "#/components/schemas/AuthKeyTypeOptionsV3UsersSecretsItems"
-              privKey:
-                type: string
-              privKeySecret:
-                type: string
-                title: V3 privacy key (text secret)
-                description: Select or create a stored text secret
-            anyOf:
-              - properties:
-                  authProtocol:
-                    enum:
-                      - none
-                    description: Discriminator value.
-                    x-speakeasy-unknown-values: allow
-              - required:
-                  - authKeyType
-              - required:
-                  - authKey
         maxBufferSize:
           type: number
           title: Buffer size limit (events)
@@ -28254,6 +28144,20 @@ components:
             load on the filesystems, but possibly delaying detection of new
             data. This option is optimized for search paths where files exist in
             the leaf directories.
+        enableDiscoveryThrottle:
+          type: boolean
+          title: Enable discovery Throttling
+          description: When enabled, discovery will throttle CPU usage to the configured
+            target percentage.
+        discoveryThrottleCpuPercent:
+          type: number
+          minimum: 1
+          maximum: 99
+          title: Discovery throttle CPU target (%)
+          description: Target CPU utilization percentage during file discovery. Discovery
+            alternates between work and yield periods within a 200ms cycle. For
+            example, 25% processes entries for 50ms then yields for 150ms. Lower
+            values reduce CPU usage at the cost of longer discovery times.
         includeUnidentifiableBinary:
           type: boolean
           title: Enable binary files
@@ -30332,69 +30236,7 @@ components:
           title: Auth tokens
           description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
           items:
-            type: object
-            anyOf:
-              - required:
-                  - token
-              - required:
-                  - tokenSecret
-            properties:
-              authType:
-                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensItems"
-                description: Select Manual to enter an auth token directly, or select Secret to
-                  use a text secret to authenticate
-              tokenSecret:
-                type: string
-                title: Token secret (text secret)
-                description: Select or create a stored text secret
-              token:
-                type: string
-                title: Token
-                description: "Shared secret to be provided by any client (Authorization: <token>)"
-              description:
-                type: string
-                title: Description
-                description: Description
-              metadata:
-                type: array
-                title: Fields
-                description: Fields to add to events referencing this token
-                items:
-                  $ref: "#/components/schemas/MetadataConfInputCollection"
-        authTokensSecrets:
-          type: array
-          title: Secret auth tokens (internal)
-          description: Persisted secret-backed token rows — split from authTokensExt for
-            downgrade safety.
-          items:
-            type: object
-            anyOf:
-              - required:
-                  - token
-              - required:
-                  - tokenSecret
-            properties:
-              authType:
-                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensSecretsItems"
-                description: Select Secret to use a text secret to authenticate
-              tokenSecret:
-                type: string
-                title: Token secret (text secret)
-                description: Select or create a stored text secret
-              token:
-                type: string
-                title: Token
-                description: "Shared secret to be provided by any client (Authorization: <token>)"
-              description:
-                type: string
-                title: Description
-                description: Description
-              metadata:
-                type: array
-                title: Fields
-                description: Fields to add to events referencing this token
-                items:
-                  $ref: "#/components/schemas/MetadataConfInputCollection"
+            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
         description:
           type: string
           title: Description
@@ -31824,11 +31666,8 @@ components:
           description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
           items:
             type: object
-            anyOf:
-              - required:
-                  - token
-              - required:
-                  - tokenSecret
+            required:
+              - token
             properties:
               authType:
                 $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensItems"
@@ -31846,6 +31685,10 @@ components:
                 type: boolean
                 title: Enable token
                 description: Enable token
+              description:
+                type: string
+                title: Description
+                description: Description
               allowedIndexesAtToken:
                 type: array
                 title: Allowed indexes
@@ -31856,10 +31699,6 @@ components:
                 items:
                   type: string
                   minLength: 1
-              description:
-                type: string
-                title: Description
-                description: Description
               metadata:
                 type: array
                 title: Fields
@@ -35723,6 +35562,243 @@ components:
             prefixed ID (group-scoped). Variable value overrides
             'accessControlAllowHeaders' at runtime.
       title: InputBeyondtrustHec
+    InputHashicorpHcpVaultDedicated:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - hecAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - hashicorp_hcp_vault_dedicated
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputCollectionOriginDataSourceDiscoveryWithDestinationArnConstraint"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokenConfInputCloudflareHec"
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set to 0 for unlimited. Caution: Increasing the limit above the default value, or setting it to unlimited, may degrade performance and reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        enableProxyHeader:
+          type: boolean
+          title: Show originating IP
+          description: Extract the client IP and port from PROXY protocol v1/v2. When
+            enabled, the X-Forwarded-For header is ignored. Disable to use the
+            X-Forwarded-For header for client IP extraction.
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        captureHeadersWarning:
+          type: string
+          readOnly: true
+          const: ""
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        hecAPI:
+          type: string
+          title: HEC endpoint
+          description: Absolute path on which to listen for HashiCorp HCP Vault Dedicated
+            HTTP Event Collector API requests
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to every event. May be overridden by fields added at
+            the token or request level.
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        allowedIndexes:
+          type: array
+          title: Allowed indexes
+          description: List values allowed in HEC event index field. Leave blank to skip
+            validation. Supports wildcards. The values here can expand index
+            validation at the token level.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowOrigin:
+          title: CORS allowed origins
+          type: array
+          description: HTTP origins to which @{product} should send CORS (cross-origin
+            resource sharing) Access-Control-Allow-* headers. Supports
+            wildcards.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowHeaders:
+          title: CORS allowed headers
+          type: array
+          description: HTTP headers that @{product} will send to allowed origins as
+            "Access-Control-Allow-Headers" in a CORS preflight response. Use "*"
+            to allow all headers.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        emitTokenMetrics:
+          type: boolean
+          title: Emit per-token request metrics
+          description: Emit per-token (<prefix>.http.perToken) and summary
+            (<prefix>.http.summary) request metrics
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_hecAPI:
+          type: string
+          description: Binds 'hecAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'hecAPI' at runtime.
+        __template_allowedIndexes:
+          type: string
+          description: Binds 'allowedIndexes' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'allowedIndexes' at
+            runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
+      title: InputHashicorpHcpVaultDedicated
     InputMimecastHec:
       type: object
       required:
@@ -36044,6 +36120,7 @@ components:
         - $ref: "#/components/schemas/InputVectraAiHec"
         - $ref: "#/components/schemas/InputF5BigIp"
         - $ref: "#/components/schemas/InputBeyondtrustHec"
+        - $ref: "#/components/schemas/InputHashicorpHcpVaultDedicated"
         - $ref: "#/components/schemas/InputMimecastHec"
       discriminator:
         propertyName: type
@@ -36130,6 +36207,7 @@ components:
           vectra_ai_hec: "#/components/schemas/InputVectraAiHec"
           f5_big_ip: "#/components/schemas/InputF5BigIp"
           beyondtrust_hec: "#/components/schemas/InputBeyondtrustHec"
+          hashicorp_hcp_vault_dedicated: "#/components/schemas/InputHashicorpHcpVaultDedicated"
           mimecast_hec: "#/components/schemas/InputMimecastHec"
       title: Input
     CountedInputSplunkHec:
@@ -62615,6 +62693,12 @@ components:
     RouteConf:
       type: object
       properties:
+        autoParse:
+          type: boolean
+          description: If <code>true</code>, detect each matched event's datatype and
+            extract fields from <code>_raw</code> before the Pipeline processes
+            the event, so Functions and Filters can reference the extracted
+            fields. Otherwise, <code>false</code> (the default).
         clones:
           type: array
           items:
@@ -67708,6 +67792,11 @@ components:
       enum:
         - msk
       description: Connector type identifier.
+    TypeOptionsSplunk:
+      type: string
+      enum:
+        - splunk
+      description: Connector type identifier.
     AuthenticationMethodOptionsAuthTokensItems:
       title: Authentication method
       type: string
@@ -67717,11 +67806,6 @@ components:
       description: Select Manual to enter an auth token directly, or select Secret to
         use a text secret to authenticate
       x-speakeasy-unknown-values: allow
-    TypeOptionsSplunk:
-      type: string
-      enum:
-        - splunk
-      description: Connector type identifier.
     AuthenticationMethodOptions:
       title: Authentication method
       type: string
@@ -68162,12 +68246,6 @@ components:
       enum:
         - s3
       description: Connector type identifier.
-    AuthKeyTypeOptionsV3UsersSecretsItems:
-      type: string
-      enum:
-        - manual
-        - secret
-      x-speakeasy-unknown-values: allow
     TypeOptionsSnmp:
       type: string
       enum:
@@ -68193,13 +68271,6 @@ components:
         - debug
         - silly
       description: Collector runtime log level
-      x-speakeasy-unknown-values: allow
-    AuthenticationMethodOptionsAuthTokensSecretsItems:
-      title: Authentication method
-      type: string
-      enum:
-        - secret
-      description: Select Secret to use a text secret to authenticate
       x-speakeasy-unknown-values: allow
     TypeOptionsNetflow:
       type: string
@@ -68239,6 +68310,13 @@ components:
           type: string
           title: Value
           description: OAuth header value
+    AuthenticationMethodOptionsAuthTokensItemsSecret:
+      title: Authentication method
+      type: string
+      enum:
+        - secret
+      description: Select Secret to use a text secret to authenticate
+      x-speakeasy-unknown-values: allow
     MetadataConfAddHecTokenRequest:
       type: object
       properties:
@@ -69108,6 +69186,12 @@ components:
     RouteConfInput:
       type: object
       properties:
+        autoParse:
+          type: boolean
+          description: If <code>true</code>, detect each matched event's datatype and
+            extract fields from <code>_raw</code> before the Pipeline processes
+            the event, so Functions and Filters can reference the extracted
+            fields. Otherwise, <code>false</code> (the default).
         clones:
           type: array
           items:
@@ -70264,14 +70348,9 @@ components:
           description: Generate full GPU metrics
     AuthTokenConfInputCloudflareHec:
       type: object
-      anyOf:
-        - required:
-            - token
-        - required:
-            - tokenSecret
       properties:
         authType:
-          $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensSecretsItems"
+          $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensItemsSecret"
           description: Select Secret to use a text secret to authenticate
         tokenSecret:
           type: string
@@ -70285,6 +70364,10 @@ components:
           type: boolean
           title: Enable token
           description: Enable token
+        description:
+          type: string
+          title: Description
+          description: Description
         allowedIndexesAtToken:
           type: array
           title: Allowed indexes
@@ -70295,10 +70378,6 @@ components:
           items:
             type: string
             minLength: 1
-        description:
-          type: string
-          title: Description
-          description: Description
         metadata:
           type: array
           title: Fields
@@ -71785,6 +71864,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Grafana Source.
+    InputCreateExamplesHashicorpHcpVaultDedicated:
+      summary: HashiCorp HCP Vault Dedicated
+      value:
+        id: hashicorp-hcp-vault-dedicated-source
+        type: hashicorp_hcp_vault_dedicated
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a HashiCorp HCP Vault Dedicated Source.
     InputCreateExamplesGooglePubsub:
       summary: Google Pub/Sub
       value:
@@ -72808,6 +72898,20 @@ components:
       description: Example request body for updating a Grafana Source.<br/><br/>The
         request body must include a complete representation of the Source that
         you want to update. This endpoint does not support partial updates.
+    UpdateInputExamplesHashicorpHcpVaultDedicated:
+      summary: HashiCorp HCP Vault Dedicated
+      value:
+        id: hashicorp-hcp-vault-dedicated-source
+        type: hashicorp_hcp_vault_dedicated
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a HashiCorp HCP Vault Dedicated
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
     UpdateInputExamplesGooglePubsub:
       summary: Google Pub/Sub
       value:
@@ -81766,6 +81870,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesFirehose"
               InputCreateExamplesGrafana:
                 $ref: "#/components/examples/InputCreateExamplesGrafana"
+              InputCreateExamplesHashicorpHcpVaultDedicated:
+                $ref: "#/components/examples/InputCreateExamplesHashicorpHcpVaultDedicated"
               InputCreateExamplesGooglePubsub:
                 $ref: "#/components/examples/InputCreateExamplesGooglePubsub"
               InputCreateExamplesHttp:
@@ -82079,6 +82185,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesFirehose"
               UpdateInputExamplesGrafana:
                 $ref: "#/components/examples/UpdateInputExamplesGrafana"
+              UpdateInputExamplesHashicorpHcpVaultDedicated:
+                $ref: "#/components/examples/UpdateInputExamplesHashicorpHcpVaultDedicated"
               UpdateInputExamplesGooglePubsub:
                 $ref: "#/components/examples/UpdateInputExamplesGooglePubsub"
               UpdateInputExamplesHttp:
@@ -86802,6 +86910,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesFirehose"
               InputCreateExamplesGrafana:
                 $ref: "#/components/examples/InputCreateExamplesGrafana"
+              InputCreateExamplesHashicorpHcpVaultDedicated:
+                $ref: "#/components/examples/InputCreateExamplesHashicorpHcpVaultDedicated"
               InputCreateExamplesGooglePubsub:
                 $ref: "#/components/examples/InputCreateExamplesGooglePubsub"
               InputCreateExamplesHttp:
@@ -87101,6 +87211,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesFirehose"
               UpdateInputExamplesGrafana:
                 $ref: "#/components/examples/UpdateInputExamplesGrafana"
+              UpdateInputExamplesHashicorpHcpVaultDedicated:
+                $ref: "#/components/examples/UpdateInputExamplesHashicorpHcpVaultDedicated"
               UpdateInputExamplesGooglePubsub:
                 $ref: "#/components/examples/UpdateInputExamplesGooglePubsub"
               UpdateInputExamplesHttp:
