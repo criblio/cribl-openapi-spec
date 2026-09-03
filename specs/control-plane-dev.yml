@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.20.0-alpha.1788410930330-6e44c01b
+  version: 4.20.0-alpha.1788474312305-7e83552a
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -17517,15 +17517,7 @@ components:
             oneOf:
               - required:
                   - token
-              - required:
-                  - authType
-                  - tokenSecret
-                properties:
-                  authType:
-                    enum:
-                      - secret
-                    description: Discriminator value.
-                    x-speakeasy-unknown-values: allow
+              - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
             properties:
               authType:
                 $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
@@ -23393,9 +23385,19 @@ components:
           title: Auth tokens
           items:
             type: object
-            required:
-              - token
+            oneOf:
+              - required:
+                  - token
+              - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
             properties:
+              authType:
+                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                description: Select Manual to enter an auth token directly, or select Secret to
+                  use a text secret to authenticate
+              tokenSecret:
+                type: string
+                title: Token secret (text secret)
+                description: Select or create a stored text secret
               token:
                 type: string
                 title: Token
@@ -54477,292 +54479,6 @@ components:
       required:
         - type
       title: OutputCriblSearchEngine
-    OutputCriblMetrics:
-      type: object
-      properties:
-        id:
-          type: string
-          title: Output ID
-          description: Unique ID for this output
-        type:
-          type: string
-          enum:
-            - cribl_metrics
-          description: Connector type identifier.
-        pipeline:
-          type: string
-          title: Pipeline
-          description: Pipeline to process data before sending out to this output
-        systemFields:
-          type: array
-          title: System fields
-          description: Fields to automatically add to events, such as cribl_pipe. Supports
-            wildcards.
-          items:
-            type: string
-        environment:
-          type: string
-          title: Environment
-          description: Optionally, enable this config only on a specified Git branch. If
-            empty, will be enabled everywhere.
-        streamtags:
-          type: array
-          title: Tags
-          description: Metadata tags used for categorization and filtering.
-          items:
-            type: string
-        loadBalanced:
-          type: boolean
-          title: Load balancing
-          description: For optimal performance, enable load balancing even if you have one
-            hostname, as it can expand to multiple IPs. If this setting is
-            disabled, consider enabling round-robin DNS.
-        tls:
-          $ref: "#/components/schemas/TlsSettingsClientSideTypeCaPathCertPath"
-          description: TLS settings (client side)
-        tokenTTLMinutes:
-          type: number
-          title: Auth Token TTL minutes
-          minimum: 1
-          maximum: 60
-          description: The number of minutes before the internally generated
-            authentication token expires. Valid values are between 1 and 60.
-        excludeFields:
-          type: array
-          title: Exclude fields
-          description: "Fields to exclude from the event. By default, all internal fields except `__output` are sent. Example: `cribl_pipe`, `c*`. Wildcards supported."
-          items:
-            type: string
-        compression:
-          $ref: "#/components/schemas/CompressionOptionsGzipNone"
-          description: Codec to use to compress the data before sending
-        concurrency:
-          type: number
-          title: Request concurrency
-          description: Maximum number of ongoing requests before blocking
-          minimum: 1
-          maximum: 32
-        maxPayloadSizeKB:
-          type: number
-          title: Body size limit (KB)
-          description: Maximum size, in KB, of the request body
-          minimum: 1024
-          maximum: 10240
-        maxPayloadEvents:
-          type: number
-          title: Events-per-request limit
-          description: Maximum number of events to include in the request body. Default is
-            0 (unlimited).
-          minimum: 0
-        rejectUnauthorized:
-          type: boolean
-          title: Validate server certs
-          description: "Always enabled for the Metric Store: server certificates must be authorized by a CA in the CA certificate path or by another trusted CA, such as the system's. Not configurable."
-        timeoutSec:
-          type: number
-          minimum: 1
-          maximum: 9007199254740991
-          title: Request timeout
-          description: Amount of time, in seconds, to wait for a request to complete
-            before canceling it
-        maxConnectionReuseSec:
-          type: number
-          minimum: 0
-          title: Max connection reuse (seconds)
-          description: How long, in seconds, to reuse a keep-alive connection after its
-            first use before forcing it closed. Set to 0 to disable the
-            time-based close and reuse connections for as long as the
-            destination server permits.
-        flushPeriodSec:
-          type: number
-          title: Flush period (sec)
-          description: Maximum time between requests. Small values could cause the payload
-            size to be smaller than the configured Body size limit.
-        extraHttpHeaders:
-          type: array
-          title: Extra HTTP headers
-          description: Headers to add to all events
-          items:
-            $ref: "#/components/schemas/ExtraHttpHeaderConfInputElastic"
-        failedRequestLoggingMode:
-          $ref: "#/components/schemas/FailedRequestLoggingModeOptions"
-          description: Data to log when a request fails. All headers are redacted by
-            default, unless listed as safe headers below.
-        safeHeaders:
-          type: array
-          title: Safe headers
-          description: List of headers that are safe to log in plain text
-          items:
-            type: string
-        throttleRatePerSec:
-          type: string
-          title: Throttling
-          description: "Rate (in bytes per second) to throttle while writing to an output. Accepts values with multiple-byte units, such as KB, MB, and GB. (Example: 42 MB) Default value of 0 specifies no throttling."
-          pattern: ^[\d.]+(\s[KMGTPEZYkmgtpezy][Bb])?$
-        responseRetrySettings:
-          type: array
-          title: Settings for failed HTTP requests
-          description: Automatically retry after unsuccessful response status codes, such
-            as 429 (Too Many Requests) or 503 (Service Unavailable)
-          minItems: 0
-          items:
-            $ref: "#/components/schemas/ResponseRetrySettingConfOutputWebhook"
-        timeoutRetrySettings:
-          $ref: "#/components/schemas/TimeoutRetrySettingsType"
-        responseHonorRetryAfterHeader:
-          type: boolean
-          title: Honor Retry-After header
-          description: Honor any Retry-After header that specifies a delay (in seconds) no
-            longer than 180 seconds after the retry request. @{product} limits
-            the delay to 180 seconds, even if the Retry-After header specifies a
-            longer delay. When enabled, takes precedence over user-configured
-            retry options. When disabled, all Retry-After headers are ignored.
-        authTokens:
-          type: array
-          title: Connected environment tokens
-          description: Shared secrets to be used by connected environments to authorize
-            connections. These tokens should also be installed in the Cribl HTTP
-            Source of the target Cribl Search workspace.
-          items:
-            $ref: "#/components/schemas/AuthTokenConfOutputCriblHttp"
-        onBackpressure:
-          $ref: "#/components/schemas/BackpressureBehaviorOptions"
-          description: How to handle events when all receivers are exerting backpressure
-        useRoundRobinDns:
-          type: boolean
-          title: Round-robin DNS
-          description: Enable round-robin DNS lookup. When a DNS server returns multiple
-            addresses, @{product} will cycle through them in the order returned.
-            For optimal performance, consider enabling this setting for non-load
-            balanced destinations.
-        description:
-          type: string
-          title: Description
-          description: Optional description for this configuration.
-        url:
-          type: string
-          title: Cribl endpoint
-          description: URL of a Cribl Worker to send events to, such as
-            http://localhost:10200
-          pattern: ^https?://.*
-        excludeSelf:
-          type: boolean
-          title: Exclude current host IPs
-          description: Exclude all IPs of the current host from the list of any resolved
-            hostnames
-        urls:
-          type: array
-          title: Cribl Worker endpoints
-          description: Cribl Worker endpoints
-          minItems: 1
-          items:
-            $ref: "#/components/schemas/UrlConfOutputCriblHttp"
-        dnsResolvePeriodSec:
-          type: number
-          minimum: 0
-          maximum: 86400
-          title: DNS resolution period (seconds)
-          description: The interval in which to re-resolve any hostnames and pick up
-            destinations from A records
-        loadBalanceStatsPeriodSec:
-          type: number
-          minimum: 10
-          title: Load balance stats period (seconds)
-          description: How far back in time to keep traffic stats for load balancing
-            purposes
-        pqStrictOrdering:
-          title: Strict ordering
-          description: Use FIFO (first in, first out) processing. Disable to forward new
-            events to receivers before queue is flushed.
-          type: boolean
-        pqRatePerSec:
-          type: number
-          title: Drain rate limit (EPS)
-          description: Throttling rate (in events per second) to impose while writing to
-            Destinations from PQ. Defaults to 0, which disables throttling.
-          minimum: 0
-        pqMode:
-          $ref: "#/components/schemas/ModeOptions"
-          description: In Error mode, PQ writes events to the filesystem if the
-            Destination is unavailable. In Backpressure mode, PQ writes events
-            to the filesystem when it detects backpressure from the Destination.
-            In Always On mode, PQ always writes events to the filesystem.
-        pqMaxBufferSize:
-          type: number
-          title: Buffer size limit (events - deprecated)
-          description: Maximum number of events to hold in memory before writing the
-            events to disk. Deprecated and only supported in workers < v4.17.0.
-            Use pqMaxBufferSizeBytes instead.
-          minimum: 42
-          maximum: 1000
-        pqMaxBackpressureSec:
-          type: number
-          title: Backpressure duration limit
-          description: How long (in seconds) to wait for backpressure to resolve before
-            engaging the queue
-          minimum: 0
-        pqMaxFileSize:
-          type: string
-          title: File size limit
-          description: The maximum size to store in each queue file before closing and
-            optionally compressing (KB, MB, etc.)
-          pattern: ^\d+\s*(?:\w{2})?$
-        pqMaxSize:
-          type: string
-          title: Queue size limit
-          description: The maximum disk space that the queue can consume (as an average
-            per Worker Process) before queueing stops. Enter a numeral with
-            units of KB, MB, etc.
-          pattern: ^\d+\s*(?:\w{2})?$
-        pqPath:
-          type: string
-          title: Queue file path
-          description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/<output-id>."
-        pqCompress:
-          $ref: "#/components/schemas/CompressionOptionsPq"
-          description: Codec to use to compress the persisted data
-        pqOnBackpressure:
-          $ref: "#/components/schemas/QueueFullBehaviorOptions"
-          description: How to handle events when the queue is exerting backpressure (full
-            capacity or low disk). 'Block' is the same behavior as non-PQ
-            blocking. 'Drop new data' throws away incoming data, while leaving
-            the contents of the PQ unchanged.
-        pqMaxBufferSizeBytes:
-          type: string
-          title: Buffer size limit (bytes)
-          description: The maximum size to hold in memory before writing events to disk.
-            Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
-            and the maximum value is 10MB.
-          pattern: ^\d+\s*(?:\w{2})?$
-        pqControls:
-          type: object
-          title: ""
-          description: Persistent queue controls.
-        __template_streamtags:
-          type: string
-          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
-            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
-            (group-scoped). Variable value overrides 'streamtags' at runtime.
-        __template_failedRequestLoggingMode:
-          type: string
-          description: Binds 'failedRequestLoggingMode' to a variable for dynamic value
-            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
-            prefixed ID (group-scoped). Variable value overrides
-            'failedRequestLoggingMode' at runtime.
-        __template_onBackpressure:
-          type: string
-          description: Binds 'onBackpressure' to a variable for dynamic value resolution.
-            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
-            (group-scoped). Variable value overrides 'onBackpressure' at
-            runtime.
-        __template_url:
-          type: string
-          description: Binds 'url' to a variable for dynamic value resolution. Set to
-            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
-            (group-scoped). Variable value overrides 'url' at runtime.
-      required:
-        - type
-      title: OutputCriblMetrics
     OutputHumioHec:
       type: object
       required:
@@ -58524,6 +58240,359 @@ components:
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
       title: OutputDynatraceOtlp
+    OutputTraversalOtlp:
+      type: object
+      required:
+        - type
+        - endpoint
+      properties:
+        id:
+          type: string
+          title: Output ID
+          description: Unique ID for this output
+        type:
+          type: string
+          enum:
+            - traversal_otlp
+          description: Connector type identifier.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data before sending out to this output
+        systemFields:
+          type: array
+          title: System fields
+          description: Fields to automatically add to events, such as cribl_pipe. Supports
+            wildcards.
+          items:
+            type: string
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        authType:
+          type: string
+          title: Authentication type
+          enum:
+            - none
+            - credentialsSecret
+            - textSecret
+            - oauthSecret
+          x-speakeasy-enum-descriptions:
+            - None
+            - Basic (credentials secret)
+            - Token (text secret)
+            - OAuth (text secret)
+          description: Authentication type
+          x-speakeasy-unknown-values: allow
+        endpoint:
+          type: string
+          title: Endpoint
+          description: The endpoint where OTel log events will be sent. Enter any valid
+            URL or an IP address (IPv4 or IPv6; enclose IPv6 addresses in square
+            brackets).
+        protocol:
+          $ref: "#/components/schemas/ProtocolOptions"
+          description: Select a transport option for OpenTelemetry
+        preserveNativeAnyValue:
+          type: boolean
+          title: Preserve native AnyValue wrappers
+          description: 'Values already in OTLP AnyValue form (e.g. {string_value: "..."})
+            are serialized directly instead of being wrapped as key-value maps'
+        compress:
+          $ref: "#/components/schemas/CompressionOptionsDeflateGzip"
+          description: Type of compression to apply to messages sent to the OpenTelemetry
+            endpoint
+        httpCompress:
+          $ref: "#/components/schemas/CompressionOptionsMessages"
+          description: Type of compression to apply to messages sent to the OpenTelemetry
+            endpoint
+        httpLogsEndpointOverride:
+          type: string
+          title: Logs endpoint override
+          description: If you want to send logs to the default `{endpoint}/v1/logs`
+            endpoint, leave this field empty; otherwise, specify the desired
+            endpoint
+        metadata:
+          type: array
+          title: Metadata
+          description: List of key-value pairs to send with each gRPC request. Value
+            supports JavaScript expressions that are evaluated just once, when
+            the destination gets started. To pass credentials as metadata, use
+            'C.Secret'.
+          minItems: 0
+          items:
+            $ref: "#/components/schemas/KeyValueMetadataConfOutputFilesystem"
+        dynamicHeadersEnabled:
+          type: boolean
+          title: Use dynamic metadata
+          description: Batch event data upon dynamic metadata (whether presented or not)
+        dynamicHeadersField:
+          type: string
+          title: Dynamic metadata field
+          description: When presented, this field which contains metadata, will be
+            injected into the Destination metadata and used to batch events.
+        concurrency:
+          type: number
+          title: Request concurrency
+          description: Maximum number of ongoing requests before blocking
+          minimum: 1
+          maximum: 32
+        maxPayloadSizeKB:
+          type: number
+          title: Body size limit (KB)
+          description: Maximum size, in KB, of the request body
+          minimum: 1024
+          maximum: 10240
+        timeoutSec:
+          type: number
+          minimum: 1
+          maximum: 9007199254740991
+          title: Request timeout
+          description: Amount of time, in seconds, to wait for a request to complete
+            before canceling it
+        maxConnectionReuseSec:
+          type: number
+          minimum: 0
+          title: Max connection reuse (seconds)
+          description: How long, in seconds, to reuse a keep-alive connection after its
+            first use before forcing it closed. Set to 0 to disable the
+            time-based close and reuse connections for as long as the
+            destination server permits.
+        flushPeriodSec:
+          type: number
+          title: Flush period (sec)
+          description: Maximum time between requests. Small values could cause the payload
+            size to be smaller than the configured Body size limit.
+        failedRequestLoggingMode:
+          $ref: "#/components/schemas/FailedRequestLoggingModeOptions"
+          description: Data to log when a request fails. All headers are redacted by
+            default, unless listed as safe headers below.
+        connectionTimeout:
+          type: number
+          title: Connection timeout
+          description: Amount of time (milliseconds) to wait for the connection to
+            establish before retrying
+        keepAliveTime:
+          type: number
+          title: Keep alive time (seconds)
+          description: How often the sender should ping the peer to keep the connection open
+          minimum: 1
+        keepAlive:
+          type: boolean
+          title: Keep alive
+          description: Disable to close the connection immediately after sending the
+            outgoing request
+        onBackpressure:
+          $ref: "#/components/schemas/BackpressureBehaviorOptions"
+          description: How to handle events when all receivers are exerting backpressure
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        credentialsSecret:
+          type: string
+          title: Credentials secret
+          description: Select or create a secret that references your credentials
+        textSecret:
+          type: string
+          title: Token (text secret)
+          description: Select or create a stored text secret
+        loginUrl:
+          type: string
+          title: Login URL
+          description: URL for OAuth
+          pattern: ^https?://.*
+        secretParamName:
+          type: string
+          title: OAuth Secret parameter name
+          description: Secret parameter name to pass in request body
+        oauthTextSecret:
+          type: string
+          title: OAuth secret (text secret)
+          description: Select or create a stored text secret for the OAuth secret
+            parameter value to pass in request body
+        tokenAttributeName:
+          type: string
+          title: Token attribute name
+          description: Name of the auth token attribute in the OAuth response. Can be
+            top-level (e.g., 'token'); or nested, using a period (e.g.,
+            'data.token').
+        authHeaderExpr:
+          type: string
+          title: Authorize expression
+          description: "JavaScript expression to compute the Authorization header value to pass in requests. The value `${token}` is used to reference the token obtained from authentication, e.g.: `Bearer ${token}`."
+        tokenTimeoutSecs:
+          type: number
+          title: Refresh interval (secs.)
+          description: How often the OAuth token should be refreshed.
+          minimum: 1
+          maximum: 300000
+        oauthParams:
+          type: array
+          title: OAuth parameters
+          description: Additional parameters to send in the OAuth login request.
+            @{product} will combine the secret with these parameters, and will
+            send the URL-encoded result in a POST request to the endpoint
+            specified in the 'Login URL'. We'll automatically add the
+            content-type header 'application/x-www-form-urlencoded' when sending
+            this request.
+          items:
+            $ref: "#/components/schemas/OauthParamConfInputServicenowTable"
+        oauthHeaders:
+          type: array
+          title: OAuth headers
+          description: Additional headers to send in the OAuth login request. @{product}
+            will automatically add the content-type header
+            'application/x-www-form-urlencoded' when sending this request.
+          items:
+            $ref: "#/components/schemas/OauthHeaderConfInputServicenowTable"
+        rejectUnauthorized:
+          type: boolean
+          title: Validate server certs
+          description: >-
+            Reject certificates not authorized by a CA in the CA certificate
+            path or by another trusted CA (such as the system's). 
+                    Enabled by default. When this setting is also present in TLS Settings (Client Side), 
+                    that value will take precedence.
+        useRoundRobinDns:
+          type: boolean
+          title: Round-robin DNS
+          description: Enable round-robin DNS lookup. When a DNS server returns multiple
+            addresses, @{product} will cycle through them in the order returned.
+            For optimal performance, consider enabling this setting for non-load
+            balanced destinations.
+        extraHttpHeaders:
+          type: array
+          title: Extra HTTP headers
+          description: Headers to add to all events
+          items:
+            $ref: "#/components/schemas/ExtraHttpHeaderConfInputElastic"
+        safeHeaders:
+          type: array
+          title: Safe headers
+          description: List of headers that are safe to log in plain text
+          items:
+            type: string
+        responseRetrySettings:
+          type: array
+          title: Settings for failed HTTP requests
+          description: Automatically retry after unsuccessful response status codes, such
+            as 429 (Too Many Requests) or 503 (Service Unavailable)
+          minItems: 0
+          items:
+            $ref: "#/components/schemas/ResponseRetrySettingConfOutputWebhook"
+        timeoutRetrySettings:
+          $ref: "#/components/schemas/TimeoutRetrySettingsType"
+        responseHonorRetryAfterHeader:
+          type: boolean
+          title: Honor Retry-After header
+          description: Honor any Retry-After header that specifies a delay (in seconds) no
+            longer than 180 seconds after the retry request. @{product} limits
+            the delay to 180 seconds, even if the Retry-After header specifies a
+            longer delay. When enabled, takes precedence over user-configured
+            retry options. When disabled, all Retry-After headers are ignored.
+        tls:
+          $ref: "#/components/schemas/TlsSettingsClientSideTypeExtended"
+          description: TLS settings (client side)
+        pqStrictOrdering:
+          title: Strict ordering
+          description: Use FIFO (first in, first out) processing. Disable to forward new
+            events to receivers before queue is flushed.
+          type: boolean
+        pqRatePerSec:
+          type: number
+          title: Drain rate limit (EPS)
+          description: Throttling rate (in events per second) to impose while writing to
+            Destinations from PQ. Defaults to 0, which disables throttling.
+          minimum: 0
+        pqMode:
+          $ref: "#/components/schemas/ModeOptions"
+          description: In Error mode, PQ writes events to the filesystem if the
+            Destination is unavailable. In Backpressure mode, PQ writes events
+            to the filesystem when it detects backpressure from the Destination.
+            In Always On mode, PQ always writes events to the filesystem.
+        pqMaxBufferSize:
+          type: number
+          title: Buffer size limit (events - deprecated)
+          description: Maximum number of events to hold in memory before writing the
+            events to disk. Deprecated and only supported in workers < v4.17.0.
+            Use pqMaxBufferSizeBytes instead.
+          minimum: 42
+          maximum: 1000
+        pqMaxBackpressureSec:
+          type: number
+          title: Backpressure duration limit
+          description: How long (in seconds) to wait for backpressure to resolve before
+            engaging the queue
+          minimum: 0
+        pqMaxFileSize:
+          type: string
+          title: File size limit
+          description: The maximum size to store in each queue file before closing and
+            optionally compressing (KB, MB, etc.)
+          pattern: ^\d+\s*(?:\w{2})?$
+        pqMaxSize:
+          type: string
+          title: Queue size limit
+          description: The maximum disk space that the queue can consume (as an average
+            per Worker Process) before queueing stops. Enter a numeral with
+            units of KB, MB, etc.
+          pattern: ^\d+\s*(?:\w{2})?$
+        pqPath:
+          type: string
+          title: Queue file path
+          description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/<output-id>."
+        pqCompress:
+          $ref: "#/components/schemas/CompressionOptionsPq"
+          description: Codec to use to compress the persisted data
+        pqOnBackpressure:
+          $ref: "#/components/schemas/QueueFullBehaviorOptions"
+          description: How to handle events when the queue is exerting backpressure (full
+            capacity or low disk). 'Block' is the same behavior as non-PQ
+            blocking. 'Drop new data' throws away incoming data, while leaving
+            the contents of the PQ unchanged.
+        pqMaxBufferSizeBytes:
+          type: string
+          title: Buffer size limit (bytes)
+          description: The maximum size to hold in memory before writing events to disk.
+            Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
+            and the maximum value is 10MB.
+          pattern: ^\d+\s*(?:\w{2})?$
+        pqControls:
+          type: object
+          title: ""
+          description: Persistent queue controls.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_failedRequestLoggingMode:
+          type: string
+          description: Binds 'failedRequestLoggingMode' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'failedRequestLoggingMode' at runtime.
+        __template_onBackpressure:
+          type: string
+          description: Binds 'onBackpressure' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'onBackpressure' at
+            runtime.
+        __template_loginUrl:
+          type: string
+          description: Binds 'loginUrl' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'loginUrl' at runtime.
+      title: OutputTraversalOtlp
     OutputSentinelOneAiSiem:
       type: object
       required:
@@ -63659,7 +63728,6 @@ components:
         - $ref: "#/components/schemas/OutputCriblTcp"
         - $ref: "#/components/schemas/OutputCriblHttp"
         - $ref: "#/components/schemas/OutputCriblSearchEngine"
-        - $ref: "#/components/schemas/OutputCriblMetrics"
         - $ref: "#/components/schemas/OutputHumioHec"
         - $ref: "#/components/schemas/OutputCrowdstrikeNextGenSiem"
         - $ref: "#/components/schemas/OutputDlS3"
@@ -63673,6 +63741,7 @@ components:
         - $ref: "#/components/schemas/OutputNetflow"
         - $ref: "#/components/schemas/OutputDynatraceHttp"
         - $ref: "#/components/schemas/OutputDynatraceOtlp"
+        - $ref: "#/components/schemas/OutputTraversalOtlp"
         - $ref: "#/components/schemas/OutputSentinelOneAiSiem"
         - $ref: "#/components/schemas/OutputChronicle"
         - $ref: "#/components/schemas/OutputDatabricks"
@@ -63748,7 +63817,6 @@ components:
           cribl_tcp: "#/components/schemas/OutputCriblTcp"
           cribl_http: "#/components/schemas/OutputCriblHttp"
           cribl_search_engine: "#/components/schemas/OutputCriblSearchEngine"
-          cribl_metrics: "#/components/schemas/OutputCriblMetrics"
           humio_hec: "#/components/schemas/OutputHumioHec"
           crowdstrike_next_gen_siem: "#/components/schemas/OutputCrowdstrikeNextGenSiem"
           dl_s3: "#/components/schemas/OutputDlS3"
@@ -63762,6 +63830,7 @@ components:
           netflow: "#/components/schemas/OutputNetflow"
           dynatrace_http: "#/components/schemas/OutputDynatraceHttp"
           dynatrace_otlp: "#/components/schemas/OutputDynatraceOtlp"
+          traversal_otlp: "#/components/schemas/OutputTraversalOtlp"
           sentinel_one_ai_siem: "#/components/schemas/OutputSentinelOneAiSiem"
           chronicle: "#/components/schemas/OutputChronicle"
           databricks: "#/components/schemas/OutputDatabricks"
@@ -63870,7 +63939,6 @@ components:
         - cribl_http
         - cribl_tcp
         - cribl_search_engine
-        - cribl_metrics
         - google_cloud_logging
         - sns
         - dl_s3
@@ -63896,6 +63964,7 @@ components:
         - snowflake_streaming
         - ibm_cloud_s3
         - databricks_zerobus
+        - traversal_otlp
       title: DestinationType
       x-speakeasy-unknown-values: allow
     PaginatedOutputResponse:
@@ -64080,8 +64149,7 @@ components:
                   disabled:
                     type: boolean
                     title: Disabled
-                    description: If <code>true</code>, disable all items in the group. Otherwise,
-                      <code>false</code>.
+                    description: Disable all items in the group.
             __template_streamtags:
               type: string
               description: Binds 'streamtags' to a variable for dynamic value resolution. Set
@@ -66115,6 +66183,10 @@ components:
     HBCriblInfo:
       type: object
       properties:
+        autoLookupVersions:
+          $ref: "#/components/schemas/LookupVersions"
+          description: Automatically deployed Lookup file names and their deployed
+            versions by context.
         config:
           type: object
           properties:
@@ -67038,10 +67110,7 @@ components:
           description: Brief description of the Pack and its purpose.
         source:
           type: string
-          description: Source of the Pack. Provide a staging source ID from <code>PUT
-            /packs</code>, a direct URL to a <code>.crbl</code> file, or a
-            <code>git+&lt;repo-url&gt;</code> Git repository URL. If omitted, an
-            empty Pack is created.
+          description: "Where to install the Pack from: an uploaded Pack source, a direct URL to a .crbl file, or a Git repository URL. Leave empty to create an empty Pack."
         tags:
           type: object
           description: Categorization tags for the Pack.
@@ -67074,13 +67143,11 @@ components:
               description: List of stream tags for routing and filtering.
         allowCustomFunctions:
           type: boolean
-          description: If <code>true</code> or omitted, allow the Pack to use custom
-            JavaScript functions. If <code>false</code>, reject Packs that use
-            custom JavaScript functions.
+          description: Allow the Pack to use custom JavaScript functions. When disabled,
+            Packs that use custom JavaScript functions are rejected.
         force:
           type: boolean
-          description: If <code>true</code>, overwrite an existing Pack with the same ID.
-            Otherwise, <code>false</code>.
+          description: Overwrite an existing Pack that has the same ID.
       anyOf:
         - required:
             - id
@@ -69280,6 +69347,15 @@ components:
       description: Select Manual to enter an auth token directly, or select Secret to
         use a text secret to authenticate
       x-speakeasy-unknown-values: allow
+    InputHttpAuthTypeSecretConstraint:
+      required:
+        - authType
+      properties:
+        authType:
+          enum:
+            - secret
+          description: Discriminator value.
+          x-speakeasy-unknown-values: allow
     TypeOptionsSplunk:
       type: string
       enum:
@@ -75835,6 +75911,14 @@ components:
         otlpVersion: 1.3.1
         tokenSecret: your-token-secret
       description: Example request body for creating a Dynatrace OTLP Destination.
+    OutputCreateExamplesTraversalOtlp:
+      summary: Traversal
+      value:
+        id: traversal-output
+        type: traversal_otlp
+        endpoint: http://traversal-processor:3000
+        protocol: http
+      description: Example request body for creating a Traversal Destination.
     OutputCreateExamplesGoogleCloudObservability:
       summary: Google Cloud Observability
       value:
@@ -76009,37 +76093,6 @@ components:
         type: cribl_search_engine
         url: https://0.0.0.0:10200
       description: Example request body for creating a Cribl Search Engine Destination.
-    OutputCreateExamplesCriblMetrics:
-      summary: Cribl Metrics
-      value:
-        id: cribl-metrics-output
-        systemFields:
-          - cribl_pipe
-        streamtags: []
-        loadBalanced: false
-        tls:
-          disabled: true
-        tokenTTLMinutes: 60
-        excludeFields:
-          - __kube_*
-          - __metadata
-          - __winEvent
-        compression: gzip
-        concurrency: 5
-        maxPayloadSizeKB: 4096
-        maxPayloadEvents: 0
-        rejectUnauthorized: true
-        timeoutSec: 30
-        flushPeriodSec: 1
-        failedRequestLoggingMode: none
-        safeHeaders: []
-        throttleRatePerSec: "0"
-        responseHonorRetryAfterHeader: true
-        onBackpressure: block
-        useRoundRobinDns: true
-        type: cribl_metrics
-        url: https://0.0.0.0:10200
-      description: Example request body for creating a Cribl Metrics Destination.
     OutputCreateExamplesGoogleCloudLogging:
       summary: Google Cloud Logging
       value:
@@ -76920,6 +76973,17 @@ components:
         Destination.<br/><br/>The request body must include a complete
         representation of the Destination that you want to update. This endpoint
         does not support partial updates.
+    UpdateOutputExamplesTraversalOtlp:
+      summary: Traversal
+      value:
+        id: traversal-output
+        type: traversal_otlp
+        endpoint: http://traversal-processor:3000
+        protocol: http
+      description: Example request body for updating a Traversal
+        Destination.<br/><br/>The request body must include a complete
+        representation of the Destination that you want to update. This endpoint
+        does not support partial updates.
     UpdateOutputExamplesGoogleCloudObservability:
       summary: Google Cloud Observability
       value:
@@ -77124,40 +77188,6 @@ components:
         type: cribl_search_engine
         url: https://0.0.0.0:10200
       description: Example request body for updating a Cribl Search Engine
-        Destination.<br/><br/>The request body must include a complete
-        representation of the Destination that you want to update. This endpoint
-        does not support partial updates.
-    UpdateOutputExamplesCriblMetrics:
-      summary: Cribl Metrics
-      value:
-        id: cribl-metrics-output
-        systemFields:
-          - cribl_pipe
-        streamtags: []
-        loadBalanced: false
-        tls:
-          disabled: true
-        tokenTTLMinutes: 60
-        excludeFields:
-          - __kube_*
-          - __metadata
-          - __winEvent
-        compression: gzip
-        concurrency: 5
-        maxPayloadSizeKB: 4096
-        maxPayloadEvents: 0
-        rejectUnauthorized: true
-        timeoutSec: 30
-        flushPeriodSec: 1
-        failedRequestLoggingMode: none
-        safeHeaders: []
-        throttleRatePerSec: "0"
-        responseHonorRetryAfterHeader: true
-        onBackpressure: block
-        useRoundRobinDns: true
-        type: cribl_metrics
-        url: https://0.0.0.0:10200
-      description: Example request body for updating a Cribl Metrics
         Destination.<br/><br/>The request body must include a complete
         representation of the Destination that you want to update. This endpoint
         does not support partial updates.
@@ -84576,6 +84606,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesServiceNow"
               OutputCreateExamplesDynatraceOtlp:
                 $ref: "#/components/examples/OutputCreateExamplesDynatraceOtlp"
+              OutputCreateExamplesTraversalOtlp:
+                $ref: "#/components/examples/OutputCreateExamplesTraversalOtlp"
               OutputCreateExamplesGoogleCloudObservability:
                 $ref: "#/components/examples/OutputCreateExamplesGoogleCloudObservability"
               OutputCreateExamplesSentinelOneAiSiem:
@@ -84600,8 +84632,6 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesCriblTcp"
               OutputCreateExamplesCriblSearchEngine:
                 $ref: "#/components/examples/OutputCreateExamplesCriblSearchEngine"
-              OutputCreateExamplesCriblMetrics:
-                $ref: "#/components/examples/OutputCreateExamplesCriblMetrics"
               OutputCreateExamplesGoogleCloudLogging:
                 $ref: "#/components/examples/OutputCreateExamplesGoogleCloudLogging"
               OutputCreateExamplesSns:
@@ -84890,6 +84920,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesServiceNow"
               UpdateOutputExamplesDynatraceOtlp:
                 $ref: "#/components/examples/UpdateOutputExamplesDynatraceOtlp"
+              UpdateOutputExamplesTraversalOtlp:
+                $ref: "#/components/examples/UpdateOutputExamplesTraversalOtlp"
               UpdateOutputExamplesGoogleCloudObservability:
                 $ref: "#/components/examples/UpdateOutputExamplesGoogleCloudObservability"
               UpdateOutputExamplesSentinelOneAiSiem:
@@ -84914,8 +84946,6 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesCriblTcp"
               UpdateOutputExamplesCriblSearchEngine:
                 $ref: "#/components/examples/UpdateOutputExamplesCriblSearchEngine"
-              UpdateOutputExamplesCriblMetrics:
-                $ref: "#/components/examples/UpdateOutputExamplesCriblMetrics"
               UpdateOutputExamplesGoogleCloudLogging:
                 $ref: "#/components/examples/UpdateOutputExamplesGoogleCloudLogging"
               UpdateOutputExamplesSns:
@@ -89588,6 +89618,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesServiceNow"
               OutputCreateExamplesDynatraceOtlp:
                 $ref: "#/components/examples/OutputCreateExamplesDynatraceOtlp"
+              OutputCreateExamplesTraversalOtlp:
+                $ref: "#/components/examples/OutputCreateExamplesTraversalOtlp"
               OutputCreateExamplesGoogleCloudObservability:
                 $ref: "#/components/examples/OutputCreateExamplesGoogleCloudObservability"
               OutputCreateExamplesSentinelOneAiSiem:
@@ -89612,8 +89644,6 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesCriblTcp"
               OutputCreateExamplesCriblSearchEngine:
                 $ref: "#/components/examples/OutputCreateExamplesCriblSearchEngine"
-              OutputCreateExamplesCriblMetrics:
-                $ref: "#/components/examples/OutputCreateExamplesCriblMetrics"
               OutputCreateExamplesGoogleCloudLogging:
                 $ref: "#/components/examples/OutputCreateExamplesGoogleCloudLogging"
               OutputCreateExamplesSns:
@@ -89889,6 +89919,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesServiceNow"
               UpdateOutputExamplesDynatraceOtlp:
                 $ref: "#/components/examples/UpdateOutputExamplesDynatraceOtlp"
+              UpdateOutputExamplesTraversalOtlp:
+                $ref: "#/components/examples/UpdateOutputExamplesTraversalOtlp"
               UpdateOutputExamplesGoogleCloudObservability:
                 $ref: "#/components/examples/UpdateOutputExamplesGoogleCloudObservability"
               UpdateOutputExamplesSentinelOneAiSiem:
@@ -89913,8 +89945,6 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesCriblTcp"
               UpdateOutputExamplesCriblSearchEngine:
                 $ref: "#/components/examples/UpdateOutputExamplesCriblSearchEngine"
-              UpdateOutputExamplesCriblMetrics:
-                $ref: "#/components/examples/UpdateOutputExamplesCriblMetrics"
               UpdateOutputExamplesGoogleCloudLogging:
                 $ref: "#/components/examples/UpdateOutputExamplesGoogleCloudLogging"
               UpdateOutputExamplesSns:
@@ -90352,7 +90382,10 @@ paths:
         <code>tls</code>, <code>proxy</code>, etc.) you want to change. Omitted
         sections stay unchanged. Each provided section fully replaces the
         existing one — send the complete section object, not only the changed
-        fields.
+        fields.<br/><br/><code>api.loginRateLimit</code> and
+        <code>api.ssoRateLimit</code> are deprecated. A new value is still
+        applied, but it is stored as <code>rateLimits</code> in the API limits
+        configuration. Use <code>PATCH /system/api-limits</code> instead.
       responses:
         "200":
           description: The updated system settings.
