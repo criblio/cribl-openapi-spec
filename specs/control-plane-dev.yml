@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.20.0-alpha.1788390840637-255ddaea
+  version: 4.20.0-alpha.1788410930330-6e44c01b
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -4885,6 +4885,75 @@ components:
         - name
         - uischema
         - version
+    FunctionConfSchemaMetricsTimeRangeGate:
+      type: object
+    FunctionMetricsTimeRangeGate:
+      type: object
+      properties:
+        __filename:
+          type: string
+          description: Path to the JavaScript file that implements the Function.
+        asyncTimeout:
+          type: number
+          description: Maximum time, in milliseconds, that the Function is allowed to run
+            asynchronously before timing out.
+        cribl_version:
+          type: string
+          description: Minimum Cribl version required by the Function, if applicable.
+        disabled:
+          type: boolean
+          description: If <code>true</code>, the Function is disabled and will not execute
+            in a Pipeline. Otherwise, <code>false</code>.
+        group:
+          type: string
+          description: Category group the Function belongs to.
+        handleSignals:
+          type: boolean
+          description: If <code>true</code>, the Function handles stream signals such as
+            <code>flush</code> and <code>close</code>. Otherwise,
+            <code>false</code>.
+        id:
+          type: string
+          enum:
+            - metrics_time_range_gate
+          description: Identifier of the Function. Always
+            <code>metrics_time_range_gate</code>
+        loadTime:
+          type: number
+          description: Time the Function module was loaded, in milliseconds since the Unix
+            epoch.
+        modTime:
+          type: number
+          description: Time the Function module was last modified, in milliseconds since
+            the Unix epoch.
+        name:
+          type: string
+          description: Display name of the Function.
+        sync:
+          type: boolean
+          description: If <code>true</code>, the Function executes synchronously.
+            Otherwise, <code>false</code>.
+        uischema:
+          type: object
+          additionalProperties: true
+          description: UI Schema that controls how the Function's configuration form is
+            rendered.
+        version:
+          type: string
+          description: Version string of the Function.
+        schema:
+          type: object
+          additionalProperties: true
+          description: JSON Schema document that describes the Function configuration.
+      required:
+        - __filename
+        - group
+        - id
+        - loadTime
+        - modTime
+        - name
+        - uischema
+        - version
     FunctionConfSchemaMvExpand:
       type: object
       additionalProperties: false
@@ -8735,6 +8804,7 @@ components:
         - $ref: "#/components/schemas/FunctionLookup"
         - $ref: "#/components/schemas/FunctionMask"
         - $ref: "#/components/schemas/FunctionMetricsExport"
+        - $ref: "#/components/schemas/FunctionMetricsTimeRangeGate"
         - $ref: "#/components/schemas/FunctionMvExpand"
         - $ref: "#/components/schemas/FunctionMvPull"
         - $ref: "#/components/schemas/FunctionNotificationPolicies"
@@ -8809,6 +8879,7 @@ components:
           lookup: "#/components/schemas/FunctionLookup"
           mask: "#/components/schemas/FunctionMask"
           metrics_export: "#/components/schemas/FunctionMetricsExport"
+          metrics_time_range_gate: "#/components/schemas/FunctionMetricsTimeRangeGate"
           mv_expand: "#/components/schemas/FunctionMvExpand"
           mv_pull: "#/components/schemas/FunctionMvPull"
           notification_policies: "#/components/schemas/FunctionNotificationPolicies"
@@ -10423,6 +10494,48 @@ components:
           title: Group ID
           description: Unique identifier of the group that contains the Pipeline Function.
           type: string
+    PipelineFunctionMetricsTimeRangeGate:
+      type: object
+      required:
+        - id
+        - conf
+      additionalProperties: false
+      properties:
+        filter:
+          title: Filter
+          description: JavaScript expression that selects data to pass through the Function.
+          type: string
+        id:
+          title: ID
+          description: Identifier of the Function. Always
+            <code>metrics_time_range_gate</code>
+          type: string
+          enum:
+            - metrics_time_range_gate
+          examples:
+            - metrics_time_range_gate
+        description:
+          title: Description
+          description: Brief description of the Pipeline function.
+          type: string
+        disabled:
+          title: Disabled
+          description: If <code>true</code>, disable the Pipeline function so that events
+            are not passed through it. Otherwise, <code>false</code>.
+          type: boolean
+        final:
+          title: Final
+          description: If <code>true</code>, stop passing events to downstream Pipeline
+            Functions after the Function executes. Otherwise,
+            <code>false</code>.
+          type: boolean
+        conf:
+          $ref: "#/components/schemas/FunctionConfSchemaMetricsTimeRangeGate"
+          description: Configuration specific to the Pipeline Function.
+        groupId:
+          title: Group ID
+          description: Unique identifier of the group that contains the Pipeline Function.
+          type: string
     PipelineFunctionMvExpand:
       type: object
       required:
@@ -11939,6 +12052,7 @@ components:
         - $ref: "#/components/schemas/PipelineFunctionLookup"
         - $ref: "#/components/schemas/PipelineFunctionMask"
         - $ref: "#/components/schemas/PipelineFunctionMetricsExport"
+        - $ref: "#/components/schemas/PipelineFunctionMetricsTimeRangeGate"
         - $ref: "#/components/schemas/PipelineFunctionMvExpand"
         - $ref: "#/components/schemas/PipelineFunctionMvPull"
         - $ref: "#/components/schemas/PipelineFunctionNotificationPolicies"
@@ -12013,6 +12127,7 @@ components:
           lookup: "#/components/schemas/PipelineFunctionLookup"
           mask: "#/components/schemas/PipelineFunctionMask"
           metrics_export: "#/components/schemas/PipelineFunctionMetricsExport"
+          metrics_time_range_gate: "#/components/schemas/PipelineFunctionMetricsTimeRangeGate"
           mv_expand: "#/components/schemas/PipelineFunctionMvExpand"
           mv_pull: "#/components/schemas/PipelineFunctionMvPull"
           notification_policies: "#/components/schemas/PipelineFunctionNotificationPolicies"
@@ -34506,20 +34621,6 @@ components:
                 type: boolean
                 title: Manage state
                 description: Manage state
-              bucketWidth:
-                type: string
-                title: Bucket width
-                description: Time bucket size for aggregated results. Smaller buckets yield more
-                  events per collection run.
-                enum:
-                  - 1d
-                  - 1h
-                  - 1m
-                x-speakeasy-enum-descriptions:
-                  - Daily (1d)
-                  - Hourly (1h)
-                  - Per-minute (1m)
-                x-speakeasy-unknown-values: allow
               groupBy:
                 type: array
                 title: Group by
@@ -34540,6 +34641,20 @@ components:
                     - cost_type
                     - token_type
                   x-speakeasy-unknown-values: allow
+              bucketWidth:
+                type: string
+                title: Bucket width
+                description: Time bucket size for aggregated results. Smaller buckets yield more
+                  events per collection run.
+                enum:
+                  - 1d
+                  - 1h
+                  - 1m
+                x-speakeasy-enum-descriptions:
+                  - Daily (1d)
+                  - Hourly (1h)
+                  - Per-minute (1m)
+                x-speakeasy-unknown-values: allow
               cronSchedule:
                 type: string
                 title: Cron schedule
@@ -35274,6 +35389,244 @@ components:
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'hecAPI' at runtime.
       title: InputAkamaiHec
+    InputPingIdentityPingone:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - hecAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - ping_identity_pingone
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokenConfInputCloudflareHec"
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set to 0 for unlimited. Caution: Increasing the limit above the default value, or setting it to unlimited, may degrade performance and reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        enableProxyHeader:
+          type: boolean
+          title: Show originating IP
+          description: Extract the client IP and port from PROXY protocol v1/v2. When
+            enabled, the X-Forwarded-For header is ignored. Disable to use the
+            X-Forwarded-For header for client IP extraction.
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        captureHeadersWarning:
+          type: string
+          readOnly: true
+          const: ""
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        hecAPI:
+          type: string
+          title: HEC endpoint
+          description: Absolute path on which to listen for Ping Identity PingOne HTTP
+            Event Collector API requests. PingOne posts structured JSON webhooks
+            to the /event endpoint.
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to every event. May be overridden by fields added at
+            the token or request level.
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        allowedIndexes:
+          type: array
+          title: Allowed indexes
+          description: List values allowed in HEC event index field. Leave blank to skip
+            validation. Supports wildcards. The values here can expand index
+            validation at the token level.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowOrigin:
+          title: CORS allowed origins
+          type: array
+          description: HTTP origins to which @{product} should send CORS (cross-origin
+            resource sharing) Access-Control-Allow-* headers. Supports
+            wildcards.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        accessControlAllowHeaders:
+          title: CORS allowed headers
+          type: array
+          description: HTTP headers that @{product} will send to allowed origins as
+            "Access-Control-Allow-Headers" in a CORS preflight response. Use "*"
+            to allow all headers.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+        emitTokenMetrics:
+          type: boolean
+          title: Emit per-token request metrics
+          description: Emit per-token (<prefix>.http.perToken) and summary
+            (<prefix>.http.summary) request metrics
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_hecAPI:
+          type: string
+          description: Binds 'hecAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'hecAPI' at runtime.
+        __template_allowedIndexes:
+          type: string
+          description: Binds 'allowedIndexes' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'allowedIndexes' at
+            runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
+      title: InputPingIdentityPingone
     InputGigamonHec:
       type: object
       required:
@@ -37005,6 +37358,7 @@ components:
         - $ref: "#/components/schemas/InputMicrosoftCopilot"
         - $ref: "#/components/schemas/InputOkta"
         - $ref: "#/components/schemas/InputAkamaiHec"
+        - $ref: "#/components/schemas/InputPingIdentityPingone"
         - $ref: "#/components/schemas/InputGigamonHec"
         - $ref: "#/components/schemas/InputVectraAiHec"
         - $ref: "#/components/schemas/InputF5BigIp"
@@ -37095,6 +37449,7 @@ components:
           microsoft_copilot: "#/components/schemas/InputMicrosoftCopilot"
           okta: "#/components/schemas/InputOkta"
           akamai_hec: "#/components/schemas/InputAkamaiHec"
+          ping_identity_pingone: "#/components/schemas/InputPingIdentityPingone"
           gigamon_hec: "#/components/schemas/InputGigamonHec"
           vectra_ai_hec: "#/components/schemas/InputVectraAiHec"
           f5_big_ip: "#/components/schemas/InputF5BigIp"
@@ -53968,6 +54323,25 @@ components:
         onBackpressure:
           $ref: "#/components/schemas/BackpressureBehaviorOptions"
           description: How to handle events when all receivers are exerting backpressure
+        sendAs:
+          type: string
+          title: Send as
+          enum:
+            - logs
+            - metrics
+            - both
+          x-speakeasy-enum-descriptions:
+            - Logs
+            - Metrics
+            - Logs and Metrics
+          description: Which signals this Destination carries. Logs sends everything to
+            log search, including metric events. Metrics routes metric events to
+            the metric store and drops everything else. Logs and Metrics routes
+            metric events to the metric store and sends the rest to log search.
+            Metric routing requires the receiving Cribl Search Source to be
+            enabled for metrics storage; if it is not, metric events are
+            discarded rather than stored as logs.
+          x-speakeasy-unknown-values: allow
         useRoundRobinDns:
           type: boolean
           title: Round-robin DNS
@@ -63023,6 +63397,209 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
       title: OutputIbmCloudS3
+    OutputDatabricksZerobus:
+      type: object
+      required:
+        - type
+        - workspaceUrl
+        - workspaceId
+        - zerobusEndpoint
+        - clientId
+        - clientTextSecret
+        - tableName
+      properties:
+        id:
+          type: string
+          title: Output ID
+          description: Unique ID for this output
+        type:
+          type: string
+          enum:
+            - databricks_zerobus
+          description: Connector type identifier.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data before sending out to this output
+        systemFields:
+          type: array
+          title: System fields
+          description: Fields to automatically add to events, such as cribl_pipe. Supports
+            wildcards.
+          items:
+            type: string
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        workspaceUrl:
+          type: string
+          title: Workspace URL
+          description: "HTTPS URL of the Databricks Workspace, used for OAuth token exchange (example: https://dbc-1234abcd-5e6f.cloud.databricks.com). Must start with https://"
+          pattern: ^https://.+$
+        workspaceId:
+          type: string
+          title: Workspace ID
+          description: Unique identifier for the Databricks Workspace. Scopes the OAuth
+            token to this Workspace.
+        zerobusEndpoint:
+          type: string
+          title: Zerobus endpoint
+          description: "Hostname of the Workspace Zerobus ingest endpoint. Omit the scheme, port, and path (example: 1234567890.zerobus.us-west-2.cloud.databricks.com)."
+          pattern: ^[^:/\s]+$
+        clientId:
+          type: string
+          title: Client ID
+          description: OAuth client ID of the service principal authorized to write to the
+            target table
+        clientTextSecret:
+          type: string
+          title: Client secret
+          description: OAuth client secret of the service principal
+        tableName:
+          type: string
+          title: Table name
+          description: "Three-part Unity Catalog name of the target table: catalog.schema.table"
+          pattern: ^[^.]+\.[^.]+\.[^.]+$
+        maxBatchSizeKB:
+          type: integer
+          title: Batch size limit
+          description: Maximum size, in KB, of the serialized records in a single ingest
+            batch
+          minimum: 1
+          maximum: 10176
+        maxBatchRecords:
+          type: integer
+          title: Batch records limit
+          description: Maximum number of records to include in a single ingest batch
+          minimum: 1
+          maximum: 2000
+        maxBufferedKB:
+          type: integer
+          title: Buffer memory limit
+          description: Maximum size, in KB, of unacknowledged records per Worker Process
+            before blocking. Must be at least the configured Batch size limit.
+            Records larger than this limit are dropped.
+          minimum: 1024
+        maxInflightBatches:
+          type: integer
+          title: In-flight batch limit
+          description: Maximum number of unacknowledged batches per Worker Process before
+            blocking
+          minimum: 1
+          maximum: 1000
+        flushPeriodSec:
+          type: integer
+          title: Flush period
+          description: Maximum time, in seconds, to hold a batch before sending it
+          minimum: 1
+        ackTimeoutSec:
+          type: integer
+          title: Acknowledgment timeout
+          description: Amount of time, in seconds, to wait for Databricks to acknowledge
+            sent batches before reconnecting
+          minimum: 1
+        connectionTimeoutSec:
+          type: integer
+          title: Connection timeout
+          description: Amount of time, in seconds, to wait for a new ingest stream to open
+            before canceling it
+          minimum: 1
+          maximum: 300
+        onBackpressure:
+          $ref: "#/components/schemas/BackpressureBehaviorOptions"
+          description: How to handle events when all receivers are exerting backpressure
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        pqStrictOrdering:
+          title: Strict ordering
+          description: Use FIFO (first in, first out) processing. Disable to forward new
+            events to receivers before queue is flushed.
+          type: boolean
+        pqRatePerSec:
+          type: number
+          title: Drain rate limit (EPS)
+          description: Throttling rate (in events per second) to impose while writing to
+            Destinations from PQ. Defaults to 0, which disables throttling.
+          minimum: 0
+        pqMode:
+          $ref: "#/components/schemas/ModeOptions"
+          description: In Error mode, PQ writes events to the filesystem if the
+            Destination is unavailable. In Backpressure mode, PQ writes events
+            to the filesystem when it detects backpressure from the Destination.
+            In Always On mode, PQ always writes events to the filesystem.
+        pqMaxBufferSize:
+          type: number
+          title: Buffer size limit (events - deprecated)
+          description: Maximum number of events to hold in memory before writing the
+            events to disk. Deprecated and only supported in workers < v4.17.0.
+            Use pqMaxBufferSizeBytes instead.
+          minimum: 42
+          maximum: 1000
+        pqMaxBackpressureSec:
+          type: number
+          title: Backpressure duration limit
+          description: How long (in seconds) to wait for backpressure to resolve before
+            engaging the queue
+          minimum: 0
+        pqMaxFileSize:
+          type: string
+          title: File size limit
+          description: The maximum size to store in each queue file before closing and
+            optionally compressing (KB, MB, etc.)
+          pattern: ^\d+\s*(?:\w{2})?$
+        pqMaxSize:
+          type: string
+          title: Queue size limit
+          description: The maximum disk space that the queue can consume (as an average
+            per Worker Process) before queueing stops. Enter a numeral with
+            units of KB, MB, etc.
+          pattern: ^\d+\s*(?:\w{2})?$
+        pqPath:
+          type: string
+          title: Queue file path
+          description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/<output-id>."
+        pqCompress:
+          $ref: "#/components/schemas/CompressionOptionsPq"
+          description: Codec to use to compress the persisted data
+        pqOnBackpressure:
+          $ref: "#/components/schemas/QueueFullBehaviorOptions"
+          description: How to handle events when the queue is exerting backpressure (full
+            capacity or low disk). 'Block' is the same behavior as non-PQ
+            blocking. 'Drop new data' throws away incoming data, while leaving
+            the contents of the PQ unchanged.
+        pqMaxBufferSizeBytes:
+          type: string
+          title: Buffer size limit (bytes)
+          description: The maximum size to hold in memory before writing events to disk.
+            Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
+            and the maximum value is 10MB.
+          pattern: ^\d+\s*(?:\w{2})?$
+        pqControls:
+          type: object
+          title: ""
+          description: Persistent queue controls.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_onBackpressure:
+          type: string
+          description: Binds 'onBackpressure' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'onBackpressure' at
+            runtime.
+      title: OutputDatabricksZerobus
     Output:
       oneOf:
         - $ref: "#/components/schemas/OutputDefault"
@@ -63110,6 +63687,7 @@ components:
         - $ref: "#/components/schemas/OutputScalityS3"
         - $ref: "#/components/schemas/OutputAlibabaCloudS3"
         - $ref: "#/components/schemas/OutputIbmCloudS3"
+        - $ref: "#/components/schemas/OutputDatabricksZerobus"
       discriminator:
         propertyName: type
         mapping:
@@ -63198,6 +63776,7 @@ components:
           scality_s3: "#/components/schemas/OutputScalityS3"
           alibaba_cloud_s3: "#/components/schemas/OutputAlibabaCloudS3"
           ibm_cloud_s3: "#/components/schemas/OutputIbmCloudS3"
+          databricks_zerobus: "#/components/schemas/OutputDatabricksZerobus"
       title: Output
     CountedOutputResponse:
       type: object
@@ -63316,6 +63895,7 @@ components:
         - alibaba_cloud_s3
         - snowflake_streaming
         - ibm_cloud_s3
+        - databricks_zerobus
       title: DestinationType
       x-speakeasy-unknown-values: allow
     PaginatedOutputResponse:
@@ -65053,6 +65633,22 @@ components:
         - dataTypeId
         - filter
       title: ObjectStorageFilter
+    SearchExecutionConfig:
+      type: object
+      properties:
+        backendId:
+          type: string
+          enum:
+            - dynamic
+            - byo
+          x-speakeasy-unknown-values: allow
+        poolRoutingKey:
+          type: string
+          description: Selects the ordinary BYO executor pool. Required only when
+            backendId is byo; not used for Lake datasets.
+      required:
+        - backendId
+      title: SearchExecutionConfig
     SearchVersion:
       type: string
       enum:
@@ -65081,6 +65677,8 @@ components:
             $ref: "#/components/schemas/ObjectStorageFilter"
           description: Glob-to-Datatype mappings for the Lake bucket path. Used only for
             search execution v2.
+        searchExecution:
+          $ref: "#/components/schemas/SearchExecutionConfig"
         searchVersion:
           $ref: "#/components/schemas/SearchVersion"
           description: Search execution version for the Cribl Lake Dataset. Search
@@ -73080,6 +73678,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a OpenTelemetry Source.
+    InputCreateExamplesPingIdentityPingone:
+      summary: Ping Identity PingOne
+      value:
+        id: ping-identity-pingone-source
+        type: ping_identity_pingone
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Ping Identity PingOne Source.
     InputCreateExamplesPrometheus:
       summary: Prometheus Scraper
       value:
@@ -74210,6 +74819,20 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for updating a OpenTelemetry
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
+    UpdateInputExamplesPingIdentityPingone:
+      summary: Ping Identity PingOne
+      value:
+        id: ping-identity-pingone-source
+        type: ping_identity_pingone
+        host: 0.0.0.0
+        port: 8088
+        hecAPI: /services/collector
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Ping Identity PingOne
         Source.<br/><br/>The request body must include a complete representation
         of the Source that you want to update. This endpoint does not support
         partial updates.
@@ -75540,7 +76163,7 @@ components:
         token: your-api-key
       description: Example request body for creating a Dynatrace HTTP Destination.
     OutputCreateExamplesDatabricks:
-      summary: Databricks
+      summary: Databricks Object Storage
       value:
         id: databricks-output
         type: databricks
@@ -75551,7 +76174,20 @@ components:
         catalog: main
         schema: external
         eventsVolumeName: events
-      description: Example request body for creating a Databricks Destination.
+      description: Example request body for creating a Databricks Object Storage
+        Destination.
+    OutputCreateExamplesDatabricksZerobus:
+      summary: Databricks Zerobus
+      value:
+        id: databricks-zerobus-output
+        type: databricks_zerobus
+        workspaceUrl: https://dbc-1234abcd-5e6f.cloud.databricks.com
+        workspaceId: your-workspace-id
+        zerobusEndpoint: 1234567890.zerobus.us-west-2.cloud.databricks.com
+        clientId: your-client-id
+        clientTextSecret: your-client-secret
+        tableName: main.external.events
+      description: Example request body for creating a Databricks Zerobus Destination.
     OutputCreateExamplesSnowflakeStreaming:
       summary: Snowflake Streaming
       value:
@@ -76685,7 +77321,7 @@ components:
         representation of the Destination that you want to update. This endpoint
         does not support partial updates.
     UpdateOutputExamplesDatabricks:
-      summary: Databricks
+      summary: Databricks Object Storage
       value:
         id: databricks-output
         type: databricks
@@ -76696,7 +77332,22 @@ components:
         catalog: main
         schema: external
         eventsVolumeName: events
-      description: Example request body for updating a Databricks
+      description: Example request body for updating a Databricks Object Storage
+        Destination.<br/><br/>The request body must include a complete
+        representation of the Destination that you want to update. This endpoint
+        does not support partial updates.
+    UpdateOutputExamplesDatabricksZerobus:
+      summary: Databricks Zerobus
+      value:
+        id: databricks-zerobus-output
+        type: databricks_zerobus
+        workspaceUrl: https://dbc-1234abcd-5e6f.cloud.databricks.com
+        workspaceId: your-workspace-id
+        zerobusEndpoint: 1234567890.zerobus.us-west-2.cloud.databricks.com
+        clientId: your-client-id
+        clientTextSecret: your-client-secret
+        tableName: main.external.events
+      description: Example request body for updating a Databricks Zerobus
         Destination.<br/><br/>The request body must include a complete
         representation of the Destination that you want to update. This endpoint
         does not support partial updates.
@@ -82913,6 +83564,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesOpenAIComplianceLogs"
               InputCreateExamplesOpenTelemetry:
                 $ref: "#/components/examples/InputCreateExamplesOpenTelemetry"
+              InputCreateExamplesPingIdentityPingone:
+                $ref: "#/components/examples/InputCreateExamplesPingIdentityPingone"
               InputCreateExamplesPrometheus:
                 $ref: "#/components/examples/InputCreateExamplesPrometheus"
               InputCreateExamplesPrometheusRw:
@@ -83234,6 +83887,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesOpenAIComplianceLogs"
               UpdateInputExamplesOpenTelemetry:
                 $ref: "#/components/examples/UpdateInputExamplesOpenTelemetry"
+              UpdateInputExamplesPingIdentityPingone:
+                $ref: "#/components/examples/UpdateInputExamplesPingIdentityPingone"
               UpdateInputExamplesPrometheus:
                 $ref: "#/components/examples/UpdateInputExamplesPrometheus"
               UpdateInputExamplesPrometheusRw:
@@ -83975,6 +84630,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesDynatraceHttp"
               OutputCreateExamplesDatabricks:
                 $ref: "#/components/examples/OutputCreateExamplesDatabricks"
+              OutputCreateExamplesDatabricksZerobus:
+                $ref: "#/components/examples/OutputCreateExamplesDatabricksZerobus"
               OutputCreateExamplesSnowflakeStreaming:
                 $ref: "#/components/examples/OutputCreateExamplesSnowflakeStreaming"
       responses:
@@ -84287,6 +84944,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesDynatraceHttp"
               UpdateOutputExamplesDatabricks:
                 $ref: "#/components/examples/UpdateOutputExamplesDatabricks"
+              UpdateOutputExamplesDatabricksZerobus:
+                $ref: "#/components/examples/UpdateOutputExamplesDatabricksZerobus"
               UpdateOutputExamplesSnowflakeStreaming:
                 $ref: "#/components/examples/UpdateOutputExamplesSnowflakeStreaming"
       responses:
@@ -87975,6 +88634,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesOpenAIComplianceLogs"
               InputCreateExamplesOpenTelemetry:
                 $ref: "#/components/examples/InputCreateExamplesOpenTelemetry"
+              InputCreateExamplesPingIdentityPingone:
+                $ref: "#/components/examples/InputCreateExamplesPingIdentityPingone"
               InputCreateExamplesPrometheus:
                 $ref: "#/components/examples/InputCreateExamplesPrometheus"
               InputCreateExamplesPrometheusRw:
@@ -88282,6 +88943,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesOpenAIComplianceLogs"
               UpdateInputExamplesOpenTelemetry:
                 $ref: "#/components/examples/UpdateInputExamplesOpenTelemetry"
+              UpdateInputExamplesPingIdentityPingone:
+                $ref: "#/components/examples/UpdateInputExamplesPingIdentityPingone"
               UpdateInputExamplesPrometheus:
                 $ref: "#/components/examples/UpdateInputExamplesPrometheus"
               UpdateInputExamplesPrometheusRw:
@@ -88979,6 +89642,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesDynatraceHttp"
               OutputCreateExamplesDatabricks:
                 $ref: "#/components/examples/OutputCreateExamplesDatabricks"
+              OutputCreateExamplesDatabricksZerobus:
+                $ref: "#/components/examples/OutputCreateExamplesDatabricksZerobus"
               OutputCreateExamplesSnowflakeStreaming:
                 $ref: "#/components/examples/OutputCreateExamplesSnowflakeStreaming"
       responses:
@@ -89278,6 +89943,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesDynatraceHttp"
               UpdateOutputExamplesDatabricks:
                 $ref: "#/components/examples/UpdateOutputExamplesDatabricks"
+              UpdateOutputExamplesDatabricksZerobus:
+                $ref: "#/components/examples/UpdateOutputExamplesDatabricksZerobus"
               UpdateOutputExamplesSnowflakeStreaming:
                 $ref: "#/components/examples/UpdateOutputExamplesSnowflakeStreaming"
       responses:
