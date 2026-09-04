@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.20.0-alpha.1788478869715-5c80dc2f
+  version: 4.20.0-alpha.1788563404406-ce0ae5dc
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -16300,6 +16300,7 @@ components:
         - oracle
         - postgres
         - sqlserver
+        - teradata
       title: DatabaseConnectionType
       x-speakeasy-unknown-values: allow
     SecureVersion:
@@ -16396,6 +16397,9 @@ components:
             password. Used with Oracle connections.
           examples:
             - oracle-production-credentials
+        database:
+          type: string
+          description: Database to connect to instead of the server default.
         databaseType:
           $ref: "#/components/schemas/DatabaseConnectionType"
           description: Type of database engine for the connection.
@@ -16406,12 +16410,22 @@ components:
           description: Brief description of the Database Connection.
           examples:
             - Production MySQL database for customer data
+        host:
+          type: string
+          description: Hostname of the server to connect to.
+          examples:
+            - |-
+              'myId-dt5egqq7iq1hj6kh.env.trial.example.com'
+              Hostname, currently intended for Teradata
         id:
           type: string
           description: Unique identifier for the Database Connection.
           examples:
             - mysql-prod-db
           pattern: ^[a-zA-Z0-9_\\-]+$
+        logOnMechanism:
+          type: string
+          description: Log On Mechanism for databases that support multiple, like Teradata.
         password:
           type: string
           description: Database password for authentication. Used with Oracle connections.
@@ -16424,6 +16438,12 @@ components:
           examples:
             - 30000
           minimum: 1000
+        sslmode:
+          type: string
+          description: HTTPS/TLS connection mode for Teradata. Controls certificate
+            verification behavior.
+          examples:
+            - VERIFY-FULL
         tags:
           type: string
           description: Comma-separated list of tags for categorizing and filtering
@@ -17421,34 +17441,7 @@ components:
           title: Auth tokens
           description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
           items:
-            type: object
-            oneOf:
-              - required:
-                  - token
-              - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
-            properties:
-              authType:
-                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
-                description: Select Manual to enter an auth token directly, or select Secret to
-                  use a text secret to authenticate
-              tokenSecret:
-                type: string
-                title: Token secret (text secret)
-                description: Select or create a stored text secret
-              token:
-                type: string
-                title: Token
-                description: "Shared secret to be provided by any client (Authorization: <token>)"
-              description:
-                type: string
-                title: Description
-                description: Description
-              metadata:
-                type: array
-                title: Fields
-                description: Fields to add to events referencing this token
-                items:
-                  $ref: "#/components/schemas/MetadataConfInputCollection"
+            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
         description:
           type: string
           title: Description
@@ -18435,6 +18428,12 @@ components:
           title: Skip file on error
           description: Skip files that trigger a processing error. Disabled by default,
             which allows retries after processing errors.
+        encoding:
+          type: string
+          title: Encoding
+          description: Character encoding to use when parsing ingested data. When not set,
+            @{product} will default to UTF-8 but may incorrectly interpret
+            multi-byte characters.
         metadata:
           type: array
           title: Fields
@@ -25626,7 +25625,7 @@ components:
           title: Auth tokens
           description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
           items:
-            $ref: "#/components/schemas/AuthTokensExtConfInputHttpRaw"
+            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
         accessControlAllowOrigin:
           title: CORS allowed origins
           type: array
@@ -28255,6 +28254,10 @@ components:
           description: Length of file header bytes to use in hash for unique file
             identification. Values above 16384 may cause issues with
             re-ingesting files.
+        enableLoadBalancing:
+          type: boolean
+          title: Enable load balancing
+          description: Load balance traffic across all Worker Processes
         metadata:
           type: array
           title: Fields
@@ -30436,7 +30439,43 @@ components:
           title: Auth tokens
           description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
           items:
-            $ref: "#/components/schemas/AuthTokensExtConfInputHttpRaw"
+            type: object
+            oneOf:
+              - required:
+                  - token
+              - required:
+                  - authType
+                  - tokenSecret
+                properties:
+                  authType:
+                    $ref: "#/components/schemas/AuthTypeOptionsAuthTokensExtItems"
+                    description: Discriminator value.
+                  tokenSecret:
+                    type: string
+                    description: Select or create a stored text secret
+            properties:
+              authType:
+                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                description: Select Manual to enter an auth token directly, or select Secret to
+                  use a text secret to authenticate
+              tokenSecret:
+                type: string
+                title: Token secret (text secret)
+                description: Select or create a stored text secret
+              token:
+                type: string
+                title: Token
+                description: "Shared secret to be provided by any client (Authorization: <token>)"
+              description:
+                type: string
+                title: Description
+                description: Description
+              metadata:
+                type: array
+                title: Fields
+                description: Fields to add to events referencing this token
+                items:
+                  $ref: "#/components/schemas/MetadataConfInputCollection"
         description:
           type: string
           title: Description
@@ -67989,6 +68028,11 @@ components:
           anyOf:
             - type: string
             - type: "null"
+        database:
+          description: Database to connect to instead of the server default.
+          anyOf:
+            - type: string
+            - type: "null"
         databaseType:
           description: Type of database engine for the connection.
           examples:
@@ -67999,12 +68043,26 @@ components:
           description: Brief description of the Database Connection.
           examples:
             - Production MySQL database for customer data
+        host:
+          description: Hostname of the server to connect to.
+          examples:
+            - |-
+              'myId-dt5egqq7iq1hj6kh.env.trial.example.com'
+              Hostname, currently intended for Teradata
+          anyOf:
+            - type: string
+            - type: "null"
         id:
           type: string
           description: Unique identifier for the Database Connection.
           examples:
             - mysql-prod-db
           pattern: ^[a-zA-Z0-9_\\-]+$
+        logOnMechanism:
+          description: Log On Mechanism for databases that support multiple, like Teradata.
+          anyOf:
+            - type: string
+            - type: "null"
         password:
           description: Database password for authentication. Used with Oracle connections.
           examples:
@@ -68020,6 +68078,14 @@ components:
           anyOf:
             - type: integer
               minimum: 1000
+            - type: "null"
+        sslmode:
+          description: HTTPS/TLS connection mode for Teradata. Controls certificate
+            verification behavior.
+          examples:
+            - VERIFY-FULL
+          anyOf:
+            - type: string
             - type: "null"
         tags:
           description: Comma-separated list of tags for categorizing and filtering
@@ -71171,34 +71237,7 @@ components:
           anyOf:
             - type: array
               items:
-                type: object
-                oneOf:
-                  - required:
-                      - token
-                  - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
-                properties:
-                  authType:
-                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
-                    description: Select Manual to enter an auth token directly, or select Secret to
-                      use a text secret to authenticate
-                  tokenSecret:
-                    type: string
-                    title: Token secret (text secret)
-                    description: Select or create a stored text secret
-                  token:
-                    type: string
-                    title: Token
-                    description: "Shared secret to be provided by any client (Authorization: <token>)"
-                  description:
-                    type: string
-                    title: Description
-                    description: Description
-                  metadata:
-                    type: array
-                    title: Fields
-                    description: Fields to add to events referencing this token
-                    items:
-                      $ref: "#/components/schemas/MetadataConfInputCollection"
+                $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
             - type: "null"
         description:
           title: Description
@@ -73304,6 +73343,14 @@ components:
             which allows retries after processing errors.
           anyOf:
             - type: boolean
+            - type: "null"
+        encoding:
+          title: Encoding
+          description: Character encoding to use when parsing ingested data. When not set,
+            @{product} will default to UTF-8 but may incorrectly interpret
+            multi-byte characters.
+          anyOf:
+            - type: string
             - type: "null"
         metadata:
           title: Fields
@@ -90109,7 +90156,7 @@ components:
           anyOf:
             - type: array
               items:
-                $ref: "#/components/schemas/AuthTokensExtConfInputHttpRaw"
+                $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
             - type: "null"
         accessControlAllowOrigin:
           title: CORS allowed origins
@@ -95704,6 +95751,12 @@ components:
             - type: number
               minimum: 1
             - type: "null"
+        enableLoadBalancing:
+          title: Enable load balancing
+          description: Load balance traffic across all Worker Processes
+          anyOf:
+            - type: boolean
+            - type: "null"
         metadata:
           title: Fields
           description: Fields to add to events from this input
@@ -100423,7 +100476,43 @@ components:
           anyOf:
             - type: array
               items:
-                $ref: "#/components/schemas/AuthTokensExtConfInputHttpRaw"
+                type: object
+                oneOf:
+                  - required:
+                      - token
+                  - required:
+                      - authType
+                      - tokenSecret
+                    properties:
+                      authType:
+                        $ref: "#/components/schemas/AuthTypeOptionsAuthTokensExtItems"
+                        description: Discriminator value.
+                      tokenSecret:
+                        type: string
+                        description: Select or create a stored text secret
+                properties:
+                  authType:
+                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                    description: Select Manual to enter an auth token directly, or select Secret to
+                      use a text secret to authenticate
+                  tokenSecret:
+                    type: string
+                    title: Token secret (text secret)
+                    description: Select or create a stored text secret
+                  token:
+                    type: string
+                    title: Token
+                    description: "Shared secret to be provided by any client (Authorization: <token>)"
+                  description:
+                    type: string
+                    title: Description
+                    description: Description
+                  metadata:
+                    type: array
+                    title: Fields
+                    description: Fields to add to events referencing this token
+                    items:
+                      $ref: "#/components/schemas/MetadataConfInputCollection"
             - type: "null"
         description:
           title: Description
@@ -166365,6 +166454,11 @@ components:
             - secret
           description: Discriminator value.
           x-speakeasy-unknown-values: allow
+    AuthTypeOptionsAuthTokensExtItems:
+      enum:
+        - secret
+      description: Discriminator value.
+      x-speakeasy-unknown-values: allow
     TypeOptionsSplunk:
       type: string
       enum:
@@ -168673,6 +168767,35 @@ components:
           $ref: "#/components/schemas/MaximumTlsVersionOptionsTls"
           description: Maximum TLS version
       description: TLS settings (server side)
+    AuthTokensExtConfInputHttp:
+      type: object
+      oneOf:
+        - required:
+            - token
+        - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+      properties:
+        authType:
+          $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+          description: Select Manual to enter an auth token directly, or select Secret to
+            use a text secret to authenticate
+        tokenSecret:
+          type: string
+          title: Token secret (text secret)
+          description: Select or create a stored text secret
+        token:
+          type: string
+          title: Token
+          description: "Shared secret to be provided by any client (Authorization: <token>)"
+        description:
+          type: string
+          title: Description
+          description: Description
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events referencing this token
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
     RetryRulesType:
       type: object
       required:
@@ -168928,25 +169051,6 @@ components:
           type: boolean
           title: Detailed metrics
           description: Generate full GPU metrics
-    AuthTokensExtConfInputHttpRaw:
-      type: object
-      required:
-        - token
-      properties:
-        token:
-          type: string
-          title: Token
-          description: "Shared secret to be provided by any client (Authorization: <token>)"
-        description:
-          type: string
-          title: Description
-          description: Description
-        metadata:
-          type: array
-          title: Fields
-          description: Fields to add to events referencing this token
-          items:
-            $ref: "#/components/schemas/MetadataConfInputCollection"
     AuthTokenConfInputCloudflareHec:
       type: object
       properties:
