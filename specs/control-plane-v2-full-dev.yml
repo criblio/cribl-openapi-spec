@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1788478984627-a14ae83f
+    version: 4.21.0-alpha.1788563499856-a4f90af2
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -14696,6 +14696,7 @@ components:
                 - oracle
                 - postgres
                 - sqlserver
+                - teradata
             title: DatabaseConnectionType
             x-speakeasy-unknown-values: allow
         SecureVersion:
@@ -14784,6 +14785,9 @@ components:
                     description: Name of the stored credentials secret containing username and password. Used with Oracle connections.
                     examples:
                         - oracle-production-credentials
+                database:
+                    type: string
+                    description: Database to connect to instead of the server default.
                 databaseType:
                     $ref: "#/components/schemas/DatabaseConnectionType"
                     description: Type of database engine for the connection.
@@ -14794,12 +14798,22 @@ components:
                     description: Brief description of the Database Connection.
                     examples:
                         - Production MySQL database for customer data
+                host:
+                    type: string
+                    description: Hostname of the server to connect to.
+                    examples:
+                        - |-
+                          'myId-dt5egqq7iq1hj6kh.env.trial.example.com'
+                          Hostname, currently intended for Teradata
                 id:
                     type: string
                     description: Unique identifier for the Database Connection.
                     examples:
                         - mysql-prod-db
                     pattern: ^[a-zA-Z0-9_\\-]+$
+                logOnMechanism:
+                    type: string
+                    description: Log On Mechanism for databases that support multiple, like Teradata.
                 password:
                     type: string
                     description: Database password for authentication. Used with Oracle connections.
@@ -14811,6 +14825,11 @@ components:
                     examples:
                         - 30000
                     minimum: 1000
+                sslmode:
+                    type: string
+                    description: HTTPS/TLS connection mode for Teradata. Controls certificate verification behavior.
+                    examples:
+                        - VERIFY-FULL
                 tags:
                     type: string
                     description: Comma-separated list of tags for categorizing and filtering Database Connections.
@@ -14920,11 +14939,21 @@ components:
                     description: Name of the stored credentials secret for the test connection (Oracle).
                     examples:
                         - oracle-production-credentials
+                database:
+                    type: string
+                    description: Database to connect to instead of the server default.
                 databaseType:
                     $ref: "#/components/schemas/DatabaseConnectionType"
                     description: Type of database engine to test the connection against.
                     examples:
                         - mysql
+                host:
+                    type: string
+                    description: Hostname of the server to connect to.
+                    examples:
+                        - |-
+                          'myId-dt5egqq7iq1hj6kh.env.trial.example.com'
+                          Hostname, currently intended for Teradata
                 id:
                     type: string
                     description: Optional of a saved Database Connection being tested. When set, the server restores masked () secret fields (connection string, password, config object) from the stored record so a saved connection can be tested without re-entering them.
@@ -16206,33 +16235,7 @@ components:
                     title: Auth tokens
                     description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
                     items:
-                        type: object
-                        oneOf:
-                            - required:
-                                - token
-                            - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
-                        properties:
-                            authType:
-                                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
-                                description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
-                            tokenSecret:
-                                type: string
-                                title: Token secret (text secret)
-                                description: Select or create a stored text secret
-                            token:
-                                type: string
-                                title: Token
-                                description: "Shared secret to be provided by any client (Authorization: <token>)"
-                            description:
-                                type: string
-                                title: Description
-                                description: Description
-                            metadata:
-                                type: array
-                                title: Fields
-                                description: Fields to add to events referencing this token
-                                items:
-                                    $ref: "#/components/schemas/MetadataConfInputCollection"
+                        $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
                 description:
                     type: string
                     title: Description
@@ -23164,7 +23167,7 @@ components:
                     title: Auth tokens
                     description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
                     items:
-                        $ref: "#/components/schemas/AuthTokensExtConfInputHttpRaw"
+                        $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
                 accessControlAllowOrigin:
                     title: CORS allowed origins
                     type: array
@@ -27176,7 +27179,42 @@ components:
                     title: Auth tokens
                     description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
                     items:
-                        $ref: "#/components/schemas/AuthTokensExtConfInputHttpRaw"
+                        type: object
+                        oneOf:
+                            - required:
+                                - token
+                            - required:
+                                - authType
+                                - tokenSecret
+                              properties:
+                                authType:
+                                    $ref: "#/components/schemas/AuthTypeOptionsAuthTokensExtItems"
+                                    description: Discriminator value.
+                                tokenSecret:
+                                    type: string
+                                    description: Select or create a stored text secret
+                        properties:
+                            authType:
+                                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                                description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                            tokenSecret:
+                                type: string
+                                title: Token secret (text secret)
+                                description: Select or create a stored text secret
+                            token:
+                                type: string
+                                title: Token
+                                description: "Shared secret to be provided by any client (Authorization: <token>)"
+                            description:
+                                type: string
+                                title: Description
+                                description: Description
+                            metadata:
+                                type: array
+                                title: Fields
+                                description: Fields to add to events referencing this token
+                                items:
+                                    $ref: "#/components/schemas/MetadataConfInputCollection"
                 description:
                     type: string
                     title: Description
@@ -60331,13 +60369,17 @@ components:
             type: object
             properties:
                 v1:
-                    type: number
+                    type: integer
+                    description: Lambda (v1) compute.
                 v2:
-                    type: number
+                    type: integer
+                    description: Deux (v2) compute.
                 lakehouse:
-                    type: number
+                    type: integer
+                    description: Lakehouse compute.
                 local:
-                    type: number
+                    type: integer
+                    description: Local (non-distributed) compute.
             description: Number of times each compute type was used in the job.
             title: ComputeTypeCounts
         SearchJobMetadata:
@@ -60361,7 +60403,7 @@ components:
                 datasets:
                     type: object
                     additionalProperties:
-                        type: number
+                        type: integer
                     description: Per-dataset usage counts for the job.
                 fieldSummaries:
                     type: string
@@ -62664,21 +62706,6 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
-        SourceResourceKind:
-            type: string
-            enum:
-                - folder
-                - dashboard
-                - panel
-                - query
-                - variable
-                - datasource
-                - library-panel
-                - alert-rule
-                - plugin
-                - other
-            title: SourceResourceKind
-            x-speakeasy-unknown-values: allow
         ConnectionFailureClass:
             type: string
             enum:
@@ -62702,7 +62729,7 @@ components:
                 deniedKinds:
                     type: array
                     items:
-                        $ref: "#/components/schemas/SourceResourceKind"
+                        $ref: "#/components/schemas/DeniedKindConfConnectionTestResult"
                     description: Resource kinds that the credentials do not have permission to read.
                 failureClass:
                     $ref: "#/components/schemas/ConnectionFailureClass"
@@ -62722,7 +62749,7 @@ components:
                 readableKinds:
                     type: array
                     items:
-                        $ref: "#/components/schemas/SourceResourceKind"
+                        $ref: "#/components/schemas/DeniedKindConfConnectionTestResult"
                     description: Resource kinds that the credentials have permission to read.
                 sourceVersion:
                     type: string
@@ -62772,20 +62799,27 @@ components:
                 applyCounts:
                     type: object
                     properties:
-                        created:
-                            type: number
-                        updated:
-                            type: number
-                        no-op:
-                            type: number
-                        placeholder:
-                            type: number
-                        skipped:
-                            type: number
-                        blocked:
-                            type: number
                         failed:
-                            type: number
+                            type: integer
+                            description: Write to the target failed.
+                        blocked:
+                            type: integer
+                            description: Item was blocked by a conflict, such as target drift.
+                        skipped:
+                            type: integer
+                            description: Item was skipped and not written to the target.
+                        created:
+                            type: integer
+                            description: Item was created at the target.
+                        placeholder:
+                            type: integer
+                            description: Item was written as a placeholder pending further action.
+                        updated:
+                            type: integer
+                            description: Item was updated at the target.
+                        no-op:
+                            type: integer
+                            description: No changes were needed at the target.
                     description: Per-outcome counts from the latest apply pass.
                 applyDurationMs:
                     type: integer
@@ -62814,15 +62848,20 @@ components:
                     type: object
                     properties:
                         accessible:
-                            type: number
+                            type: integer
+                            description: Fully readable.
                         missing:
-                            type: number
+                            type: integer
+                            description: Not found.
                         permission-denied:
-                            type: number
+                            type: integer
+                            description: Credentials lack access.
                         unsupported:
-                            type: number
+                            type: integer
+                            description: Resource type not supported by adapter.
                         incomplete:
-                            type: number
+                            type: integer
+                            description: Partially discovered (pagination/permission cutoff).
                     description: Per-availability-status counts for discovered resources.
                 cancelRequested:
                     type: boolean
@@ -62836,26 +62875,36 @@ components:
                 counts:
                     type: object
                     properties:
-                        folder:
-                            type: number
-                        dashboard:
-                            type: number
                         panel:
-                            type: number
+                            type: integer
+                            description: Panel within a dashboard.
                         query:
-                            type: number
-                        variable:
-                            type: number
-                        datasource:
-                            type: number
-                        library-panel:
-                            type: number
-                        alert-rule:
-                            type: number
-                        plugin:
-                            type: number
+                            type: integer
+                            description: Saved query resource.
+                        dashboard:
+                            type: integer
+                            description: Dashboard resource.
                         other:
-                            type: number
+                            type: integer
+                            description: Resource type not in the provider-neutral closed set.
+                        datasource:
+                            type: integer
+                            description: Data source connection.
+                        folder:
+                            type: integer
+                            description: Folder resource.
+                        variable:
+                            type: integer
+                            description: Dashboard or template variable.
+                        library-panel:
+                            type: integer
+                            description: Reusable library panel.
+                        alert-rule:
+                            type: integer
+                            description: Alert rule resource.
+                        plugin:
+                            type: integer
+                            description: Plugin resource.
                     description: Discovery progress counts grouped by resource kind.
                 createdAt:
                     type: string
@@ -62866,7 +62915,7 @@ components:
                 deniedKinds:
                     type: array
                     items:
-                        $ref: "#/components/schemas/SourceResourceKind"
+                        $ref: "#/components/schemas/DeniedKindConfConnectionTestResult"
                     description: Resource kinds the source credential was denied access to during discovery.
                 discoveryAttempts:
                     type: integer
@@ -72551,8 +72600,9 @@ components:
                     description: Identifier for the source Organization, stack, or instance, such as a Grafana org ID and URL host or <code>upload</code> for runs based only on uploaded files.
                 provider:
                     $ref: "#/components/schemas/MigrationProvider"
+                    description: Source system provider type.
                 resourceKind:
-                    $ref: "#/components/schemas/SourceResourceKind"
+                    $ref: "#/components/schemas/DeniedKindConfConnectionTestResult"
                 sourceUid:
                     type: string
                     description: Provider-native stable UID (Grafana dashboard uid, datasource uid, ...). For nested items without native UIDs, adapters derive a deterministic child id (parent uid + stable path). Unique only WITHIN a resource kind.
@@ -72563,25 +72613,24 @@ components:
                 - resourceKind
                 - sourceUid
             title: SourceResourceIdentity
-        ApplyOutcome:
-            type: string
-            enum:
-                - created
-                - updated
-                - no-op
-                - placeholder
-                - skipped
-                - blocked
-                - failed
-            title: ApplyOutcome
-            x-speakeasy-unknown-values: allow
         ApplyItemResult:
             type: object
             properties:
                 identity:
                     $ref: "#/components/schemas/SourceResourceIdentity"
+                    description: Identity of the source resource this apply result describes.
                 outcome:
-                    $ref: "#/components/schemas/ApplyOutcome"
+                    type: string
+                    enum:
+                        - blocked
+                        - created
+                        - failed
+                        - no-op
+                        - placeholder
+                        - skipped
+                        - updated
+                    description: Outcome of the apply operation for this item.
+                    x-speakeasy-unknown-values: allow
                 reasonCode:
                     type: string
                     description: Reason code when the resource was not written, such as <code>target-modified</code> if a conflict blocked the write, or <code>no-op</code> if no changes were needed.
@@ -72730,16 +72779,6 @@ components:
                 - ignoredMetrics
                 - metricReplacements
             title: MigrationQueryOverrides
-        ResourceAvailability:
-            type: string
-            enum:
-                - accessible
-                - missing
-                - permission-denied
-                - unsupported
-                - incomplete
-            title: ResourceAvailability
-            x-speakeasy-unknown-values: allow
         MappingCandidates:
             type: object
             properties:
@@ -72778,8 +72817,15 @@ components:
                         type: object
                         properties:
                             availability:
-                                $ref: "#/components/schemas/ResourceAvailability"
+                                type: string
+                                enum:
+                                    - accessible
+                                    - incomplete
+                                    - missing
+                                    - permission-denied
+                                    - unsupported
                                 description: Whether the data source can be mapped.
+                                x-speakeasy-unknown-values: allow
                             name:
                                 type: string
                                 description: Display name of the data source.
@@ -73021,6 +73067,7 @@ components:
                     description: Human-readable consequence — what importing would do, shown on Review so the outcome is explicit before anything is written.
                 identity:
                     $ref: "#/components/schemas/SourceResourceIdentity"
+                    description: Identity of the source resource this compatibility result applies to.
                 nextAction:
                     type: string
                     description: Recommended next step to resolve an action-required item.
@@ -73033,6 +73080,7 @@ components:
                     description: Stable machine-readable reason code. Present for every non-ready status.
                 status:
                     $ref: "#/components/schemas/CompatibilityStatus"
+                    description: Compatibility status of the resource.
             required:
                 - identity
                 - status
@@ -73227,6 +73275,7 @@ components:
                     type: object
                     additionalProperties:
                         type: string
+                    description: Target checksums keyed by target ID, used to detect target drift between assessment and apply.
                 validationWindow:
                     type: string
                     description: Relative-time every preflight in this revision ran with (Cribl Search syntax, e.g. , ). Absent on revisions assessed before the window was selectable (they used the built-in default).
@@ -73299,8 +73348,15 @@ components:
             type: object
             properties:
                 availability:
-                    $ref: "#/components/schemas/ResourceAvailability"
+                    type: string
+                    enum:
+                        - accessible
+                        - incomplete
+                        - missing
+                        - permission-denied
+                        - unsupported
                     description: Availability state of the resource at discovery time. <br><code>accessible</code> == Fully readable <br><code>missing</code> == Not found <br><code>permission-denied</code> == Credentials lack access <br><code>unsupported</code> == Resource type not supported by adapter <br><code>incomplete</code> == Partially discovered (pagination/permission cutoff).
+                    x-speakeasy-unknown-values: allow
                 checksum:
                     type: string
                     description: Content checksum of the normalized source payload (sha256 hex). Reruns compare it to detect source changes. Absent when the body was not readable.
@@ -73342,6 +73398,7 @@ components:
                     type: array
                     items:
                         $ref: "#/components/schemas/NormalizedResource"
+                    description: Normalized resources on this page.
                 limit:
                     type: number
                     description: Echo of the effective page size, after clamping to the maximum.
@@ -84603,6 +84660,71 @@ components:
                 - startedAt
                 - status
             title: ErasureRequestGetResp
+        CriblLakeMetrics:
+            type: object
+            properties:
+                currentSizeBytes:
+                    type: integer
+                    description: Current logical size of the Lake Dataset, in bytes.
+                datasetId:
+                    type: string
+                    description: The <code>id</code> of the Lake Dataset.
+                id:
+                    type: string
+                    description: Unique identifier for the metrics record.
+                lastUpdated:
+                    type: integer
+                    description: Timestamp when Cribl last updated the metrics record, in Unix time (milliseconds).
+                metricsDate:
+                    type: string
+                    description: Date represented by the inventory metrics, in YYYY-MM-DD format.
+                newestObjectCreatedAt:
+                    type: string
+                    description: Timestamp of the newest object in the Lake Dataset, in ISO 8601 format.
+                objectCount:
+                    type: integer
+                    description: Number of objects in the Lake Dataset.
+                oldestObjectCreatedAt:
+                    type: string
+                    description: Timestamp of the oldest object in the Lake Dataset, in ISO 8601 format.
+                storageLocationId:
+                    type: string
+                    description: The <code>id</code> of the Lake Storage Location.
+                storageLocationType:
+                    type: string
+                    description: Provider type of the Lake Storage Location.
+            required:
+                - currentSizeBytes
+                - datasetId
+                - id
+                - lastUpdated
+                - metricsDate
+                - newestObjectCreatedAt
+                - objectCount
+                - oldestObjectCreatedAt
+                - storageLocationId
+                - storageLocationType
+            title: CriblLakeMetrics
+        CountedListCriblLakeMetrics:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/CriblLakeMetrics"
+                offset:
+                    type: integer
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
+                limit:
+                    type: integer
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
         CriblLakeSource:
             type: object
             properties:
@@ -87175,16 +87297,6 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
-        MonitorInstanceStatus:
-            type: string
-            enum:
-                - ok
-                - info
-                - warning
-                - critical
-                - no_data
-            title: MonitorInstanceStatus
-            x-speakeasy-unknown-values: allow
         MonitorInstanceEval:
             type: object
             properties:
@@ -87202,14 +87314,28 @@ components:
                     type: string
                     description: Alert Monitor configuration ID.
                 pending_status:
-                    $ref: "#/components/schemas/MonitorInstanceStatus"
+                    type: string
+                    enum:
+                        - critical
+                        - info
+                        - no_data
+                        - ok
+                        - warning
                     description: Status evaluated from the alert Monitor rules before applying the grace period.
+                    x-speakeasy-unknown-values: allow
                 pending_status_timestamp:
                     type: integer
                     description: Unix timestamp in milliseconds for the first evaluation in the current sequence with the same pending status.
                 status:
-                    $ref: "#/components/schemas/MonitorInstanceStatus"
+                    type: string
+                    enum:
+                        - critical
+                        - info
+                        - no_data
+                        - ok
+                        - warning
                     description: Current status of the instance after applying the rules and grace period.
+                    x-speakeasy-unknown-values: allow
                 timestamp:
                     type: integer
                     description: Unix timestamp in milliseconds for the evaluation.
@@ -87231,20 +87357,32 @@ components:
                 instances_statuses:
                     type: object
                     properties:
-                        ok:
-                            type: number
                         info:
-                            type: number
+                            type: integer
+                            description: Informational alert.
                         warning:
-                            type: number
+                            type: integer
+                            description: Warning-level alert.
                         critical:
-                            type: number
+                            type: integer
+                            description: Critical-severity alert.
+                        ok:
+                            type: integer
+                            description: Monitor is healthy.
                         no_data:
-                            type: number
+                            type: integer
+                            description: No data received from the monitor.
                     description: Distribution of statuses across alert Monitor instances.
                 status:
-                    $ref: "#/components/schemas/MonitorInstanceStatus"
+                    type: string
+                    enum:
+                        - critical
+                        - info
+                        - no_data
+                        - ok
+                        - warning
                     description: Most severe status across alert Monitor instances.
+                    x-speakeasy-unknown-values: allow
                 updated_at:
                     type: integer
                     description: Unix timestamp in milliseconds for the last update.
@@ -87428,6 +87566,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                database:
+                    description: Database to connect to instead of the server default.
+                    anyOf:
+                        - type: string
+                        - type: "null"
                 databaseType:
                     description: Type of database engine for the connection.
                     examples:
@@ -87438,12 +87581,26 @@ components:
                     description: Brief description of the Database Connection.
                     examples:
                         - Production MySQL database for customer data
+                host:
+                    description: Hostname of the server to connect to.
+                    examples:
+                        - |-
+                          'myId-dt5egqq7iq1hj6kh.env.trial.example.com'
+                          Hostname, currently intended for Teradata
+                    anyOf:
+                        - type: string
+                        - type: "null"
                 id:
                     type: string
                     description: Unique identifier for the Database Connection.
                     examples:
                         - mysql-prod-db
                     pattern: ^[a-zA-Z0-9_\\-]+$
+                logOnMechanism:
+                    description: Log On Mechanism for databases that support multiple, like Teradata.
+                    anyOf:
+                        - type: string
+                        - type: "null"
                 password:
                     description: Database password for authentication. Used with Oracle connections.
                     examples:
@@ -87458,6 +87615,13 @@ components:
                     anyOf:
                         - type: integer
                           minimum: 1000
+                        - type: "null"
+                sslmode:
+                    description: HTTPS/TLS connection mode for Teradata. Controls certificate verification behavior.
+                    examples:
+                        - VERIFY-FULL
+                    anyOf:
+                        - type: string
                         - type: "null"
                 tags:
                     description: Comma-separated list of tags for categorizing and filtering Database Connections.
@@ -90479,33 +90643,7 @@ components:
                     anyOf:
                         - type: array
                           items:
-                            type: object
-                            oneOf:
-                                - required:
-                                    - token
-                                - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
-                            properties:
-                                authType:
-                                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
-                                    description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
-                                tokenSecret:
-                                    type: string
-                                    title: Token secret (text secret)
-                                    description: Select or create a stored text secret
-                                token:
-                                    type: string
-                                    title: Token
-                                    description: "Shared secret to be provided by any client (Authorization: <token>)"
-                                description:
-                                    type: string
-                                    title: Description
-                                    description: Description
-                                metadata:
-                                    type: array
-                                    title: Fields
-                                    description: Fields to add to events referencing this token
-                                    items:
-                                        $ref: "#/components/schemas/MetadataConfInputCollection"
+                            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
                         - type: "null"
                 description:
                     title: Description
@@ -107040,7 +107178,7 @@ components:
                     anyOf:
                         - type: array
                           items:
-                            $ref: "#/components/schemas/AuthTokensExtConfInputHttpRaw"
+                            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
                         - type: "null"
                 accessControlAllowOrigin:
                     title: CORS allowed origins
@@ -115966,7 +116104,42 @@ components:
                     anyOf:
                         - type: array
                           items:
-                            $ref: "#/components/schemas/AuthTokensExtConfInputHttpRaw"
+                            type: object
+                            oneOf:
+                                - required:
+                                    - token
+                                - required:
+                                    - authType
+                                    - tokenSecret
+                                  properties:
+                                    authType:
+                                        $ref: "#/components/schemas/AuthTypeOptionsAuthTokensExtItems"
+                                        description: Discriminator value.
+                                    tokenSecret:
+                                        type: string
+                                        description: Select or create a stored text secret
+                            properties:
+                                authType:
+                                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                                    description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                                tokenSecret:
+                                    type: string
+                                    title: Token secret (text secret)
+                                    description: Select or create a stored text secret
+                                token:
+                                    type: string
+                                    title: Token
+                                    description: "Shared secret to be provided by any client (Authorization: <token>)"
+                                description:
+                                    type: string
+                                    title: Description
+                                    description: Description
+                                metadata:
+                                    type: array
+                                    title: Fields
+                                    description: Fields to add to events referencing this token
+                                    items:
+                                        $ref: "#/components/schemas/MetadataConfInputCollection"
                         - type: "null"
                 description:
                     title: Description
@@ -182139,6 +182312,11 @@ components:
                         - secret
                     description: Discriminator value.
                     x-speakeasy-unknown-values: allow
+        AuthTypeOptionsAuthTokensExtItems:
+            enum:
+                - secret
+            description: Discriminator value.
+            x-speakeasy-unknown-values: allow
         TypeOptionsSplunk:
             type: string
             enum:
@@ -183786,6 +183964,20 @@ components:
                 - saved
             description: Logs monitors only. Distinguishes authoring a fresh search ('new') from selecting a saved one ('saved'). Defaults to 'new' when omitted; ignored for non-logs monitor types.
             x-speakeasy-unknown-values: allow
+        DeniedKindConfConnectionTestResult:
+            type: string
+            enum:
+                - panel
+                - query
+                - dashboard
+                - other
+                - datasource
+                - folder
+                - variable
+                - library-panel
+                - alert-rule
+                - plugin
+            x-speakeasy-unknown-values: allow
         EstimatedIngestRateOptionsConfigGroup:
             type: integer
             enum:
@@ -184833,6 +185025,34 @@ components:
                     $ref: "#/components/schemas/MaximumTlsVersionOptionsTls"
                     description: Maximum TLS version
             description: TLS settings (server side)
+        AuthTokensExtConfInputHttp:
+            type: object
+            oneOf:
+                - required:
+                    - token
+                - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+            properties:
+                authType:
+                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                    description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                tokenSecret:
+                    type: string
+                    title: Token secret (text secret)
+                    description: Select or create a stored text secret
+                token:
+                    type: string
+                    title: Token
+                    description: "Shared secret to be provided by any client (Authorization: <token>)"
+                description:
+                    type: string
+                    title: Description
+                    description: Description
+                metadata:
+                    type: array
+                    title: Fields
+                    description: Fields to add to events referencing this token
+                    items:
+                        $ref: "#/components/schemas/MetadataConfInputCollection"
         RetryRulesType:
             type: object
             required:
@@ -185059,25 +185279,6 @@ components:
                     type: boolean
                     title: Detailed metrics
                     description: Generate full GPU metrics
-        AuthTokensExtConfInputHttpRaw:
-            type: object
-            required:
-                - token
-            properties:
-                token:
-                    type: string
-                    title: Token
-                    description: "Shared secret to be provided by any client (Authorization: <token>)"
-                description:
-                    type: string
-                    title: Description
-                    description: Description
-                metadata:
-                    type: array
-                    title: Fields
-                    description: Fields to add to events referencing this token
-                    items:
-                        $ref: "#/components/schemas/MetadataConfInputCollection"
         AuthTokenConfInputCloudflareHec:
             type: object
             properties:
@@ -199537,6 +199738,52 @@ components:
                 startedAt: 2026-07-08T02:00:00Z
                 completedAt: null
                 auditLogDataset: system:erasure-audit-log
+        LatestLakeDatasetMetricsResponseExamplesLatestDatasetMetrics:
+            summary: Get the latest metrics for a Lake Dataset
+            description: Example response for getting the latest inventory metrics for a Lake Dataset.
+            value:
+                id: metrics-web-access-logs-2026-08-24
+                datasetId: web_access_logs
+                storageLocationId: us-east-1-primary
+                storageLocationType: aws-s3
+                currentSizeBytes: 1073741824
+                objectCount: 2048
+                oldestObjectCreatedAt: 2026-08-01T00:00:00.000Z
+                newestObjectCreatedAt: 2026-08-24T23:59:59.999Z
+                lastUpdated: 1787601600000
+                metricsDate: 2026-08-24
+        LakeDatasetMetricsResponseExamplesDatasetMetrics:
+            summary: List metrics for a Lake Dataset
+            description: Example response for listing inventory metrics for a Lake Dataset.
+            value:
+                items:
+                    - id: metrics-web-access-logs-2026-08-24
+                      datasetId: web_access_logs
+                      storageLocationId: us-east-1-primary
+                      storageLocationType: aws-s3
+                      currentSizeBytes: 1073741824
+                      objectCount: 2048
+                      oldestObjectCreatedAt: 2026-08-01T00:00:00.000Z
+                      newestObjectCreatedAt: 2026-08-24T23:59:59.999Z
+                      lastUpdated: 1787601600000
+                      metricsDate: 2026-08-24
+                count: 1
+        LakeStorageLocationMetricsResponseExamplesStorageLocationMetrics:
+            summary: List metrics for a Lake Storage Location
+            description: Example response for listing inventory metrics for a Lake Storage Location.
+            value:
+                items:
+                    - id: metrics-web-access-logs-2026-08-24
+                      datasetId: web_access_logs
+                      storageLocationId: us-east-1-primary
+                      storageLocationType: aws-s3
+                      currentSizeBytes: 1073741824
+                      objectCount: 2048
+                      oldestObjectCreatedAt: 2026-08-01T00:00:00.000Z
+                      newestObjectCreatedAt: 2026-08-24T23:59:59.999Z
+                      lastUpdated: 1787601600000
+                      metricsDate: 2026-08-24
+                count: 1
         LakeSourceCreateExamplesDdssSource:
             summary: Create a DDSS Cribl Lake Source
             description: Example request body for creating a DDSS Cribl Lake Source (bucket) in the specified Lake.
@@ -264597,6 +264844,173 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Lake Record Erasure request to get.
+    /products/lake/lakes/{lakeId}/datasets/{datasetId}/metrics/latest:
+        get:
+            operationId: getProductsLakeLakesDatasetsMetricsLatestByLakeIdAndDatasetId
+            tags:
+                - lake
+            x-speakeasy-group: lakes.datasets.metrics.latest
+            x-speakeasy-name-override: get
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Get the latest inventory metrics for a Lake Dataset (Cribl.Cloud only)
+            description: Get the latest inventory metrics for the specified Lake Dataset (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: The latest inventory metrics for the specified Lake Dataset.
+                    content:
+                        application/json:
+                            schema:
+                                oneOf:
+                                    - $ref: "#/components/schemas/CriblLakeMetrics"
+                                    - type: "null"
+                            examples:
+                                LatestLakeDatasetMetricsResponseExamplesLatestDatasetMetrics:
+                                    $ref: "#/components/examples/LatestLakeDatasetMetricsResponseExamplesLatestDatasetMetrics"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: lakeId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake that contains the Lake Dataset.
+                - name: datasetId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake Dataset.
+    /products/lake/lakes/{lakeId}/datasets/{datasetId}/metrics:
+        get:
+            operationId: getProductsLakeLakesDatasetsMetricsByLakeIdAndDatasetId
+            tags:
+                - lake
+            x-speakeasy-group: lakes.datasets.metrics
+            x-speakeasy-name-override: list
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List all inventory metrics for a Lake Dataset (Cribl.Cloud only)
+            description: Get a list of all inventory metrics for the specified Lake Dataset (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: Inventory metrics for the specified Lake Dataset.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListCriblLakeMetrics"
+                            examples:
+                                LakeDatasetMetricsResponseExamplesDatasetMetrics:
+                                    $ref: "#/components/examples/LakeDatasetMetricsResponseExamplesDatasetMetrics"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: lakeId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake that contains the Lake Dataset.
+                - name: datasetId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake Dataset.
+    /products/lake/lakes/{lakeId}/storage-locations/{storageLocationId}/metrics:
+        get:
+            operationId: getProductsLakeLakesStorageLocationsMetricsByLakeIdAndStoragelocationId
+            tags:
+                - lake
+            x-speakeasy-group: lakes.storageLocations.metrics
+            x-speakeasy-name-override: list
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List all inventory metrics for a Lake Storage Location (Cribl.Cloud only)
+            description: Get a list of all inventory metrics for the specified Lake Storage Location (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: Inventory metrics for the specified Lake Storage Location.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListCriblLakeMetrics"
+                            examples:
+                                LakeStorageLocationMetricsResponseExamplesStorageLocationMetrics:
+                                    $ref: "#/components/examples/LakeStorageLocationMetricsResponseExamplesStorageLocationMetrics"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: lakeId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake that contains the Lake Storage Location.
+                - name: storageLocationId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake Storage Location.
     /products/lake/lakes/{lakeId}/sources/{id}:
         delete:
             operationId: deleteProductsLakeLakesSourcesByLakeIdAndId
