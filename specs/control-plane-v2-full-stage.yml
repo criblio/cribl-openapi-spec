@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.0-alpha.1788649882863-ceebda54
+    version: 4.20.0-alpha.1788996117160-2dc79397
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -16235,7 +16235,32 @@ components:
                     title: Auth tokens
                     description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
                     items:
-                        $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+                        type: object
+                        oneOf:
+                            - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
+                            - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+                        properties:
+                            authType:
+                                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                                description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                            tokenSecret:
+                                type: string
+                                title: Token secret (text secret)
+                                description: Select or create a stored text secret
+                            token:
+                                type: string
+                                title: Token
+                                description: "Shared secret to be provided by any client (Authorization: <token>)"
+                            description:
+                                type: string
+                                title: Description
+                                description: Description
+                            metadata:
+                                type: array
+                                title: Fields
+                                description: Fields to add to events referencing this token
+                                items:
+                                    $ref: "#/components/schemas/MetadataConfInputCollection"
                 description:
                     type: string
                     title: Description
@@ -21150,8 +21175,7 @@ components:
                     items:
                         type: object
                         oneOf:
-                            - required:
-                                - token
+                            - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
                             - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
                         properties:
                             authType:
@@ -23171,7 +23195,33 @@ components:
                     title: Auth tokens
                     description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
                     items:
-                        $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+                        type: object
+                        oneOf:
+                            - required:
+                                - token
+                            - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+                        properties:
+                            authType:
+                                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                                description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                            tokenSecret:
+                                type: string
+                                title: Token secret (text secret)
+                                description: Select or create a stored text secret
+                            token:
+                                type: string
+                                title: Token
+                                description: "Shared secret to be provided by any client (Authorization: <token>)"
+                            description:
+                                type: string
+                                title: Description
+                                description: Description
+                            metadata:
+                                type: array
+                                title: Fields
+                                description: Fields to add to events referencing this token
+                                items:
+                                    $ref: "#/components/schemas/MetadataConfInputCollection"
                 accessControlAllowOrigin:
                     title: CORS allowed origins
                     type: array
@@ -71249,17 +71299,8 @@ components:
                     type: integer
                     description: Timestamp (in Unix time) when the lakehouse engine metrics were last published, in milliseconds.
                 status:
-                    type: string
-                    enum:
-                        - blocked
-                        - delayed
-                        - failed
-                        - provisioning
-                        - ready
-                        - resizing
-                        - terminated
+                    $ref: "#/components/schemas/StatusOptionsLocalSearchEngineApi"
                     description: Provisioning lifecycle status of the lakehouse engine.
-                    x-speakeasy-unknown-values: allow
                 tierSize:
                     $ref: "#/components/schemas/EngineSize"
                     description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code>, <code>4xlarge</code>,<code>5xlarge</code>, and <code>6xlarge</code> requires the <code>cribl_operator</code> role.
@@ -73014,10 +73055,16 @@ components:
                     type: object
                     additionalProperties:
                         type: string
+                syntaxError:
+                    type: string
+                    description: Parser message when the query text failed static PromQL analysis. Present only for rows that could not be parsed; the panel cannot be migrated until the source query is fixed.
                 unmatchedMetrics:
                     type: array
                     items:
                         type: string
+                unsupportedConstruct:
+                    type: string
+                    description: Reason when the query parsed but uses a construct the Metric Store does not support (for example an unsupported aggregation operator). Present only for such rows.
                 validation:
                     type: string
                     enum:
@@ -75237,11 +75284,9 @@ components:
             enum:
                 - deploying
                 - failed
-                - none
-                - submitted
                 - succeeded
                 - unknown
-            description: Deployment progress states for an App backend.
+            description: Public backend deployment states. Internal <code>submitted</code> is reported as <code>deploying</code>; internal <code>none</code> is omitted. Any other value is <code>unknown</code>.
             title: AppBackendDeploymentState
             x-speakeasy-unknown-values: allow
         AppBackendStatus:
@@ -81479,9 +81524,15 @@ components:
                         appBackendMaxInFlight:
                             type: integer
                             description: Maximum number of concurrent App Platform backend invocations across all apps on this Leader.
+                        appScheduleBodyExpressionMaxLength:
+                            type: integer
+                            description: Maximum number of characters allowed in a schedule bodyExpression.
                         appScheduledConcurrentJobLimit:
                             type: integer
                             description: Maximum number of concurrent scheduled App Platform function jobs across all apps on this Leader (group-wide). Changes require a Leader restart.
+                        appSchedulesMax:
+                            type: integer
+                            description: Maximum number of schedule records a single App may declare.
                         enabled:
                             type: boolean
                             description: If <code>true</code>, enable Apps. Otherwise, <code>false</code>.
@@ -86386,6 +86437,101 @@ components:
                 - fields
             description: Field names present in a lakehouse engine Dataset over the requested time window.
             title: FieldsResponse
+        LocalSearchConfig:
+            type: object
+            properties:
+                __srcGroup:
+                    type: string
+                    description: Fleet or group id this entity was inherited from when served by a Config Helper for a child fleet. Present when inherited from parent, including when the child has a local overlay. Omitted when the entity is local and not inherited. Display-only; never persisted.
+                __srcOverridden:
+                    type: boolean
+                    description: If true, the child fleet has a local overlay on an inherited entity. Omitted when inherited and unmodified, or when local and not inherited. Display-only; never persisted.
+                enabled:
+                    type: boolean
+                    description: Whether the lakehouse service is currently enabled.
+                estimatedIngestRate:
+                    type: integer
+                    description: Combined estimated ingest rate for the lakehouse worker group in gigabytes per day, using the same discrete ladder as Cloud Group <code>IConfigGroup.estimatedIngestRate</code>.
+                groupSizeOverride:
+                    type: integer
+                    enum:
+                        - 1024
+                        - 2048
+                        - 3072
+                        - 4096
+                        - 5120
+                        - 7168
+                        - 10240
+                        - 13312
+                        - 15360
+                    description: Cribl-operator-set worker group ingest sizing that pins the value Zeus receives, replacing the sum auto-computed from active engines. Set, updated, or cleared through the operator-only <code>/search/local-search/group-size-override</code> endpoints; when absent, sizing is auto-computed.
+                    x-speakeasy-unknown-values: allow
+                    x-speakeasy-enums:
+                        - GroupSizeOverride1024
+                        - GroupSizeOverride2048
+                        - GroupSizeOverride3072
+                        - GroupSizeOverride4096
+                        - GroupSizeOverride5120
+                        - GroupSizeOverride7168
+                        - GroupSizeOverride10240
+                        - GroupSizeOverride13312
+                        - GroupSizeOverride15360
+                id:
+                    type: string
+                    description: Unique identifier.
+                lastProvisionedMs:
+                    type: integer
+                    description: Timestamp (in Unix time) when the entity was last provisioned or updated, in milliseconds.
+                status:
+                    $ref: "#/components/schemas/StatusOptionsLocalSearchEngineApi"
+                    description: Provisioning lifecycle status of the lakehouse engine.
+            required:
+                - enabled
+                - id
+            title: LocalSearchConfig
+        LocalSearchGroupSizeOverrideBody:
+            type: object
+            properties:
+                estimatedIngestRate:
+                    type: integer
+                    enum:
+                        - 1024
+                        - 2048
+                        - 3072
+                        - 4096
+                        - 5120
+                        - 7168
+                        - 10240
+                        - 13312
+                        - 15360
+                    description: The pinned worker group ingest sizing, aligned to the same discrete ladder as Cloud Group <code>IConfigGroup.estimatedIngestRate</code>. Zeus consumes this value in place of the sum auto-computed from active engines.
+                    examples:
+                        - 4096
+                    x-speakeasy-enum-descriptions:
+                        - 12 MB/sec
+                        - 24 MB/sec
+                        - 36 MB/sec
+                        - 48 MB/sec
+                        - 60 MB/sec
+                        - 84 MB/sec
+                        - 120 MB/sec
+                        - 156 MB/sec
+                        - 180 MB/sec
+                    x-speakeasy-enums:
+                        - Rate12MBPerSec
+                        - Rate24MBPerSec
+                        - Rate36MBPerSec
+                        - Rate48MBPerSec
+                        - Rate60MBPerSec
+                        - Rate84MBPerSec
+                        - Rate120MBPerSec
+                        - Rate156MBPerSec
+                        - Rate180MBPerSec
+                    x-speakeasy-unknown-values: allow
+            required:
+                - estimatedIngestRate
+            description: Request body for POST/PATCH <code>/search/local-search/group-size-override</code>.
+            title: LocalSearchGroupSizeOverrideBody
         LocalSearchApiErrorBody:
             type: object
             properties:
@@ -90569,7 +90715,32 @@ components:
                     anyOf:
                         - type: array
                           items:
-                            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+                            type: object
+                            oneOf:
+                                - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
+                                - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+                            properties:
+                                authType:
+                                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                                    description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                                tokenSecret:
+                                    type: string
+                                    title: Token secret (text secret)
+                                    description: Select or create a stored text secret
+                                token:
+                                    type: string
+                                    title: Token
+                                    description: "Shared secret to be provided by any client (Authorization: <token>)"
+                                description:
+                                    type: string
+                                    title: Description
+                                    description: Description
+                                metadata:
+                                    type: array
+                                    title: Fields
+                                    description: Fields to add to events referencing this token
+                                    items:
+                                        $ref: "#/components/schemas/MetadataConfInputCollection"
                         - type: "null"
                 description:
                     title: Description
@@ -102456,8 +102627,7 @@ components:
                           items:
                             type: object
                             oneOf:
-                                - required:
-                                    - token
+                                - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
                                 - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
                             properties:
                                 authType:
@@ -107110,7 +107280,33 @@ components:
                     anyOf:
                         - type: array
                           items:
-                            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+                            type: object
+                            oneOf:
+                                - required:
+                                    - token
+                                - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+                            properties:
+                                authType:
+                                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                                    description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                                tokenSecret:
+                                    type: string
+                                    title: Token secret (text secret)
+                                    description: Select or create a stored text secret
+                                token:
+                                    type: string
+                                    title: Token
+                                    description: "Shared secret to be provided by any client (Authorization: <token>)"
+                                description:
+                                    type: string
+                                    title: Description
+                                    description: Description
+                                metadata:
+                                    type: array
+                                    title: Fields
+                                    description: Fields to add to events referencing this token
+                                    items:
+                                        $ref: "#/components/schemas/MetadataConfInputCollection"
                         - type: "null"
                 accessControlAllowOrigin:
                     title: CORS allowed origins
@@ -182217,6 +182413,13 @@ components:
                 - secret
             description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
             x-speakeasy-unknown-values: allow
+        InputHttpAuthTokensExtItemsType:
+            required:
+                - token
+            properties:
+                token:
+                    type: string
+                    description: Shared secret provided by clients for authentication
         InputHttpAuthTypeSecretConstraint:
             required:
                 - authType
@@ -184091,6 +184294,18 @@ components:
                 - kusto_datetime
             description: Format or interpretation of the configured timestamp field's contents, such as a Kusto datetime.
             x-speakeasy-unknown-values: allow
+        StatusOptionsLocalSearchEngineApi:
+            type: string
+            enum:
+                - blocked
+                - delayed
+                - failed
+                - provisioning
+                - ready
+                - resizing
+                - terminated
+            description: Provisioning lifecycle status of the lakehouse engine.
+            x-speakeasy-unknown-values: allow
         ProductConfAppRequestBody:
             type: string
             enum:
@@ -184199,9 +184414,15 @@ components:
                 appBackendMaxInFlight:
                     type: integer
                     description: Maximum number of concurrent App Platform backend invocations across all apps on this Leader.
+                appScheduleBodyExpressionMaxLength:
+                    type: integer
+                    description: Maximum number of characters allowed in a schedule bodyExpression.
                 appScheduledConcurrentJobLimit:
                     type: integer
                     description: Maximum number of concurrent scheduled App Platform function jobs across all apps on this Leader (group-wide). Changes require a Leader restart.
+                appSchedulesMax:
+                    type: integer
+                    description: Maximum number of schedule records a single App may declare.
                 enabled:
                     type: boolean
                     description: If <code>true</code>, enable Apps. Otherwise, <code>false</code>.
@@ -184939,34 +185160,6 @@ components:
                     $ref: "#/components/schemas/MaximumTlsVersionOptionsTls"
                     description: Maximum TLS version
             description: TLS settings (server side)
-        AuthTokensExtConfInputHttp:
-            type: object
-            oneOf:
-                - required:
-                    - token
-                - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
-            properties:
-                authType:
-                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
-                    description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
-                tokenSecret:
-                    type: string
-                    title: Token secret (text secret)
-                    description: Select or create a stored text secret
-                token:
-                    type: string
-                    title: Token
-                    description: "Shared secret to be provided by any client (Authorization: <token>)"
-                description:
-                    type: string
-                    title: Description
-                    description: Description
-                metadata:
-                    type: array
-                    title: Fields
-                    description: Fields to add to events referencing this token
-                    items:
-                        $ref: "#/components/schemas/MetadataConfInputCollection"
         RetryRulesType:
             type: object
             required:
@@ -190022,8 +190215,8 @@ components:
                     maxPageSize: 250
                 configHelperSpawn:
                     default:
-                        memPerBootSpikeMB: 768
-                        reserveHeadroomMB: 1024
+                        memPerBootSpikeMB: 512
+                        reserveHeadroomMB: 512
                         systemMemPressureRatio: 0.85
                         systemCpuPressurePerc: 90
                         systemEluPressurePerc: 90
@@ -190036,8 +190229,8 @@ components:
                     maxPageSize: 1000
                 configHelperSpawn:
                     default:
-                        memPerBootSpikeMB: 768
-                        reserveHeadroomMB: 1024
+                        memPerBootSpikeMB: 512
+                        reserveHeadroomMB: 512
                         systemMemPressureRatio: 0.85
                         systemCpuPressurePerc: 90
                         systemEluPressurePerc: 90
@@ -196096,12 +196289,13 @@ components:
                 installationId: example-app
                 version: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
                 state: deploying
-        AppBackendStatusExamplesNone:
-            summary: No backend deployment
-            description: The App has no backend deployment intent.
+        AppBackendStatusExamplesUnknown:
+            summary: Unconfirmed deployment status
+            description: The platform could not classify the deployment.
             value:
                 installationId: example-app
-                state: none
+                version: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+                state: unknown
         AppBackendStatusExamplesFailed:
             summary: Terminal deployment failure
             description: Matching deployer work ended with a sanitized terminal message.
@@ -200626,6 +200820,20 @@ components:
                         - "200"
                         - "404"
                         - "500"
+        LocalSearchGroupSizeOverrideCreateExamplesCreated:
+            summary: Lakehouse configuration after creating the override
+            description: Example response for creating the lakehouse worker group ingest sizing override.
+            value:
+                id: local_search
+                enabled: true
+                status: ready
+                estimatedIngestRate: 4096
+                groupSizeOverride: 4096
+        LocalSearchGroupSizeOverrideRequestExamplesPin:
+            summary: Pin the worker group ingest sizing
+            description: Example request body pinning the lakehouse worker group ingest sizing to a discrete value from the ingest-rate ladder.
+            value:
+                estimatedIngestRate: 4096
         LocalSearchDeployExamplesDeployedWorkerGroup:
             summary: Deployment metadata for lakehouse service
             description: Example response for deploying the lakehouse service configuration.
@@ -200689,6 +200897,15 @@ components:
             description: Example response for getting an operator-only lakehouse service infrastructure sync payload when the lakehouse service is disabled or there are no active engines. Orchestration should tear down worker and storage resources.
             value:
                 storage: []
+        LocalSearchGroupSizeOverrideUpdateExamplesUpdated:
+            summary: Lakehouse configuration after updating the override
+            description: Example response for updating the lakehouse worker group ingest sizing override to a new value on the ingest-rate ladder.
+            value:
+                id: local_search
+                enabled: true
+                status: ready
+                estimatedIngestRate: 5120
+                groupSizeOverride: 5120
         LocalSearchCaptureNdjsonResponseExamplesSampleEventLine:
             summary: One captured event
             description: Example response for capturing one event from a streaming lakehouse engine. Each line represents one event.
@@ -248778,8 +248995,8 @@ paths:
                                     $ref: "#/components/examples/AppBackendStatusExamplesSucceeded"
                                 AppBackendStatusExamplesDeploying:
                                     $ref: "#/components/examples/AppBackendStatusExamplesDeploying"
-                                AppBackendStatusExamplesNone:
-                                    $ref: "#/components/examples/AppBackendStatusExamplesNone"
+                                AppBackendStatusExamplesUnknown:
+                                    $ref: "#/components/examples/AppBackendStatusExamplesUnknown"
                                 AppBackendStatusExamplesFailed:
                                     $ref: "#/components/examples/AppBackendStatusExamplesFailed"
                 "401":
@@ -249316,8 +249533,8 @@ paths:
                                     $ref: "#/components/examples/AppBackendStatusExamplesSucceeded"
                                 AppBackendStatusExamplesDeploying:
                                     $ref: "#/components/examples/AppBackendStatusExamplesDeploying"
-                                AppBackendStatusExamplesNone:
-                                    $ref: "#/components/examples/AppBackendStatusExamplesNone"
+                                AppBackendStatusExamplesUnknown:
+                                    $ref: "#/components/examples/AppBackendStatusExamplesUnknown"
                                 AppBackendStatusExamplesFailed:
                                     $ref: "#/components/examples/AppBackendStatusExamplesFailed"
                 "401":
@@ -266965,6 +267182,159 @@ paths:
                   schema:
                     type: boolean
                   description: Whether to also return each field's most frequent values, keyed by field name and capped server-side. Defaults to <code>false</code>; omit it when only field names are needed, since the values multiply the response size.
+    /search/local-search/group-size-override:
+        post:
+            operationId: createSearchLocalSearchGroupSizeOverride
+            tags:
+                - search
+            x-speakeasy-group: searches.localSearches.groupSizeOverrides
+            x-speakeasy-name-override: create
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - searchGroup
+            summary: Create the lakehouse worker group size override (Cribl.Cloud only)
+            description: Pin the worker group ingest sizing sent to infrastructure, replacing the value auto-computed from active engines (Cribl.Cloud only). Fails with 409 when an override already exists — update it via PATCH instead.<br/><br/>Requires the <code>cribl_operator</code> role.
+            responses:
+                "201":
+                    description: The created override.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LocalSearchConfig"
+                            examples:
+                                LocalSearchGroupSizeOverrideCreateExamplesCreated:
+                                    $ref: "#/components/examples/LocalSearchGroupSizeOverrideCreateExamplesCreated"
+                "400":
+                    description: The request body is missing or not on the discrete ingest-rate ladder.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Requires the <code>cribl_operator</code> role. No response body.
+                "409":
+                    description: An override already exists.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: LocalSearchGroupSizeOverrideBody object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LocalSearchGroupSizeOverrideBody"
+                        examples:
+                            LocalSearchGroupSizeOverrideRequestExamplesPin:
+                                $ref: "#/components/examples/LocalSearchGroupSizeOverrideRequestExamplesPin"
+        delete:
+            operationId: deleteSearchLocalSearchGroupSizeOverride
+            tags:
+                - search
+            x-speakeasy-group: searches.localSearches.groupSizeOverrides
+            x-speakeasy-name-override: delete
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - searchGroup
+            summary: Delete the lakehouse worker group size override (Cribl.Cloud only)
+            description: Clear the current worker group ingest sizing override (Cribl.Cloud only). Worker sizing then falls back to the value auto-computed from active engines.<br/><br/>Requires the <code>cribl_operator</code> role.
+            responses:
+                "204":
+                    description: The override was cleared. No response body. Fetch <code>/search/local_search/config</code> to see the resulting worker sizing.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Requires the <code>cribl_operator</code> role. No response body.
+                "404":
+                    description: No override is currently set.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+        patch:
+            operationId: updateSearchLocalSearchGroupSizeOverride
+            tags:
+                - search
+            x-speakeasy-group: searches.localSearches.groupSizeOverrides
+            x-speakeasy-name-override: update
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - searchGroup
+            summary: Update the lakehouse worker group size override (Cribl.Cloud only)
+            description: Change the current worker group ingest sizing override (Cribl.Cloud only). Fails with 404 when no override is set — create one via POST first.<br/><br/>Requires the <code>cribl_operator</code> role.<br/><br/>Provide the complete editable payload. Partial updates are not supported.
+            responses:
+                "200":
+                    description: The updated override.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LocalSearchConfig"
+                            examples:
+                                LocalSearchGroupSizeOverrideUpdateExamplesUpdated:
+                                    $ref: "#/components/examples/LocalSearchGroupSizeOverrideUpdateExamplesUpdated"
+                "400":
+                    description: The request body is missing or not on the discrete ingest-rate ladder.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Requires the <code>cribl_operator</code> role. No response body.
+                "404":
+                    description: No override is currently set.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: LocalSearchGroupSizeOverrideBody object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LocalSearchGroupSizeOverrideBody"
+                        examples:
+                            LocalSearchGroupSizeOverrideRequestExamplesPin:
+                                $ref: "#/components/examples/LocalSearchGroupSizeOverrideRequestExamplesPin"
     /search/local_search/deploy:
         patch:
             operationId: updateSearchLocalSearchDeploy
