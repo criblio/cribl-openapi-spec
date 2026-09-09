@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1788563499856-a4f90af2
+    version: 4.21.0-alpha.1788996116428-1a0698e3
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -82797,6 +82797,631 @@ components:
             required:
                 - value
             title: AiFeatureToggleRequest
+        PaginatedWorkflowRunMeta:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/WorkflowRunMeta"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
+        WorkflowRunRevision:
+            type: string
+            enum:
+                - published
+                - draft
+            title: WorkflowRunRevision
+            x-speakeasy-unknown-values: allow
+        WorkflowRunStatus:
+            type: string
+            enum:
+                - running
+                - stopped
+                - completed
+                - failed
+            title: WorkflowRunStatus
+            x-speakeasy-unknown-values: allow
+        WorkflowRunMeta:
+            type: object
+            properties:
+                createdAt:
+                    type: number
+                    description: Epoch milliseconds when the run was created.
+                error:
+                    type: string
+                    description: Failure message. Absent unless <code>status</code> is <code>failed</code>.
+                modifiedAt:
+                    type: number
+                    description: Epoch milliseconds of the most recent write to the run.
+                owner:
+                    type: string
+                    description: User id that started the run.
+                revision:
+                    $ref: "#/components/schemas/WorkflowRunRevision"
+                    description: Revision slot that the run was created from. <br><code>published</code> == Live production revision <br><code>draft</code> == Builder test-run (excluded from run history).
+                revisionAt:
+                    type: integer
+                    description: Epoch milliseconds when the snapshotted revision was last written.
+                runId:
+                    type: string
+                    description: Unique id of the run.
+                status:
+                    $ref: "#/components/schemas/WorkflowRunStatus"
+                    description: Current status of the run.
+                stopRequested:
+                    type: boolean
+                    description: When <code>true</code>, a stop was requested and is honored at the next task or tool-call boundary. An in-flight tool call is allowed to finish.
+                title:
+                    type: string
+                    description: Display title for the run. Absent until one is assigned.
+                triggerInput:
+                    type: string
+                    description: Input the run was started with. Absent when the request omitted <code>input</code> and the trigger has no <code>defaultInput</code>.
+                triggeredBy:
+                    type: string
+                    const: http
+                    description: How the run was triggered.
+                workflowId:
+                    type: string
+                    description: Id of the workflow this run belongs to.
+            required:
+                - createdAt
+                - modifiedAt
+                - owner
+                - revision
+                - revisionAt
+                - runId
+                - status
+                - triggeredBy
+                - workflowId
+            title: WorkflowRunMeta
+        CreateWorkflowRunRequest:
+            type: object
+            properties:
+                input:
+                    type: string
+                    description: Input to start the run with. Copied into <code>triggerInput</code> on the run metadata. When omitted, the selected revision's <code>trigger.defaultInput</code> is used if set.
+                revision:
+                    $ref: "#/components/schemas/WorkflowRunRevision"
+                    description: Revision slot to execute. Defaults to <code>published</code>.
+            title: CreateWorkflowRunRequest
+        RunLogPhase:
+            type: string
+            enum:
+                - execution
+                - chat
+            title: RunLogPhase
+            x-speakeasy-unknown-values: allow
+        RunChatMessage:
+            type: object
+            properties:
+                content:
+                    type:
+                        - "null"
+                        - string
+                    description: Message text. Null when an assistant message contains only tool calls.
+                name:
+                    type: string
+                    description: Name of the tool that produced this result. Set only on a <code>tool</code> message.
+                role:
+                    type: string
+                    enum:
+                        - assistant
+                        - system
+                        - tool
+                        - user
+                    description: Role of the message author.<br/> <br><code>user</code> == Human user input <br><code>assistant</code> == AI-generated response <br><code>system</code> == System-level instruction <br><code>tool</code> == Tool execution result.
+                    x-speakeasy-unknown-values: allow
+                tool_call_id:
+                    type: string
+                    description: Id of the <code>tool_calls[].id</code> this message answers. Set only on a <code>tool</code> message.
+                tool_calls:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            function:
+                                type: object
+                                properties:
+                                    arguments:
+                                        type: string
+                                        description: JSON-encoded arguments passed to the function.
+                                    name:
+                                        type: string
+                                        description: Name of the function to invoke.
+                                required:
+                                    - arguments
+                                    - name
+                                description: Function details for the tool call.
+                            id:
+                                type: string
+                                description: Unique identifier for the tool call.
+                        required:
+                            - function
+                            - id
+                    description: Tool invocations requested by the assistant. Each entry contains the tool call ID and function details.
+            required:
+                - content
+                - role
+            title: RunChatMessage
+        WorkflowRunEventType:
+            type: string
+            enum:
+                - taskStarted
+                - taskCompleted
+                - taskFailed
+                - runCompleted
+                - runStopped
+                - runFailed
+            title: WorkflowRunEventType
+            x-speakeasy-unknown-values: allow
+        WorkflowRunEvent:
+            type: object
+            properties:
+                event:
+                    $ref: "#/components/schemas/WorkflowRunEventType"
+                    description: Type of orchestrator event.
+            required:
+                - event
+            title: WorkflowRunEvent
+        WorkflowTaskRunStatus:
+            type: string
+            enum:
+                - pending
+                - running
+                - done
+                - failed
+                - stopped
+            title: WorkflowTaskRunStatus
+            x-speakeasy-unknown-values: allow
+        WorkflowRunState:
+            type: object
+            properties:
+                cursor:
+                    type: string
+                    description: Id of the current or next task in the walk. Absent when no task remains.
+                tasks:
+                    type: object
+                    additionalProperties:
+                        type: object
+                        properties:
+                            endedAt:
+                                type: integer
+                                description: Timestamp (in Unix time) when the task ended, in milliseconds.
+                            error:
+                                type: string
+                                description: Error message if the task failed.
+                            startedAt:
+                                type: integer
+                                description: Timestamp (in Unix time) when the task started, in milliseconds.
+                            status:
+                                $ref: "#/components/schemas/WorkflowTaskRunStatus"
+                                description: Current status of the task.
+                        required:
+                            - status
+                    description: Per-task execution state, keyed by task ID.
+            required:
+                - tasks
+            title: WorkflowRunState
+        WorkflowToolRef:
+            type: object
+            properties:
+                mcpServerId:
+                    type: string
+                    description: An MCP Integration's <code>IMCPServerConfig.id</code>, or <code>CRIBL_LEADER_SERVER_ID</code> for leader built-in tools.
+                toolName:
+                    type: string
+                    description: The raw MCP tool name, not the catalog's composite <code>mcp_&lt;serverId&gt;_&lt;toolName&gt;</code> id.
+            required:
+                - mcpServerId
+                - toolName
+            title: WorkflowToolRef
+        TaskToolConfig:
+            type: object
+            properties:
+                paramBindings:
+                    type: object
+                    additionalProperties:
+                        oneOf:
+                            - type: object
+                              properties:
+                                source:
+                                    type: string
+                                    const: auto
+                              required:
+                                - source
+                            - type: object
+                              properties:
+                                source:
+                                    type: string
+                                    const: pinned
+                                value:
+                                    type: object
+                                    additionalProperties: true
+                              required:
+                                - source
+                                - value
+                    description: Sparse overlay of parameter bindings, keyed by property name from this tool's <code>inputSchema</code>.
+                toolRef:
+                    $ref: "#/components/schemas/WorkflowToolRef"
+                    description: Reference to the MCP or leader tool this task may invoke.
+            required:
+                - toolRef
+            title: TaskToolConfig
+        WorkflowTask:
+            type: object
+            properties:
+                displayName:
+                    type: string
+                    description: Display name for the task.
+                id:
+                    type: string
+                    description: Stable task id within the workflow revision.
+                imports:
+                    type: array
+                    items:
+                        type: string
+                    description: Ids of earlier tasks whose output joins this task's context. The predecessor is implicit.
+                model:
+                    type: string
+                    enum:
+                        - frontier
+                        - reasoning
+                        - small
+                    description: Model tier for this task. Absent binding means the default tier resolution applies.
+                    x-speakeasy-unknown-values: allow
+                prompt:
+                    type: string
+                    description: Task prompt sent to the model. Required unless the task is deterministic; see <code>isDeterministicTask</code>.
+                respond:
+                    type: boolean
+                    description: "When <code>true</code>, the task's output is appended to the run log as a <code>role: 'assistant'</code> message. Stored rather than derived; tool count does not imply it."
+                tools:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/TaskToolConfig"
+                    description: Tools available to this task, each with an optional parameter-binding overlay.
+            required:
+                - displayName
+                - id
+                - tools
+            title: WorkflowTask
+        WorkflowTrigger:
+            type: object
+            properties:
+                defaultInput:
+                    type: string
+                    description: Default text used as run input when the start-run body omits <code>input</code>.
+                guidance:
+                    type: string
+                    description: Placeholder text describing the expected input. UI only; never injected into model context.
+                kind:
+                    type: string
+                    const: prompt
+                    description: Trigger kind. Currently only <code>prompt</code> is supported.
+            required:
+                - kind
+            title: WorkflowTrigger
+        WorkflowRevision:
+            type: object
+            properties:
+                description:
+                    type: string
+                    description: Summary for the workflow list. Never reaches the model; use <code>systemPrompt</code> for model context.
+                systemPrompt:
+                    type: string
+                    description: "Merged into the <code>role: 'system'</code> message of every LLM task, alongside orchestrator framing."
+                tasks:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/WorkflowTask"
+                    description: Tasks in execution order; the walk is sequential.
+                trigger:
+                    $ref: "#/components/schemas/WorkflowTrigger"
+                    description: Input trigger configuration for starting a run.
+            required:
+                - tasks
+                - trigger
+            title: WorkflowRevision
+        WorkflowRun:
+            type: object
+            properties:
+                log:
+                    type: array
+                    items:
+                        allOf:
+                            - type: object
+                              properties:
+                                phase:
+                                    $ref: "#/components/schemas/RunLogPhase"
+                                    description: Phase of the run that the entry belongs to.
+                                seq:
+                                    type: integer
+                                    description: Ordering key within the run (run-global, never reassigned).
+                                taskId:
+                                    type: string
+                                    description: Unique identifier of the task that the entry relates to. Absent on run-level and follow-up chat entries.
+                                timestamp:
+                                    type: integer
+                                    description: Timestamp (in Unix time) when the entry was logged, in milliseconds.
+                              required:
+                                - phase
+                                - seq
+                                - timestamp
+                            - oneOf:
+                                - $ref: "#/components/schemas/RunChatMessage"
+                                - $ref: "#/components/schemas/WorkflowRunEvent"
+                    description: Ordered log of chat messages and system events produced during the run.
+                meta:
+                    $ref: "#/components/schemas/WorkflowRunMeta"
+                    description: Metadata about the workflow run (timing, status, revision info).
+                state:
+                    $ref: "#/components/schemas/WorkflowRunState"
+                    description: Current execution state of the workflow run.
+                workflow:
+                    $ref: "#/components/schemas/WorkflowRevision"
+                    description: Snapshot of the workflow definition as it existed when the run started.
+            required:
+                - log
+                - meta
+                - state
+                - workflow
+            title: WorkflowRun
+        PaginatedWorkflowToolCatalogItem:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/WorkflowToolCatalogItem"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
+        WorkflowToolInputSchema:
+            type: object
+            additionalProperties: true
+            title: WorkflowToolInputSchema
+        WorkflowToolSource:
+            type: string
+            enum:
+                - cribl_leader
+                - external_mcp
+            title: WorkflowToolSource
+            x-speakeasy-unknown-values: allow
+        WorkflowToolCatalogItem:
+            type: object
+            properties:
+                description:
+                    type: string
+                    description: Short description for the tool picker.
+                id:
+                    type: string
+                    description: Stable catalog id (MCP tool name, or <code>mcp_&lt;serverId&gt;_&lt;toolName&gt;</code> for external tools).
+                inputSchema:
+                    $ref: "#/components/schemas/WorkflowToolInputSchema"
+                    description: MCP JSON Schema for execution args.
+                name:
+                    type: string
+                    description: Raw MCP tool name when <code>source</code> is <code>external_mcp</code>.
+                serverDisplayName:
+                    type: string
+                    description: Display name of the MCP Integration when <code>source</code> is <code>external_mcp</code>. Falls back to <code>serverId</code> when the Integration has no display name.
+                serverId:
+                    type: string
+                    description: External MCP server id when <code>source</code> is <code>external_mcp</code>.
+                source:
+                    $ref: "#/components/schemas/WorkflowToolSource"
+                    description: Catalog source for this tool.
+                title:
+                    type: string
+                    description: Display title for the tool picker.
+            required:
+                - description
+                - id
+                - inputSchema
+                - source
+                - title
+            title: WorkflowToolCatalogItem
+        PaginatedWorkflowSummary:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/WorkflowSummary"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
+        WorkflowStatus:
+            type: string
+            enum:
+                - draft
+                - published
+                - modified
+            title: WorkflowStatus
+            x-speakeasy-unknown-values: allow
+        WorkflowSummary:
+            type: object
+            properties:
+                color:
+                    type: string
+                    description: Card color for the workflow.
+                description:
+                    type: string
+                    description: Summary from the published revision when present, otherwise the draft.
+                displayName:
+                    type: string
+                    description: Display name for the workflow.
+                id:
+                    type: string
+                    description: Workflow id.
+                status:
+                    $ref: "#/components/schemas/WorkflowStatus"
+                    description: Current lifecycle status of the workflow.
+            required:
+                - displayName
+                - id
+                - status
+            title: WorkflowSummary
+        WorkflowInfo:
+            type: object
+            properties:
+                createdAt:
+                    type: number
+                    description: Epoch milliseconds when the workflow was created.
+                createdBy:
+                    type: string
+                    description: User id of the creator.
+                draftSavedAt:
+                    type: number
+                    description: Epoch milliseconds when the draft was last saved. Absent once a publish clears the draft.
+                draftSavedBy:
+                    type: string
+                    description: User id that last saved the draft. Absent once a publish clears the draft.
+                modifiedAt:
+                    type: number
+                    description: Epoch milliseconds of the most recent write, including draft saves.
+                modifiedBy:
+                    type: string
+                    description: User id of the most recent writer.
+                publishedAt:
+                    type: number
+                    description: Epoch milliseconds of the most recent publish. Absent until the first publish.
+                publishedBy:
+                    type: string
+                    description: User id of the most recent publisher. Absent until the first publish.
+            required:
+                - createdAt
+                - createdBy
+                - modifiedAt
+                - modifiedBy
+            title: WorkflowInfo
+        WorkflowConfig:
+            type: object
+            properties:
+                __srcGroup:
+                    type: string
+                    description: Fleet or group id this entity was inherited from when served by a Config Helper for a child fleet. Present when inherited from parent, including when the child has a local overlay. Omitted when the entity is local and not inherited. Display-only; never persisted.
+                __srcOverridden:
+                    type: boolean
+                    description: If true, the child fleet has a local overlay on an inherited entity. Omitted when inherited and unmodified, or when local and not inherited. Display-only; never persisted.
+                color:
+                    type: string
+                    description: Card color for the workflow list. Never reaches the model.
+                displayName:
+                    type: string
+                    description: Display name for the workflow.
+                draft:
+                    $ref: "#/components/schemas/WorkflowRevision"
+                    description: Pending edits, and the only body before first publish. Absent when <code>published</code> is current.
+                id:
+                    type: string
+                    description: Unique identifier.
+                info:
+                    $ref: "#/components/schemas/WorkflowInfo"
+                    description: Server-stamped audit metadata for create, modify, draft save, and publish.
+                published:
+                    $ref: "#/components/schemas/WorkflowRevision"
+                    description: The vended body — what a run executes.
+                status:
+                    $ref: "#/components/schemas/WorkflowStatus"
+                    description: Lifecycle status. Computed by the server; never accepted from a client.
+            required:
+                - displayName
+                - id
+                - info
+                - status
+            title: WorkflowConfig
+        WorkflowCreateRequest:
+            type: object
+            properties:
+                color:
+                    type: string
+                    description: Card color for the workflow list. Trimmed; a blank value is stored as absent. Never reaches the model.
+                description:
+                    type: string
+                    description: Summary for the workflow list. Trimmed; a blank value is stored as absent. Never reaches the model; use <code>systemPrompt</code> for model context.
+                displayName:
+                    type: string
+                    description: Required. Display name for the workflow. Trimmed; cannot be blank.
+                id:
+                    type: string
+                    description: Client-supplied workflow id. Must be unique.
+                systemPrompt:
+                    type: string
+                    description: "Merged into the <code>role: 'system'</code> message of every LLM task, alongside orchestrator framing. Trimmed; a blank value is stored as absent."
+                tasks:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/WorkflowTask"
+                    description: Tasks in execution order. Defaults to an empty list when omitted.
+                trigger:
+                    $ref: "#/components/schemas/WorkflowTrigger"
+                    description: "Input trigger configuration. Defaults to <code>{ kind: 'prompt' }</code> when omitted."
+            required:
+                - displayName
+                - id
+            title: WorkflowCreateRequest
+        WorkflowEntityPatchRequest:
+            type: object
+            properties:
+                color:
+                    type: string
+                    description: Card color for the workflow. Trimmed; a blank value clears the stored color.
+                displayName:
+                    type: string
+                    description: Display name for the workflow. Trimmed, and cannot be blank.
+            title: WorkflowEntityPatchRequest
+        WorkflowDraftUpdateRequest:
+            type: object
+            properties:
+                description:
+                    type: string
+                    description: Summary for the workflow list. Trimmed; a blank value is stored as absent. Never reaches the model; use <code>systemPrompt</code> for model context.
+                systemPrompt:
+                    type: string
+                    description: "Merged into the <code>role: 'system'</code> message of every LLM task, alongside orchestrator framing. Trimmed; a blank value is stored as absent."
+                tasks:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/WorkflowTask"
+                    description: Tasks in execution order. Defaults to an empty list when omitted.
+                trigger:
+                    $ref: "#/components/schemas/WorkflowTrigger"
+                    description: "Input trigger configuration. Defaults to <code>{ kind: 'prompt' }</code> when omitted."
+            title: WorkflowDraftUpdateRequest
         FindingStatus:
             type: string
             enum:
@@ -198803,6 +199428,558 @@ components:
             description: Example request body for enabling a single AI feature. Use the <code>feature</code> path parameter to specify the feature to enable. Requires explicit consent to use AI features for the deployment (see <code>POST /ai/consent</code>).
             value:
                 value: true
+        ListWorkflowRunsResponseExamplesRunList:
+            summary: Workflow run metadata list
+            description: GET /ai/workflows/{id}/runs returns published run metadata, most recent first. Builder test-runs are omitted. API v2 uses the configured default page size when pagination parameters are omitted.
+            value:
+                items:
+                    - runId: run_1724000000000_1
+                      workflowId: investigate-spikes
+                      revision: published
+                      revisionAt: 1723920000000
+                      status: completed
+                      owner: admin
+                      triggeredBy: http
+                      triggerInput: Investigate the traffic spike at 14:30 UTC
+                      createdAt: 1724000000000
+                      modifiedAt: 1724000060000
+                    - runId: run_1723990000000_1
+                      workflowId: investigate-spikes
+                      revision: published
+                      revisionAt: 1723920000000
+                      status: running
+                      owner: admin
+                      triggeredBy: http
+                      createdAt: 1723990000000
+                      modifiedAt: 1723990000000
+                count: 2
+                offset: 0
+                limit: 100
+        CreateWorkflowRunResponseExamplesRunCreated:
+            summary: Run created
+            description: Returns 201 with persisted run metadata after the workflow walk is scheduled. <code>status</code> is initially <code>running</code>; execution continues in the background.
+            value:
+                runId: run_1724000000000_1
+                workflowId: investigate-spikes
+                revision: published
+                revisionAt: 1723920000000
+                status: running
+                owner: admin
+                triggeredBy: http
+                triggerInput: Investigate the traffic spike at 14:30 UTC
+                createdAt: 1724000000000
+                modifiedAt: 1724000000000
+        CreateWorkflowRunRequestExamplesCreateRun:
+            summary: Create a workflow run
+            description: POST /ai/workflows/{id}/runs with an optional revision and trigger input. Revision defaults to published, and an explicitly supplied input value, including an empty string, is preserved.
+            value:
+                revision: published
+                input: Investigate the traffic spike at 14:30 UTC
+        CreateWorkflowRunRequestExamplesTestDraft:
+            summary: Test a draft workflow revision
+            value:
+                revision: draft
+                input: Investigate the traffic spike at 14:30 UTC
+        GetWorkflowRunResponseExamplesCompletedRun:
+            summary: Completed run with event log
+            description: GET /ai/workflows/{id}/runs/{runId} returns full run state.
+            value:
+                meta:
+                    runId: run_1724000000000_1
+                    workflowId: investigate-spikes
+                    revision: published
+                    revisionAt: 1723920000000
+                    status: completed
+                    owner: admin
+                    triggeredBy: http
+                    triggerInput: Investigate the traffic spike at 14:30 UTC
+                    createdAt: 1724000000000
+                    modifiedAt: 1724000060000
+                workflow:
+                    trigger:
+                        kind: prompt
+                    tasks:
+                        - id: classify
+                          displayName: Classify spike
+                          tools: []
+                          prompt: Determine whether this is a volume or error-rate spike.
+                        - id: recommend
+                          displayName: Recommend action
+                          tools: []
+                          prompt: Suggest a remediation.
+                          imports:
+                            - classify
+                state:
+                    cursor: recommend
+                    tasks:
+                        classify:
+                            status: done
+                            startedAt: 1724000001000
+                            endedAt: 1724000030000
+                        recommend:
+                            status: done
+                            startedAt: 1724000030000
+                            endedAt: 1724000060000
+                log:
+                    - seq: 1
+                      timestamp: 1724000001000
+                      phase: execution
+                      taskId: classify
+                      event: taskStarted
+                    - seq: 2
+                      timestamp: 1724000030000
+                      phase: execution
+                      taskId: classify
+                      event: taskCompleted
+                    - seq: 3
+                      timestamp: 1724000030000
+                      phase: execution
+                      taskId: recommend
+                      event: taskStarted
+                    - seq: 4
+                      timestamp: 1724000060000
+                      phase: execution
+                      taskId: recommend
+                      event: taskCompleted
+                    - seq: 5
+                      timestamp: 1724000060000
+                      phase: execution
+                      event: runCompleted
+        StopWorkflowRunResponseExamplesStopRequested:
+            summary: Stop acknowledged
+            description: POST /ai/workflows/{id}/runs/{runId}/stop returns immediately with stopRequested recorded; status still reads running until the walk exits.
+            value:
+                runId: run_1724000000000_1
+                workflowId: investigate-spikes
+                revision: published
+                revisionAt: 1723920000000
+                status: running
+                owner: admin
+                triggeredBy: http
+                triggerInput: Investigate the traffic spike at 14:30 UTC
+                stopRequested: true
+                createdAt: 1724000000000
+                modifiedAt: 1724000045000
+        ListWorkflowToolsResponseExamplesCriblLeaderCatalog:
+            summary: Cribl Default catalog (serverId=cribl_leader)
+            description: "Example catalog when serverId=cribl_leader: Cribl Default Select-a-task tools only (RBAC-filtered). Pinable UI metadata is deferred."
+            value:
+                items:
+                    - id: cribl_runSearchQuery
+                      source: cribl_leader
+                      title: Run Search query
+                      description: Executes a search query against a dataset
+                      inputSchema:
+                        type: object
+                        required:
+                            - query
+                        properties:
+                            query:
+                                type: string
+                                minLength: 1
+                    - id: cribl_getSearchJobResults
+                      source: cribl_leader
+                      title: Retrieve Search results
+                      description: Fetches results from a completed search
+                      inputSchema:
+                        type: object
+                        required:
+                            - jobId
+                        properties:
+                            jobId:
+                                type: string
+                    - id: cribl_getSearchContext
+                      source: cribl_leader
+                      title: List datasets and saved searches
+                      description: Lists available datasets and saved searches
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSources
+                      source: cribl_leader
+                      title: Inspect Sources
+                      description: Reviews Sources
+                      inputSchema:
+                        type: object
+                    - id: cribl_getDestinations
+                      source: cribl_leader
+                      title: Inspect Destinations
+                      description: Reviews Destinations
+                      inputSchema:
+                        type: object
+                    - id: cribl_listWorkerGroups
+                      source: cribl_leader
+                      title: Inspect Worker Groups and health
+                      description: Reviews Worker Group status and health
+                      inputSchema:
+                        type: object
+                    - id: cribl_getAlerts
+                      source: cribl_leader
+                      title: Retrieve alerts
+                      description: Fetches alerts and system messages
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSystemMetrics
+                      source: cribl_leader
+                      title: Retrieve system metrics
+                      description: Fetches system metrics
+                      inputSchema:
+                        type: object
+                    - id: cribl_addToSearchNotebook
+                      source: cribl_leader
+                      title: Add findings to a Notebook
+                      description: Saves findings to a Notebook
+                      inputSchema:
+                        type: object
+                    - id: cribl_search
+                      source: cribl_leader
+                      title: Search
+                      description: Runs a Search from natural language or KQL, including dataset selection and results
+                      inputSchema:
+                        type: object
+                        properties:
+                            query:
+                                type: string
+                count: 10
+                offset: 0
+                limit: 100
+        ListWorkflowToolsResponseExamplesExternalMcpCatalog:
+            summary: "Combined catalog (no serverId: Default + all enabled Integrations)"
+            description: "Example catalog with no serverId: Cribl Default tools plus tools from every enabled MCP Integration. Unreachable servers are omitted. Pass serverId=<integrationId> to narrow the catalog to that Integration only."
+            value:
+                items:
+                    - id: cribl_runSearchQuery
+                      source: cribl_leader
+                      title: Run Search query
+                      description: Executes a search query against a dataset
+                      inputSchema:
+                        type: object
+                        required:
+                            - query
+                        properties:
+                            query:
+                                type: string
+                                minLength: 1
+                    - id: mcp_pd_create-incident
+                      source: external_mcp
+                      serverId: pd
+                      serverDisplayName: PagerDuty on-call
+                      name: create_incident
+                      title: create_incident
+                      description: Create a PagerDuty incident
+                      inputSchema:
+                        type: object
+                        required:
+                            - title
+                        properties:
+                            title:
+                                type: string
+                    - id: mcp_jira_create-issue
+                      source: external_mcp
+                      serverId: jira
+                      serverDisplayName: Jira Cloud
+                      name: create_issue
+                      title: create_issue
+                      description: Create a Jira issue
+                      inputSchema:
+                        type: object
+                        required:
+                            - summary
+                        properties:
+                            summary:
+                                type: string
+                count: 3
+                offset: 0
+                limit: 100
+        ListWorkflowToolsResponseExamplesSingleIntegrationCatalog:
+            summary: Single Integration catalog (serverId=pd)
+            description: "Example catalog when serverId names an MCP Integration: only that Integration's tools. Cribl Default tools are excluded; request them with serverId=cribl_leader or by omitting serverId."
+            value:
+                items:
+                    - id: mcp_pd_create-incident
+                      source: external_mcp
+                      serverId: pd
+                      name: create_incident
+                      title: create_incident
+                      description: Create a PagerDuty incident
+                      inputSchema:
+                        type: object
+                        required:
+                            - title
+                        properties:
+                            title:
+                                type: string
+                    - id: mcp_pd_list-incidents
+                      source: external_mcp
+                      serverId: pd
+                      name: list_incidents
+                      title: list_incidents
+                      description: List PagerDuty incidents
+                      inputSchema:
+                        type: object
+                count: 2
+                offset: 0
+                limit: 100
+        ListWorkflowToolsResponseExamplesPaginatedCatalog:
+            summary: Paginated catalog
+            description: API v2 returns a standard paginated list envelope, using configured defaults when offset and limit are omitted. Tools are ordered by id, so each Integration's tools stay contiguous. This example is unfiltered (no serverId).
+            value:
+                items:
+                    - id: cribl_getSearchJobResults
+                      source: cribl_leader
+                      title: Retrieve Search results
+                      description: Fetches results from a completed search
+                      inputSchema:
+                        type: object
+                        required:
+                            - jobId
+                        properties:
+                            jobId:
+                                type: string
+                    - id: mcp_pd_create-incident
+                      source: external_mcp
+                      serverId: pd
+                      serverDisplayName: PagerDuty on-call
+                      name: create_incident
+                      title: create_incident
+                      description: Create a PagerDuty incident
+                      inputSchema:
+                        type: object
+                        required:
+                            - title
+                        properties:
+                            title:
+                                type: string
+                count: 4
+                offset: 1
+                limit: 2
+        ListWorkflowsResponseExamplesSummaryList:
+            summary: Workflow summaries
+            description: GET /ai/workflows returns summary fields only. API v2 uses the configured default page size when pagination parameters are omitted.
+            value:
+                items:
+                    - id: investigate-spikes
+                      displayName: Investigate traffic spikes
+                      description: Triage volume anomalies
+                      status: draft
+                      color: "#4C6EF5"
+                    - id: daily-digest
+                      displayName: Daily digest
+                      status: published
+                count: 2
+                offset: 0
+                limit: 100
+        ListWorkflowsResponseExamplesPaginatedSummaryList:
+            summary: Paginated workflow summaries (offset and limit provided)
+            description: When offset and/or limit are provided, the response is a standard paginated list envelope.
+            value:
+                items:
+                    - id: daily-digest
+                      displayName: Daily digest
+                      status: published
+                count: 2
+                offset: 1
+                limit: 1
+        CreateWorkflowResponseExamplesCreatedDraft:
+            summary: Created draft workflow
+            value:
+                id: investigate-spikes
+                displayName: Investigate traffic spikes
+                color: "#4C6EF5"
+                status: draft
+                draft:
+                    description: Triage volume anomalies
+                    systemPrompt: You are a stream-ops assistant. Prefer pipeline and route evidence over host metrics.
+                    trigger:
+                        kind: prompt
+                        guidance: Paste a log snippet or describe the spike
+                        defaultInput: Investigate the latest volume spike
+                    tasks:
+                        - id: classify
+                          displayName: Classify spike
+                          tools: []
+                          prompt: Determine whether this is a volume or error-rate spike.
+                          respond: true
+                          model: frontier
+                        - id: recommend
+                          displayName: Recommend action
+                          tools: []
+                          prompt: Suggest a remediation.
+                          imports:
+                            - classify
+                          respond: false
+                          model: small
+                info:
+                    createdAt: 1723920000000
+                    createdBy: admin
+                    modifiedAt: 1723920000000
+                    modifiedBy: admin
+                    draftSavedAt: 1723920000000
+                    draftSavedBy: admin
+        CreateWorkflowRequestExamplesCreateWithTasks:
+            summary: Create workflow with tasks
+            description: Server lands the document as draft and stamps audit metadata.
+            value:
+                id: investigate-spikes
+                displayName: Investigate traffic spikes
+                description: Triage volume anomalies
+                color: "#4C6EF5"
+                systemPrompt: You are a stream-ops assistant. Prefer pipeline and route evidence over host metrics.
+                trigger:
+                    kind: prompt
+                    guidance: Paste a log snippet or describe the spike
+                    defaultInput: Investigate the latest volume spike
+                tasks:
+                    - id: classify
+                      displayName: Classify spike
+                      tools: []
+                      prompt: Determine whether this is a volume or error-rate spike.
+                      respond: true
+                      model: frontier
+                    - id: recommend
+                      displayName: Recommend action
+                      tools: []
+                      prompt: Suggest a remediation.
+                      imports:
+                        - classify
+                      respond: false
+                      model: small
+        GetWorkflowResponseExamplesFullDocument:
+            summary: Full workflow document
+            value:
+                id: investigate-spikes
+                displayName: Investigate traffic spikes
+                color: "#4C6EF5"
+                status: draft
+                draft:
+                    description: Triage volume anomalies
+                    systemPrompt: You are a stream-ops assistant. Prefer pipeline and route evidence over host metrics.
+                    trigger:
+                        kind: prompt
+                        guidance: Paste a log snippet or describe the spike
+                        defaultInput: Investigate the latest volume spike
+                    tasks:
+                        - id: classify
+                          displayName: Classify spike
+                          tools: []
+                          prompt: Determine whether this is a volume or error-rate spike.
+                          respond: true
+                          model: frontier
+                        - id: recommend
+                          displayName: Recommend action
+                          tools: []
+                          prompt: Suggest a remediation.
+                          imports:
+                            - classify
+                          respond: false
+                          model: small
+                info:
+                    createdAt: 1723920000000
+                    createdBy: admin
+                    modifiedAt: 1723920000000
+                    modifiedBy: admin
+                    draftSavedAt: 1723920000000
+                    draftSavedBy: admin
+        PatchWorkflowResponseExamplesPatchedEntity:
+            summary: Patch metadata on a published workflow
+            description: The published revision is unchanged.
+            value:
+                id: investigate-spikes
+                displayName: Investigate volume spikes
+                color: "#7048E8"
+                status: published
+                published:
+                    description: Triage volume anomalies
+                    systemPrompt: You are a stream-ops assistant. Prefer pipeline and route evidence over host metrics.
+                    trigger:
+                        kind: prompt
+                        guidance: Paste a log snippet or describe the spike
+                        defaultInput: Investigate the latest volume spike
+                    tasks:
+                        - id: classify
+                          displayName: Classify spike
+                          tools: []
+                          prompt: Determine whether this is a volume or error-rate spike.
+                          respond: true
+                          model: frontier
+                        - id: recommend
+                          displayName: Recommend action
+                          tools: []
+                          prompt: Suggest a remediation.
+                          imports:
+                            - classify
+                          respond: false
+                          model: small
+                info:
+                    createdAt: 1723920000000
+                    createdBy: admin
+                    modifiedAt: 1723921800000
+                    modifiedBy: admin
+                    publishedAt: 1723920000000
+                    publishedBy: admin
+        PatchWorkflowRequestExamplesSetListFacingFields:
+            summary: Set display name and color
+            description: Sparse-merges entity metadata without changing the draft, published revision, or lifecycle status.
+            value:
+                displayName: Investigate volume spikes
+                color: "#7048E8"
+        PublishWorkflowResponseExamplesPublished:
+            summary: Published workflow
+            value:
+                id: investigate-spikes
+                displayName: Investigate traffic spikes
+                color: "#4C6EF5"
+                status: published
+                published:
+                    description: Triage volume anomalies
+                    trigger:
+                        kind: prompt
+                    tasks: []
+                info:
+                    createdAt: 1723920000000
+                    createdBy: admin
+                    modifiedAt: 1723927200000
+                    modifiedBy: admin
+                    publishedAt: 1723927200000
+                    publishedBy: admin
+        UpdateWorkflowResponseExamplesSavedDraft:
+            summary: Updated workflow (status rederived)
+            value:
+                id: investigate-spikes
+                displayName: Investigate traffic spikes
+                color: "#4C6EF5"
+                status: draft
+                draft:
+                    description: Updated description
+                    trigger:
+                        kind: prompt
+                        guidance: Describe the anomaly
+                        defaultInput: Investigate the latest volume spike
+                    tasks:
+                        - id: classify
+                          displayName: Classify spike
+                          tools: []
+                          prompt: Determine spike type.
+                info:
+                    createdAt: 1723920000000
+                    createdBy: admin
+                    modifiedAt: 1723923600000
+                    modifiedBy: admin
+                    draftSavedAt: 1723923600000
+                    draftSavedBy: admin
+        UpdateWorkflowRequestExamplesUpdateDraft:
+            summary: Update draft revision
+            description: Replaces the draft body without changing the workflow display name or color.
+            value:
+                description: Updated description
+                trigger:
+                    kind: prompt
+                    guidance: Describe the anomaly
+                    defaultInput: Investigate the latest volume spike
+                tasks:
+                    - id: classify
+                      displayName: Classify spike
+                      tools: []
+                      prompt: Determine spike type.
         DetectionAggregationExamplesGuardFindings:
             summary: Guard detection findings
             description: Example response showing aggregated Guard findings grouped by datatype and pipeline.
@@ -205546,7 +206723,6 @@ tags:
         - leader
     - name: AI
       description: Actions related to AI
-      x-cribl-internal: true
       x-cribl-availability: both
       x-cribl-api-context:
         - leader
@@ -260065,6 +261241,918 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+    /ai/workflows/{id}/runs:
+        get:
+            operationId: getAiWorkflowsRunsById
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: List workflow runs
+            description: Returns run metadata for the specified workflow. Builder test-runs (<code>draft</code>) are omitted. API v2 applies the configured default page size when pagination parameters are omitted.
+            responses:
+                "200":
+                    description: List of WorkflowRunMeta objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedWorkflowRunMeta"
+                            examples:
+                                ListWorkflowRunsResponseExamplesRunList:
+                                    $ref: "#/components/examples/ListWorkflowRunsResponseExamplesRunList"
+                "400":
+                    description: Invalid workflow id or pagination params
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Pagination offset (0-based). Required with <code>limit</code> on API v1.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of runs to return from the offset.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
+        post:
+            operationId: createAiWorkflowsRunsById
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Start a workflow run
+            description: Validates input, creates the run directory, kicks off the workflow, and returns 201 with the run metadata without waiting for the walk. The authenticated user is stamped as <code>owner</code>. The requested revision defaults to <code>published</code>. When the body omits <code>input</code>, the selected revision's <code>trigger.defaultInput</code> is copied into <code>triggerInput</code> if set.
+            responses:
+                "201":
+                    description: The created WorkflowRunMeta object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/WorkflowRunMeta"
+                            examples:
+                                CreateWorkflowRunResponseExamplesRunCreated:
+                                    $ref: "#/components/examples/CreateWorkflowRunResponseExamplesRunCreated"
+                "400":
+                    description: Invalid workflow id or request body
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authenticated user and Authorization header required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: AI execution or Leader MCP is unavailable, consent is missing, or caller permissions are unavailable
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: Workflow not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: Workflow has no requested revision or its configured tools are invalid or unavailable
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "502":
+                    description: An enabled MCP dependency is unreachable
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            requestBody:
+                description: CreateWorkflowRunRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/CreateWorkflowRunRequest"
+                        examples:
+                            CreateWorkflowRunRequestExamplesCreateRun:
+                                $ref: "#/components/examples/CreateWorkflowRunRequestExamplesCreateRun"
+                            CreateWorkflowRunRequestExamplesTestDraft:
+                                $ref: "#/components/examples/CreateWorkflowRunRequestExamplesTestDraft"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+    /ai/workflows/{id}/runs/{runId}:
+        delete:
+            operationId: deleteAiWorkflowsRunsByIdAndRunId
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Delete a workflow run
+            description: Removes the run and its outputs.
+            responses:
+                "204":
+                    description: Run deleted.
+                "400":
+                    description: Invalid workflow id or run id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: Run not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: Run is still running
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+                - name: runId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The run id.
+        get:
+            operationId: getAiWorkflowsRunsByIdAndRunId
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Get a workflow run
+            description: Returns status, per-task state, and full event log. Works for finished or in-flight runs.
+            responses:
+                "200":
+                    description: The requested WorkflowRun object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/WorkflowRun"
+                            examples:
+                                GetWorkflowRunResponseExamplesCompletedRun:
+                                    $ref: "#/components/examples/GetWorkflowRunResponseExamplesCompletedRun"
+                "400":
+                    description: Invalid workflow id or run id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: Run not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+                - name: runId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The run id.
+    /ai/workflows/{id}/runs/{runId}/stop:
+        post:
+            operationId: createAiWorkflowsRunsStopByIdAndRunId
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Stop a workflow run
+            description: Idempotent stop request, honored at the next task or tool-call boundary. An in-flight tool call is allowed to finish. Returns the run metadata with the request recorded; <code>status</code> is unchanged until the walk exits.
+            responses:
+                "200":
+                    description: The created WorkflowRunMeta object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/WorkflowRunMeta"
+                            examples:
+                                StopWorkflowRunResponseExamplesStopRequested:
+                                    $ref: "#/components/examples/StopWorkflowRunResponseExamplesStopRequested"
+                "400":
+                    description: Invalid workflow id or run id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: Run not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+                - name: runId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The run id.
+    /ai/workflow-tools:
+        get:
+            operationId: getAiWorkflowTools
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: List workflow builder tools
+            description: Returns tools from the requested source. Omit <code>serverId</code> for Cribl Default tools (RBAC-filtered) plus all enabled Integrations (unreachable servers omitted). Pass <code>serverId=cribl_leader</code> for Cribl Default tools only. Pass any other <code>serverId</code> for that Integration's tools only (502 if unreachable). API v2 applies the configured default page size when pagination parameters are omitted. Tools are ordered by <code>id</code>, which keeps each Integration's tools contiguous.
+            responses:
+                "200":
+                    description: List of WorkflowToolCatalogItem objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedWorkflowToolCatalogItem"
+                            examples:
+                                ListWorkflowToolsResponseExamplesCriblLeaderCatalog:
+                                    $ref: "#/components/examples/ListWorkflowToolsResponseExamplesCriblLeaderCatalog"
+                                ListWorkflowToolsResponseExamplesExternalMcpCatalog:
+                                    $ref: "#/components/examples/ListWorkflowToolsResponseExamplesExternalMcpCatalog"
+                                ListWorkflowToolsResponseExamplesSingleIntegrationCatalog:
+                                    $ref: "#/components/examples/ListWorkflowToolsResponseExamplesSingleIntegrationCatalog"
+                                ListWorkflowToolsResponseExamplesPaginatedCatalog:
+                                    $ref: "#/components/examples/ListWorkflowToolsResponseExamplesPaginatedCatalog"
+                "400":
+                    description: Invalid pagination params, non-string <code>serverId</code>, or blank <code>serverId</code>
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: MCP Integration not found or disabled
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "502":
+                    description: MCP Integration unreachable when listing tools
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            parameters:
+                - name: serverId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: "Strict source filter: <code>cribl_leader</code> for Default-only, an MCP Integration id for that Integration only, or omit for Default + all enabled Integrations. Blank or whitespace-only values are rejected."
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Pagination offset (0-based). Required with <code>limit</code> on API v1.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of tools to return from the offset.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
+    /ai/workflows:
+        get:
+            operationId: getAiWorkflows
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: List AI workflows
+            description: Returns summary fields only (<code>id</code>, <code>displayName</code>, <code>description</code>, <code>status</code>, and optional <code>color</code>). <code>displayName</code> and <code>color</code> come from the workflow entity. Description comes from the published revision when present, otherwise the draft. API v2 applies the configured default page size when pagination parameters are omitted.
+            responses:
+                "200":
+                    description: List of WorkflowSummary objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedWorkflowSummary"
+                            examples:
+                                ListWorkflowsResponseExamplesSummaryList:
+                                    $ref: "#/components/examples/ListWorkflowsResponseExamplesSummaryList"
+                                ListWorkflowsResponseExamplesPaginatedSummaryList:
+                                    $ref: "#/components/examples/ListWorkflowsResponseExamplesPaginatedSummaryList"
+                "400":
+                    description: Invalid pagination params
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Pagination offset (0-based). Required with <code>limit</code> on API v1.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of workflows to return from the offset.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
+        post:
+            operationId: createAiWorkflows
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Create an AI workflow
+            description: "Creates a workflow document. Always lands as <code>status: 'draft'</code>. The body requires <code>id</code> and <code>displayName</code>."
+            responses:
+                "201":
+                    description: The created WorkflowConfig object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/WorkflowConfig"
+                            examples:
+                                CreateWorkflowResponseExamplesCreatedDraft:
+                                    $ref: "#/components/examples/CreateWorkflowResponseExamplesCreatedDraft"
+                "400":
+                    description: Invalid request body
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authenticated user required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: A workflow with this id already exists
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: WorkflowCreateRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/WorkflowCreateRequest"
+                        examples:
+                            CreateWorkflowRequestExamplesCreateWithTasks:
+                                $ref: "#/components/examples/CreateWorkflowRequestExamplesCreateWithTasks"
+    /ai/workflows/{id}:
+        delete:
+            operationId: deleteAiWorkflowsById
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Delete an AI workflow
+            description: Removes the workflow document.
+            responses:
+                "204":
+                    description: Workflow deleted.
+                "400":
+                    description: Invalid workflow id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authenticated user required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: Workflow not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+        get:
+            operationId: getAiWorkflowsById
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Get an AI workflow
+            description: Returns the full workflow document.
+            responses:
+                "200":
+                    description: The requested WorkflowConfig object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/WorkflowConfig"
+                            examples:
+                                GetWorkflowResponseExamplesFullDocument:
+                                    $ref: "#/components/examples/GetWorkflowResponseExamplesFullDocument"
+                "400":
+                    description: Invalid workflow id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: Workflow not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+        patch:
+            operationId: updateAiWorkflowsById
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Patch AI workflow metadata
+            description: Sparse-merges the workflow display name and color without changing its draft, published revision, or lifecycle status.
+            responses:
+                "200":
+                    description: The updated WorkflowConfig object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/WorkflowConfig"
+                            examples:
+                                PatchWorkflowResponseExamplesPatchedEntity:
+                                    $ref: "#/components/examples/PatchWorkflowResponseExamplesPatchedEntity"
+                "400":
+                    description: Invalid request body or workflow id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authenticated user required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: Workflow not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: WorkflowEntityPatchRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/WorkflowEntityPatchRequest"
+                        examples:
+                            PatchWorkflowRequestExamplesSetListFacingFields:
+                                $ref: "#/components/examples/PatchWorkflowRequestExamplesSetListFacingFields"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+    /ai/workflows/{id}/draft:
+        delete:
+            operationId: deleteAiWorkflowsDraftById
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Discard an AI workflow draft
+            description: Deletes the draft revision and leaves the published revision in place. Repeating the request after the draft is already gone is a no-op. Returns 409 if no published version exists.
+            responses:
+                "204":
+                    description: Draft discarded.
+                "400":
+                    description: Invalid workflow id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authenticated user required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: Workflow not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: No published version exists
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+        put:
+            operationId: updateAiWorkflowsDraftById
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Update an AI workflow draft
+            description: "Replaces the draft slot wholesale. Omitted <code>description</code> and <code>systemPrompt</code>, and values that are blank after trimming, are dropped. Omitted <code>trigger</code> defaults to <code>{ kind: 'prompt' }</code>; omitted <code>tasks</code> defaults to <code>[]</code>. Never changes the workflow display name or color."
+            responses:
+                "200":
+                    description: The updated WorkflowConfig object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/WorkflowConfig"
+                            examples:
+                                UpdateWorkflowResponseExamplesSavedDraft:
+                                    $ref: "#/components/examples/UpdateWorkflowResponseExamplesSavedDraft"
+                "400":
+                    description: Invalid request body or workflow id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authenticated user required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: Workflow not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: WorkflowDraftUpdateRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/WorkflowDraftUpdateRequest"
+                        examples:
+                            UpdateWorkflowRequestExamplesUpdateDraft:
+                                $ref: "#/components/examples/UpdateWorkflowRequestExamplesUpdateDraft"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+    /ai/workflows/{id}/publish:
+        post:
+            operationId: createAiWorkflowsPublishById
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Publish an AI workflow
+            description: Promotes the draft revision to published.
+            responses:
+                "200":
+                    description: The created WorkflowConfig object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/WorkflowConfig"
+                            examples:
+                                PublishWorkflowResponseExamplesPublished:
+                                    $ref: "#/components/examples/PublishWorkflowResponseExamplesPublished"
+                "400":
+                    description: Invalid workflow id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authenticated user required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: Workflow not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
     /ai/guard/findings/ignore:
         delete:
             operationId: deleteAiGuardFindingsIgnore
