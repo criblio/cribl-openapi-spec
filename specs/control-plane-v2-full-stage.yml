@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.0-alpha.1788996117160-2dc79397
+    version: 4.20.1-alpha.1789082370205-54b0cdd7
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -1790,21 +1790,9 @@ components:
             type: object
             title: Detection Rules
             properties:
-                upstreamSources:
-                    title: Upstream Rule Sources
-                    description: Baseline rule sets maintained by a vendor or community. Loaded first; org sources can replace individual rules by ID.
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/UpstreamSourceConfFunctionConfSchemaDetectionRules"
-                orgSources:
-                    title: Organization Rule Sources
-                    description: Your organization's rules. A rule with the same ID as an upstream rule fully replaces it.
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/UpstreamSourceConfFunctionConfSchemaDetectionRules"
                 localOverrides:
                     title: Local Overrides
-                    description: Instance-level tuning applied after all sources are merged. No git required.
+                    description: Instance-level tuning applied after the rule set is merged. Managed by Cribl Security; not intended for direct editing.
                     type: object
                     properties:
                         disabled:
@@ -1881,7 +1869,7 @@ components:
                                         type: string
                         inlineRules:
                             title: Inline Rules
-                            description: Full rule definitions authored here. Quick one-offs that don't warrant a git commit.
+                            description: Full rule definitions authored here rather than delivered with the corpus.
                             type: array
                             items:
                                 type: object
@@ -87369,6 +87357,246 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        FindingInfoDef:
+            type: object
+            properties:
+                desc:
+                    type: string
+                    description: Longer description of what the finding means.
+                title:
+                    type: string
+                    description: Short title for the finding. Defaults to the rule name.
+                types:
+                    type: array
+                    items:
+                        type: string
+                    description: OCSF finding type labels to attach to the finding.
+            title: FindingInfoDef
+        ObservableDef:
+            type: object
+            properties:
+                name:
+                    type: string
+                    description: OCSF field path the observable refers to, for example <code>src_endpoint.ip</code>.
+                type:
+                    type: string
+                    description: Human-readable observable type label. Derived from <code>typeId</code> when omitted.
+                typeId:
+                    type: number
+                    description: OCSF observable type id, for example <code>2</code> for an IP address.
+                value:
+                    type: string
+                    description: Observable value. Supports <code>${field}</code> substitution, including extract aliases.
+            required:
+                - name
+                - typeId
+                - value
+            title: ObservableDef
+        EmitDef:
+            type: object
+            properties:
+                attacks:
+                    type: array
+                    items:
+                        type: string
+                    description: MITRE ATT&amp;CK technique uids the rule detects, for example <code>T1059</code>.
+                confidence:
+                    type: string
+                    description: Confidence label. Derived from <code>confidenceId</code>; not read from the document.
+                confidenceId:
+                    type: number
+                    description: OCSF confidence id, <code>1</code> (Low) through <code>3</code> (High).
+                confidenceScore:
+                    type: number
+                    description: Confidence as a score from <code>0</code> to <code>100</code>.
+                evidences:
+                    type: array
+                    items:
+                        type: object
+                        additionalProperties: true
+                    description: Supporting detail attached to the finding. String values support <code>${field}</code> substitution.
+                findingInfo:
+                    $ref: "#/components/schemas/FindingInfoDef"
+                    description: Overrides for the OCSF <code>finding_info</code> object.
+                impact:
+                    type: string
+                    description: Impact label. Derived from <code>impactId</code>; not read from the document.
+                impactId:
+                    type: number
+                    description: OCSF impact id, <code>1</code> (Low) through <code>4</code> (Critical).
+                impactScore:
+                    type: number
+                    description: Impact as a score from <code>0</code> to <code>100</code>.
+                isAlert:
+                    type: boolean
+                    description: If <code>true</code>, the finding is marked as an alert.
+                message:
+                    type: string
+                    description: Message emitted with the finding. Supports <code>${field}</code> substitution.
+                observables:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ObservableDef"
+                    description: Entities the finding is about, such as the source IP or the user involved.
+                severity:
+                    type: string
+                    description: Severity label. Derived from <code>severityId</code> when the finding is built; not read from the document.
+                severityId:
+                    type: number
+                    description: OCSF severity id, <code>1</code> (Informational) through <code>5</code> (Critical).
+            title: EmitDef
+        DetectionRule:
+            type: object
+            properties:
+                condition:
+                    type: string
+                    description: Expression that decides whether the rule matches an event. Required unless <code>passthrough</code> is <code>true</code>.
+                condition_language:
+                    type: string
+                    description: "Language <code>condition</code> is written in: <code>cribl-rules</code> (default) or <code>kql</code>."
+                description:
+                    type: string
+                    description: Human-readable description of what the rule detects. Not evaluated.
+                disabled:
+                    type: boolean
+                    description: If <code>true</code>, the rule is stored but never loaded by an engine worker.
+                emit:
+                    $ref: "#/components/schemas/EmitDef"
+                    description: Shapes the OCSF finding produced when the rule matches.
+                enabled:
+                    type: boolean
+                    description: If <code>false</code>, the rule is stored but never loaded by an engine worker.
+                extract:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    description: Capture expressions keyed by alias. Each value is a <code>field =~ /pattern/</code> expression whose first capture group becomes the alias value, referenceable as <code>${alias}</code> in emit templates.
+                id:
+                    type: string
+                    description: Unique identifier for the Detection Rule.
+                name:
+                    type: string
+                    description: Display name for the Detection Rule.
+                passthrough:
+                    type: boolean
+                    description: If <code>true</code>, the rule matches every event without evaluating a condition, and is used only for field extraction.
+                references:
+                    type: array
+                    items:
+                        type: string
+                    description: Reference links for the rule, such as vendor documentation. Stored but not evaluated.
+                tags:
+                    type: array
+                    items:
+                        type: string
+                    description: Tags for filtering and grouping rules.
+            required:
+                - id
+                - name
+            title: DetectionRule
+        RejectedRule:
+            type: object
+            properties:
+                message:
+                    type: string
+                    description: Why the rule was skipped, for example an unsupported regex or an invalid extract expression.
+                rule:
+                    type: string
+                    description: <code>id</code> of the rule that was skipped.
+            required:
+                - message
+            title: RejectedRule
+        BulkReplaceResult:
+            type: object
+            properties:
+                count:
+                    type: number
+                    description: Number of Detection Rules stored. Excludes any rule listed in <code>rejected</code>.
+                items:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/DetectionRule"
+                rejected:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/RejectedRule"
+            required:
+                - count
+                - items
+                - rejected
+            title: BulkReplaceResult
+        RuleDefaults:
+            type: object
+            properties:
+                confidenceId:
+                    type: number
+                    description: Default OCSF confidence for rules that omit <code>emit.confidenceId</code>.
+                isAlert:
+                    type: boolean
+                    description: Default alert flag for rules that omit <code>emit.isAlert</code>.
+                severityId:
+                    type: number
+                    description: Default OCSF severity for rules in the document that omit <code>emit.severityId</code>.
+            title: RuleDefaults
+        RuleDef:
+            type: object
+            properties:
+                condition:
+                    type: string
+                    description: Expression that decides whether the rule matches an event. Required unless <code>passthrough</code> is <code>true</code>.
+                condition_language:
+                    type: string
+                    description: "Language <code>condition</code> is written in: <code>cribl-rules</code> (default) or <code>kql</code>."
+                emit:
+                    $ref: "#/components/schemas/EmitDef"
+                    description: Shapes the OCSF finding produced when the rule matches.
+                enabled:
+                    type: boolean
+                    description: If <code>false</code>, the rule is stored but never loaded by an engine worker.
+                extract:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    description: Capture expressions keyed by alias. Each value is a <code>field =~ /pattern/</code> expression whose first capture group becomes the alias value, referenceable as <code>${alias}</code> in emit templates.
+                id:
+                    type: string
+                    description: Unique identifier for the rule. Falls back to <code>name</code> when omitted.
+                name:
+                    type: string
+                    description: Display name for the rule.
+                passthrough:
+                    type: boolean
+                    description: If <code>true</code>, the rule matches every event without evaluating a condition, and is used only for field extraction.
+                references:
+                    type: array
+                    items:
+                        type: string
+                    description: Reference links for the rule, such as vendor documentation. Stored but not evaluated.
+                tags:
+                    type: array
+                    items:
+                        type: string
+                    description: Tags for filtering and grouping rules.
+            required:
+                - name
+            title: RuleDef
+        RuleFileDoc:
+            type: object
+            properties:
+                defaults:
+                    $ref: "#/components/schemas/RuleDefaults"
+                    description: Values applied to every rule in <code>rules</code> that omits them. Baked into each rule when stored.
+                rules:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/RuleDef"
+                    description: The rules to publish. An empty array removes every stored rule.
+                version:
+                    type: string
+                    description: Rule-document format version. Informational; the loader does not branch on it.
+            required:
+                - rules
+            title: RuleFileDoc
         MonitorInstanceEval:
             type: object
             properties:
@@ -181857,27 +182085,6 @@ components:
                     type: string
                     title: Pattern
                     description: "Grok pattern to extract fields. Syntax supported: %{PATTERN_NAME:FIELD_NAME}"
-        RefreshIntervalOptionsUpstreamSourcesItems:
-            title: Refresh Interval
-            type: string
-            description: How often to pull updates. Ignored when ref is a tag or SHA.
-            enum:
-                - never
-                - 5m
-                - 15m
-                - 1h
-                - 6h
-                - 24h
-            x-speakeasy-unknown-values: allow
-        SourceTypeOptionsUpstreamSourcesItems:
-            title: Source Type
-            type: string
-            enum:
-                - git_repo
-            x-speakeasy-enum-descriptions:
-                - Git repository
-            description: Source Type
-            x-speakeasy-unknown-values: allow
         NameFieldType:
             type: object
             description: Reference to a field by its original text and parsed path segments.
@@ -184751,33 +184958,6 @@ components:
                 maxVersion:
                     $ref: "#/components/schemas/MaximumTlsVersionOptionsRedisDeploymentTypeStandaloneTlsOptions"
                     description: Maximum TLS version to use when connecting
-        UpstreamSourceConfFunctionConfSchemaDetectionRules:
-            type: object
-            required:
-                - type
-            properties:
-                type:
-                    $ref: "#/components/schemas/SourceTypeOptionsUpstreamSourcesItems"
-                    description: Source Type
-                url:
-                    title: Git Repository URL
-                    type: string
-                    description: HTTPS git URL only. Required for git_repo.
-                ref:
-                    title: Git Ref
-                    type: string
-                    description: Branch, tag, or commit SHA. Tags/SHAs never auto-refresh.
-                glob:
-                    title: Rule File Glob
-                    type: string
-                    description: Glob relative to repo root.
-                refreshInterval:
-                    $ref: "#/components/schemas/RefreshIntervalOptionsUpstreamSourcesItems"
-                    description: How often to pull updates. Ignored when ref is a tag or SHA.
-                token:
-                    title: Access Token
-                    type: string
-                    description: HTTPS personal access token (PAT). Injected into the URL at clone time — not stored in the URL field.
         PaginationTypeRestDiscoveryDiscoverTypeHttp:
             type: object
             description: Settings that control how the Collector paginates through Discover results.
@@ -201097,6 +201277,114 @@ components:
                 host: 0.0.0.0
                 tcpPort: 601
                 udpPort: 514
+        PublishDetectionRulesResponseExamplesClean:
+            summary: Every rule stored
+            description: All rules in the document loaded, so rejected is empty.
+            value:
+                count: 2
+                items:
+                    - id: okta-mfa-deactivated
+                      name: Okta MFA Factor Deactivated
+                    - id: okta-admin-granted
+                      name: Okta Admin Role Granted
+                rejected: []
+        PublishDetectionRulesResponseExamplesWithRejections:
+            summary: Some rules skipped
+            description: A rule the loader could not accept is reported in rejected and is not stored, and is not counted in count. The rest of the document is stored.
+            value:
+                count: 1
+                items:
+                    - id: okta-admin-granted
+                      name: Okta Admin Role Granted
+                rejected:
+                    - rule: linux-ssh-auth-failure
+                      message: 'Rule "linux-ssh-auth-failure" skipped: unsafe regex pattern — nested quantifier'
+        PublishDetectionRulesExamplesSingleRule:
+            summary: Publish one rule
+            description: Replaces the stored corpus with a single rule. A rule needs a name and a condition; everything under emit shapes the OCSF finding the rule produces.
+            value:
+                rules:
+                    - id: aws-root-console-login
+                      name: AWS Root Console Login
+                      condition: eventName == "ConsoleLogin" and userIdentity.type == "Root"
+                      condition_language: kql
+                      tags:
+                        - aws
+                        - iam
+                      emit:
+                        severityId: 4
+                        isAlert: true
+                        message: Root console login from ${sourceIPAddress}
+                        attacks:
+                            - T1078.004
+                        findingInfo:
+                            title: Root console login
+                            desc: The AWS account root user signed in to the console.
+        PublishDetectionRulesExamplesWithFileDefaults:
+            summary: Publish rules that share defaults
+            description: A document-level defaults block supplies emit values for rules that omit them. Defaults are baked into each rule as it is stored, so a stored rule always means what the document said. An explicit value on a rule wins over the default.
+            value:
+                defaults:
+                    severityId: 3
+                    isAlert: false
+                rules:
+                    - id: okta-mfa-deactivated
+                      name: Okta MFA Factor Deactivated
+                      condition: eventType == "user.mfa.factor.deactivate"
+                      condition_language: kql
+                      emit:
+                        findingInfo:
+                            title: MFA factor deactivated
+                    - id: okta-admin-granted
+                      name: Okta Admin Role Granted
+                      condition: eventType == "user.account.privilege.grant"
+                      condition_language: kql
+                      emit:
+                        severityId: 5
+                        isAlert: true
+                        findingInfo:
+                            title: Admin role granted
+        PublishDetectionRulesExamplesExtractAndObservables:
+            summary: Publish a rule that extracts fields
+            description: Each extract entry binds an alias to a "field =~ /pattern/" expression; the first capture group becomes the alias value, which emit templates reference as ${alias}. Observables carry the entities a finding is about.
+            value:
+                rules:
+                    - id: linux-ssh-auth-failure
+                      name: Linux SSH Authentication Failure
+                      condition: raw_data contains "Failed password"
+                      condition_language: kql
+                      extract:
+                        user: raw_data =~ /for (?:invalid user )?(\w+)/
+                        src: raw_data =~ /from ([\d.]+)/
+                      emit:
+                        severityId: 3
+                        isAlert: true
+                        message: Failed SSH login for ${user} from ${src}
+                        observables:
+                            - name: src_endpoint.ip
+                              typeId: 2
+                              value: ${src}
+                            - name: actor.user.name
+                              typeId: 4
+                              value: ${user}
+        PublishDetectionRulesExamplesDisabledRule:
+            summary: Publish a rule that is stored but not loaded
+            description: A rule marked enabled false is stored and returned, and engine workers do not load it. Rules absent from the document are removed, so this is how a rule is retired without dropping it.
+            value:
+                rules:
+                    - id: noisy-detection
+                      name: Noisy Detection Under Review
+                      condition: severityId <= 2
+                      condition_language: kql
+                      enabled: false
+                      emit:
+                        severityId: 1
+                        isAlert: false
+        PublishDetectionRulesExamplesEmptyCorpus:
+            summary: Remove every rule
+            description: An empty rules array clears the corpus. Engine workers then load no detections.
+            value:
+                rules: []
         AlertHistoryStatsExamplesActivityStats:
             summary: Monitor activity statistics
             description: Example response body that contains alert Monitor activity counts for a specific time window.
@@ -206199,11 +206487,6 @@ tags:
         - leader
     - name: security
       description: Actions related to Security
-      x-cribl-availability: both
-      x-cribl-api-context:
-        - leader
-        - node
-        - single
     - name: sharedConfigs
       description: Actions related to SharedConfigs
       x-cribl-internal: true
@@ -237831,7 +238114,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Create a secret store
-            description: Create a new secret store that is backed by an external provider for global secrets. The built-in <code>cribl</code> secret store is automatically provisioned.<br/><br/>External stores are validated on save, so an unreachable endpoint or bad credentials are rejected with a 400 rather than persisted. For Azure Key Vault stores, Cribl probes the vault with a List call, falling back to a Get on a placeholder secret name; the credentials must have, at the vault scope, either List (<code>Key Vault Reader</code>) or Get (<code>Key Vault Secrets User</code>) permission. Access scoped to individual secrets alone is not sufficient to validate the connection.<br/><br/><b>Deprecated:</b> a <code>config.tls.rejectUnauthorized</code> value supplied through the API is ignored — Cribl enforces HashiCorp Vault server-certificate validation.
+            description: Create a new secret store that is backed by an external provider for global secrets. The built-in <code>cribl</code> secret store is automatically provisioned.<br/><br/>External stores are validated on save, so an unreachable endpoint or bad credentials are rejected with a 400 rather than persisted. For Azure Key Vault stores, grant List (<code>Key Vault Reader</code>) or Get (<code>Key Vault Secrets User</code>) at vault scope. If vault-level access is not possible, create a secret named <code>cribl-gsm-connectivity-probe</code> and grant Get on it. Cribl validates the connection on save with a List call, falling back to a Get on that secret name.<br/><br/><b>Deprecated:</b> a <code>config.tls.rejectUnauthorized</code> value supplied through the API is ignored — Cribl enforces HashiCorp Vault server-certificate validation.
             responses:
                 "201":
                     description: The created SecretStoreWithRuntimeState object.
@@ -238049,7 +238332,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Update a secret store
-            description: 'Update the specified secret store. Cribl does not support updates to the built-in <code>cribl</code> secret store.<br/><br/>If you change the <code>auth.provider</code>, you must send a complete <code>auth</code> object with the correct configuration for the provider. As long as you do not change the <code>auth.provider</code>, you can update a single setting in <code>auth</code> without resending the entire object.<br/><br/>Secret values (such as <code>auth.token</code>) are returned masked as an empty string by <code>GET</code>, so a read-modify-write is safe: a secret sent as an empty string is treated as "keep the stored value" and is ignored, rather than clearing the secret or failing validation. To change a secret, send its new value. There is no way to clear a secret through this endpoint.<br/><br/>For Vault stores, omitting <code>config.healthCheckEndpoint</code> preserves the current value. Send an empty string (<code>""</code>) to clear it and disable health checks.<br/><br/>The updated configuration is validated on save, so an unreachable endpoint or bad credentials are rejected with a 400 and the previous configuration is preserved. For Azure Key Vault stores, Cribl probes the vault with a List call, falling back to a Get on a placeholder secret name; the credentials must have, at the vault scope, either List (<code>Key Vault Reader</code>) or Get (<code>Key Vault Secrets User</code>) permission. Access scoped to individual secrets alone is not sufficient to validate the connection.<br/><br/><b>Deprecated:</b> a <code>config.tls.rejectUnauthorized</code> value supplied through the API is ignored — Cribl enforces HashiCorp Vault server-certificate validation.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration.'
+            description: 'Update the specified secret store. Cribl does not support updates to the built-in <code>cribl</code> secret store.<br/><br/>If you change the <code>auth.provider</code>, you must send a complete <code>auth</code> object with the correct configuration for the provider. As long as you do not change the <code>auth.provider</code>, you can update a single setting in <code>auth</code> without resending the entire object.<br/><br/>Secret values (such as <code>auth.token</code>) are returned masked as an empty string by <code>GET</code>, so a read-modify-write is safe: a secret sent as an empty string is treated as "keep the stored value" and is ignored, rather than clearing the secret or failing validation. To change a secret, send its new value. There is no way to clear a secret through this endpoint.<br/><br/>For Vault stores, omitting <code>config.healthCheckEndpoint</code> preserves the current value. Send an empty string (<code>""</code>) to clear it and disable health checks.<br/><br/>The updated configuration is validated on save, so an unreachable endpoint or bad credentials are rejected with a 400 and the previous configuration is preserved. For Azure Key Vault stores, grant List (<code>Key Vault Reader</code>) or Get (<code>Key Vault Secrets User</code>) at vault scope. If vault-level access is not possible, create a secret named <code>cribl-gsm-connectivity-probe</code> and grant Get on it. Cribl validates the connection on save with a List call, falling back to a Get on that secret name.<br/><br/><b>Deprecated:</b> a <code>config.tls.rejectUnauthorized</code> value supplied through the API is ignored — Cribl enforces HashiCorp Vault server-certificate validation.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration.'
             responses:
                 "200":
                     description: The updated SecretStoreWithRuntimeState object.
@@ -260730,6 +261013,12 @@ paths:
                   schema:
                     type: string
                   description: Detected datatype to scope the mitigation to. Requires pipeline.
+                - name: sinceHours
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Lookback window in hours for sampling findings. When omitted, jobs scoped to a Pipeline and datatype use 720 hours and other jobs use 24 hours.
     /ai/consent:
         get:
             operationId: getAiConsent
@@ -268174,6 +268463,66 @@ paths:
                   schema:
                     type: string
                   description: The existing HEC token string to update on the Splunk HEC source.
+    /security/detection-rules:
+        put:
+            operationId: updateSecurityDetectionRules
+            tags:
+                - security
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - searchGroup
+            summary: Replace all Detection Rules (Cribl.Cloud only)
+            description: "Replace every Detection Rule in the current config context from an uploaded rule document (Cribl.Cloud only). The request body is a rules file (<code>{rules: [...]}</code>) in YAML or JSON. You can send it <code>Content-Encoding: gzip</code> compressed to reduce transfer size, but the 5 MB body limit applies to the uncompressed document either way. Rules not present in the document are removed. Returns the stored rules plus any the loader rejected."
+            responses:
+                "200":
+                    description: The stored Detection Rules, with per-rule rejections
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BulkReplaceResult"
+                            examples:
+                                PublishDetectionRulesResponseExamplesClean:
+                                    $ref: "#/components/examples/PublishDetectionRulesResponseExamplesClean"
+                                PublishDetectionRulesResponseExamplesWithRejections:
+                                    $ref: "#/components/examples/PublishDetectionRulesResponseExamplesWithRejections"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: RuleFileDoc object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/RuleFileDoc"
+                        examples:
+                            PublishDetectionRulesExamplesSingleRule:
+                                $ref: "#/components/examples/PublishDetectionRulesExamplesSingleRule"
+                            PublishDetectionRulesExamplesWithFileDefaults:
+                                $ref: "#/components/examples/PublishDetectionRulesExamplesWithFileDefaults"
+                            PublishDetectionRulesExamplesExtractAndObservables:
+                                $ref: "#/components/examples/PublishDetectionRulesExamplesExtractAndObservables"
+                            PublishDetectionRulesExamplesDisabledRule:
+                                $ref: "#/components/examples/PublishDetectionRulesExamplesDisabledRule"
+                            PublishDetectionRulesExamplesEmptyCorpus:
+                                $ref: "#/components/examples/PublishDetectionRulesExamplesEmptyCorpus"
     /alert/history/stats:
         get:
             operationId: getAlertHistoryStats
