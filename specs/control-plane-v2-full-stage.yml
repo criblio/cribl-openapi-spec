@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.1-alpha.1789082370205-54b0cdd7
+    version: 4.20.1-alpha.1789168825035-45924bfb
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -55471,6 +55471,19 @@ components:
                 - day
             title: RateLimitInterval
             x-speakeasy-unknown-values: allow
+        ManagedRateLimitConfig:
+            type: object
+            properties:
+                enabled:
+                    type: boolean
+                    description: Whether requests over the limit receive an HTTP 429 response.
+                interval:
+                    $ref: "#/components/schemas/RateLimitInterval"
+                    description: Time window for the rate limit.
+                rate:
+                    type: integer
+                    description: Maximum number of requests allowed per interval.
+            title: ManagedRateLimitConfig
         RateLimitConfig:
             type: object
             properties:
@@ -55487,6 +55500,12 @@ components:
         RateLimits:
             type: object
             properties:
+                diagnostics:
+                    $ref: "#/components/schemas/ManagedRateLimitConfig"
+                    description: Rate limit shared by diagnostic REST endpoints.
+                global:
+                    $ref: "#/components/schemas/ManagedRateLimitConfig"
+                    description: Global rate limit shared by rate-limited REST endpoints.
                 login:
                     $ref: "#/components/schemas/RateLimitConfig"
                     description: Rate limit for the login endpoint.
@@ -84690,6 +84709,19 @@ components:
                 - startedAt
                 - status
             title: ErasureRequestGetResp
+        CriblLakeHighsideCallerIdentity:
+            type: object
+            properties:
+                callerRoleArn:
+                    type: string
+                    description: The IAM role ARN under which the running Cribl leader process is authenticated, normalised from the STS assumed-role session ARN into the underlying role ARN.
+                partition:
+                    type: string
+                    description: The AWS partition the running Cribl process is authenticated in, as reported by STS GetCallerIdentity. Downstream artifacts such as the BYOS S3 CloudFormation template use this to construct partition-correct resource ARNs.
+            required:
+                - callerRoleArn
+                - partition
+            title: CriblLakeHighsideCallerIdentity
         CriblLakeSource:
             type: object
             properties:
@@ -168220,6 +168252,16 @@ components:
         RateLimitsPartialRequest:
             type: object
             properties:
+                diagnostics:
+                    description: Rate limit shared by diagnostic REST endpoints.
+                    anyOf:
+                        - $ref: "#/components/schemas/ManagedRateLimitConfigPartialRequest"
+                        - type: "null"
+                global:
+                    description: Global rate limit shared by rate-limited REST endpoints.
+                    anyOf:
+                        - $ref: "#/components/schemas/ManagedRateLimitConfigPartialRequest"
+                        - type: "null"
                 login:
                     description: Rate limit for the login endpoint.
                     anyOf:
@@ -168231,6 +168273,25 @@ components:
                         - $ref: "#/components/schemas/RateLimitConfigPartialRequest"
                         - type: "null"
             title: RateLimitsPartialRequest
+        ManagedRateLimitConfigPartialRequest:
+            type: object
+            properties:
+                enabled:
+                    description: Whether requests over the limit receive an HTTP 429 response.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                interval:
+                    description: Time window for the rate limit.
+                    anyOf:
+                        - $ref: "#/components/schemas/RateLimitInterval"
+                        - type: "null"
+                rate:
+                    description: Maximum number of requests allowed per interval.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
+            title: ManagedRateLimitConfigPartialRequest
         RateLimitConfigPartialRequest:
             type: object
             properties:
@@ -177791,6 +177852,12 @@ components:
                                 anyOf:
                                     - type: string
                                     - type: "null"
+                            controlPlaneOutpostGroupId:
+                                description: Outpost group that executes Azure operations for this Storage Location.
+                                anyOf:
+                                    - type: string
+                                      minLength: 1
+                                    - type: "null"
                             bucketName:
                                 description: AWS S3 bucket name backing the Storage Location.
                                 anyOf:
@@ -186282,6 +186349,10 @@ components:
                 region:
                     type: string
                     description: Cloud region where the storage resides.
+                controlPlaneOutpostGroupId:
+                    type: string
+                    minLength: 1
+                    description: Outpost group that executes Azure operations for this Storage Location.
                 bucketName:
                     type: string
                     description: AWS S3 bucket name backing the Storage Location.
@@ -200026,6 +200097,12 @@ components:
                 startedAt: 2026-07-08T02:00:00Z
                 completedAt: null
                 auditLogDataset: system:erasure-audit-log
+        GetLakeHighsideCallerIdentityResponseExamplesDefault:
+            summary: Cribl process running as an aws-iso IAM role
+            description: Returns the IAM role ARN of the running Cribl leader process, normalised from the STS assumed-role session ARN to the underlying role ARN.
+            value:
+                callerRoleArn: arn:aws-iso:iam::123456789012:role/customer-cribl-leader
+                partition: aws-iso
         LakeSourceCreateExamplesDdssSource:
             summary: Create a DDSS Cribl Lake Source
             description: Example request body for creating a DDSS Cribl Lake Source (bucket) in the specified Lake.
@@ -206199,7 +206276,6 @@ tags:
         - node
     - name: lake
       description: Actions related to Lake
-      x-cribl-availability: cloud
       x-cribl-api-context:
         - leader
     - name: licenses
@@ -242966,6 +243042,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist — Dataset Provider not found.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -243024,6 +243106,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist — Dataset Provider not found.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -265220,6 +265308,46 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Lake Record Erasure request to get.
+    /products/lake/highside/caller-identity:
+        get:
+            operationId: getProductsLakeHighsideCallerIdentity
+            tags:
+                - lake
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: Get the running Cribl process's IAM role ARN
+            description: Returns the IAM role ARN under which the running Cribl leader process is authenticated. Available only in Highside deployments; returns 404 elsewhere. Requires the caller to have the lake admin role. The UI uses the returned ARN as the trusted principal in the generated BYOS S3 CloudFormation template.
+            responses:
+                "200":
+                    description: The running process's IAM role ARN.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CriblLakeHighsideCallerIdentity"
+                            examples:
+                                GetLakeHighsideCallerIdentityResponseExamplesDefault:
+                                    $ref: "#/components/examples/GetLakeHighsideCallerIdentityResponseExamplesDefault"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
     /products/lake/lakes/{lakeId}/sources/{id}:
         delete:
             operationId: deleteProductsLakeLakesSourcesByLakeIdAndId
