@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1788996116428-1a0698e3
+    version: 4.21.0-alpha.1789168814622-93237c52
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -16235,7 +16235,32 @@ components:
                     title: Auth tokens
                     description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
                     items:
-                        $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+                        type: object
+                        oneOf:
+                            - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
+                            - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+                        properties:
+                            authType:
+                                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                                description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                            tokenSecret:
+                                type: string
+                                title: Token secret (text secret)
+                                description: Select or create a stored text secret
+                            token:
+                                type: string
+                                title: Token
+                                description: "Shared secret to be provided by any client (Authorization: <token>)"
+                            description:
+                                type: string
+                                title: Description
+                                description: Description
+                            metadata:
+                                type: array
+                                title: Fields
+                                description: Fields to add to events referencing this token
+                                items:
+                                    $ref: "#/components/schemas/MetadataConfInputCollection"
                 description:
                     type: string
                     title: Description
@@ -17049,6 +17074,10 @@ components:
                     type: boolean
                     title: Skip file on error
                     description: Skip files that trigger a processing error. Disabled by default, which allows retries after processing errors.
+                encoding:
+                    type: string
+                    title: Encoding
+                    description: Character encoding to use when parsing ingested data. When not set, @{product} will default to UTF-8 but may incorrectly interpret multi-byte characters.
                 metadata:
                     type: array
                     title: Fields
@@ -21146,8 +21175,7 @@ components:
                     items:
                         type: object
                         oneOf:
-                            - required:
-                                - token
+                            - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
                             - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
                         properties:
                             authType:
@@ -23167,7 +23195,33 @@ components:
                     title: Auth tokens
                     description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
                     items:
-                        $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+                        type: object
+                        oneOf:
+                            - required:
+                                - token
+                            - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+                        properties:
+                            authType:
+                                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                                description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                            tokenSecret:
+                                type: string
+                                title: Token secret (text secret)
+                                description: Select or create a stored text secret
+                            token:
+                                type: string
+                                title: Token
+                                description: "Shared secret to be provided by any client (Authorization: <token>)"
+                            description:
+                                type: string
+                                title: Description
+                                description: Description
+                            metadata:
+                                type: array
+                                title: Fields
+                                description: Fields to add to events referencing this token
+                                items:
+                                    $ref: "#/components/schemas/MetadataConfInputCollection"
                 accessControlAllowOrigin:
                     title: CORS allowed origins
                     type: array
@@ -25344,6 +25398,10 @@ components:
                     minimum: 1
                     title: Hash length
                     description: Length of file header bytes to use in hash for unique file identification. Values above 16384 may cause issues with re-ingesting files.
+                enableLoadBalancing:
+                    type: boolean
+                    title: Enable load balancing
+                    description: Load balance traffic across all Worker Processes
                 metadata:
                     type: array
                     title: Fields
@@ -56677,24 +56735,6 @@ components:
                             type: string
                             description: Error message if the task has failed.
                             readOnly: true
-                deploy:
-                    type: object
-                    title: Deployment
-                    description: Optional automatic deployment settings for lookups in distributed Worker Groups. Ignored unless lookup automatic deployment is enabled in this deployment. When omitted, lookups require manual group deploy.
-                    properties:
-                        mode:
-                            type: string
-                            title: Auto Deploy
-                            enum:
-                                - manual
-                                - auto
-                            description: Deployment mode. When set to "auto", the leader automatically deploys this lookup to Worker Groups after content changes. When set to "manual", the lookup is only deployed during a manual group deployment. Only applies to lookups in distributed deployments.
-                            x-speakeasy-unknown-values: allow
-                        delay:
-                            type: number
-                            title: Delay
-                            minimum: 0
-                            description: Minutes to wait after the lookup is modified before triggering automatic deployment. Helps batch rapid edits into a single deploy.
             anyOf:
                 - properties:
                     fileInfo:
@@ -58210,7 +58250,7 @@ components:
                     description: If <code>true</code>, opens the link in a new browser tab.
                 url:
                     type: string
-                    description: Target URL for the action.
+                    description: Target URL for the action. Relative, protocol-relative, and <code>http</code>/<code>https</code> URLs are supported, along with benign schemes such as <code>mailto</code> and <code>tel</code>. Executable schemes (<code>javascript</code>, <code>vbscript</code>, and <code>data</code>) are rejected on create and update; any such value already stored is made inert and is never navigated to.
             required:
                 - label
                 - url
@@ -71259,17 +71299,8 @@ components:
                     type: integer
                     description: Timestamp (in Unix time) when the lakehouse engine metrics were last published, in milliseconds.
                 status:
-                    type: string
-                    enum:
-                        - blocked
-                        - delayed
-                        - failed
-                        - provisioning
-                        - ready
-                        - resizing
-                        - terminated
+                    $ref: "#/components/schemas/StatusOptionsLocalSearchEngineApi"
                     description: Provisioning lifecycle status of the lakehouse engine.
-                    x-speakeasy-unknown-values: allow
                 tierSize:
                     $ref: "#/components/schemas/EngineSize"
                     description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code>, <code>4xlarge</code>,<code>5xlarge</code>, and <code>6xlarge</code> requires the <code>cribl_operator</code> role.
@@ -75247,11 +75278,9 @@ components:
             enum:
                 - deploying
                 - failed
-                - none
-                - submitted
                 - succeeded
                 - unknown
-            description: Deployment progress states for an App backend.
+            description: Public backend deployment states. Internal <code>submitted</code> is reported as <code>deploying</code>; internal <code>none</code> is omitted. Any other value is <code>unknown</code>.
             title: AppBackendDeploymentState
             x-speakeasy-unknown-values: allow
         AppBackendStatus:
@@ -79822,6 +79851,7 @@ components:
                 - input
                 - output
                 - savedJob
+                - databaseConnection
             title: ScanEntityType
             x-speakeasy-unknown-values: allow
         PromotionSiteRef:
@@ -87085,6 +87115,101 @@ components:
                 - fields
             description: Field names present in a lakehouse engine Dataset over the requested time window.
             title: FieldsResponse
+        LocalSearchConfig:
+            type: object
+            properties:
+                __srcGroup:
+                    type: string
+                    description: Fleet or group id this entity was inherited from when served by a Config Helper for a child fleet. Present when inherited from parent, including when the child has a local overlay. Omitted when the entity is local and not inherited. Display-only; never persisted.
+                __srcOverridden:
+                    type: boolean
+                    description: If true, the child fleet has a local overlay on an inherited entity. Omitted when inherited and unmodified, or when local and not inherited. Display-only; never persisted.
+                enabled:
+                    type: boolean
+                    description: Whether the lakehouse service is currently enabled.
+                estimatedIngestRate:
+                    type: integer
+                    description: Combined estimated ingest rate for the lakehouse worker group in gigabytes per day, using the same discrete ladder as Cloud Group <code>IConfigGroup.estimatedIngestRate</code>.
+                groupSizeOverride:
+                    type: integer
+                    enum:
+                        - 1024
+                        - 2048
+                        - 3072
+                        - 4096
+                        - 5120
+                        - 7168
+                        - 10240
+                        - 13312
+                        - 15360
+                    description: Cribl-operator-set worker group ingest sizing that pins the value Zeus receives, replacing the sum auto-computed from active engines. Set, updated, or cleared through the operator-only <code>/search/local-search/group-size-override</code> endpoints; when absent, sizing is auto-computed.
+                    x-speakeasy-unknown-values: allow
+                    x-speakeasy-enums:
+                        - GroupSizeOverride1024
+                        - GroupSizeOverride2048
+                        - GroupSizeOverride3072
+                        - GroupSizeOverride4096
+                        - GroupSizeOverride5120
+                        - GroupSizeOverride7168
+                        - GroupSizeOverride10240
+                        - GroupSizeOverride13312
+                        - GroupSizeOverride15360
+                id:
+                    type: string
+                    description: Unique identifier.
+                lastProvisionedMs:
+                    type: integer
+                    description: Timestamp (in Unix time) when the entity was last provisioned or updated, in milliseconds.
+                status:
+                    $ref: "#/components/schemas/StatusOptionsLocalSearchEngineApi"
+                    description: Provisioning lifecycle status of the lakehouse engine.
+            required:
+                - enabled
+                - id
+            title: LocalSearchConfig
+        LocalSearchGroupSizeOverrideBody:
+            type: object
+            properties:
+                estimatedIngestRate:
+                    type: integer
+                    enum:
+                        - 1024
+                        - 2048
+                        - 3072
+                        - 4096
+                        - 5120
+                        - 7168
+                        - 10240
+                        - 13312
+                        - 15360
+                    description: The pinned worker group ingest sizing, aligned to the same discrete ladder as Cloud Group <code>IConfigGroup.estimatedIngestRate</code>. Zeus consumes this value in place of the sum auto-computed from active engines.
+                    examples:
+                        - 4096
+                    x-speakeasy-enum-descriptions:
+                        - 12 MB/sec
+                        - 24 MB/sec
+                        - 36 MB/sec
+                        - 48 MB/sec
+                        - 60 MB/sec
+                        - 84 MB/sec
+                        - 120 MB/sec
+                        - 156 MB/sec
+                        - 180 MB/sec
+                    x-speakeasy-enums:
+                        - Rate12MBPerSec
+                        - Rate24MBPerSec
+                        - Rate36MBPerSec
+                        - Rate48MBPerSec
+                        - Rate60MBPerSec
+                        - Rate84MBPerSec
+                        - Rate120MBPerSec
+                        - Rate156MBPerSec
+                        - Rate180MBPerSec
+                    x-speakeasy-unknown-values: allow
+            required:
+                - estimatedIngestRate
+            description: Request body for POST/PATCH <code>/search/local-search/group-size-override</code>.
+            title: LocalSearchGroupSizeOverrideBody
         LocalSearchApiErrorBody:
             type: object
             properties:
@@ -91268,7 +91393,32 @@ components:
                     anyOf:
                         - type: array
                           items:
-                            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+                            type: object
+                            oneOf:
+                                - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
+                                - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+                            properties:
+                                authType:
+                                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                                    description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                                tokenSecret:
+                                    type: string
+                                    title: Token secret (text secret)
+                                    description: Select or create a stored text secret
+                                token:
+                                    type: string
+                                    title: Token
+                                    description: "Shared secret to be provided by any client (Authorization: <token>)"
+                                description:
+                                    type: string
+                                    title: Description
+                                    description: Description
+                                metadata:
+                                    type: array
+                                    title: Fields
+                                    description: Fields to add to events referencing this token
+                                    items:
+                                        $ref: "#/components/schemas/MetadataConfInputCollection"
                         - type: "null"
                 description:
                     title: Description
@@ -93079,6 +93229,12 @@ components:
                     description: Skip files that trigger a processing error. Disabled by default, which allows retries after processing errors.
                     anyOf:
                         - type: boolean
+                        - type: "null"
+                encoding:
+                    title: Encoding
+                    description: Character encoding to use when parsing ingested data. When not set, @{product} will default to UTF-8 but may incorrectly interpret multi-byte characters.
+                    anyOf:
+                        - type: string
                         - type: "null"
                 metadata:
                     title: Fields
@@ -103149,8 +103305,7 @@ components:
                           items:
                             type: object
                             oneOf:
-                                - required:
-                                    - token
+                                - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
                                 - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
                             properties:
                                 authType:
@@ -107803,7 +107958,33 @@ components:
                     anyOf:
                         - type: array
                           items:
-                            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+                            type: object
+                            oneOf:
+                                - required:
+                                    - token
+                                - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+                            properties:
+                                authType:
+                                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+                                    description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
+                                tokenSecret:
+                                    type: string
+                                    title: Token secret (text secret)
+                                    description: Select or create a stored text secret
+                                token:
+                                    type: string
+                                    title: Token
+                                    description: "Shared secret to be provided by any client (Authorization: <token>)"
+                                description:
+                                    type: string
+                                    title: Description
+                                    description: Description
+                                metadata:
+                                    type: array
+                                    title: Fields
+                                    description: Fields to add to events referencing this token
+                                    items:
+                                        $ref: "#/components/schemas/MetadataConfInputCollection"
                         - type: "null"
                 accessControlAllowOrigin:
                     title: CORS allowed origins
@@ -112640,6 +112821,12 @@ components:
                     anyOf:
                         - type: number
                           minimum: 1
+                        - type: "null"
+                enableLoadBalancing:
+                    title: Enable load balancing
+                    description: Load balance traffic across all Worker Processes
+                    anyOf:
+                        - type: boolean
                         - type: "null"
                 metadata:
                     title: Fields
@@ -174450,30 +174637,6 @@ components:
                                     - type: string
                                     - type: "null"
                         - type: "null"
-                deploy:
-                    title: Deployment
-                    description: Optional automatic deployment settings for lookups in distributed Worker Groups. Ignored unless lookup automatic deployment is enabled in this deployment. When omitted, lookups require manual group deploy.
-                    anyOf:
-                        - type: object
-                          properties:
-                            mode:
-                                title: Auto Deploy
-                                description: Deployment mode. When set to "auto", the leader automatically deploys this lookup to Worker Groups after content changes. When set to "manual", the lookup is only deployed during a manual group deployment. Only applies to lookups in distributed deployments.
-                                anyOf:
-                                    - type: string
-                                      enum:
-                                        - manual
-                                        - auto
-                                      x-speakeasy-unknown-values: allow
-                                    - type: "null"
-                            delay:
-                                title: Delay
-                                description: Minutes to wait after the lookup is modified before triggering automatic deployment. Helps batch rapid edits into a single deploy.
-                                anyOf:
-                                    - type: number
-                                      minimum: 0
-                                    - type: "null"
-                        - type: "null"
             anyOf:
                 - properties:
                     fileInfo:
@@ -182928,6 +183091,13 @@ components:
                 - secret
             description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
             x-speakeasy-unknown-values: allow
+        InputHttpAuthTokensExtItemsType:
+            required:
+                - token
+            properties:
+                token:
+                    type: string
+                    description: Shared secret provided by clients for authentication
         InputHttpAuthTypeSecretConstraint:
             required:
                 - authType
@@ -184802,6 +184972,18 @@ components:
                 - kusto_datetime
             description: Format or interpretation of the configured timestamp field's contents, such as a Kusto datetime.
             x-speakeasy-unknown-values: allow
+        StatusOptionsLocalSearchEngineApi:
+            type: string
+            enum:
+                - blocked
+                - delayed
+                - failed
+                - provisioning
+                - ready
+                - resizing
+                - terminated
+            description: Provisioning lifecycle status of the lakehouse engine.
+            x-speakeasy-unknown-values: allow
         ProductConfAppRequestBody:
             type: string
             enum:
@@ -185650,34 +185832,6 @@ components:
                     $ref: "#/components/schemas/MaximumTlsVersionOptionsTls"
                     description: Maximum TLS version
             description: TLS settings (server side)
-        AuthTokensExtConfInputHttp:
-            type: object
-            oneOf:
-                - required:
-                    - token
-                - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
-            properties:
-                authType:
-                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
-                    description: Select Manual to enter an auth token directly, or select Secret to use a text secret to authenticate
-                tokenSecret:
-                    type: string
-                    title: Token secret (text secret)
-                    description: Select or create a stored text secret
-                token:
-                    type: string
-                    title: Token
-                    description: "Shared secret to be provided by any client (Authorization: <token>)"
-                description:
-                    type: string
-                    title: Description
-                    description: Description
-                metadata:
-                    type: array
-                    title: Fields
-                    description: Fields to add to events referencing this token
-                    items:
-                        $ref: "#/components/schemas/MetadataConfInputCollection"
         RetryRulesType:
             type: object
             required:
@@ -190733,8 +190887,8 @@ components:
                     maxPageSize: 250
                 configHelperSpawn:
                     default:
-                        memPerBootSpikeMB: 768
-                        reserveHeadroomMB: 1024
+                        memPerBootSpikeMB: 512
+                        reserveHeadroomMB: 512
                         systemMemPressureRatio: 0.85
                         systemCpuPressurePerc: 90
                         systemEluPressurePerc: 90
@@ -190747,8 +190901,8 @@ components:
                     maxPageSize: 1000
                 configHelperSpawn:
                     default:
-                        memPerBootSpikeMB: 768
-                        reserveHeadroomMB: 1024
+                        memPerBootSpikeMB: 512
+                        reserveHeadroomMB: 512
                         systemMemPressureRatio: 0.85
                         systemCpuPressurePerc: 90
                         systemEluPressurePerc: 90
@@ -196807,12 +196961,13 @@ components:
                 installationId: example-app
                 version: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
                 state: deploying
-        AppBackendStatusExamplesNone:
-            summary: No backend deployment
-            description: The App has no backend deployment intent.
+        AppBackendStatusExamplesUnknown:
+            summary: Unconfirmed deployment status
+            description: The platform could not classify the deployment.
             value:
                 installationId: example-app
-                state: none
+                version: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+                state: unknown
         AppBackendStatusExamplesFailed:
             summary: Terminal deployment failure
             description: Matching deployer work ended with a sanitized terminal message.
@@ -199565,18 +199720,30 @@ components:
             description: "Example catalog when serverId=cribl_leader: Cribl Default Select-a-task tools only (RBAC-filtered). Pinable UI metadata is deferred."
             value:
                 items:
-                    - id: cribl_runSearchQuery
+                    - id: cribl_addToSearchNotebook
                       source: cribl_leader
-                      title: Run Search query
-                      description: Executes a search query against a dataset
+                      title: Add findings to a Notebook
+                      description: Saves findings to a Notebook
                       inputSchema:
                         type: object
-                        required:
-                            - query
-                        properties:
-                            query:
-                                type: string
-                                minLength: 1
+                    - id: cribl_getAlerts
+                      source: cribl_leader
+                      title: Retrieve alerts
+                      description: Fetches alerts and system messages
+                      inputSchema:
+                        type: object
+                    - id: cribl_getDestinations
+                      source: cribl_leader
+                      title: Inspect Destinations
+                      description: Reviews Destinations
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSearchContext
+                      source: cribl_leader
+                      title: List datasets and saved searches
+                      description: Lists available datasets and saved searches
+                      inputSchema:
+                        type: object
                     - id: cribl_getSearchJobResults
                       source: cribl_leader
                       title: Retrieve Search results
@@ -199588,34 +199755,10 @@ components:
                         properties:
                             jobId:
                                 type: string
-                    - id: cribl_getSearchContext
-                      source: cribl_leader
-                      title: List datasets and saved searches
-                      description: Lists available datasets and saved searches
-                      inputSchema:
-                        type: object
                     - id: cribl_getSources
                       source: cribl_leader
                       title: Inspect Sources
                       description: Reviews Sources
-                      inputSchema:
-                        type: object
-                    - id: cribl_getDestinations
-                      source: cribl_leader
-                      title: Inspect Destinations
-                      description: Reviews Destinations
-                      inputSchema:
-                        type: object
-                    - id: cribl_listWorkerGroups
-                      source: cribl_leader
-                      title: Inspect Worker Groups and health
-                      description: Reviews Worker Group status and health
-                      inputSchema:
-                        type: object
-                    - id: cribl_getAlerts
-                      source: cribl_leader
-                      title: Retrieve alerts
-                      description: Fetches alerts and system messages
                       inputSchema:
                         type: object
                     - id: cribl_getSystemMetrics
@@ -199624,29 +199767,12 @@ components:
                       description: Fetches system metrics
                       inputSchema:
                         type: object
-                    - id: cribl_addToSearchNotebook
+                    - id: cribl_listWorkerGroups
                       source: cribl_leader
-                      title: Add findings to a Notebook
-                      description: Saves findings to a Notebook
+                      title: Inspect Worker Groups and health
+                      description: Reviews Worker Group status and health
                       inputSchema:
                         type: object
-                    - id: cribl_search
-                      source: cribl_leader
-                      title: Search
-                      description: Runs a Search from natural language or KQL, including dataset selection and results
-                      inputSchema:
-                        type: object
-                        properties:
-                            query:
-                                type: string
-                count: 10
-                offset: 0
-                limit: 100
-        ListWorkflowToolsResponseExamplesExternalMcpCatalog:
-            summary: "Combined catalog (no serverId: Default + all enabled Integrations)"
-            description: "Example catalog with no serverId: Cribl Default tools plus tools from every enabled MCP Integration. Unreachable servers are omitted. Pass serverId=<integrationId> to narrow the catalog to that Integration only."
-            value:
-                items:
                     - id: cribl_runSearchQuery
                       source: cribl_leader
                       title: Run Search query
@@ -199658,21 +199784,100 @@ components:
                         properties:
                             query:
                                 type: string
-                                minLength: 1
-                    - id: mcp_pd_create-incident
-                      source: external_mcp
-                      serverId: pd
-                      serverDisplayName: PagerDuty on-call
-                      name: create_incident
-                      title: create_incident
-                      description: Create a PagerDuty incident
+                    - id: cribl_search
+                      source: cribl_leader
+                      title: Search
+                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
                       inputSchema:
                         type: object
                         required:
-                            - title
+                            - query
                         properties:
-                            title:
+                            query:
+                                type: object
+                count: 10
+                offset: 0
+                limit: 100
+        ListWorkflowToolsResponseExamplesCombinedCatalog:
+            summary: "Combined catalog (no serverId: Default + all enabled Integrations)"
+            description: "Example catalog with no serverId: Cribl Default tools plus tools from every enabled MCP Integration. Unreachable servers are omitted. Pass serverId=<integrationId> to narrow the catalog to that Integration only."
+            value:
+                items:
+                    - id: cribl_addToSearchNotebook
+                      source: cribl_leader
+                      title: Add findings to a Notebook
+                      description: Saves findings to a Notebook
+                      inputSchema:
+                        type: object
+                    - id: cribl_getAlerts
+                      source: cribl_leader
+                      title: Retrieve alerts
+                      description: Fetches alerts and system messages
+                      inputSchema:
+                        type: object
+                    - id: cribl_getDestinations
+                      source: cribl_leader
+                      title: Inspect Destinations
+                      description: Reviews Destinations
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSearchContext
+                      source: cribl_leader
+                      title: List datasets and saved searches
+                      description: Lists available datasets and saved searches
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSearchJobResults
+                      source: cribl_leader
+                      title: Retrieve Search results
+                      description: Fetches results from a completed search
+                      inputSchema:
+                        type: object
+                        required:
+                            - jobId
+                        properties:
+                            jobId:
                                 type: string
+                    - id: cribl_getSources
+                      source: cribl_leader
+                      title: Inspect Sources
+                      description: Reviews Sources
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSystemMetrics
+                      source: cribl_leader
+                      title: Retrieve system metrics
+                      description: Fetches system metrics
+                      inputSchema:
+                        type: object
+                    - id: cribl_listWorkerGroups
+                      source: cribl_leader
+                      title: Inspect Worker Groups and health
+                      description: Reviews Worker Group status and health
+                      inputSchema:
+                        type: object
+                    - id: cribl_runSearchQuery
+                      source: cribl_leader
+                      title: Run Search query
+                      description: Executes a search query against a dataset
+                      inputSchema:
+                        type: object
+                        required:
+                            - query
+                        properties:
+                            query:
+                                type: string
+                    - id: cribl_search
+                      source: cribl_leader
+                      title: Search
+                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
+                      inputSchema:
+                        type: object
+                        required:
+                            - query
+                        properties:
+                            query:
+                                type: object
                     - id: mcp_jira_create-issue
                       source: external_mcp
                       serverId: jira
@@ -199687,7 +199892,21 @@ components:
                         properties:
                             summary:
                                 type: string
-                count: 3
+                    - id: mcp_pd_create-incident
+                      source: external_mcp
+                      serverId: pd
+                      serverDisplayName: PagerDuty on-call
+                      name: create_incident
+                      title: create_incident
+                      description: Create a PagerDuty incident
+                      inputSchema:
+                        type: object
+                        required:
+                            - title
+                        properties:
+                            title:
+                                type: string
+                count: 12
                 offset: 0
                 limit: 100
         ListWorkflowToolsResponseExamplesSingleIntegrationCatalog:
@@ -199721,36 +199940,36 @@ components:
                 limit: 100
         ListWorkflowToolsResponseExamplesPaginatedCatalog:
             summary: Paginated catalog
-            description: API v2 returns a standard paginated list envelope, using configured defaults when offset and limit are omitted. Tools are ordered by id, so each Integration's tools stay contiguous. This example is unfiltered (no serverId).
+            description: API v2 returns a standard paginated list envelope, using configured defaults when offset and limit are omitted. Tools are ordered by id, so each Integration's tools stay contiguous. This example is unfiltered (no serverId) and requests the page that spans the last Cribl Default tool and the first Integration tool.
             value:
                 items:
-                    - id: cribl_getSearchJobResults
+                    - id: cribl_search
                       source: cribl_leader
-                      title: Retrieve Search results
-                      description: Fetches results from a completed search
+                      title: Search
+                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
                       inputSchema:
                         type: object
                         required:
-                            - jobId
+                            - query
                         properties:
-                            jobId:
-                                type: string
-                    - id: mcp_pd_create-incident
+                            query:
+                                type: object
+                    - id: mcp_jira_create-issue
                       source: external_mcp
-                      serverId: pd
-                      serverDisplayName: PagerDuty on-call
-                      name: create_incident
-                      title: create_incident
-                      description: Create a PagerDuty incident
+                      serverId: jira
+                      serverDisplayName: Jira Cloud
+                      name: create_issue
+                      title: create_issue
+                      description: Create a Jira issue
                       inputSchema:
                         type: object
                         required:
-                            - title
+                            - summary
                         properties:
-                            title:
+                            summary:
                                 type: string
-                count: 4
-                offset: 1
+                count: 12
+                offset: 9
                 limit: 2
         ListWorkflowsResponseExamplesSummaryList:
             summary: Workflow summaries
@@ -201935,6 +202154,20 @@ components:
                         - "200"
                         - "404"
                         - "500"
+        LocalSearchGroupSizeOverrideCreateExamplesCreated:
+            summary: Lakehouse configuration after creating the override
+            description: Example response for creating the lakehouse worker group ingest sizing override.
+            value:
+                id: local_search
+                enabled: true
+                status: ready
+                estimatedIngestRate: 4096
+                groupSizeOverride: 4096
+        LocalSearchGroupSizeOverrideRequestExamplesPin:
+            summary: Pin the worker group ingest sizing
+            description: Example request body pinning the lakehouse worker group ingest sizing to a discrete value from the ingest-rate ladder.
+            value:
+                estimatedIngestRate: 4096
         LocalSearchDeployExamplesDeployedWorkerGroup:
             summary: Deployment metadata for lakehouse service
             description: Example response for deploying the lakehouse service configuration.
@@ -201998,6 +202231,15 @@ components:
             description: Example response for getting an operator-only lakehouse service infrastructure sync payload when the lakehouse service is disabled or there are no active engines. Orchestration should tear down worker and storage resources.
             value:
                 storage: []
+        LocalSearchGroupSizeOverrideUpdateExamplesUpdated:
+            summary: Lakehouse configuration after updating the override
+            description: Example response for updating the lakehouse worker group ingest sizing override to a new value on the ingest-rate ladder.
+            value:
+                id: local_search
+                enabled: true
+                status: ready
+                estimatedIngestRate: 5120
+                groupSizeOverride: 5120
         LocalSearchCaptureNdjsonResponseExamplesSampleEventLine:
             summary: One captured event
             description: Example response for capturing one event from a streaming lakehouse engine. Each line represents one event.
@@ -250086,8 +250328,8 @@ paths:
                                     $ref: "#/components/examples/AppBackendStatusExamplesSucceeded"
                                 AppBackendStatusExamplesDeploying:
                                     $ref: "#/components/examples/AppBackendStatusExamplesDeploying"
-                                AppBackendStatusExamplesNone:
-                                    $ref: "#/components/examples/AppBackendStatusExamplesNone"
+                                AppBackendStatusExamplesUnknown:
+                                    $ref: "#/components/examples/AppBackendStatusExamplesUnknown"
                                 AppBackendStatusExamplesFailed:
                                     $ref: "#/components/examples/AppBackendStatusExamplesFailed"
                 "401":
@@ -250624,8 +250866,8 @@ paths:
                                     $ref: "#/components/examples/AppBackendStatusExamplesSucceeded"
                                 AppBackendStatusExamplesDeploying:
                                     $ref: "#/components/examples/AppBackendStatusExamplesDeploying"
-                                AppBackendStatusExamplesNone:
-                                    $ref: "#/components/examples/AppBackendStatusExamplesNone"
+                                AppBackendStatusExamplesUnknown:
+                                    $ref: "#/components/examples/AppBackendStatusExamplesUnknown"
                                 AppBackendStatusExamplesFailed:
                                     $ref: "#/components/examples/AppBackendStatusExamplesFailed"
                 "401":
@@ -253649,8 +253891,8 @@ paths:
                     type: string
                   description: The ID of the invite to verify.
     /jobs/{id}/cancel:
-        patch:
-            operationId: updateJobsCancelById
+        post:
+            operationId: createJobsCancelById
             tags:
                 - jobs
             x-cribl-internal: false
@@ -254083,8 +254325,8 @@ paths:
                     type: string
                   description: The <code>id</code> of the job to retrieve.
     /jobs/{id}/keep:
-        patch:
-            operationId: updateJobsKeepById
+        post:
+            operationId: createJobsKeepById
             tags:
                 - jobs
             x-cribl-internal: false
@@ -254158,8 +254400,8 @@ paths:
                     type: string
                   description: The <code>id</code> of the job to retain.
     /jobs/{id}/pause:
-        patch:
-            operationId: updateJobsPauseById
+        post:
+            operationId: createJobsPauseById
             tags:
                 - jobs
             x-cribl-internal: false
@@ -254242,8 +254484,8 @@ paths:
                     type: string
                   description: The <code>id</code> of the job to pause.
     /jobs/{id}/resume:
-        patch:
-            operationId: updateJobsResumeById
+        post:
+            operationId: createJobsResumeById
             tags:
                 - jobs
             x-cribl-internal: false
@@ -261618,8 +261860,8 @@ paths:
                             examples:
                                 ListWorkflowToolsResponseExamplesCriblLeaderCatalog:
                                     $ref: "#/components/examples/ListWorkflowToolsResponseExamplesCriblLeaderCatalog"
-                                ListWorkflowToolsResponseExamplesExternalMcpCatalog:
-                                    $ref: "#/components/examples/ListWorkflowToolsResponseExamplesExternalMcpCatalog"
+                                ListWorkflowToolsResponseExamplesCombinedCatalog:
+                                    $ref: "#/components/examples/ListWorkflowToolsResponseExamplesCombinedCatalog"
                                 ListWorkflowToolsResponseExamplesSingleIntegrationCatalog:
                                     $ref: "#/components/examples/ListWorkflowToolsResponseExamplesSingleIntegrationCatalog"
                                 ListWorkflowToolsResponseExamplesPaginatedCatalog:
@@ -262943,6 +263185,8 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: AI consent not accepted yet or AI is disabled
                 "500":
                     description: Failed to save selected guard model
                     content:
@@ -269350,6 +269594,159 @@ paths:
                   schema:
                     type: boolean
                   description: Whether to also return each field's most frequent values, keyed by field name and capped server-side. Defaults to <code>false</code>; omit it when only field names are needed, since the values multiply the response size.
+    /search/local-search/group-size-override:
+        post:
+            operationId: createSearchLocalSearchGroupSizeOverride
+            tags:
+                - search
+            x-speakeasy-group: searches.localSearches.groupSizeOverrides
+            x-speakeasy-name-override: create
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - searchGroup
+            summary: Create the lakehouse worker group size override (Cribl.Cloud only)
+            description: Pin the worker group ingest sizing sent to infrastructure, replacing the value auto-computed from active engines (Cribl.Cloud only). Fails with 409 when an override already exists — update it via PATCH instead.<br/><br/>Requires the <code>cribl_operator</code> role.
+            responses:
+                "201":
+                    description: The created override.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LocalSearchConfig"
+                            examples:
+                                LocalSearchGroupSizeOverrideCreateExamplesCreated:
+                                    $ref: "#/components/examples/LocalSearchGroupSizeOverrideCreateExamplesCreated"
+                "400":
+                    description: The request body is missing or not on the discrete ingest-rate ladder.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Requires the <code>cribl_operator</code> role. No response body.
+                "409":
+                    description: An override already exists.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: LocalSearchGroupSizeOverrideBody object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LocalSearchGroupSizeOverrideBody"
+                        examples:
+                            LocalSearchGroupSizeOverrideRequestExamplesPin:
+                                $ref: "#/components/examples/LocalSearchGroupSizeOverrideRequestExamplesPin"
+        delete:
+            operationId: deleteSearchLocalSearchGroupSizeOverride
+            tags:
+                - search
+            x-speakeasy-group: searches.localSearches.groupSizeOverrides
+            x-speakeasy-name-override: delete
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - searchGroup
+            summary: Delete the lakehouse worker group size override (Cribl.Cloud only)
+            description: Clear the current worker group ingest sizing override (Cribl.Cloud only). Worker sizing then falls back to the value auto-computed from active engines.<br/><br/>Requires the <code>cribl_operator</code> role.
+            responses:
+                "204":
+                    description: The override was cleared. No response body. Fetch <code>/search/local_search/config</code> to see the resulting worker sizing.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Requires the <code>cribl_operator</code> role. No response body.
+                "404":
+                    description: No override is currently set.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+        patch:
+            operationId: updateSearchLocalSearchGroupSizeOverride
+            tags:
+                - search
+            x-speakeasy-group: searches.localSearches.groupSizeOverrides
+            x-speakeasy-name-override: update
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - searchGroup
+            summary: Update the lakehouse worker group size override (Cribl.Cloud only)
+            description: Change the current worker group ingest sizing override (Cribl.Cloud only). Fails with 404 when no override is set — create one via POST first.<br/><br/>Requires the <code>cribl_operator</code> role.<br/><br/>Provide the complete editable payload. Partial updates are not supported.
+            responses:
+                "200":
+                    description: The updated override.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LocalSearchConfig"
+                            examples:
+                                LocalSearchGroupSizeOverrideUpdateExamplesUpdated:
+                                    $ref: "#/components/examples/LocalSearchGroupSizeOverrideUpdateExamplesUpdated"
+                "400":
+                    description: The request body is missing or not on the discrete ingest-rate ladder.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Requires the <code>cribl_operator</code> role. No response body.
+                "404":
+                    description: No override is currently set.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: LocalSearchGroupSizeOverrideBody object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LocalSearchGroupSizeOverrideBody"
+                        examples:
+                            LocalSearchGroupSizeOverrideRequestExamplesPin:
+                                $ref: "#/components/examples/LocalSearchGroupSizeOverrideRequestExamplesPin"
     /search/local_search/deploy:
         patch:
             operationId: updateSearchLocalSearchDeploy
