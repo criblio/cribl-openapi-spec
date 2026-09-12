@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.0-76dfc464
+    version: 4.20.0-9de9868c
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -78232,6 +78232,50 @@ components:
             required:
                 - count
             title: AppKvStoreBulkPutResponse
+        AppKvStoreScanEntry:
+            type: object
+            properties:
+                key:
+                    type: string
+                    description: KV store key.
+                value:
+                    type: string
+                    description: Value stored under the key.
+            required:
+                - key
+                - value
+            title: AppKvStoreScanEntry
+        AppKvStoreScanResponse:
+            type: object
+            properties:
+                count:
+                    type: number
+                    description: Total entries the full scan would return for this prefix, not the size of this page. Under concurrent writes it may differ between pages, because each page reports the total as of the moment it was served.
+                items:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/AppKvStoreScanEntry"
+                    description: Entries in this page, in ascending key order.
+                nextCursor:
+                    type: string
+                    description: "Present only when more entries remain. An opaque token: pass it back as <code>cursor</code> verbatim to fetch the next page. Do not construct, parse, or derive one — its encoding is an implementation detail and may change."
+            required:
+                - count
+                - items
+            title: AppKvStoreScanResponse
+        AppKvStoreScanRequest:
+            type: object
+            properties:
+                cursor:
+                    type: string
+                    description: Opaque token from a previous response's <code>nextCursor</code>. Pass it back unchanged to fetch the next page.
+                limit:
+                    type: number
+                    description: Maximum entries in this page. Defaults to 1000; a larger value is clamped to 10000.
+                prefix:
+                    type: string
+                    description: Return only keys starting with this string.
+            title: AppKvStoreScanRequest
         LicenseType:
             type: string
             enum:
@@ -78354,6 +78398,9 @@ components:
                         system_email:
                             type: integer
                             description: System email limit.
+                        worker_group_boot_throttle:
+                            type: integer
+                            description: Whether the Leader may throttle Worker Group and Fleet APIs that boot a group process when resources are insufficient.
                         worker_groups:
                             type: integer
                             description: Maximum number of Worker Groups.
@@ -80437,6 +80484,9 @@ components:
                 system_email:
                     type: integer
                     description: System email limit.
+                worker_group_boot_throttle:
+                    type: integer
+                    description: Whether the Leader may throttle Worker Group and Fleet APIs that boot a group process when resources are insufficient.
                 worker_groups:
                     type: integer
                     description: Maximum number of Worker Groups.
@@ -197584,6 +197634,38 @@ components:
             description: Response confirming the number of entries written by the bulk request.
             value:
                 count: 3
+        AppKvStoreScanResponseExamplesPageWithCursor:
+            summary: Page of KV store entries with more remaining
+            description: A page that closed on one of its bounds. nextCursor is an opaque token to pass back as cursor; it is not a key and must not be constructed or parsed by the caller.
+            value:
+                items:
+                    - key: rules/detect-0001
+                      value: '{"id":"detect-0001","enabled":true}'
+                    - key: rules/detect-0002
+                      value: '{"id":"detect-0002","enabled":false}'
+                count: 900
+                nextCursor: eyJ2IjoxLCJrIjoicnVsZXMvZGV0ZWN0LTAwMDIifQ
+        AppKvStoreScanResponseExamplesFinalPage:
+            summary: Final page of a scan
+            description: The last page of a scan omits nextCursor, signalling that no entries remain.
+            value:
+                items:
+                    - key: rules/detect-0900
+                      value: '{"id":"detect-0900","enabled":true}'
+                count: 900
+        AppKvStoreScanRequestExamplesFirstPage:
+            summary: First page of a prefix scan
+            description: Read the first page of entries whose keys start with a prefix.
+            value:
+                prefix: rules/
+                limit: 500
+        AppKvStoreScanRequestExamplesNextPage:
+            summary: Next page of a prefix scan
+            description: Resume the same scan by passing back the previous response's nextCursor verbatim. The cursor is an opaque token — do not construct or parse one.
+            value:
+                prefix: rules/
+                limit: 500
+                cursor: eyJ2IjoxLCJrIjoicnVsZXMvZGV0ZWN0LTA0OTkifQ
         CreateLicenseExamplesAddLicense:
             summary: Add a license
             description: Example request body for adding a license to a Cribl deployment using a JSON Web Token (JWT) license string.
@@ -254390,6 +254472,64 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+    /kvstore/scan:
+        post:
+            operationId: createKvstoreScan
+            tags:
+                - apps
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - node
+                - single
+            summary: Read a page of App KV store entries
+            description: "Read the App's KV store entries as a keyset-paginated page of <code>{key, value}</code> objects in ascending key order, optionally filtered by key prefix. A page closes at whichever bound is reached first: the entry count given by <code>limit</code>, or 4 MiB of accumulated value bytes. A page always contains at least one entry when any remain. Follow <code>nextCursor</code> until it is absent to read the whole namespace. <code>nextCursor</code> is an <b>opaque token</b>: pass it back verbatim as <code>cursor</code> and do not construct, parse, or derive one — its encoding is an implementation detail and may change. Encrypted values are omitted from the page and excluded from <code>count</code>; use <code>POST /kvstore/keys</code> to discover that such a key exists."
+            responses:
+                "200":
+                    description: A page of KV store entries, with a cursor when more remain
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/AppKvStoreScanResponse"
+                            examples:
+                                AppKvStoreScanResponseExamplesPageWithCursor:
+                                    $ref: "#/components/examples/AppKvStoreScanResponseExamplesPageWithCursor"
+                                AppKvStoreScanResponseExamplesFinalPage:
+                                    $ref: "#/components/examples/AppKvStoreScanResponseExamplesFinalPage"
+                "400":
+                    description: Failed validation or malformed input — unknown body field, non-integer or negative limit, a cursor that was not issued by a previous scan, or missing App context
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: AppKvStoreScanRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/AppKvStoreScanRequest"
+                        examples:
+                            AppKvStoreScanRequestExamplesFirstPage:
+                                $ref: "#/components/examples/AppKvStoreScanRequestExamplesFirstPage"
+                            AppKvStoreScanRequestExamplesNextPage:
+                                $ref: "#/components/examples/AppKvStoreScanRequestExamplesNextPage"
     /system/licenses:
         post:
             operationId: createSystemLicenses
