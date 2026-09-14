@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.20.1-alpha.1789168592834-45924bfb
+  version: 4.20.1-alpha.1789427595844-7740d36b
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -38037,6 +38037,20 @@ components:
         - id
         - type
       title: NotificationTargetDetails
+    TemplateTargetPair:
+      type: object
+      properties:
+        targetId:
+          type: string
+          description: The <code>id</code> of the Notification target to send the
+            Notification to.
+        templateId:
+          type: string
+          description: The <code>id</code> of the Notification template to use.
+      required:
+        - targetId
+        - templateId
+      title: TemplateTargetPair
     Notification:
       type: object
       properties:
@@ -38106,18 +38120,7 @@ components:
         templateTargetPairs:
           type: array
           items:
-            type: object
-            properties:
-              targetId:
-                type: string
-                description: The <code>id</code> of the Notification target to send the
-                  Notification to.
-              templateId:
-                type: string
-                description: The <code>id</code> of the Notification template to use.
-            required:
-              - targetId
-              - templateId
+            $ref: "#/components/schemas/TemplateTargetPair"
           description: If <code>mode</code> is <code>direct</code>, the key-value pairs
             that define the Notification templates and targets to use for
             sending Notifications.
@@ -52309,6 +52312,9 @@ components:
             - Token (text secret)
             - AWS Signature v4
           x-speakeasy-unknown-values: allow
+        tls:
+          $ref: "#/components/schemas/TlsSettingsClientSideTypeCaPathCertPathExtended"
+          description: TLS settings (client side)
         description:
           type: string
           title: Description
@@ -140198,6 +140204,83 @@ components:
                 - aws_sigv4
               x-speakeasy-unknown-values: allow
             - type: "null"
+        tls:
+          title: TLS settings (client side)
+          description: TLS settings (client side)
+          anyOf:
+            - type: object
+              properties:
+                disabled:
+                  title: Disabled
+                  description: Disabled
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                servername:
+                  title: Server name (SNI)
+                  description: Server name for the SNI (Server Name Indication) TLS extension. It
+                    must be a host name, and not an IP address.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                certificateName:
+                  title: Certificate
+                  description: The name of the predefined certificate
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                caPath:
+                  title: CA certificate path
+                  description: Path on client in which to find CA certificates to verify the
+                    server's cert. PEM format. Can reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                privKeyPath:
+                  title: Private key path (mutual auth)
+                  description: Path on client in which to find the private key to use. PEM format.
+                    Can reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                certPath:
+                  title: Certificate path (mutual auth)
+                  description: Path on client in which to find certificates to use. PEM format.
+                    Can reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                passphrase:
+                  title: Passphrase
+                  description: Passphrase to use to decrypt private key
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                minVersion:
+                  title: Minimum TLS version
+                  description: Minimum TLS version
+                  anyOf:
+                    - type: string
+                      enum:
+                        - TLSv1
+                        - TLSv1.1
+                        - TLSv1.2
+                        - TLSv1.3
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                maxVersion:
+                  title: Maximum TLS version
+                  description: Maximum TLS version
+                  anyOf:
+                    - type: string
+                      enum:
+                        - TLSv1
+                        - TLSv1.1
+                        - TLSv1.2
+                        - TLSv1.3
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+            - type: "null"
         description:
           title: Description
           description: Optional description for this configuration.
@@ -171103,6 +171186,23 @@ components:
       description: Example response for clearing the persistent queue (PQ) for a
         Destination.
       value: ceb17a42-f785-4f5e-b52a-7f0e1b2c3d4e
+    OutputPQStatusResponseExamplesCompletedClearJob:
+      summary: Get information about the latest job to clear PQ
+      description: Example response for getting information about the latest job to
+        clear the persistent queue (PQ) for the specified Destination.
+      value:
+        id: "1727123456.1234567890"
+        args:
+          type: collection
+          collector:
+            type: filesystem
+            conf:
+              path: /var/lib/cribl/persistent-queue
+          run:
+            mode: run
+        status:
+          state: 5
+        stats: {}
     OutputResponseExamplesSplunkHecDestination:
       summary: Splunk HEC Destination response
       description: Example response for getting or updating a Splunk HEC Destination.
@@ -181415,6 +181515,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/JobInfo"
+              examples:
+                OutputPQStatusResponseExamplesCompletedClearJob:
+                  $ref: "#/components/examples/OutputPQStatusResponseExamplesCompletedClearJob"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -186358,6 +186461,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/JobInfo"
+              examples:
+                OutputPQStatusResponseExamplesCompletedClearJob:
+                  $ref: "#/components/examples/OutputPQStatusResponseExamplesCompletedClearJob"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
