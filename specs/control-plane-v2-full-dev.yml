@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1789168814622-93237c52
+    version: 4.21.0-alpha.1789427817389-c2219345
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -66571,26 +66571,26 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
-        PaginatedLakeConfigItem:
+        CountedListLakeConfigItem:
             type: object
             required:
                 - items
                 - count
             properties:
-                items:
-                    type: array
-                    description: The pre-limited items in the list of results
-                    items:
-                        $ref: "#/components/schemas/LakeConfigItem"
                 count:
                     type: integer
-                    description: Total number of items available
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/LakeConfigItem"
                 offset:
                     type: integer
-                    description: Pagination offset
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
                 limit:
                     type: integer
-                    description: Pagination limit
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
         LakeConfigItem:
             type: object
             properties:
@@ -221704,6 +221704,13 @@ paths:
                             examples:
                                 LookupUploadResponseExamplesUploadedFile:
                                     $ref: "#/components/examples/LookupUploadResponseExamplesUploadedFile"
+                    links:
+                        CreateLookup:
+                            requestBody:
+                                fileInfo:
+                                    filename: $response.body#/filename
+                            description: Create a Lookup from the uploaded file.
+                            operationId: createLookupFile
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                 "401":
@@ -222417,6 +222424,15 @@ paths:
                             examples:
                                 LookupUploadResponseExamplesUploadedFile:
                                     $ref: "#/components/examples/LookupUploadResponseExamplesUploadedFile"
+                    links:
+                        CreateLookup:
+                            parameters:
+                                pack: $request.path.pack
+                            requestBody:
+                                fileInfo:
+                                    filename: $response.body#/filename
+                            description: Create a Lookup from the uploaded file.
+                            operationId: createLookupFileSystemLookupsByPack
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                 "401":
@@ -230506,6 +230522,17 @@ paths:
                             examples:
                                 SearchJobCreateResponseExamplesSyntheticCompleted:
                                     $ref: "#/components/examples/SearchJobCreateResponseExamplesSyntheticCompleted"
+                    links:
+                        GetSearchJobStatus:
+                            parameters:
+                                id: $response.body#/id
+                            description: Get the status of the newly created search job.
+                            operationId: getSearchJobStatusById
+                        GetSearchJobResults:
+                            parameters:
+                                id: $response.body#/id
+                            description: Get the results of the newly created search job.
+                            operationId: getSearchJobsResultsById
                 "400":
                     description: Failed validation or malformed input — Invalid query or request validation failure.
                 "401":
@@ -241103,7 +241130,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/PaginatedLakeConfigItem"
+                                $ref: "#/components/schemas/CountedListLakeConfigItem"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -241130,31 +241157,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Lake to get configuration limits for.
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Pagination offset
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Maximum number of items to return
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
     /products/lake/lakes/{lakeId}/config/{configId}:
         get:
             operationId: getLakeConfigItemConfigByLakeIdAndConfigId
@@ -241188,6 +241190,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -242321,6 +242329,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/AzureSpStatus"
+                "400":
+                    description: The required <code>tenantId</code> query parameter is missing or empty.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -242334,6 +242348,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The provider does not support this endpoint. Only <code>azure_blob</code> is supported.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -242377,6 +242397,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/AzurePrincipalObjectId"
+                "400":
+                    description: The required <code>tenantId</code> query parameter is missing or empty.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -242390,6 +242416,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The provider does not support this endpoint (only <code>azure_blob</code>), or the Cribl service principal does not exist in the customer's Azure AD tenant.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -242446,6 +242478,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The provider does not expose setup info. Only <code>azure_blob</code> is supported on this endpoint.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -250088,6 +250126,12 @@ paths:
                             examples:
                                 AppUploadResponseExamplesUploaded:
                                     $ref: "#/components/examples/AppUploadResponseExamplesUploaded"
+                    links:
+                        InstallApp:
+                            requestBody:
+                                source: $response.body#/source
+                            description: Install the uploaded App.
+                            operationId: createApps
                 "400":
                     description: Failed validation or malformed input — missing or invalid <code>filename</code> query parameter
                 "401":
@@ -257151,6 +257195,12 @@ paths:
                             examples:
                                 PackUploadResponseExamplesUploadedPack:
                                     $ref: "#/components/examples/PackUploadResponseExamplesUploadedPack"
+                    links:
+                        InstallPack:
+                            requestBody:
+                                source: $response.body#/source
+                            description: Install the uploaded Pack.
+                            operationId: createPacks
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -259496,6 +259546,12 @@ paths:
                             examples:
                                 VersionCommitResponseExamplesCommitCreated:
                                     $ref: "#/components/examples/VersionCommitResponseExamplesCommitCreated"
+                    links:
+                        DeployGroup:
+                            requestBody:
+                                version: $response.body#/commit
+                            description: Deploy the committed configuration to the target Worker Group, Outpost Group, or Edge Fleet.
+                            operationId: updateProductsGroupsDeployByProductAndId
                 "400":
                     description: "When <code>effective: true</code> is provided without a group context."
                     content:
@@ -261817,6 +261873,71 @@ paths:
                     description: Run not found
                     content:
                         application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+                - name: runId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The run id.
+    /ai/workflows/{id}/runs/{runId}/subscribe:
+        get:
+            operationId: getAiWorkflowsRunsSubscribeByIdAndRunId
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Subscribe to a workflow run log
+            description: Replays the durable run log and follows a running workflow. Each record is delivered as a <code>workflowRunEntry</code> server-sent event whose id is the persisted sequence number. Clients must close the subscription after receiving <code>runCompleted</code>, <code>runStopped</code>, or <code>runFailed</code>. When <code>Last-Event-ID</code> is present, replay resumes with the following sequence number; a terminal run with no remaining entries returns <code>204</code> to stop automatic reconnection.
+            responses:
+                "200":
+                    description: The requested string object.
+                    content:
+                        text/event-stream:
+                            schema:
+                                type: string
+                "204":
+                    description: The run is terminal and the subscriber has received every log entry
+                "400":
+                    description: Invalid workflow id, run id, or <code>Last-Event-ID</code> header
+                    content:
+                        text/event-stream:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: Run not found
+                    content:
+                        text/event-stream:
                             schema:
                                 $ref: "#/components/schemas/RestApiJsonError"
                 "500":
