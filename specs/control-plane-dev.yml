@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.21.0-alpha.1789600445253-d6e06e31
+  version: 4.21.0-alpha.1789686764533-7ce8fd53
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -22664,6 +22664,189 @@ components:
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'authTokens' at runtime.
       title: InputFirehose
+    InputCloudChangeFirehose:
+      type: object
+      required:
+        - type
+        - host
+        - port
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - cloud_change_firehose
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          items:
+            type: string
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set to 0 for unlimited. Caution: Increasing the limit above the default value, or setting it to unlimited, may degrade performance and reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        enableProxyHeader:
+          type: boolean
+          title: Show originating IP
+          description: Extract the client IP and port from PROXY protocol v1/v2. When
+            enabled, the X-Forwarded-For header is ignored. Disable to use the
+            X-Forwarded-For header for client IP extraction.
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        captureHeadersWarning:
+          type: string
+          description: Warning displayed when request-header capture is enabled.
+          readOnly: true
+          const: ""
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        enableHealthCheck:
+          type: boolean
+          title: Health check endpoint
+          description: Expose the /cribl_health endpoint, which returns 200 OK when this
+            Source is healthy
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_authTokens:
+          type: string
+          description: Binds 'authTokens' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'authTokens' at runtime.
+      title: InputCloudChangeFirehose
     InputGooglePubsub:
       type: object
       required:
@@ -37895,6 +38078,7 @@ components:
         - $ref: "#/components/schemas/InputEventhubAmqp"
         - $ref: "#/components/schemas/InputExec"
         - $ref: "#/components/schemas/InputFirehose"
+        - $ref: "#/components/schemas/InputCloudChangeFirehose"
         - $ref: "#/components/schemas/InputGooglePubsub"
         - $ref: "#/components/schemas/InputCribl"
         - $ref: "#/components/schemas/InputCriblTcp"
@@ -37987,6 +38171,7 @@ components:
           eventhub_amqp: "#/components/schemas/InputEventhubAmqp"
           exec: "#/components/schemas/InputExec"
           firehose: "#/components/schemas/InputFirehose"
+          cloud_change_firehose: "#/components/schemas/InputCloudChangeFirehose"
           google_pubsub: "#/components/schemas/InputGooglePubsub"
           cribl: "#/components/schemas/InputCribl"
           cribl_tcp: "#/components/schemas/InputCriblTcp"
@@ -64360,6 +64545,275 @@ components:
             (group-scoped). Variable value overrides 'onBackpressure' at
             runtime.
       title: OutputDatabricksZerobus
+    OutputSecuronix:
+      type: object
+      required:
+        - type
+        - httpReceiverEndpoint
+      properties:
+        id:
+          type: string
+          title: Output ID
+          description: Unique ID for this output
+        type:
+          type: string
+          enum:
+            - securonix
+          description: Connector type identifier.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data before sending out to this output
+        systemFields:
+          type: array
+          title: System fields
+          description: Fields to automatically add to events, such as cribl_pipe. Supports
+            wildcards.
+          items:
+            type: string
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        keepAlive:
+          type: boolean
+          title: Keep alive
+          description: Disable to close the connection immediately after sending the
+            outgoing request
+        concurrency:
+          type: number
+          title: Request concurrency
+          description: Maximum number of ongoing requests before blocking
+          minimum: 1
+          maximum: 32
+        maxPayloadSizeKB:
+          type: number
+          title: Body size limit (KB)
+          description: Maximum size, in KB, of the request body
+          minimum: 1024
+          maximum: 512000
+        maxPayloadEvents:
+          type: number
+          title: Events-per-request limit
+          description: Maximum number of events to include in the request body. Default is
+            0 (unlimited).
+          minimum: 0
+        compress:
+          type: boolean
+          title: Compress
+          description: Compress the payload body before sending
+        rejectUnauthorized:
+          type: boolean
+          title: Validate server certs
+          description: >-
+            Reject certificates not authorized by a CA in the CA certificate
+            path or by another trusted CA (such as the system's). 
+                    Enabled by default. When this setting is also present in TLS Settings (Client Side), 
+                    that value will take precedence.
+        timeoutSec:
+          type: number
+          minimum: 1
+          maximum: 9007199254740991
+          title: Request timeout
+          description: Amount of time, in seconds, to wait for a request to complete
+            before canceling it
+        maxConnectionReuseSec:
+          type: number
+          minimum: 0
+          title: Max connection reuse (seconds)
+          description: How long, in seconds, to reuse a keep-alive connection after its
+            first use before forcing it closed. Set to 0 to disable the
+            time-based close and reuse connections for as long as the
+            destination server permits.
+        flushPeriodSec:
+          type: number
+          title: Flush period (sec)
+          description: Maximum time between requests. Small values could cause the payload
+            size to be smaller than the configured Body size limit.
+        extraHttpHeaders:
+          type: array
+          title: Extra HTTP headers
+          description: Headers to add to all events. You can also add headers dynamically
+            on a per-event basis in the __headers field, as explained in [Cribl
+            Docs](https://docs.cribl.io/stream/destinations-webhook/#internal-fields).
+          items:
+            $ref: "#/components/schemas/ExtraHttpHeaderConfInputElastic"
+        useRoundRobinDns:
+          type: boolean
+          title: Round-robin DNS
+          description: Enable round-robin DNS lookup. When a DNS server returns multiple
+            addresses, @{product} will cycle through them in the order returned.
+            For optimal performance, consider enabling this setting for non-load
+            balanced destinations.
+        failedRequestLoggingMode:
+          $ref: "#/components/schemas/FailedRequestLoggingModeOptions"
+          description: Data to log when a request fails. All headers are redacted by
+            default, unless listed as safe headers below.
+        safeHeaders:
+          type: array
+          title: Safe headers
+          description: List of headers that are safe to log in plain text
+          items:
+            type: string
+        responseRetrySettings:
+          type: array
+          title: Settings for failed HTTP requests
+          description: Automatically retry after unsuccessful response status codes, such
+            as 429 (Too Many Requests) or 503 (Service Unavailable)
+          minItems: 0
+          items:
+            $ref: "#/components/schemas/ResponseRetrySettingConfOutputWebhook"
+        timeoutRetrySettings:
+          $ref: "#/components/schemas/TimeoutRetrySettingsType"
+          description: Retry settings for HTTP requests that exceed the request timeout.
+        responseHonorRetryAfterHeader:
+          type: boolean
+          title: Honor Retry-After header
+          description: Honor any Retry-After header that specifies a delay (in seconds) no
+            longer than 180 seconds after the retry request. @{product} limits
+            the delay to 180 seconds, even if the Retry-After header specifies a
+            longer delay. When enabled, takes precedence over user-configured
+            retry options. When disabled, all Retry-After headers are ignored.
+        onBackpressure:
+          $ref: "#/components/schemas/BackpressureBehaviorOptions"
+          description: How to handle events when all receivers are exerting backpressure
+        authType:
+          type: string
+          title: Authentication type
+          description: Authentication method to use for the HTTP request
+          enum:
+            - credentialsSecret
+            - textSecret
+          x-speakeasy-enum-descriptions:
+            - Basic (credentials secret)
+            - Token (text secret)
+          x-speakeasy-unknown-values: allow
+        tls:
+          $ref: "#/components/schemas/TlsSettingsClientSideTypeCaPathCertPath"
+          description: TLS settings (client side)
+        totalMemoryLimitKB:
+          type: number
+          title: Buffer memory limit (KB)
+          description: Maximum total size of the batches waiting to be sent. If left
+            blank, defaults to 5 times the max body size (if set). If 0, no
+            limit is enforced.
+          minimum: 0
+        httpReceiverEndpoint:
+          type: string
+          title: HTTP Receiver endpoint
+          description: URL of the Securonix HTTP Event Receiver endpoint
+          pattern: ^https?://.*
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        pqStrictOrdering:
+          title: Strict ordering
+          description: Use FIFO (first in, first out) processing. Disable to forward new
+            events to receivers before queue is flushed.
+          type: boolean
+        pqRatePerSec:
+          type: number
+          title: Drain rate limit (EPS)
+          description: Throttling rate (in events per second) to impose while writing to
+            Destinations from PQ. Defaults to 0, which disables throttling.
+          minimum: 0
+        pqMode:
+          $ref: "#/components/schemas/ModeOptions"
+          description: In Error mode, PQ writes events to the filesystem if the
+            Destination is unavailable. In Backpressure mode, PQ writes events
+            to the filesystem when it detects backpressure from the Destination.
+            In Always On mode, PQ always writes events to the filesystem.
+        pqMaxBufferSize:
+          type: number
+          title: Buffer size limit (events - deprecated)
+          description: Maximum number of events to hold in memory before writing the
+            events to disk. Deprecated and only supported in workers < v4.17.0.
+            Use pqMaxBufferSizeBytes instead.
+          minimum: 42
+          maximum: 1000
+        pqMaxBackpressureSec:
+          type: number
+          title: Backpressure duration limit
+          description: How long (in seconds) to wait for backpressure to resolve before
+            engaging the queue
+          minimum: 0
+        pqMaxFileSize:
+          type: string
+          title: File size limit
+          description: The maximum size to store in each queue file before closing and
+            optionally compressing (KB, MB, etc.)
+          pattern: ^\d+\s*(?:\w{2})?$
+        pqMaxSize:
+          type: string
+          title: Queue size limit
+          description: The maximum disk space that the queue can consume (as an average
+            per Worker Process) before queueing stops. Enter a numeral with
+            units of KB, MB, etc.
+          pattern: ^\d+\s*(?:\w{2})?$
+        pqPath:
+          type: string
+          title: Queue file path
+          description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/<output-id>."
+        pqCompress:
+          $ref: "#/components/schemas/CompressionOptionsPq"
+          description: Codec to use to compress the persisted data
+        pqOnBackpressure:
+          $ref: "#/components/schemas/QueueFullBehaviorOptions"
+          description: How to handle events when the queue is exerting backpressure (full
+            capacity or low disk). 'Block' is the same behavior as non-PQ
+            blocking. 'Drop new data' throws away incoming data, while leaving
+            the contents of the PQ unchanged.
+        pqMaxBufferSizeBytes:
+          type: string
+          title: Buffer size limit (bytes)
+          description: The maximum size to hold in memory before writing events to disk.
+            Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
+            and the maximum value is 10MB.
+          pattern: ^\d+\s*(?:\w{2})?$
+        pqControls:
+          type: object
+          title: ""
+          description: Persistent queue controls.
+        credentialsSecret:
+          type: string
+          title: Credentials secret
+          description: Select or create a secret that references your credentials
+        textSecret:
+          type: string
+          title: Token (text secret)
+          description: Select or create a stored text secret
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_failedRequestLoggingMode:
+          type: string
+          description: Binds 'failedRequestLoggingMode' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'failedRequestLoggingMode' at runtime.
+        __template_onBackpressure:
+          type: string
+          description: Binds 'onBackpressure' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'onBackpressure' at
+            runtime.
+        __template_httpReceiverEndpoint:
+          type: string
+          description: Binds 'httpReceiverEndpoint' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'httpReceiverEndpoint' at runtime.
+      title: OutputSecuronix
     Output:
       oneOf:
         - $ref: "#/components/schemas/OutputDefault"
@@ -64448,6 +64902,7 @@ components:
         - $ref: "#/components/schemas/OutputAlibabaCloudS3"
         - $ref: "#/components/schemas/OutputIbmCloudS3"
         - $ref: "#/components/schemas/OutputDatabricksZerobus"
+        - $ref: "#/components/schemas/OutputSecuronix"
       discriminator:
         propertyName: type
         mapping:
@@ -64537,6 +64992,7 @@ components:
           alibaba_cloud_s3: "#/components/schemas/OutputAlibabaCloudS3"
           ibm_cloud_s3: "#/components/schemas/OutputIbmCloudS3"
           databricks_zerobus: "#/components/schemas/OutputDatabricksZerobus"
+          securonix: "#/components/schemas/OutputSecuronix"
       title: Output
     CountedOutputResponse:
       type: object
@@ -64656,6 +65112,7 @@ components:
         - ibm_cloud_s3
         - databricks_zerobus
         - traversal_otlp
+        - securonix
       title: DestinationType
       x-speakeasy-unknown-values: allow
     PaginatedOutputResponse:
@@ -74164,6 +74621,16 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Firehose Source.
+    InputCreateExamplesCloudChangeFirehose:
+      summary: Cloud Change Event (Firehose)
+      value:
+        id: cloud-change-firehose-source
+        type: cloud_change_firehose
+        host: 0.0.0.0
+        port: 10080
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Cloud Change Event (Firehose) Source.
     InputCreateExamplesGrafana:
       summary: Grafana
       value:
@@ -75252,6 +75719,19 @@ components:
       description: Example request body for updating a Firehose Source.<br/><br/>The
         request body must include a complete representation of the Source that
         you want to update. This endpoint does not support partial updates.
+    UpdateInputExamplesCloudChangeFirehose:
+      summary: Cloud Change Event (Firehose)
+      value:
+        id: cloud-change-firehose-source
+        type: cloud_change_firehose
+        host: 0.0.0.0
+        port: 10080
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Cloud Change Event (Firehose)
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
     UpdateInputExamplesGrafana:
       summary: Grafana
       value:
@@ -76565,6 +77045,17 @@ components:
         type: webhook
         url: https://example.com/webhook
       description: Example request body for creating a Webhook Destination.
+    OutputCreateExamplesSecuronix:
+      summary: Securonix
+      value:
+        id: securonix-output
+        type: securonix
+        httpReceiverEndpoint: https://acme.securonix.net/http-event-receiver/cribl-stream
+        authType: textSecret
+        textSecret: securonix-api-token
+        tls:
+          disabled: false
+      description: Example request body for creating a Securonix Destination.
     OutputCreateExamplesPrometheus:
       summary: Prometheus
       value:
@@ -77593,6 +78084,20 @@ components:
         type: webhook
         url: https://example.com/webhook
       description: Example request body for updating a Webhook
+        Destination.<br/><br/>The request body must include a complete
+        representation of the Destination that you want to update. This endpoint
+        does not support partial updates.
+    UpdateOutputExamplesSecuronix:
+      summary: Securonix
+      value:
+        id: securonix-output
+        type: securonix
+        httpReceiverEndpoint: https://acme.securonix.net/http-event-receiver/cribl-stream
+        authType: textSecret
+        textSecret: securonix-api-token
+        tls:
+          disabled: false
+      description: Example request body for updating a Securonix
         Destination.<br/><br/>The request body must include a complete
         representation of the Destination that you want to update. This endpoint
         does not support partial updates.
@@ -84291,6 +84796,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesFile"
               InputCreateExamplesFirehose:
                 $ref: "#/components/examples/InputCreateExamplesFirehose"
+              InputCreateExamplesCloudChangeFirehose:
+                $ref: "#/components/examples/InputCreateExamplesCloudChangeFirehose"
               InputCreateExamplesGrafana:
                 $ref: "#/components/examples/InputCreateExamplesGrafana"
               InputCreateExamplesHashicorpHcpVaultDedicated:
@@ -84616,6 +85123,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesFile"
               UpdateInputExamplesFirehose:
                 $ref: "#/components/examples/UpdateInputExamplesFirehose"
+              UpdateInputExamplesCloudChangeFirehose:
+                $ref: "#/components/examples/UpdateInputExamplesCloudChangeFirehose"
               UpdateInputExamplesGrafana:
                 $ref: "#/components/examples/UpdateInputExamplesGrafana"
               UpdateInputExamplesHashicorpHcpVaultDedicated:
@@ -85337,6 +85846,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesDatadog"
               OutputCreateExamplesWebhook:
                 $ref: "#/components/examples/OutputCreateExamplesWebhook"
+              OutputCreateExamplesSecuronix:
+                $ref: "#/components/examples/OutputCreateExamplesSecuronix"
               OutputCreateExamplesPrometheus:
                 $ref: "#/components/examples/OutputCreateExamplesPrometheus"
               OutputCreateExamplesAmazonManagedPrometheus:
@@ -85651,6 +86162,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesDatadog"
               UpdateOutputExamplesWebhook:
                 $ref: "#/components/examples/UpdateOutputExamplesWebhook"
+              UpdateOutputExamplesSecuronix:
+                $ref: "#/components/examples/UpdateOutputExamplesSecuronix"
               UpdateOutputExamplesPrometheus:
                 $ref: "#/components/examples/UpdateOutputExamplesPrometheus"
               UpdateOutputExamplesAmazonManagedPrometheus:
@@ -89374,6 +89887,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesFile"
               InputCreateExamplesFirehose:
                 $ref: "#/components/examples/InputCreateExamplesFirehose"
+              InputCreateExamplesCloudChangeFirehose:
+                $ref: "#/components/examples/InputCreateExamplesCloudChangeFirehose"
               InputCreateExamplesGrafana:
                 $ref: "#/components/examples/InputCreateExamplesGrafana"
               InputCreateExamplesHashicorpHcpVaultDedicated:
@@ -89685,6 +90200,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesFile"
               UpdateInputExamplesFirehose:
                 $ref: "#/components/examples/UpdateInputExamplesFirehose"
+              UpdateInputExamplesCloudChangeFirehose:
+                $ref: "#/components/examples/UpdateInputExamplesCloudChangeFirehose"
               UpdateInputExamplesGrafana:
                 $ref: "#/components/examples/UpdateInputExamplesGrafana"
               UpdateInputExamplesHashicorpHcpVaultDedicated:
@@ -90362,6 +90879,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesDatadog"
               OutputCreateExamplesWebhook:
                 $ref: "#/components/examples/OutputCreateExamplesWebhook"
+              OutputCreateExamplesSecuronix:
+                $ref: "#/components/examples/OutputCreateExamplesSecuronix"
               OutputCreateExamplesPrometheus:
                 $ref: "#/components/examples/OutputCreateExamplesPrometheus"
               OutputCreateExamplesAmazonManagedPrometheus:
@@ -90663,6 +91182,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesDatadog"
               UpdateOutputExamplesWebhook:
                 $ref: "#/components/examples/UpdateOutputExamplesWebhook"
+              UpdateOutputExamplesSecuronix:
+                $ref: "#/components/examples/UpdateOutputExamplesSecuronix"
               UpdateOutputExamplesPrometheus:
                 $ref: "#/components/examples/UpdateOutputExamplesPrometheus"
               UpdateOutputExamplesAmazonManagedPrometheus:
