@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.1-alpha.1789859508641-de9a42da
+    version: 4.20.1-alpha.1790032490502-5360241d
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -75548,9 +75548,6 @@ components:
                         createAppScriptVersion:
                             type: string
                             description: Version of the scaffold script that originally created the App. Populated automatically.
-                        hidden:
-                            type: boolean
-                            description: Install the App without listing it in the Apps list in the UI.
                         appAuthMode:
                             type: string
                             enum:
@@ -75668,9 +75665,6 @@ components:
                         createAppScriptVersion:
                             type: string
                             description: Version of the scaffold script that originally created the App.
-                        hidden:
-                            type: boolean
-                            description: If <code>true</code>, the App is installed but is not included in the Apps list in the Cribl UI.
                         hideAppHeader:
                             type: boolean
                             description: If <code>true</code>, Cribl hides the App toolbar (back button, App name, settings menu) in the UI for Apps that render in an iframe.
@@ -82400,7 +82394,7 @@ components:
                         description: If <code>true</code>, the diff was truncated because it exceeded the line limit. Otherwise, <code>false</code>.
                     language:
                         type: string
-                        description: Programming language or file format detected for syntax highlighting.
+                        description: File extension of the changed file specified in <code>newName</code>, used for syntax highlighting. Omitted for files without an extension.
                     mode:
                         type: string
                         description: Combined file mode when both old and new modes are the same.
@@ -82436,7 +82430,6 @@ components:
                     - deletedLines
                     - isCombined
                     - isGitDiff
-                    - language
                     - newName
                     - oldName
             title: DiffFiles
@@ -207412,8 +207405,6 @@ tags:
     - name: secretFolders
       description: Actions related to SecretFolders
       x-cribl-availability: both
-      x-cribl-api-context:
-        - leader
     - name: secrets
       description: Actions related to Secrets
       x-cribl-availability: both
@@ -238412,15 +238403,15 @@ paths:
                   description: The <code>id</code> of the script to run.
     /system/secret-folders:
         get:
+            operationId: getSystemSecretFolders
+            tags:
+                - secretFolders
             x-cribl-internal: false
             x-cribl-availability: both
             x-cribl-api-context:
-                - leader
-            x-speakeasy-name-override: list
-            tags:
-                - secretFolders
-            summary: List all secret folders
-            description: Get a list of all configured secret folders.
+                - group
+            summary: List all secret folders shared with the Worker Group or Edge Fleet
+            description: Get a list of all secret folders that are shared with the Worker Group or Edge Fleet.
             responses:
                 "200":
                     description: List of SecretFolderWithRuntimeState objects.
@@ -238450,8 +238441,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-            operationId: getSecretFolder
-            x-speakeasy-group: secrets.folders
             parameters:
                 - name: offset
                   in: query
@@ -238478,59 +238467,6 @@ paths:
                       type: limit
                 outputs:
                     results: $.items
-        post:
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            x-speakeasy-name-override: create
-            tags:
-                - secretFolders
-            summary: Create a secret folder
-            description: Create a new secret folder to contain global secrets.
-            requestBody:
-                description: SecretFolderCreate object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/SecretFolderCreate"
-                        examples:
-                            CreateSecretFolderExamplesCriblBackedFolder:
-                                $ref: "#/components/examples/CreateSecretFolderExamplesCriblBackedFolder"
-            responses:
-                "201":
-                    description: The created SecretFolderWithRuntimeState object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/SecretFolderWithRuntimeState"
-                            examples:
-                                SecretFolderResponseExamplesSecretFolder:
-                                    $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
-                "400":
-                    description: Failed validation or malformed input — invalid request body or unknown secret store
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            operationId: createSecretFolder
-            x-speakeasy-group: secrets.folders
     /system/secret-folders/{id}:
         get:
             x-cribl-internal: false
