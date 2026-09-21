@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1789859517626-4d3ad5be
+    version: 4.21.0-alpha.1790032493562-c82d58ce
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -1606,6 +1606,66 @@ components:
                     enum:
                         - clone
                     description: Identifier of the Function. Always <code>clone</code>
+                loadTime:
+                    type: number
+                    description: Time the Function module was loaded, in milliseconds since the Unix epoch.
+                modTime:
+                    type: number
+                    description: Time the Function module was last modified, in milliseconds since the Unix epoch.
+                name:
+                    type: string
+                    description: Display name of the Function.
+                sync:
+                    type: boolean
+                    description: If <code>true</code>, the Function executes synchronously. Otherwise, <code>false</code>.
+                uischema:
+                    type: object
+                    additionalProperties: true
+                    description: UI Schema that controls how the Function's configuration form is rendered.
+                version:
+                    type: string
+                    description: Version string of the Function.
+                schema:
+                    type: object
+                    additionalProperties: true
+                    description: JSON Schema document that describes the Function configuration.
+            required:
+                - __filename
+                - group
+                - id
+                - loadTime
+                - modTime
+                - name
+                - uischema
+                - version
+        FunctionConfSchemaCloudChangeEnricher:
+            type: object
+        FunctionCloudChangeEnricher:
+            type: object
+            properties:
+                __filename:
+                    type: string
+                    description: Path to the JavaScript file that implements the Function.
+                asyncTimeout:
+                    type: number
+                    description: Maximum time, in milliseconds, that the Function is allowed to run asynchronously before timing out.
+                cribl_version:
+                    type: string
+                    description: Minimum Cribl version required by the Function, if applicable.
+                disabled:
+                    type: boolean
+                    description: If <code>true</code>, the Function is disabled and will not execute in a Pipeline. Otherwise, <code>false</code>.
+                group:
+                    type: string
+                    description: Category group the Function belongs to.
+                handleSignals:
+                    type: boolean
+                    description: If <code>true</code>, the Function handles stream signals such as <code>flush</code> and <code>close</code>. Otherwise, <code>false</code>.
+                id:
+                    type: string
+                    enum:
+                        - cloudChangeEnricher
+                    description: Identifier of the Function. Always <code>cloudChangeEnricher</code>
                 loadTime:
                     type: number
                     description: Time the Function module was loaded, in milliseconds since the Unix epoch.
@@ -7860,6 +7920,7 @@ components:
                 - $ref: "#/components/schemas/FunctionCef"
                 - $ref: "#/components/schemas/FunctionChain"
                 - $ref: "#/components/schemas/FunctionClone"
+                - $ref: "#/components/schemas/FunctionCloudChangeEnricher"
                 - $ref: "#/components/schemas/FunctionCode"
                 - $ref: "#/components/schemas/FunctionComment"
                 - $ref: "#/components/schemas/FunctionDetectionRules"
@@ -7935,6 +7996,7 @@ components:
                     cef: "#/components/schemas/FunctionCef"
                     chain: "#/components/schemas/FunctionChain"
                     clone: "#/components/schemas/FunctionClone"
+                    cloudChangeEnricher: "#/components/schemas/FunctionCloudChangeEnricher"
                     code: "#/components/schemas/FunctionCode"
                     comment: "#/components/schemas/FunctionComment"
                     detection_rules: "#/components/schemas/FunctionDetectionRules"
@@ -8235,6 +8297,44 @@ components:
                     type: boolean
                 conf:
                     $ref: "#/components/schemas/FunctionConfSchemaClone"
+                    description: Configuration specific to the Pipeline Function.
+                groupId:
+                    title: Group ID
+                    description: Unique identifier of the group that contains the Pipeline Function.
+                    type: string
+        PipelineFunctionCloudChangeEnricher:
+            type: object
+            required:
+                - id
+                - conf
+            additionalProperties: false
+            properties:
+                filter:
+                    title: Filter
+                    description: JavaScript expression that selects data to pass through the Function.
+                    type: string
+                id:
+                    title: ID
+                    description: Identifier of the Function. Always <code>cloudChangeEnricher</code>
+                    type: string
+                    enum:
+                        - cloudChangeEnricher
+                    examples:
+                        - cloudChangeEnricher
+                description:
+                    title: Description
+                    description: Brief description of the Pipeline function.
+                    type: string
+                disabled:
+                    title: Disabled
+                    description: If <code>true</code>, disable the Pipeline function so that events are not passed through it. Otherwise, <code>false</code>.
+                    type: boolean
+                final:
+                    title: Final
+                    description: If <code>true</code>, stop passing events to downstream Pipeline Functions after the Function executes. Otherwise, <code>false</code>.
+                    type: boolean
+                conf:
+                    $ref: "#/components/schemas/FunctionConfSchemaCloudChangeEnricher"
                     description: Configuration specific to the Pipeline Function.
                 groupId:
                     title: Group ID
@@ -10884,6 +10984,7 @@ components:
                 - $ref: "#/components/schemas/PipelineFunctionCef"
                 - $ref: "#/components/schemas/PipelineFunctionChain"
                 - $ref: "#/components/schemas/PipelineFunctionClone"
+                - $ref: "#/components/schemas/PipelineFunctionCloudChangeEnricher"
                 - $ref: "#/components/schemas/PipelineFunctionCode"
                 - $ref: "#/components/schemas/PipelineFunctionComment"
                 - $ref: "#/components/schemas/PipelineFunctionDetectionRules"
@@ -10959,6 +11060,7 @@ components:
                     cef: "#/components/schemas/PipelineFunctionCef"
                     chain: "#/components/schemas/PipelineFunctionChain"
                     clone: "#/components/schemas/PipelineFunctionClone"
+                    cloudChangeEnricher: "#/components/schemas/PipelineFunctionCloudChangeEnricher"
                     code: "#/components/schemas/PipelineFunctionCode"
                     comment: "#/components/schemas/PipelineFunctionComment"
                     detection_rules: "#/components/schemas/PipelineFunctionDetectionRules"
@@ -67481,6 +67583,29 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        CriblEvent:
+            type: object
+            additionalProperties: true
+            properties:
+                _raw:
+                    type: string
+                    description: Original raw event payload.
+            required:
+                - _raw
+            description: Event payload object that includes the original raw event and extracted fields.
+            title: CriblEvent
+        CriblEventEnvelop:
+            type: object
+            additionalProperties: true
+            properties:
+                results:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CriblEvent"
+                    description: Aggregated result events.
+            required:
+                - results
+            title: CriblEventEnvelop
         CountedListLakeConfigItem:
             type: object
             required:
@@ -70264,6 +70389,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -70326,6 +70454,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -70396,6 +70527,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -70471,6 +70605,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -70534,6 +70671,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -70611,6 +70751,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -70667,6 +70810,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -70723,6 +70869,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -70785,6 +70934,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -70841,6 +70993,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -70896,6 +71051,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -70952,6 +71110,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71011,6 +71172,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71068,6 +71232,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71124,6 +71291,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71175,6 +71345,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71237,6 +71410,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71310,6 +71486,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71362,6 +71541,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71432,6 +71614,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71483,6 +71668,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71538,6 +71726,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71589,6 +71780,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71683,6 +71877,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71750,6 +71947,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71802,6 +72002,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -71876,6 +72079,9 @@ components:
                 tags:
                     type: string
                     description: Optional comma-separated tags for organizing and filtering Datasets.
+                timeCreated:
+                    type: integer
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
                 viewName:
                     type: string
                     description: Lakehouse cache view name, when applicable.
@@ -81953,29 +82159,6 @@ components:
             required:
                 - results
             title: QueryResultsEnvelop
-        CriblEvent:
-            type: object
-            additionalProperties: true
-            properties:
-                _raw:
-                    type: string
-                    description: Original raw event payload.
-            required:
-                - _raw
-            description: Event payload object that includes the original raw event and extracted fields.
-            title: CriblEvent
-        CriblEventEnvelop:
-            type: object
-            additionalProperties: true
-            properties:
-                results:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/CriblEvent"
-                    description: Aggregated result events.
-            required:
-                - results
-            title: CriblEventEnvelop
         AuthConfig:
             type: object
             additionalProperties: true
@@ -86632,26 +86815,26 @@ components:
                 - id
                 - sourceType
             title: CriblLakeSource
-        PaginatedCriblLakeSource:
+        CountedListCriblLakeSource:
             type: object
             required:
                 - items
                 - count
             properties:
-                items:
-                    type: array
-                    description: The pre-limited items in the list of results
-                    items:
-                        $ref: "#/components/schemas/CriblLakeSource"
                 count:
                     type: integer
-                    description: Total number of items available
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/CriblLakeSource"
                 offset:
                     type: integer
-                    description: Pagination offset
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
                 limit:
                     type: integer
-                    description: Pagination limit
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
         PreviewResponseBody:
             type: object
             properties:
@@ -183310,6 +183493,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -183387,6 +183575,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -183471,6 +183664,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -183563,6 +183761,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -183637,6 +183840,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -183709,6 +183917,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -183780,6 +183993,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -183850,6 +184068,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -183938,6 +184161,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -184009,6 +184237,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -184078,6 +184311,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -184149,6 +184387,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -184224,6 +184467,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -184294,6 +184542,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -184366,6 +184619,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -184431,6 +184689,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -184514,6 +184777,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -184591,6 +184859,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -184656,6 +184929,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -184733,6 +185011,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -184798,6 +185081,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -184870,6 +185158,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -184935,6 +185228,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -185032,6 +185330,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -185115,6 +185418,11 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
                     anyOf:
@@ -185180,6 +185488,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -185280,6 +185593,11 @@ components:
                     description: Optional comma-separated tags for organizing and filtering Datasets.
                     anyOf:
                         - type: string
+                        - type: "null"
+                timeCreated:
+                    description: Unix time (in milliseconds) when the Dataset was created. Absent on Datasets created before this field was introduced.
+                    anyOf:
+                        - type: integer
                         - type: "null"
                 viewName:
                     description: Lakehouse cache view name, when applicable.
@@ -198456,6 +198774,24 @@ components:
                             - s3:ListBucket
                             - s3:ListBucketVersions
                             - s3:GetBucketLocation
+        LakeCacheExternalMetricsResponseExamplesQueriesPerMinute:
+            summary: Query external metrics for a Lakehouse
+            description: Example response for querying externally reported metrics (ClickHouse or CloudWatch) for a Lakehouse over a time range.
+            value:
+                results:
+                    - _raw: ""
+                      starttime: 1725000000
+                      endtime: 1725000060
+                      QueriesPerMinute: 42
+        LakeCacheStreamMetricsResponseExamplesQueryLagOverTime:
+            summary: Query Stream metrics for a Lakehouse
+            description: Example response for querying internal Stream-reported metrics for a Lakehouse over a time range.
+            value:
+                results:
+                    - _raw: ""
+                      starttime: 1725000000
+                      endtime: 1725000060
+                      health: 1
         LakeDatasetBulkDeleteResponseExamplesBulkDeleteSuccess:
             summary: Batch delete Lake Datasets
             description: Example response for batch-deleting Lake Datasets. <code>items</code> contains the soft-deleted Lake Datasets, and <code>errors</code> contains an entry for each id that failed.
@@ -244858,6 +245194,57 @@ paths:
                     type: string
                   description: The <code>id</code> of the Cribl Lake bucket to update.
     /products/lake/lakes/{lakeId}/lakehouses/{cacheId}/datasets/{datasetId}/connections:
+        post:
+            operationId: createCriblLakeCacheServerLakehousesDatasetsConnectionsByLakeIdAndCacheIdAndDatasetId
+            tags:
+                - lake
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Attach a Dataset to a Lakehouse (Cribl.Cloud only)
+            description: Attach the specified Dataset to the specified Lakehouse (Cribl.Cloud only).
+            responses:
+                "204":
+                    description: No Content
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: lakeId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake.
+                - name: cacheId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lakehouse to attach the Dataset to.
+                - name: datasetId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Dataset to attach.
         delete:
             operationId: deleteCriblLakeCacheServerLakehousesDatasetsConnectionsByLakeIdAndCacheIdAndDatasetId
             tags:
@@ -244909,6 +245296,163 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Dataset to detach.
+        patch:
+            operationId: updateCriblLakeCacheServerLakehousesDatasetsConnectionsByLakeIdAndCacheIdAndDatasetId
+            tags:
+                - lake
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Update a Dataset connection to a Lakehouse (Cribl.Cloud only)
+            description: Update the connection between the specified Dataset and Lakehouse, such as its accelerated fields or retention (Cribl.Cloud only).
+            responses:
+                "204":
+                    description: No Content
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: lakeId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake.
+                - name: cacheId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lakehouse the Dataset is attached to.
+                - name: datasetId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Dataset whose connection is updated.
+    /products/lake/lakes/{lakeId}/lakehouses/{id}/metrics/external:
+        post:
+            operationId: createCriblLakeCacheServerLakehousesMetricsExternalByLakeIdAndId
+            tags:
+                - lake
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Query external metrics for a Lakehouse (Cribl.Cloud only)
+            description: Query externally reported metrics for the specified Lakehouse over a time range (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: The created CriblEventEnvelop object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CriblEventEnvelop"
+                            examples:
+                                LakeCacheExternalMetricsResponseExamplesQueriesPerMinute:
+                                    $ref: "#/components/examples/LakeCacheExternalMetricsResponseExamplesQueriesPerMinute"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: lakeId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake.
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lakehouse to query metrics for.
+    /products/lake/lakes/{lakeId}/lakehouses/{id}/metrics/stream:
+        post:
+            operationId: createCriblLakeCacheServerLakehousesMetricsStreamByLakeIdAndId
+            tags:
+                - lake
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Query Stream metrics for a Lakehouse (Cribl.Cloud only)
+            description: Query internal Stream-reported metrics for the specified Lakehouse over a time range (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: The created CriblEventEnvelop object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CriblEventEnvelop"
+                            examples:
+                                LakeCacheStreamMetricsResponseExamplesQueryLagOverTime:
+                                    $ref: "#/components/examples/LakeCacheStreamMetricsResponseExamplesQueryLagOverTime"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: lakeId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake.
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lakehouse to query metrics for.
     /products/lake/lakes/{lakeId}/config:
         get:
             operationId: getLakeConfigItemConfigByLakeId
@@ -252686,7 +253230,7 @@ paths:
             description: Get the current Metadata snapshot for the Edge host from enabled collectors.
             responses:
                 "200":
-                    description: Metadata for the Edge host in a response envelope with <code>count</code> and <code>items</code>.
+                    description: The requested Metadata object.
                     content:
                         application/json:
                             schema:
@@ -252803,7 +253347,7 @@ paths:
             description: Ingest a file from the Edge Node filesystem and send the resulting events to Routes or directly to Destinations.<br/><br/>Set <code>sendToRoutes</code> to <code>true</code> to use Routes, or <code>false</code> and provide <code>connections</code> to send events to one or more Destinations.<br/><br/>The request body must include <code>filePath</code> and <code>sendToRoutes</code>.
             responses:
                 "200":
-                    description: Ingest results for the processed file in a response envelope with <code>count</code> and <code>items</code>.
+                    description: The created FileIngestFileResult object.
                     content:
                         application/json:
                             schema:
@@ -271708,7 +272252,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/PaginatedCriblLakeSource"
+                                $ref: "#/components/schemas/CountedListCriblLakeSource"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -271737,31 +272281,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Lake that contains the Lake Sources.
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Pagination offset
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Maximum number of items to return
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
     /search/event-breaker-preview:
         post:
             operationId: createSearchEventBreakerPreview
