@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1790032493562-c82d58ce
+    version: 4.21.0-alpha.1790118878299-0fd51e0c
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -72370,23 +72370,6 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
-        EngineSize:
-            type: string
-            enum:
-                - 3xsmall
-                - 2xsmall
-                - xsmall
-                - small
-                - medium
-                - large
-                - xlarge
-                - 2xlarge
-                - 3xlarge
-                - 4xlarge
-                - 5xlarge
-                - 6xlarge
-            title: EngineSize
-            x-speakeasy-unknown-values: allow
         LocalSearchEngineApi:
             type: object
             properties:
@@ -72446,18 +72429,66 @@ components:
                 lastProvisionedMs:
                     type: integer
                     description: Timestamp (in Unix time) when the lakehouse engine was last provisioned or updated, in milliseconds.
+                maximumTierSize:
+                    type: string
+                    enum:
+                        - 2xlarge
+                        - 2xsmall
+                        - 3xlarge
+                        - 3xsmall
+                        - 4xlarge
+                        - 5xlarge
+                        - 6xlarge
+                        - large
+                        - medium
+                        - small
+                        - xlarge
+                        - xsmall
+                    description: Largest engine size to which this lakehouse engine may be resized. Omitted when no additional maximum applies. Derived on read and ignored in request bodies.
+                    x-speakeasy-unknown-values: allow
                 metricsDatasetId:
                     type: string
                     description: The <code>id</code> of the Cribl-managed customer-metrics Dataset linked to this engine, resolved by ownership (not by name). Absent when the engine has no metrics Dataset we own.
                 metricsLastPublishedAt:
                     type: integer
                     description: Timestamp (in Unix time) when the lakehouse engine metrics were last published, in milliseconds.
+                minimumTierSize:
+                    type: string
+                    enum:
+                        - 2xlarge
+                        - 2xsmall
+                        - 3xlarge
+                        - 3xsmall
+                        - 4xlarge
+                        - 5xlarge
+                        - 6xlarge
+                        - large
+                        - medium
+                        - small
+                        - xlarge
+                        - xsmall
+                    description: Smallest engine size to which this lakehouse engine may be resized. Omitted when no additional minimum applies. Derived on read and ignored in request bodies.
+                    x-speakeasy-unknown-values: allow
                 status:
                     $ref: "#/components/schemas/StatusOptionsLocalSearchEngineApi"
                     description: Provisioning lifecycle status of the lakehouse engine.
                 tierSize:
-                    $ref: "#/components/schemas/EngineSize"
+                    type: string
+                    enum:
+                        - 2xlarge
+                        - 2xsmall
+                        - 3xlarge
+                        - 3xsmall
+                        - 4xlarge
+                        - 5xlarge
+                        - 6xlarge
+                        - large
+                        - medium
+                        - small
+                        - xlarge
+                        - xsmall
                     description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code>, <code>4xlarge</code>,<code>5xlarge</code>, and <code>6xlarge</code> requires the <code>cribl_operator</code> role.
+                    x-speakeasy-unknown-values: allow
             required:
                 - engineType
                 - id
@@ -84116,6 +84147,104 @@ components:
                 - triggeredBy
                 - workflowId
             title: WorkflowRunMeta
+        WorkflowChatMessageStreamLine:
+            type: object
+            properties:
+                content:
+                    type:
+                        - "null"
+                        - string
+                    description: Token chunk or tool result text. Null when the item is a tool-call request.
+                name:
+                    type: string
+                    description: Agent fully-qualified name on assistant chunks.
+                role:
+                    type: string
+                    enum:
+                        - assistant
+                        - tool
+                    description: Role of the stream item.
+                    x-speakeasy-unknown-values: allow
+                tool_call_id:
+                    type: string
+                    description: Id of the tool call this result answers.
+                tool_calls:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ToolCallConfWorkflowChatMessageStreamLine"
+                    description: Tool invocations requested by the assistant.
+                turnId:
+                    type: string
+                    description: Correlation id for this chat turn. Present on every chat message line, including token chunks and synthetic errors.
+            required:
+                - content
+                - role
+            title: WorkflowChatMessageStreamLine
+        WorkflowChatNotificationStreamLine:
+            type: object
+            properties:
+                content:
+                    type: array
+                    items:
+                        type: string
+                    description: Notification payload lines.
+                notificationMessageType:
+                    type: string
+                    description: "Discriminator: type of notification."
+                toolCallId:
+                    type: string
+                    description: Tool call id. Present on confirmation prompts.
+                toolName:
+                    type: string
+                    description: Tool that emitted this notification.
+            required:
+                - content
+                - notificationMessageType
+                - toolName
+            title: WorkflowChatNotificationStreamLine
+        WorkflowChatControlStreamLine:
+            type: object
+            properties:
+                code:
+                    type: string
+                    enum:
+                        - internal_error
+                        - timeout
+                    description: Machine-readable failure code. Present only on <code>turnFailed</code>.
+                    x-speakeasy-unknown-values: allow
+                event:
+                    type: string
+                    enum:
+                        - turnCompleted
+                        - turnFailed
+                        - turnStarted
+                    description: Lifecycle event for the chat turn.
+                    x-speakeasy-unknown-values: allow
+                message:
+                    type: string
+                    description: Human-readable failure description. Present only on <code>turnFailed</code>.
+                turnId:
+                    type: string
+                    description: Correlation id for this chat turn.
+            required:
+                - event
+                - turnId
+            title: WorkflowChatControlStreamLine
+        WorkflowChatStreamLine:
+            oneOf:
+                - $ref: "#/components/schemas/WorkflowChatMessageStreamLine"
+                - $ref: "#/components/schemas/WorkflowChatNotificationStreamLine"
+                - $ref: "#/components/schemas/WorkflowChatControlStreamLine"
+            title: WorkflowChatStreamLine
+        WorkflowRunChatRequest:
+            type: object
+            properties:
+                message:
+                    type: string
+                    description: User message for the follow-up chat conversation.
+            required:
+                - message
+            title: WorkflowRunChatRequest
         CreateWorkflowRunRequest:
             type: object
             properties:
@@ -84159,30 +84288,7 @@ components:
                 tool_calls:
                     type: array
                     items:
-                        type: object
-                        properties:
-                            extra_content:
-                                type: object
-                                additionalProperties: true
-                            function:
-                                type: object
-                                properties:
-                                    arguments:
-                                        type: string
-                                        description: JSON-encoded arguments passed to the function.
-                                    name:
-                                        type: string
-                                        description: Name of the function to invoke.
-                                required:
-                                    - arguments
-                                    - name
-                                description: Function details for the tool call.
-                            id:
-                                type: string
-                                description: Unique identifier for the tool call.
-                        required:
-                            - function
-                            - id
+                        $ref: "#/components/schemas/ToolCallConfWorkflowChatMessageStreamLine"
                     description: Tool invocations requested by the assistant. Each entry contains the tool call ID and function details.
             required:
                 - content
@@ -84684,9 +84790,6 @@ components:
                 displayName:
                     type: string
                     description: Required. Display name for the workflow. Trimmed; cannot be blank.
-                id:
-                    type: string
-                    description: Client-supplied workflow id. Must be unique.
                 systemPrompt:
                     type: string
                     description: "Merged into the <code>role: 'system'</code> message of every LLM task, alongside orchestrator framing. Trimmed; a blank value is stored as absent."
@@ -84700,7 +84803,6 @@ components:
                     description: "Input trigger configuration. Defaults to <code>{ kind: 'prompt' }</code> when omitted."
             required:
                 - displayName
-                - id
             title: WorkflowCreateRequest
         WorkflowEntityPatchRequest:
             type: object
@@ -89822,6 +89924,26 @@ components:
                 items:
                     type: string
             title: MetricLabels
+        CountedListString:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        type: string
+                offset:
+                    type: integer
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
+                limit:
+                    type: integer
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
         SystemInsightsHealthCheckStatus:
             oneOf:
                 - type: object
@@ -185715,6 +185837,25 @@ components:
                     anyOf:
                         - type: integer
                         - type: "null"
+                maximumTierSize:
+                    description: Largest engine size to which this lakehouse engine may be resized. Omitted when no additional maximum applies. Derived on read and ignored in request bodies.
+                    anyOf:
+                        - type: string
+                          enum:
+                            - 2xlarge
+                            - 2xsmall
+                            - 3xlarge
+                            - 3xsmall
+                            - 4xlarge
+                            - 5xlarge
+                            - 6xlarge
+                            - large
+                            - medium
+                            - small
+                            - xlarge
+                            - xsmall
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
                 metricsDatasetId:
                     description: The <code>id</code> of the Cribl-managed customer-metrics Dataset linked to this engine, resolved by ownership (not by name). Absent when the engine has no metrics Dataset we own.
                     anyOf:
@@ -185724,6 +185865,25 @@ components:
                     description: Timestamp (in Unix time) when the lakehouse engine metrics were last published, in milliseconds.
                     anyOf:
                         - type: integer
+                        - type: "null"
+                minimumTierSize:
+                    description: Smallest engine size to which this lakehouse engine may be resized. Omitted when no additional minimum applies. Derived on read and ignored in request bodies.
+                    anyOf:
+                        - type: string
+                          enum:
+                            - 2xlarge
+                            - 2xsmall
+                            - 3xlarge
+                            - 3xsmall
+                            - 4xlarge
+                            - 5xlarge
+                            - 6xlarge
+                            - large
+                            - medium
+                            - small
+                            - xlarge
+                            - xsmall
+                          x-speakeasy-unknown-values: allow
                         - type: "null"
                 status:
                     description: Provisioning lifecycle status of the lakehouse engine.
@@ -185740,8 +185900,22 @@ components:
                           x-speakeasy-unknown-values: allow
                         - type: "null"
                 tierSize:
+                    type: string
+                    enum:
+                        - 2xlarge
+                        - 2xsmall
+                        - 3xlarge
+                        - 3xsmall
+                        - 4xlarge
+                        - 5xlarge
+                        - 6xlarge
+                        - large
+                        - medium
+                        - small
+                        - xlarge
+                        - xsmall
                     description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code>, <code>4xlarge</code>,<code>5xlarge</code>, and <code>6xlarge</code> requires the <code>cribl_operator</code> role.
-                    $ref: "#/components/schemas/EngineSize"
+                    x-speakeasy-unknown-values: allow
             description: "Lakehouse engine: provisioned storage and compute for ingest and search."
             title: LocalSearchEngineApiPartialRequest
         DatasetRulesetPartialRequest:
@@ -188917,6 +189091,19 @@ components:
                 - openai_compatible
             description: API-side provider identifier.
             x-speakeasy-unknown-values: allow
+        FunctionTypeWorkflowChatMessageStreamLineToolCallsItems:
+            type: object
+            properties:
+                arguments:
+                    type: string
+                    description: JSON-encoded arguments passed to the function.
+                name:
+                    type: string
+                    description: Name of the function to invoke.
+            required:
+                - arguments
+                - name
+            description: Function details for the tool call.
         AdditionalPropertiesTypeWorkflowRunStatePatchTasks:
             type: object
             properties:
@@ -190361,6 +190548,21 @@ components:
                 - intercom
                 - upgrade
             description: System-level operational settings for the Cribl instance.
+        ToolCallConfWorkflowChatMessageStreamLine:
+            type: object
+            properties:
+                extra_content:
+                    type: object
+                    additionalProperties: true
+                function:
+                    $ref: "#/components/schemas/FunctionTypeWorkflowChatMessageStreamLineToolCallsItems"
+                    description: Function details for the tool call.
+                id:
+                    type: string
+                    description: Unique identifier for the tool call.
+            required:
+                - function
+                - id
         EventConfPreviewResponseBody:
             allOf:
                 - $ref: "#/components/schemas/PreviewResponseBodyEventsItemsType"
@@ -203404,7 +203606,7 @@ components:
             value:
                 items:
                     - runId: run_1724000000000_1
-                      workflowId: investigate-spikes
+                      workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                       revision: published
                       revisionAt: 1723920000000
                       status: completed
@@ -203416,7 +203618,7 @@ components:
                       modifiedAt: 1724000060000
                       lastActivityAt: 1724000120000
                     - runId: run_1723990000000_1
-                      workflowId: investigate-spikes
+                      workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                       revision: published
                       revisionAt: 1723920000000
                       status: running
@@ -203429,12 +203631,45 @@ components:
                 count: 2
                 offset: 0
                 limit: 100
+        ChatWorkflowRunNdjsonLineResponseExamplesTurnStarted:
+            summary: Turn lifecycle control record
+            description: Guaranteed first line before any agent output. Provides the turnId for stream-to-log correlation.
+            value:
+                event: turnStarted
+                turnId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        ChatWorkflowRunNdjsonLineResponseExamplesTokenChunk:
+            summary: Stream one assistant token chunk
+            description: A live collector line with turnId for stream-to-log correlation. Later lines may be further tokens, tool calls, or tool results.
+            value:
+                name: workflow_chat
+                role: assistant
+                content: Latency
+                turnId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        ChatWorkflowRunNdjsonLineResponseExamplesTurnCompleted:
+            summary: Turn completed successfully
+            description: Final line before a clean close on a successful turn.
+            value:
+                event: turnCompleted
+                turnId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        ChatWorkflowRunNdjsonLineResponseExamplesTurnFailed:
+            summary: Turn failed with a structured error
+            description: Final line before close on a failed turn. Follows a synthetic assistant message that is persisted for conversation readability.
+            value:
+                event: turnFailed
+                turnId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                code: timeout
+                message: Chat turn exceeded its wall-clock cap
+        ChatWorkflowRunRequestExamplesFollowUp:
+            summary: Ask a follow-up question
+            description: Ask why latency spiked after a completed run. Prior chat history is loaded server-side.
+            value:
+                message: What caused the spike?
         CreateWorkflowRunResponseExamplesRunCreated:
             summary: Run created
             description: Returns 201 with persisted run metadata after the workflow walk is scheduled. <code>status</code> is initially <code>running</code>; execution continues in the background.
             value:
                 runId: run_1724000000000_1
-                workflowId: investigate-spikes
+                workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                 revision: published
                 revisionAt: 1723920000000
                 status: running
@@ -203461,7 +203696,7 @@ components:
             value:
                 meta:
                     runId: run_1724000000000_1
-                    workflowId: investigate-spikes
+                    workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                     revision: published
                     revisionAt: 1723920000000
                     status: completed
@@ -203559,7 +203794,7 @@ components:
                                 endedAt: 1724000060000
                       metaPatch:
                         runId: run_1724000000000_1
-                        workflowId: investigate-spikes
+                        workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                         revision: published
                         revisionAt: 1723920000000
                         status: completed
@@ -203573,7 +203808,7 @@ components:
             description: POST /ai/workflows/{id}/runs/{runId}/stop returns immediately with stopRequested recorded; status still reads running until the walk exits.
             value:
                 runId: run_1724000000000_1
-                workflowId: investigate-spikes
+                workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                 revision: published
                 revisionAt: 1723920000000
                 status: running
@@ -203857,7 +204092,7 @@ components:
             description: GET /ai/workflows returns summary fields only. API v2 uses the configured default page size when pagination parameters are omitted.
             value:
                 items:
-                    - id: investigate-spikes
+                    - id: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                       displayName: Investigate traffic spikes
                       description: Triage volume anomalies
                       status: draft
@@ -203866,7 +204101,7 @@ components:
                       owner: alice
                       displayOwner: Alice Smith
                       lastRunAt: 1724000000000
-                    - id: daily-digest
+                    - id: 9a7b3c1d-5e2f-4a8b-b6c4-d0e9f8a7b6c5
                       displayName: Daily digest
                       status: published
                       lastModified: 1723927200000
@@ -203880,7 +204115,7 @@ components:
             description: When offset and/or limit are provided, the response is a standard paginated list envelope.
             value:
                 items:
-                    - id: daily-digest
+                    - id: 9a7b3c1d-5e2f-4a8b-b6c4-d0e9f8a7b6c5
                       displayName: Daily digest
                       status: published
                       lastModified: 1723927200000
@@ -203892,7 +204127,7 @@ components:
         CreateWorkflowResponseExamplesCreatedDraft:
             summary: Created draft workflow
             value:
-                id: investigate-spikes
+                id: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                 displayName: Investigate traffic spikes
                 color: "#4C6EF5"
                 status: draft
@@ -203930,7 +204165,6 @@ components:
             summary: Create workflow with tasks
             description: Server lands the document as draft and stamps audit metadata.
             value:
-                id: investigate-spikes
                 displayName: Investigate traffic spikes
                 description: Triage volume anomalies
                 color: "#4C6EF5"
@@ -203957,7 +204191,7 @@ components:
         GetWorkflowResponseExamplesFullDocument:
             summary: Full workflow document
             value:
-                id: investigate-spikes
+                id: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                 displayName: Investigate traffic spikes
                 color: "#4C6EF5"
                 status: draft
@@ -203995,7 +204229,7 @@ components:
             summary: Patch metadata on a published workflow
             description: The published revision is unchanged.
             value:
-                id: investigate-spikes
+                id: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                 displayName: Investigate volume spikes
                 color: "#7048E8"
                 status: published
@@ -204037,7 +204271,7 @@ components:
         PublishWorkflowResponseExamplesPublished:
             summary: Published workflow
             value:
-                id: investigate-spikes
+                id: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                 displayName: Investigate traffic spikes
                 color: "#4C6EF5"
                 status: published
@@ -204056,7 +204290,7 @@ components:
         UpdateWorkflowResponseExamplesSavedDraft:
             summary: Updated workflow (status rederived)
             value:
-                id: investigate-spikes
+                id: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                 displayName: Investigate traffic spikes
                 color: "#4C6EF5"
                 status: draft
@@ -211688,6 +211922,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Subscription"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -211954,6 +212193,11 @@ paths:
                             examples:
                                 DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
                                     $ref: "#/components/examples/DatabaseConnectionResponseExamplesMySQLDatabaseConnection"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -212384,6 +212628,11 @@ paths:
                             examples:
                                 DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
                                     $ref: "#/components/examples/DatabaseConnectionResponseExamplesMySQLDatabaseConnection"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -212781,6 +213030,11 @@ paths:
                             examples:
                                 EventBreakerRuleResponseExamplesEventBreakerRuleset:
                                     $ref: "#/components/examples/EventBreakerRuleResponseExamplesEventBreakerRuleset"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -213198,6 +213452,11 @@ paths:
                             examples:
                                 EventBreakerRuleResponseExamplesEventBreakerRuleset:
                                     $ref: "#/components/examples/EventBreakerRuleResponseExamplesEventBreakerRuleset"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -214370,6 +214629,11 @@ paths:
                                     $ref: "#/components/examples/GlobalVarResponseExamplesStringVariable"
                                 GlobalVarResponseExamplesNumberVariable:
                                     $ref: "#/components/examples/GlobalVarResponseExamplesNumberVariable"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -214675,6 +214939,11 @@ paths:
                                     $ref: "#/components/examples/GlobalVarResponseExamplesStringVariable"
                                 GlobalVarResponseExamplesNumberVariable:
                                     $ref: "#/components/examples/GlobalVarResponseExamplesNumberVariable"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -215014,6 +215283,11 @@ paths:
                                     $ref: "#/components/examples/HmacFunctionResponseExamplesSHA256Webhook"
                                 HmacFunctionResponseExamplesSHA1Legacy:
                                     $ref: "#/components/examples/HmacFunctionResponseExamplesSHA1Legacy"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -215299,6 +215573,11 @@ paths:
                                     $ref: "#/components/examples/HmacFunctionResponseExamplesSHA256Webhook"
                                 HmacFunctionResponseExamplesSHA1Legacy:
                                     $ref: "#/components/examples/HmacFunctionResponseExamplesSHA1Legacy"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -215896,6 +216175,11 @@ paths:
                                     $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
                                 InputResponseExamplesHttpSource:
                                     $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -216814,6 +217098,11 @@ paths:
                                     $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
                                 InputResponseExamplesHttpSource:
                                     $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -217982,6 +218271,11 @@ paths:
                                     $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
                                 OutputResponseExamplesSnowflakeStreamingDestination:
                                     $ref: "#/components/examples/OutputResponseExamplesSnowflakeStreamingDestination"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -218876,6 +219170,11 @@ paths:
                                     $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
                                 OutputResponseExamplesSnowflakeStreamingDestination:
                                     $ref: "#/components/examples/OutputResponseExamplesSnowflakeStreamingDestination"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -219541,6 +219840,11 @@ paths:
                             examples:
                                 ParquetSchemaGetResponseExamplesEventData:
                                     $ref: "#/components/examples/ParquetSchemaGetResponseExamplesEventData"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -219826,6 +220130,11 @@ paths:
                                     $ref: "#/components/examples/PipelineResponseExamplesEmptyPipeline"
                                 PipelineResponseExamplesEvalPipeline:
                                     $ref: "#/components/examples/PipelineResponseExamplesEvalPipeline"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                 "401":
@@ -220334,6 +220643,11 @@ paths:
                                     $ref: "#/components/examples/PipelineResponseExamplesEmptyPipeline"
                                 PipelineResponseExamplesEvalPipeline:
                                     $ref: "#/components/examples/PipelineResponseExamplesEvalPipeline"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                 "401":
@@ -220873,6 +221187,11 @@ paths:
                             examples:
                                 ProfilerCreateResponseExamplesProfilerCreated:
                                     $ref: "#/components/examples/ProfilerCreateResponseExamplesProfilerCreated"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -221716,6 +222035,11 @@ paths:
                                     $ref: "#/components/examples/SchemaResponseExamplesEventData"
                                 SchemaResponseExamplesUserActivity:
                                     $ref: "#/components/examples/SchemaResponseExamplesUserActivity"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — Invalid request body or schema.
                 "401":
@@ -222007,6 +222331,11 @@ paths:
                                     $ref: "#/components/examples/SchemaResponseExamplesEventData"
                                 SchemaResponseExamplesUserActivity:
                                     $ref: "#/components/examples/SchemaResponseExamplesUserActivity"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — Invalid request body or schema.
                 "401":
@@ -222332,6 +222661,11 @@ paths:
                             examples:
                                 SecretCreateResponseExamplesSecret:
                                     $ref: "#/components/examples/SecretCreateResponseExamplesSecret"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — invalid request body or validation error
                 "401":
@@ -224449,6 +224783,11 @@ paths:
                             examples:
                                 GrokFileResponseExamplesGrokFile:
                                     $ref: "#/components/examples/GrokFileResponseExamplesGrokFile"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -224725,6 +225064,11 @@ paths:
                             examples:
                                 GrokFileResponseExamplesGrokFile:
                                     $ref: "#/components/examples/GrokFileResponseExamplesGrokFile"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -225038,6 +225382,11 @@ paths:
                             examples:
                                 CollectorResponseExamplesRestCollector:
                                     $ref: "#/components/examples/CollectorResponseExamplesRestCollector"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -225354,6 +225703,11 @@ paths:
                             examples:
                                 CollectorResponseExamplesRestCollector:
                                     $ref: "#/components/examples/CollectorResponseExamplesRestCollector"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -225769,6 +226123,11 @@ paths:
                             examples:
                                 LookupGetResponseExamplesCsvLookup:
                                     $ref: "#/components/examples/LookupGetResponseExamplesCsvLookup"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                 "401":
@@ -226482,6 +226841,11 @@ paths:
                             examples:
                                 LookupGetResponseExamplesCsvLookup:
                                     $ref: "#/components/examples/LookupGetResponseExamplesCsvLookup"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                 "401":
@@ -227184,6 +227548,11 @@ paths:
                             examples:
                                 ParserGetResponseExamplesCsvParser:
                                     $ref: "#/components/examples/ParserGetResponseExamplesCsvParser"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -227470,6 +227839,11 @@ paths:
                             examples:
                                 ParserGetResponseExamplesCsvParser:
                                     $ref: "#/components/examples/ParserGetResponseExamplesCsvParser"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -228044,6 +228418,11 @@ paths:
                             examples:
                                 RegexGetResponseExamplesIpAddress:
                                     $ref: "#/components/examples/RegexGetResponseExamplesIpAddress"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -228325,6 +228704,11 @@ paths:
                             examples:
                                 RegexGetResponseExamplesIpAddress:
                                     $ref: "#/components/examples/RegexGetResponseExamplesIpAddress"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -228639,6 +229023,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/SensitiveDataRule"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -228908,6 +229297,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/SensitiveDataRule"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -229377,6 +229771,11 @@ paths:
                             examples:
                                 SampleCreateResponseExamplesCreatedSample:
                                     $ref: "#/components/examples/SampleCreateResponseExamplesCreatedSample"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -229718,6 +230117,11 @@ paths:
                             examples:
                                 SampleCreateResponseExamplesCreatedSample:
                                     $ref: "#/components/examples/SampleCreateResponseExamplesCreatedSample"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -230190,6 +230594,11 @@ paths:
                             examples:
                                 DashboardResponseExampleDashboard:
                                     $ref: "#/components/examples/DashboardResponseExampleDashboard"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -230823,6 +231232,11 @@ paths:
                             examples:
                                 DashboardResponseExampleDashboard:
                                     $ref: "#/components/examples/DashboardResponseExampleDashboard"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -231433,6 +231847,11 @@ paths:
                             examples:
                                 DatatypeCreateResponseExamplesCreatedDatatype:
                                     $ref: "#/components/examples/DatatypeCreateResponseExamplesCreatedDatatype"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input, such as an invalid Datatype configuration or a duplicate Datatype id.
                     content:
@@ -231752,6 +232171,11 @@ paths:
                             examples:
                                 DatatypeCreateResponseExamplesCreatedDatatype:
                                     $ref: "#/components/examples/DatatypeCreateResponseExamplesCreatedDatatype"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input, such as an invalid Datatype configuration or a duplicate Datatype id.
                     content:
@@ -232179,6 +232603,11 @@ paths:
                             examples:
                                 SearchMacroCreateResponseExamplesMinimal:
                                     $ref: "#/components/examples/SearchMacroCreateResponseExamplesMinimal"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -232690,6 +233119,11 @@ paths:
                             examples:
                                 SearchMacroCreateResponseExamplesMinimal:
                                     $ref: "#/components/examples/SearchMacroCreateResponseExamplesMinimal"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -233121,6 +233555,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/NotebookTemplate"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -233549,6 +233988,11 @@ paths:
                             examples:
                                 SavedQueryCreateResponseExamplesCreated:
                                     $ref: "#/components/examples/SavedQueryCreateResponseExamplesCreated"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -234260,6 +234704,11 @@ paths:
                             examples:
                                 SavedQueryCreateResponseExamplesCreated:
                                     $ref: "#/components/examples/SavedQueryCreateResponseExamplesCreated"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -234667,6 +235116,11 @@ paths:
                                 id: $response.body#/id
                             description: Get the results of the newly created search job.
                             operationId: getSearchJobsResultsById
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — Invalid query or request validation failure.
                 "401":
@@ -236736,6 +237190,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/DatasetAccess"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -236998,6 +237457,11 @@ paths:
                                     $ref: "#/components/examples/AppScheduleResponseExamplesSingleSchedule"
                                 AppScheduleResponseExamplesMultipleSchedules:
                                     $ref: "#/components/examples/AppScheduleResponseExamplesMultipleSchedules"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -237330,6 +237794,11 @@ paths:
                             examples:
                                 CreateBannerResponseExamplesBanner:
                                     $ref: "#/components/examples/CreateBannerResponseExamplesBanner"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -237603,6 +238072,11 @@ paths:
                             examples:
                                 CertificateResponseExamplesCertificate:
                                     $ref: "#/components/examples/CertificateResponseExamplesCertificate"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — invalid PEM format or validation error
                 "401":
@@ -238066,6 +238540,11 @@ paths:
                             examples:
                                 GlobalSecretResponseExamplesGlobalSecret:
                                     $ref: "#/components/examples/GlobalSecretResponseExamplesGlobalSecret"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — invalid request body or validation error
                 "401":
@@ -238540,6 +239019,11 @@ paths:
                             examples:
                                 GroupCreateResponseExamplesWorkerGroup:
                                     $ref: "#/components/examples/GroupCreateResponseExamplesWorkerGroup"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — Invalid group payload or invalid cloud/on-prem configuration.
                 "401":
@@ -239068,6 +239552,11 @@ paths:
                             examples:
                                 KeyCreateResponseExamplesKey:
                                     $ref: "#/components/examples/KeyCreateResponseExamplesKey"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -239549,6 +240038,11 @@ paths:
                             examples:
                                 MappingRulesetCreateResponseExamplesCreateMappingRuleset:
                                     $ref: "#/components/examples/MappingRulesetCreateResponseExamplesCreateMappingRuleset"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                 "401":
@@ -239889,6 +240383,11 @@ paths:
                             examples:
                                 CreateMessageResponseExamplesMessage:
                                     $ref: "#/components/examples/CreateMessageResponseExamplesMessage"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -240106,6 +240605,11 @@ paths:
                             examples:
                                 NotificationTargetResponseExamplesNotificationTarget:
                                     $ref: "#/components/examples/NotificationTargetResponseExamplesNotificationTarget"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -240452,6 +240956,11 @@ paths:
                             examples:
                                 NotificationResponseExamplesNotification:
                                     $ref: "#/components/examples/NotificationResponseExamplesNotification"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -240749,6 +241258,11 @@ paths:
                             examples:
                                 NotificationResponseExamplesNotification:
                                     $ref: "#/components/examples/NotificationResponseExamplesNotification"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -241075,6 +241589,11 @@ paths:
                             examples:
                                 CreatePolicyResponseExamplesPolicy:
                                     $ref: "#/components/examples/CreatePolicyResponseExamplesPolicy"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -241352,6 +241871,11 @@ paths:
                             examples:
                                 PrivateKeyResponseExamplesPrivateKey:
                                     $ref: "#/components/examples/PrivateKeyResponseExamplesPrivateKey"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — invalid PEM format or validation error
                 "401":
@@ -241688,6 +242212,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/ProvisioningTokenWithSecret"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                 "401":
@@ -242094,6 +242623,11 @@ paths:
                             examples:
                                 CreateRoleResponseExamplesRole:
                                     $ref: "#/components/examples/CreateRoleResponseExamplesRole"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -242369,6 +242903,11 @@ paths:
                             examples:
                                 ScriptCreatedResponseExamplesScriptEntry:
                                     $ref: "#/components/examples/ScriptCreatedResponseExamplesScriptEntry"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -242766,6 +243305,11 @@ paths:
                             examples:
                                 SecretFolderResponseExamplesSecretFolder:
                                     $ref: "#/components/examples/SecretFolderResponseExamplesSecretFolder"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — invalid request body or unknown secret store
                 "401":
@@ -243336,6 +243880,11 @@ paths:
                             examples:
                                 SecretStoreResponseExamplesVaultSecretStore:
                                     $ref: "#/components/examples/SecretStoreResponseExamplesVaultSecretStore"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — invalid request body or unsupported built-in store creation
                 "401":
@@ -243733,6 +244282,11 @@ paths:
                             examples:
                                 CreateTeamResponseExamplesTeam:
                                     $ref: "#/components/examples/CreateTeamResponseExamplesTeam"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -244201,6 +244755,11 @@ paths:
                             examples:
                                 CreateUserResponseExamplesCreatedUser:
                                     $ref: "#/components/examples/CreateUserResponseExamplesCreatedUser"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -244532,6 +245091,11 @@ paths:
                             examples:
                                 CreateAiSessionResponseExamplesCreated:
                                     $ref: "#/components/examples/CreateAiSessionResponseExamplesCreated"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -244893,6 +245457,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/CriblLakeBucket"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — Invalid bucket type, region, or policy
                 "401":
@@ -246292,6 +246861,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/CriblLakeStorageLocation"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -246863,6 +247437,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/DashboardCategory"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -247201,6 +247780,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Notebook"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -247809,6 +248393,11 @@ paths:
                             examples:
                                 UsageGroupCreateResponseExamplesUsageGroup:
                                     $ref: "#/components/examples/UsageGroupCreateResponseExamplesUsageGroup"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input, such as an invalid Usage Group configuration.
                     content:
@@ -248341,6 +248930,11 @@ paths:
                             examples:
                                 DatasetProviderResponseExampleDefault:
                                     $ref: "#/components/examples/DatasetProviderResponseExampleDefault"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -249009,6 +249603,11 @@ paths:
                             examples:
                                 DatasetResponseExampleCreatedS3Dataset:
                                     $ref: "#/components/examples/DatasetResponseExampleCreatedS3Dataset"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -249627,6 +250226,11 @@ paths:
                             examples:
                                 LocalSearchEngineCountedResponseExamplesSingleEngine:
                                     $ref: "#/components/examples/LocalSearchEngineCountedResponseExamplesSingleEngine"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -249914,6 +250518,11 @@ paths:
                             examples:
                                 LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset:
                                     $ref: "#/components/examples/LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -250193,6 +250802,11 @@ paths:
                             examples:
                                 LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset:
                                     $ref: "#/components/examples/LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -250521,6 +251135,11 @@ paths:
                             examples:
                                 MonitorConfResponseExamplesMonitor:
                                     $ref: "#/components/examples/MonitorConfResponseExamplesMonitor"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -250784,6 +251403,11 @@ paths:
                             examples:
                                 AlertSilenceResponseExamplesSilence:
                                     $ref: "#/components/examples/AlertSilenceResponseExamplesSilence"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -254350,6 +254974,11 @@ paths:
                             examples:
                                 AppInstallResponseExamplesInstalled:
                                     $ref: "#/components/examples/AppInstallResponseExamplesInstalled"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — invalid <code>id</code> (must not include a directory or path segment)
                 "401":
@@ -257666,6 +258295,11 @@ paths:
                             examples:
                                 ExpressionResponseExamplesEvaluatedExpression:
                                     $ref: "#/components/examples/ExpressionResponseExamplesEvaluatedExpression"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -257720,6 +258354,11 @@ paths:
                             examples:
                                 ExpressionResponseExamplesEvaluatedExpression:
                                     $ref: "#/components/examples/ExpressionResponseExamplesEvaluatedExpression"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -258394,6 +259033,11 @@ paths:
                             examples:
                                 CreateJobResponseExamplesNewRunId:
                                     $ref: "#/components/examples/CreateJobResponseExamplesNewRunId"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: The request body is invalid or fails schema validation.
                     content:
@@ -259447,6 +260091,11 @@ paths:
                             examples:
                                 CreateJobResponseExamplesNewRunId:
                                     $ref: "#/components/examples/CreateJobResponseExamplesNewRunId"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: The request body is invalid or fails schema validation.
                     content:
@@ -259916,6 +260565,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/License"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -261355,6 +262009,11 @@ paths:
                             examples:
                                 PackInstallResponseExamplesInstalledFromURL:
                                     $ref: "#/components/examples/PackInstallResponseExamplesInstalledFromURL"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -262026,6 +262685,11 @@ paths:
                             examples:
                                 PreviewResponseExamplesProcessedEvents:
                                     $ref: "#/components/examples/PreviewResponseExamplesProcessedEvents"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — invalid request (for example, invalid <code>memory</code>, forbidden <code>sampleId</code> path, unsupported <code>mode</code>)
                 "401":
@@ -265994,6 +266658,93 @@ paths:
                   schema:
                     type: string
                   description: The workflow id.
+    /ai/workflows/{id}/runs/{runId}/chat:
+        post:
+            operationId: createAiWorkflowsRunsChatByIdAndRunId
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Send a follow-up chat message
+            description: "Sends a follow-up question about a completed, failed, or stopped workflow run. Chat is also allowed after a stop is requested while the run finishes draining. Leader tools are read-only inspect APIs; chat cannot start Search jobs, write notebooks, or change configuration.<br/><br/>The success body is an NDJSON stream of live agent collector items: assistant token chunks (with <code>name</code> set to the agent id), tool-call messages, and tool results. It is not the durable run log. Persisted chat lives on the run as <code>messages.ndjson</code> and on GET run. Failures after the stream starts, including the wall-clock cap, are an assistant NDJSON line rather than an HTTP error (there is no 504)."
+            responses:
+                "200":
+                    description: "Follow-up chat stream as NDJSON. Clients discriminate on <code>event</code> (turn lifecycle: <code>turnStarted</code>, <code>turnCompleted</code>, or <code>turnFailed</code>), then <code>role</code> (chat message), then <code>notificationMessageType</code> (ephemeral notification). Not a durable log entry."
+                    content:
+                        application/x-ndjson:
+                            schema:
+                                $ref: "#/components/schemas/WorkflowChatStreamLine"
+                            examples:
+                                ChatWorkflowRunNdjsonLineResponseExamplesTurnStarted:
+                                    $ref: "#/components/examples/ChatWorkflowRunNdjsonLineResponseExamplesTurnStarted"
+                                ChatWorkflowRunNdjsonLineResponseExamplesTokenChunk:
+                                    $ref: "#/components/examples/ChatWorkflowRunNdjsonLineResponseExamplesTokenChunk"
+                                ChatWorkflowRunNdjsonLineResponseExamplesTurnCompleted:
+                                    $ref: "#/components/examples/ChatWorkflowRunNdjsonLineResponseExamplesTurnCompleted"
+                                ChatWorkflowRunNdjsonLineResponseExamplesTurnFailed:
+                                    $ref: "#/components/examples/ChatWorkflowRunNdjsonLineResponseExamplesTurnFailed"
+                "400":
+                    description: Invalid request body or ids
+                    content:
+                        application/x-ndjson:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authenticated user required
+                    content:
+                        application/x-ndjson:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: AI execution is unavailable or consent is missing
+                    content:
+                        application/x-ndjson:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: Run not found
+                    content:
+                        application/x-ndjson:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: Run is still running and a stop has not been requested, or a chat turn is already in progress for this run
+                    content:
+                        application/x-ndjson:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: WorkflowRunChatRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/WorkflowRunChatRequest"
+                        examples:
+                            ChatWorkflowRunRequestExamplesFollowUp:
+                                $ref: "#/components/examples/ChatWorkflowRunRequestExamplesFollowUp"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The workflow id.
+                - name: runId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The run id.
     /ai/workflows/{id}/runs/{runId}:
         delete:
             operationId: deleteAiWorkflowsRunsByIdAndRunId
@@ -266201,7 +266952,7 @@ paths:
                 - leader
                 - single
             summary: Subscribe to a workflow run log
-            description: Replays the durable run log and follows a running workflow. Each record is delivered as a <code>workflowRunEntry</code> server-sent event whose id is the persisted sequence number. Clients must close the subscription after receiving <code>runCompleted</code>, <code>runStopped</code>, or <code>runFailed</code>. When <code>Last-Event-ID</code> is present, replay resumes with the following sequence number; a terminal run with no remaining entries returns <code>204</code> to stop automatic reconnection.
+            description: "Replays the durable run log and follows a running workflow. Each record is delivered as a <code>workflowRunEntry</code> server-sent event whose id is the persisted sequence number. Clients must close the subscription after receiving <code>runCompleted</code>, <code>runStopped</code>, or <code>runFailed</code>. When <code>Last-Event-ID</code> is present, replay resumes with the following sequence number; a terminal run with no remaining entries returns <code>204</code> to stop automatic reconnection.<br/><br/>This subscription is execution-scoped: it delivers entries until the run reaches a terminal state, then closes. Post-run chat entries (from <code>POST .../chat</code>) are not pushed to existing subscriptions. After a chat turn completes, reopen <code>/subscribe</code> with <code>Last-Event-ID</code> or <code>GET</code> the run to read the durable chat entries."
             responses:
                 "200":
                     description: The requested string object.
@@ -266433,7 +267184,7 @@ paths:
                 - leader
                 - single
             summary: Create an AI workflow
-            description: "Creates a workflow document. Always lands as <code>status: 'draft'</code>. The body requires <code>id</code> and <code>displayName</code>."
+            description: "Creates a workflow document with a server-generated id. Always lands as <code>status: 'draft'</code>. The body requires <code>displayName</code>."
             responses:
                 "201":
                     description: The created WorkflowConfig object.
@@ -266452,12 +267203,6 @@ paths:
                                 $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authenticated user required
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "409":
-                    description: A workflow with this id already exists
                     content:
                         application/json:
                             schema:
@@ -275571,7 +276316,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/PaginatedString"
+                                $ref: "#/components/schemas/CountedListString"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -275591,32 +276336,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-            parameters:
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Pagination offset
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Maximum number of items to return
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
     /system-insights/healthcheck:
         get:
             operationId: getSystemInsightsHealthcheck
