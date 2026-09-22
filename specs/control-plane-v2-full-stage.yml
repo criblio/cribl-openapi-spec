@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.1-alpha.1790032490502-5360241d
+    version: 4.20.2-alpha.1790118853479-8e56f971
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -80446,6 +80446,29 @@ components:
                 - proposedName
                 - secretType
             title: GroupSecretCandidate
+        ManualMigrationExclusion:
+            type: object
+            properties:
+                entityId:
+                    type: string
+                    description: Id of the input/output/saved job/database connection excluded.
+                entityType:
+                    $ref: "#/components/schemas/ScanEntityType"
+                packId:
+                    type: string
+                    description: Owning pack id, when the entity lives in a pack.
+                reason:
+                    type: string
+                    description: Why automated promotion is not supported; manual migration is required.
+                type:
+                    type: string
+                    description: The connector/entity discriminator value that is unsupported.
+            required:
+                - entityId
+                - entityType
+                - reason
+                - type
+            title: ManualMigrationExclusion
         SecretFieldMeta:
             type: object
             properties:
@@ -80666,6 +80689,10 @@ components:
                     type: array
                     items:
                         $ref: "#/components/schemas/GroupSecretCandidate"
+                manualMigration:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ManualMigrationExclusion"
                 migratable:
                     type: array
                     items:
@@ -80685,6 +80712,7 @@ components:
                 - groupId
                 - groupReferences
                 - groupSecrets
+                - manualMigration
                 - migratable
                 - nonMigratable
                 - unverifiedReferences
@@ -198989,6 +199017,7 @@ components:
                 alreadyPromoted: []
                 unverifiedReferences: []
                 nonMigratable: []
+                manualMigration: []
                 diagnostics: []
                 complete: true
         SystemInfoResponseExamplesBasicSystemInfo:
@@ -241638,6 +241667,8 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Insufficient license
                 "500":
                     description: Unexpected server error.
                     content:
@@ -241740,6 +241771,8 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Insufficient license
                 "500":
                     description: Unexpected server error.
                     content:
