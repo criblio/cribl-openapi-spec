@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1790118878299-0fd51e0c
+    version: 4.21.0-alpha.1790205665939-434739a9
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -58547,6 +58547,7 @@ components:
                 - scatter
                 - single
                 - table
+                - wordCloud
             title: ChartType
             x-speakeasy-unknown-values: allow
         ChartSeries:
@@ -58673,6 +58674,10 @@ components:
                 type:
                     $ref: "#/components/schemas/ChartType"
                     description: Default chart type for all series.
+                visualization:
+                    type: object
+                    additionalProperties: true
+                    description: Registry-native visualization configuration.
                 xAxis:
                     $ref: "#/components/schemas/XAxisTypeChartElementConfig"
                     description: X-axis configuration.
@@ -59283,21 +59288,6 @@ components:
                 - label
                 - url
             title: TitleAction
-        ChartVisualizationElementType:
-            type: string
-            enum:
-                - chart.area
-                - chart.column
-                - chart.funnel
-                - chart.gauge
-                - chart.horizontalBar
-                - chart.line
-                - chart.map
-                - chart.pie
-                - chart.scatter
-                - counter.single
-            title: ChartVisualizationElementType
-            x-speakeasy-unknown-values: allow
         DashboardChartVisualization:
             type: object
             properties:
@@ -59341,10 +59331,25 @@ components:
                     $ref: "#/components/schemas/TitleAction"
                     description: Clickable action link displayed alongside the element title.
                 type:
-                    $ref: "#/components/schemas/ChartVisualizationElementType"
+                    type: string
+                    enum:
+                        - chart.area
+                        - chart.column
+                        - chart.funnel
+                        - chart.gauge
+                        - chart.horizontalBar
+                        - chart.line
+                        - chart.map
+                        - chart.pie
+                        - chart.scatter
+                        - counter.single
+                        - viz-counter.gauge
+                        - viz-counter.single
+                        - viz-counter.wordCloud
                     description: Chart type.
                     examples:
                         - chart.line
+                    x-speakeasy-unknown-values: allow
                 variant:
                     type: string
                     enum:
@@ -60857,6 +60862,9 @@ components:
                 - chart.pie
                 - chart.scatter
                 - counter.single
+                - viz-counter.gauge
+                - viz-counter.single
+                - viz-counter.wordCloud
                 - list.events
                 - list.table
                 - custom.throughputMetrics
@@ -61228,6 +61236,10 @@ components:
                 type:
                     $ref: "#/components/schemas/ChartType"
                     description: Default chart type for all series.
+                visualization:
+                    type: object
+                    additionalProperties: true
+                    description: Registry-native visualization configuration. Dashboard visualizations narrow this base type to the concrete configurations they support.
                 xAxis:
                     $ref: "#/components/schemas/XAxisTypeChartElementConfig"
                     description: X-axis configuration.
@@ -62184,6 +62196,10 @@ components:
                         type:
                             $ref: "#/components/schemas/ChartType"
                             description: Default chart type for all series.
+                        visualization:
+                            type: object
+                            additionalProperties: true
+                            description: Registry-native visualization configuration. Dashboard visualizations narrow this base type to the concrete configurations they support.
                         xAxis:
                             $ref: "#/components/schemas/XAxisTypeChartElementConfig"
                             description: X-axis configuration.
@@ -62892,6 +62908,51 @@ components:
                     type: string
                     description: Named IANA timezone used to assign timestamps to seasonal phases.
             title: AnomalyConfig
+        OutlierConfig:
+            type: object
+            properties:
+                algorithm:
+                    type: string
+                    const: mad
+                    description: Detector family (the outlier fit). Currently MAD — median absolute deviation from peers.
+                cohortLabels:
+                    type: array
+                    items:
+                        type: string
+                    description: Labels that group series into peer cohorts; empty means one global cohort across all series.
+                evaluationWindowMs:
+                    type: number
+                    description: Window in milliseconds the pooled cohort median/MAD is computed over.
+                minCoverage:
+                    type: number
+                    description: Percentage (1–100) of expected window points a series needs before it is graded.
+                mode:
+                    type: string
+                    enum:
+                        - instant
+                        - windowed
+                    description: "How the peer cohort is pooled: per-instant cross-section, or pooled over the window."
+                    x-speakeasy-unknown-values: allow
+                pct:
+                    type: number
+                    description: Percentage (1–100) of a series' window points that must breach before it is flagged.
+                thresholdDirection:
+                    type: string
+                    enum:
+                        - above
+                        - below
+                        - either
+                    description: "Which side flags an outlier: above the cohort spread, below it, or either."
+                    x-speakeasy-unknown-values: allow
+            required:
+                - algorithm
+                - cohortLabels
+                - evaluationWindowMs
+                - minCoverage
+                - mode
+                - pct
+                - thresholdDirection
+            title: OutlierConfig
         ChangeType:
             type: string
             enum:
@@ -62921,16 +62982,6 @@ components:
                 - changeType
                 - compareAgainst
             title: ChangeConfig
-        OutlierConfig:
-            type: object
-            properties:
-                algorithm:
-                    type: string
-                    const: mad
-                    description: Discriminator value.
-            required:
-                - algorithm
-            title: OutlierConfig
         ForecastAlgorithm:
             type: string
             enum:
@@ -63816,6 +63867,13 @@ components:
                 - fake
             title: MigrationProvider
             x-speakeasy-unknown-values: allow
+        MigrationScope:
+            type: string
+            enum:
+                - dashboards
+                - alerts
+            title: MigrationScope
+            x-speakeasy-unknown-values: allow
         MigrationSourceKind:
             type: string
             enum:
@@ -63999,6 +64057,9 @@ components:
                 retryNotBefore:
                     type: string
                     description: ISO-8601 time before which the run should not be retried, set after a retryable discovery failure so the retry budget is spread over a backoff instead of being spent at the service-tick rate. Cleared on forward progress.
+                scope:
+                    $ref: "#/components/schemas/MigrationScope"
+                    description: "Resource family this run manages: <code>dashboards</code> or <code>alerts</code>. Set by the page that started the run; absent means both families."
                 selectedSourceKeys:
                     type: array
                     items:
@@ -73983,6 +74044,11 @@ components:
         MigrationQueryOverrides:
             type: object
             properties:
+                acknowledgedTransformations:
+                    type: array
+                    items:
+                        type: string
+                    description: "Source keys of alert rules whose behavior-changing transformations (MON-1443) the user has explicitly acknowledged. A rule whose semantics carry <code>requiresAcknowledgement: true</code> cannot be applied until its source key is in this list — re-assessment (not an in-place edit) is what turns a PATCH into <code>transformationsAcknowledged: true</code> on the rule's compatibility detail."
                 ignoredMetrics:
                     type: array
                     items:
@@ -74101,10 +74167,37 @@ components:
                 - defaultDatasetId
                 - folderToCollection
             title: MigrationMapping
+        AlertRuleDiagnostic:
+            type: object
+            properties:
+                code:
+                    type: string
+                    description: Stable machine-readable code for the blocker, e.g. <code>grafana-global</code>.
+                detail:
+                    type: string
+                    description: Human-readable description naming the offending part of the rule.
+            required:
+                - code
+                - detail
+            title: AlertRuleDiagnostic
+        AlertRuleBehaviorDifference:
+            type: object
+            properties:
+                code:
+                    type: string
+                    description: Stable machine-readable code for the difference, e.g. <code>formula-non-finite</code>.
+                detail:
+                    type: string
+                    description: Human-readable description of how the two systems differ.
+            required:
+                - code
+                - detail
+            title: AlertRuleBehaviorDifference
         AlertRuleClass:
             type: string
             enum:
                 - reducer-threshold
+                - formula-threshold
                 - multi-query-threshold
                 - expression-dag
                 - unsupported-reducer
@@ -74136,19 +74229,43 @@ components:
                 forDurationSec:
                     type: integer
                     description: How long the condition must hold before firing, in seconds.
+                formula:
+                    type: string
+                    description: Source arithmetic formula that combined the queries (e.g. <code>$A / $B</code>), verbatim. Present only for a multi-query-formula shape.
+                hasRecoveryThreshold:
+                    type: boolean
+                    description: True when the source threshold carries a recovery (hysteresis) evaluator, which the Monitor threshold model cannot express — such rules are not imported.
                 isPaused:
                     type: boolean
                     description: Whether the source rule is paused (not migrated — a manual re-creation would alert).
+                keepFiringForSec:
+                    type: integer
+                    description: How long the source rule keeps firing after recovery, in seconds (Grafana ), preserved from the source.
+                maxDataPoints:
+                    type: integer
+                    description: Maximum data points the source rule requested for its query, when known.
+                missingSeriesEvalsToResolve:
+                    type: integer
+                    description: Consecutive evaluations a missing series must be absent before it resolves (Grafana ), preserved from the source.
                 noDataState:
                     type: string
                     description: Grafana behavior when the query returns no data (not migrated).
+                queryCount:
+                    type: integer
+                    description: Number of source queries the rule evaluated.
+                queryIntervalMs:
+                    type: integer
+                    description: Query step interval in milliseconds the source rule requested, when known.
                 queryShape:
                     type: string
-                    const: single-promql
-                    description: Shape of the rule's query. Always <code>single-promql</code>.
+                    enum:
+                        - multi-query-formula
+                        - single-promql
+                    description: Shape of the rule's query. <code>single-promql</code> for one query, <code>multi-query-formula</code> when several queries are combined by an arithmetic formula.
+                    x-speakeasy-unknown-values: allow
                 queryText:
                     type: string
-                    description: The rule's query text, verbatim (never rewritten).
+                    description: The rule's query text, verbatim (never rewritten). For a multi-query formula this is the lowered PromQL the Monitor runs; the source formula is in <code>formula</code>.
                 queryWindow:
                     type: object
                     properties:
@@ -74169,6 +74286,15 @@ components:
                 reducer:
                     type: string
                     description: Reduce step (e.g. , ). Absent for instant-query→threshold rules.
+                reducerMode:
+                    type: string
+                    description: "Reduce non-numeric handling mode (Grafana : , , ), preserved so the import can decide eligibility and disclose differences."
+                reducerReplaceValue:
+                    type: number
+                    description: Value a reducer substitutes for non-numeric samples, preserved from the source (this replacement can fire, so such rules are not imported).
+                requiresAcknowledgement:
+                    type: boolean
+                    description: True when the migration applied a behavior-changing rewrite to make this rule importable (combining queries into a formula, or lowering a compound/range condition to a generated 0/1 PromQL query) — as opposed to importing the single source query verbatim. Such a rule cannot be applied until its source key appears in .
                 thresholdParams:
                     type: array
                     items:
@@ -74177,14 +74303,64 @@ components:
             required:
                 - queryShape
                 - recoverySemantics
+                - requiresAcknowledgement
             title: AlertRuleSemantics
+        AlertRuleTransformation:
+            type: object
+            properties:
+                code:
+                    type: string
+                    description: Stable machine-readable code for the transformation, e.g. <code>formula-lowered</code>.
+                detail:
+                    type: string
+                    description: Human-readable description of the rewrite that was applied.
+            required:
+                - code
+                - detail
+            title: AlertRuleTransformation
         AlertRuleCompatibilityDetail:
             type: object
             properties:
+                diagnostics:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/AlertRuleDiagnostic"
+                differences:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/AlertRuleBehaviorDifference"
                 ruleClass:
                     $ref: "#/components/schemas/AlertRuleClass"
                 semantics:
                     $ref: "#/components/schemas/AlertRuleSemantics"
+                transformations:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/AlertRuleTransformation"
+                transformationsAcknowledged:
+                    type: boolean
+                    description: Whether the user has acknowledged this rule's behavior-changing rewrite. Required before the rule can be applied when acknowledgement is needed; omitted when this rule has no behavior-changing rewrite to acknowledge.
+                translatedQuery:
+                    type: object
+                    properties:
+                        branches:
+                            type: object
+                            additionalProperties:
+                                type: string
+                        comparator:
+                            type: string
+                            description: The Monitor threshold's comparison operator (for example, <code>gt</code>, <code>lt</code>).
+                        formula:
+                            type: string
+                            description: The Monitor threshold's formula expression over the query branch labels (for example, <code>A / B</code>), or just the sole label when the rule has no combination to perform.
+                        limit:
+                            type: number
+                            description: The Monitor threshold's limit value.
+                    required:
+                        - branches
+                        - comparator
+                        - formula
+                        - limit
             required:
                 - ruleClass
             title: AlertRuleCompatibilityDetail
@@ -179626,6 +179802,12 @@ components:
                     anyOf:
                         - $ref: "#/components/schemas/ChartType"
                         - type: "null"
+                visualization:
+                    description: Registry-native visualization configuration. Dashboard visualizations narrow this base type to the concrete configurations they support.
+                    anyOf:
+                        - type: object
+                          additionalProperties: true
+                        - type: "null"
                 xAxis:
                     description: X-axis configuration.
                     anyOf:
@@ -179853,8 +180035,8 @@ components:
                     anyOf:
                         - oneOf:
                             - $ref: "#/components/schemas/AnomalyConfig"
-                            - $ref: "#/components/schemas/ChangeConfig"
                             - $ref: "#/components/schemas/OutlierConfig"
+                            - $ref: "#/components/schemas/ChangeConfig"
                             - $ref: "#/components/schemas/ForecastConfig"
                         - type: "null"
                 enabled:
@@ -179971,8 +180153,8 @@ components:
                             anyOf:
                                 - oneOf:
                                     - $ref: "#/components/schemas/AnomalyConfig"
-                                    - $ref: "#/components/schemas/ChangeConfig"
                                     - $ref: "#/components/schemas/OutlierConfig"
+                                    - $ref: "#/components/schemas/ChangeConfig"
                                     - $ref: "#/components/schemas/ForecastConfig"
                                 - type: "null"
                         enabled:
@@ -188613,8 +188795,8 @@ components:
         DetectionConfigTypeAetosMonitorConf:
             oneOf:
                 - $ref: "#/components/schemas/AnomalyConfig"
-                - $ref: "#/components/schemas/ChangeConfig"
                 - $ref: "#/components/schemas/OutlierConfig"
+                - $ref: "#/components/schemas/ChangeConfig"
                 - $ref: "#/components/schemas/ForecastConfig"
             description: Type-specific detection configuration. Present for change, anomaly, outlier, and forecast monitors; undefined for threshold and logs monitors.
         SearchModeOptionsAetosMonitorConf:
@@ -195958,6 +196140,83 @@ components:
                         query: top 10 source | chart count() over _time by source
                         earliest: -24h
                         latest: now
+        CreateDashboardExamplesCounterDashboard:
+            summary: Create a Dashboard with registry counters
+            description: Example request body with single-value and word-cloud counter panels.
+            value:
+                id: search_counter_overview
+                name: Search Counter Overview
+                elements:
+                    - id: total_events
+                      type: viz-counter.single
+                      title: Total events
+                      layout:
+                        x: 0
+                        y: 0
+                        w: 4
+                        h: 4
+                      search:
+                        type: inline
+                        query: dataset="cribl_search_sample" | summarize count()
+                        earliest: -24h
+                        latest: now
+                      config:
+                        visualization:
+                            family: counter
+                            counter: single
+                            fieldsConfig:
+                                fields:
+                                    - name: count_
+                                      type: number
+                            counterConfig: {}
+                            displayConfig:
+                                colors: "#0091eb"
+                                label: Events
+                                textDisplay: fontColor
+                            fieldTypeConfig:
+                                number:
+                                    type: number
+                                    format: "{0,}"
+                                    kind: number
+                    - id: top_sources
+                      type: viz-counter.wordCloud
+                      title: Top sources
+                      layout:
+                        x: 4
+                        y: 0
+                        w: 8
+                        h: 4
+                      search:
+                        type: inline
+                        query: dataset="cribl_search_sample" | summarize count() by source
+                        earliest: -24h
+                        latest: now
+                      config:
+                        visualization:
+                            family: counter
+                            counter: wordCloud
+                            fieldsConfig:
+                                fields:
+                                    - name: source
+                                      type: string
+                                    - name: count_
+                                      type: number
+                            counterConfig:
+                                category: source
+                                value: count_
+                            displayConfig:
+                                colors:
+                                    name: sequential1
+                                fillRatio: 0.8
+                                scaleMode: max
+                            legendConfig:
+                                position: bottom
+                            tooltipConfig: {}
+                            fieldTypeConfig:
+                                number:
+                                    type: number
+                                    format: "{0,}"
+                                    kind: number
         InvalidateDashboardCacheResponseExampleCacheInvalidated:
             summary: Cache invalidated
             description: The Dashboard list cache was flushed. The response is an empty list.
@@ -225387,6 +225646,12 @@ paths:
                             description: The canonical URL of the newly created resource.
                             schema:
                                 type: string
+                "400":
+                    description: The request body failed validation, such as a missing or invalid job type, Collector, or scheduled-search field.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -225627,6 +225892,12 @@ paths:
                             examples:
                                 CollectorResponseExamplesRestCollector:
                                     $ref: "#/components/examples/CollectorResponseExamplesRestCollector"
+                "400":
+                    description: The request body failed validation, such as a missing or invalid job type, Collector, or scheduled-search field.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -225708,6 +225979,12 @@ paths:
                             description: The canonical URL of the newly created resource.
                             schema:
                                 type: string
+                "400":
+                    description: The request body failed validation, such as a missing or invalid job type, Collector, or scheduled-search field.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -225973,6 +226250,12 @@ paths:
                             examples:
                                 CollectorResponseExamplesRestCollector:
                                     $ref: "#/components/examples/CollectorResponseExamplesRestCollector"
+                "400":
+                    description: The request body failed validation, such as a missing or invalid job type, Collector, or scheduled-search field.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -230584,6 +230867,8 @@ paths:
                         examples:
                             CreateDashboardExamplesSimpleDashboard:
                                 $ref: "#/components/examples/CreateDashboardExamplesSimpleDashboard"
+                            CreateDashboardExamplesCounterDashboard:
+                                $ref: "#/components/examples/CreateDashboardExamplesCounterDashboard"
             responses:
                 "201":
                     description: The created Dashboard
@@ -231222,6 +231507,8 @@ paths:
                         examples:
                             CreateDashboardExamplesSimpleDashboard:
                                 $ref: "#/components/examples/CreateDashboardExamplesSimpleDashboard"
+                            CreateDashboardExamplesCounterDashboard:
+                                $ref: "#/components/examples/CreateDashboardExamplesCounterDashboard"
             responses:
                 "201":
                     description: The created Dashboard
@@ -231991,6 +232278,12 @@ paths:
             responses:
                 "204":
                     description: No Content
+                "400":
+                    description: When trying to delete a stock (Cribl library) datatype.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -232328,6 +232621,12 @@ paths:
             responses:
                 "204":
                     description: No Content
+                "400":
+                    description: When trying to delete a stock (Cribl library) datatype.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -252610,7 +252909,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Replace a migration run's finding decisions
-            description: "Persists the run's metric-name replacements and ignored findings. This is a full-document replacement: an omitted list clears the stored decisions of that kind, so send the complete desired state. Re-run assessment afterward to produce a new plan revision that reflects the decisions — this never edits query text in place. Returns 409 while an assessment pass is pending (the pass reads the inputs it was authorized against — wait for it to finish) and once the run is applying or terminal (the inputs can no longer change).<br/><br/>Provide the complete editable payload. Partial updates are not supported."
+            description: "Persists the run's metric-name replacements, ignored findings, and acknowledged alert-rule transformations. This is a full-document replacement: an omitted list clears the stored decisions of that kind, so send the complete desired state. Re-run assessment afterward to produce a new plan revision that reflects the decisions — this never edits query text in place. Returns 409 while an assessment pass is pending (the pass reads the inputs it was authorized against — wait for it to finish) and once the run is applying or terminal (the inputs can no longer change).<br/><br/>Provide the complete editable payload. Partial updates are not supported."
             responses:
                 "200":
                     description: The persisted finding decisions.
