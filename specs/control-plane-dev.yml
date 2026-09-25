@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.21.0-alpha.1790205446531-434739a9
+  version: 4.21.0-alpha.1790377987356-c4f724bb
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -34021,6 +34021,277 @@ components:
             prefixed ID (group-scoped). Variable value overrides
             'accessControlAllowHeaders' at runtime.
       title: InputTrellixHec
+    InputSalesforce:
+      type: object
+      required:
+        - type
+        - salesforceSubdomain
+        - salesforceCloud
+        - salesforceOauthClientId
+        - salesforceApiVersion
+        - textSecret
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          enum:
+            - salesforce
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        salesforceSubdomain:
+          type: string
+          title: Salesforce subdomain
+          description: "Your Salesforce My Domain prefix. For production: mycompany. For sandbox: mycompany.sandbox. For developer: mycompany.develop."
+        salesforceCloud:
+          type: string
+          title: Cloud
+          description: Salesforce cloud deployment — determines the domain suffix.
+        salesforceOauthClientId:
+          type: string
+          title: OAuth client ID
+          description: Client ID from your Salesforce connected app
+        textSecret:
+          type: string
+          title: OAuth client secret (text secret)
+          description: Select or create a stored text secret
+        salesforceApiVersion:
+          type: string
+          title: API version
+          description: "Salesforce REST API version (example: v64.0)"
+        contentConfig:
+          type: array
+          title: Content Types
+          description: Salesforce data sources to collect. Each entry specifies a
+            Salesforce object, fields, and a cursor for time filtering — or an
+            EventLogFile download.
+          minItems: 1
+          items:
+            type: object
+            required:
+              - contentType
+            properties:
+              contentType:
+                type: string
+                title: Content type
+                readOnly: true
+                description: Content type
+              disabled:
+                type: boolean
+                title: Enabled
+                description: Enabled
+              stateTracking:
+                type: boolean
+                title: State tracking
+                description: Track collection progress between consecutive scheduled executions.
+              stateUpdateExpression:
+                type: string
+                title: State update expression
+                description: JavaScript expression that defines how to update the state from an
+                  event. Use the event's data and the current state to compute
+                  the new state. See [Understanding State Expression
+                  Fields](https://docs.cribl.io/stream/collectors-rest#state-tracking-expression-fields)
+                  for more information.
+              stateMergeExpression:
+                type: string
+                title: State merge expression
+                description: JavaScript expression that defines which state to keep when merging
+                  a task's newly reported state with previously saved state.
+                  Evaluates `prevState` and `newState` variables, resolving to
+                  the state to keep.
+              manageState:
+                type: object
+                description: Controls for viewing and managing the collector state.
+              contentDescription:
+                type: string
+                readOnly: true
+                description: Brief description of what this content type collects.
+              objectName:
+                type: string
+                title: Object
+                description: "Salesforce object API name to query (examples: LoginHistory, SetupAuditTrail, Account)"
+              fields:
+                type: array
+                title: Fields
+                description: Field API names to include in the query.
+                items:
+                  type: string
+                minItems: 1
+              cursor:
+                type: string
+                title: Cursor field
+                description: "Timestamp field used for time filtering and breaker rule routing (examples: LoginTime, CreatedDate)"
+              filter:
+                type: string
+                title: Filter (advanced)
+                description: "Optional SOQL WHERE conditions, entered as a Cribl expression that evaluates to a SOQL string. Wrap the value in backticks (example: `CountryIso = 'US'`). The expression is evaluated once when the Source initializes — not per collection run. Combined with cursor-based time filtering using AND. SOQL syntax is not validated locally; invalid conditions will fail at collection time."
+              cronSchedule:
+                type: string
+                title: Cron schedule
+                description: Schedule on which to run this collection job
+              earliest:
+                type: string
+                title: Earliest
+                description: Earliest time for data collection, relative to now
+              latest:
+                type: string
+                title: Latest
+                description: Latest time for data collection, relative to now
+              jobTimeout:
+                title: Job timeout
+                type: string
+                description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+              __template_filter:
+                type: string
+                description: Binds 'filter' to a variable for dynamic value resolution. Set to
+                  variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+                  (group-scoped). Variable value overrides 'filter' at runtime.
+        maxPages:
+          type: number
+          title: Max pages per collection
+          description: Maximum number of pages to fetch per content type per scheduled
+            run. Use 0 for unlimited.
+          minimum: 0
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: HTTP request inactivity timeout. Use 0 to disable.
+          minimum: 0
+          maximum: 2400
+        breakerRulesets:
+          type: array
+          title: Event Breaker rulesets
+          description: A list of event-breaking rulesets that will be applied, in order,
+            to the input data stream
+          items:
+            type: string
+        staleChannelFlushMs:
+          type: number
+          title: Event Breaker buffer timeout (ms)
+          description: How long (in milliseconds) the Event Breaker will wait for new data
+            to be sent to a specific channel before flushing the data stream
+            out, as is, to the Pipelines
+          minimum: 10
+          maximum: 43200000
+        keepAliveTime:
+          type: number
+          title: Keep alive time (seconds)
+          description: How often workers should check in with the scheduler to keep job
+            subscription alive
+          minimum: 10
+        maxMissedKeepAlives:
+          type: number
+          title: Worker timeout (periods)
+          description: The number of Keep Alive Time periods before an inactive worker
+            will have its job subscription revoked.
+          minimum: 2
+        ttl:
+          type: string
+          title: Time to live
+          description: Time to keep the job's artifacts on disk after job completion. This
+            also affects how long a job is listed in the Job Inspector.
+          pattern: \d+[smh]$
+        ignoreGroupJobsLimit:
+          type: boolean
+          title: Ignore Worker Group job limits
+          description: When enabled, this job's artifacts are not counted toward the
+            Worker Group's finished job artifacts limit. Artifacts will be
+            removed only after the Collector's configured time to live.
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        retryRules:
+          $ref: "#/components/schemas/RetryRulesType"
+          description: HTTP retry behavior for failed collection requests.
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_salesforceSubdomain:
+          type: string
+          description: Binds 'salesforceSubdomain' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'salesforceSubdomain' at runtime.
+        __template_salesforceCloud:
+          type: string
+          description: Binds 'salesforceCloud' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'salesforceCloud' at
+            runtime.
+        __template_salesforceOauthClientId:
+          type: string
+          description: Binds 'salesforceOauthClientId' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'salesforceOauthClientId' at runtime.
+        __template_salesforceApiVersion:
+          type: string
+          description: Binds 'salesforceApiVersion' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'salesforceApiVersion' at runtime.
+      title: InputSalesforce
     InputSailpointHec:
       type: object
       required:
@@ -38165,6 +38436,181 @@ components:
             prefixed ID (group-scoped). Variable value overrides
             'accessControlAllowHeaders' at runtime.
       title: InputTrendMicroVisionOne
+    InputNetskope:
+      type: object
+      required:
+        - type
+        - tenantUrl
+        - textSecret
+        - contentConfig
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique ID for this input
+        type:
+          type: string
+          enum:
+            - netskope
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        tenantUrl:
+          type: string
+          title: Netskope tenant URL
+          description: "Full base URL of your Netskope tenant (example: https://mycompany.goskope.com). Do not include trailing slashes or API paths."
+        apiToken:
+          type: string
+          title: API token
+          description: API token
+        textSecret:
+          type: string
+          title: API token (text secret)
+          description: Select or create a stored Netskope V2 API token
+        contentConfig:
+          type: array
+          title: Content types
+          items:
+            type: object
+            required:
+              - contentType
+              - cursorIndex
+              - cronSchedule
+            properties:
+              contentType:
+                type: string
+                title: Content type
+                readOnly: true
+                description: Content type
+              contentDescription:
+                type: string
+                title: Description
+                readOnly: true
+                description: Description
+              disabled:
+                type: boolean
+                title: Enabled
+                description: Enabled
+              cursorIndex:
+                type: string
+                title: Cursor index
+                description: Server-side index name Netskope uses for tracking data export
+                  state. Change only if you need a separate export cursor.
+              cronSchedule:
+                type: string
+                title: Cron schedule
+                description: Schedule on which to collect this content type
+              jobTimeout:
+                title: Job timeout
+                type: string
+                description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+                pattern: ^\d+[sm]?$
+              logLevel:
+                $ref: "#/components/schemas/LogLevelOptionsContentConfigItemsDebugError"
+                description: Collector runtime log level
+          description: Content types
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: HTTP request inactivity timeout. Use 0 to disable.
+          minimum: 0
+        keepAliveTime:
+          type: number
+          title: Keep alive time (seconds)
+          description: How often workers should check in with the scheduler to keep job
+            subscription alive
+          minimum: 10
+        maxMissedKeepAlives:
+          type: number
+          title: Worker timeout (periods)
+          description: The number of Keep Alive Time periods before an inactive worker
+            will have its job subscription revoked.
+          minimum: 2
+        ttl:
+          type: string
+          title: Time to live
+          description: Time to keep the job's artifacts on disk after job completion. This
+            also affects how long a job is listed in the Job Inspector.
+          pattern: \d+[smh]$
+        ignoreGroupJobsLimit:
+          type: boolean
+          title: Ignore Worker Group job limits
+          description: When enabled, this job's artifacts are not counted toward the
+            Worker Group's finished job artifacts limit. Artifacts will be
+            removed only after the Collector's configured time to live.
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        retryRules:
+          $ref: "#/components/schemas/RetryRulesType"
+          description: HTTP retry behavior for failed collection requests.
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_tenantUrl:
+          type: string
+          description: Binds 'tenantUrl' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tenantUrl' at runtime.
+      title: InputNetskope
     Input:
       oneOf:
         - $ref: "#/components/schemas/InputCollection"
@@ -38240,6 +38686,7 @@ components:
         - $ref: "#/components/schemas/InputSysdigHec"
         - $ref: "#/components/schemas/InputUpwindHec"
         - $ref: "#/components/schemas/InputTrellixHec"
+        - $ref: "#/components/schemas/InputSalesforce"
         - $ref: "#/components/schemas/InputSailpointHec"
         - $ref: "#/components/schemas/InputExtrahopRevealx360"
         - $ref: "#/components/schemas/InputAquaSecurityHec"
@@ -38257,6 +38704,7 @@ components:
         - $ref: "#/components/schemas/InputHashicorpHcpVaultDedicated"
         - $ref: "#/components/schemas/InputMimecastHec"
         - $ref: "#/components/schemas/InputTrendMicroVisionOne"
+        - $ref: "#/components/schemas/InputNetskope"
       discriminator:
         propertyName: type
         mapping:
@@ -38333,6 +38781,7 @@ components:
           sysdig_hec: "#/components/schemas/InputSysdigHec"
           upwind_hec: "#/components/schemas/InputUpwindHec"
           trellix_hec: "#/components/schemas/InputTrellixHec"
+          salesforce: "#/components/schemas/InputSalesforce"
           sailpoint_hec: "#/components/schemas/InputSailpointHec"
           extrahop_revealx_360: "#/components/schemas/InputExtrahopRevealx360"
           aqua_security_hec: "#/components/schemas/InputAquaSecurityHec"
@@ -38350,6 +38799,7 @@ components:
           hashicorp_hcp_vault_dedicated: "#/components/schemas/InputHashicorpHcpVaultDedicated"
           mimecast_hec: "#/components/schemas/InputMimecastHec"
           trend_micro_vision_one: "#/components/schemas/InputTrendMicroVisionOne"
+          netskope: "#/components/schemas/InputNetskope"
       title: Input
     CountedInputSplunkHec:
       type: object
@@ -74989,6 +75439,33 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Okta Source.
+    InputCreateExamplesNetskope:
+      summary: Netskope
+      value:
+        id: netskope-source
+        type: netskope
+        textSecret: netskope-api-token-secret
+        tenantUrl: https://your-tenant.goskope.com
+        contentConfig:
+          - contentType: Alerts
+            contentDescription: Netskope alert data including DLP, malware, policy,
+              quarantine, and more
+            cursorIndex: cribl_netskope_collector_alerts_index
+            cronSchedule: "*/15 * * * *"
+            jobTimeout: "300"
+            logLevel: info
+            disabled: false
+          - contentType: Events
+            contentDescription: Netskope event data including application, audit, network,
+              infrastructure, and more
+            cursorIndex: cribl_netskope_collector_events_index
+            cronSchedule: "*/5 * * * *"
+            jobTimeout: "300"
+            logLevel: info
+            disabled: false
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Netskope Source.
     InputCreateExamplesOpenAI:
       summary: OpenAI
       value:
@@ -75159,6 +75636,44 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Cloud Change Event Source.
+    InputCreateExamplesSalesforce:
+      summary: Salesforce
+      value:
+        id: salesforce-source
+        type: salesforce
+        textSecret: salesforce-client-secret
+        salesforceSubdomain: mycompany
+        salesforceCloud: .my.salesforce.com
+        salesforceApiVersion: v64.0
+        salesforceOauthClientId: your-connected-app-client-id
+        contentConfig:
+          - contentType: EventLogFile
+            disabled: true
+            cronSchedule: "*/5 * * * *"
+            earliest: -7d@d
+            latest: now
+            jobTimeout: 60m
+            stateTracking: true
+          - contentType: LoginHistory
+            objectName: LoginHistory
+            fields:
+              - Id
+              - LoginTime
+              - UserId
+              - LoginType
+              - Status
+              - SourceIp
+            cursor: LoginTime
+            filter: "`CountryIso = 'US'`"
+            disabled: false
+            cronSchedule: "*/5 * * * *"
+            earliest: -7d@d
+            latest: now
+            jobTimeout: 60m
+            stateTracking: true
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Salesforce Source.
     InputCreateExamplesServiceNowTable:
       summary: ServiceNow Table API
       value:
@@ -76148,6 +76663,35 @@ components:
       description: Example request body for updating a Okta Source.<br/><br/>The
         request body must include a complete representation of the Source that
         you want to update. This endpoint does not support partial updates.
+    UpdateInputExamplesNetskope:
+      summary: Netskope
+      value:
+        id: netskope-source
+        type: netskope
+        textSecret: netskope-api-token-secret
+        tenantUrl: https://your-tenant.goskope.com
+        contentConfig:
+          - contentType: Alerts
+            contentDescription: Netskope alert data including DLP, malware, policy,
+              quarantine, and more
+            cursorIndex: cribl_netskope_collector_alerts_index
+            cronSchedule: "*/15 * * * *"
+            jobTimeout: "300"
+            logLevel: info
+            disabled: false
+          - contentType: Events
+            contentDescription: Netskope event data including application, audit, network,
+              infrastructure, and more
+            cursorIndex: cribl_netskope_collector_events_index
+            cronSchedule: "*/5 * * * *"
+            jobTimeout: "300"
+            logLevel: info
+            disabled: false
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Netskope Source.<br/><br/>The
+        request body must include a complete representation of the Source that
+        you want to update. This endpoint does not support partial updates.
     UpdateInputExamplesOpenAI:
       summary: OpenAI
       value:
@@ -76355,6 +76899,46 @@ components:
         Source.<br/><br/>The request body must include a complete representation
         of the Source that you want to update. This endpoint does not support
         partial updates.
+    UpdateInputExamplesSalesforce:
+      summary: Salesforce
+      value:
+        id: salesforce-source
+        type: salesforce
+        textSecret: salesforce-client-secret
+        salesforceSubdomain: mycompany
+        salesforceCloud: .my.salesforce.com
+        salesforceApiVersion: v64.0
+        salesforceOauthClientId: your-connected-app-client-id
+        contentConfig:
+          - contentType: EventLogFile
+            disabled: true
+            cronSchedule: "*/5 * * * *"
+            earliest: -7d@d
+            latest: now
+            jobTimeout: 60m
+            stateTracking: true
+          - contentType: LoginHistory
+            objectName: LoginHistory
+            fields:
+              - Id
+              - LoginTime
+              - UserId
+              - LoginType
+              - Status
+              - SourceIp
+            cursor: LoginTime
+            filter: "`CountryIso = 'US'`"
+            disabled: false
+            cronSchedule: "*/5 * * * *"
+            earliest: -7d@d
+            latest: now
+            jobTimeout: 60m
+            stateTracking: true
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Salesforce Source.<br/><br/>The
+        request body must include a complete representation of the Source that
+        you want to update. This endpoint does not support partial updates.
     UpdateInputExamplesServiceNowTable:
       summary: ServiceNow Table API
       value:
@@ -84971,6 +85555,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesOffice365Service"
               InputCreateExamplesOkta:
                 $ref: "#/components/examples/InputCreateExamplesOkta"
+              InputCreateExamplesNetskope:
+                $ref: "#/components/examples/InputCreateExamplesNetskope"
               InputCreateExamplesOpenAI:
                 $ref: "#/components/examples/InputCreateExamplesOpenAI"
               InputCreateExamplesOpenAIComplianceLogs:
@@ -84999,6 +85585,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesSecurityLake"
               InputCreateExamplesCloudChangeEvent:
                 $ref: "#/components/examples/InputCreateExamplesCloudChangeEvent"
+              InputCreateExamplesSalesforce:
+                $ref: "#/components/examples/InputCreateExamplesSalesforce"
               InputCreateExamplesServiceNowTable:
                 $ref: "#/components/examples/InputCreateExamplesServiceNowTable"
               InputCreateExamplesSnmp:
@@ -85298,6 +85886,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesOffice365Service"
               UpdateInputExamplesOkta:
                 $ref: "#/components/examples/UpdateInputExamplesOkta"
+              UpdateInputExamplesNetskope:
+                $ref: "#/components/examples/UpdateInputExamplesNetskope"
               UpdateInputExamplesOpenAI:
                 $ref: "#/components/examples/UpdateInputExamplesOpenAI"
               UpdateInputExamplesOpenAIComplianceLogs:
@@ -85326,6 +85916,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesSecurityLake"
               UpdateInputExamplesCloudChangeEvent:
                 $ref: "#/components/examples/UpdateInputExamplesCloudChangeEvent"
+              UpdateInputExamplesSalesforce:
+                $ref: "#/components/examples/UpdateInputExamplesSalesforce"
               UpdateInputExamplesServiceNowTable:
                 $ref: "#/components/examples/UpdateInputExamplesServiceNowTable"
               UpdateInputExamplesSnmp:
@@ -90062,6 +90654,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesOffice365Service"
               InputCreateExamplesOkta:
                 $ref: "#/components/examples/InputCreateExamplesOkta"
+              InputCreateExamplesNetskope:
+                $ref: "#/components/examples/InputCreateExamplesNetskope"
               InputCreateExamplesOpenAI:
                 $ref: "#/components/examples/InputCreateExamplesOpenAI"
               InputCreateExamplesOpenAIComplianceLogs:
@@ -90090,6 +90684,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesSecurityLake"
               InputCreateExamplesCloudChangeEvent:
                 $ref: "#/components/examples/InputCreateExamplesCloudChangeEvent"
+              InputCreateExamplesSalesforce:
+                $ref: "#/components/examples/InputCreateExamplesSalesforce"
               InputCreateExamplesServiceNowTable:
                 $ref: "#/components/examples/InputCreateExamplesServiceNowTable"
               InputCreateExamplesSnmp:
@@ -90375,6 +90971,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesOffice365Service"
               UpdateInputExamplesOkta:
                 $ref: "#/components/examples/UpdateInputExamplesOkta"
+              UpdateInputExamplesNetskope:
+                $ref: "#/components/examples/UpdateInputExamplesNetskope"
               UpdateInputExamplesOpenAI:
                 $ref: "#/components/examples/UpdateInputExamplesOpenAI"
               UpdateInputExamplesOpenAIComplianceLogs:
@@ -90403,6 +91001,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesSecurityLake"
               UpdateInputExamplesCloudChangeEvent:
                 $ref: "#/components/examples/UpdateInputExamplesCloudChangeEvent"
+              UpdateInputExamplesSalesforce:
+                $ref: "#/components/examples/UpdateInputExamplesSalesforce"
               UpdateInputExamplesServiceNowTable:
                 $ref: "#/components/examples/UpdateInputExamplesServiceNowTable"
               UpdateInputExamplesSnmp:
