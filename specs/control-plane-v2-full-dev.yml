@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1790205665939-434739a9
+    version: 4.21.0-alpha.1790464287881-76ecb845
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -30062,6 +30062,232 @@ components:
                     type: string
                     description: Binds 'accessControlAllowHeaders' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'accessControlAllowHeaders' at runtime.
             title: InputTrellixHec
+        InputSalesforce:
+            type: object
+            required:
+                - type
+                - salesforceSubdomain
+                - salesforceCloud
+                - salesforceOauthClientId
+                - salesforceApiVersion
+                - textSecret
+            properties:
+                id:
+                    type: string
+                    title: Input ID
+                    description: Unique ID for this input
+                type:
+                    type: string
+                    enum:
+                        - salesforce
+                    description: Connector type identifier.
+                disabled:
+                    type: boolean
+                    title: Disabled
+                    description: If true, the Source is disabled and will not collect data.
+                pipeline:
+                    type: string
+                    title: Pipeline
+                    description: Pipeline to process data from this Source before sending it through the Routes
+                sendToRoutes:
+                    type: boolean
+                    description: Select whether to send data to Routes, or directly to Destinations.
+                environment:
+                    type: string
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                pqEnabled:
+                    type: boolean
+                    title: Enable persistent queue
+                    description: Use a disk queue to minimize data loss when connected services block. See [Cribl Docs](https://docs.cribl.io/stream/persistent-queues) for PQ defaults (Cribl-managed Cloud Workers) and configuration options (on-prem and hybrid Workers).
+                streamtags:
+                    type: array
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    items:
+                        type: string
+                criblSourceProvenance:
+                    $ref: "#/components/schemas/InputProvenanceTypeOptional"
+                    description: Read-only metadata that records how the Source was created. Preserved on update when omitted from the request body. Cannot be set on create.
+                connections:
+                    type: array
+                    title: Use QuickConnect
+                    description: Direct connections to Destinations, and optionally via a Pipeline or a Pack
+                    items:
+                        $ref: "#/components/schemas/ConnectionConfInputCollection"
+                pq:
+                    $ref: "#/components/schemas/PqType"
+                    description: Persistent queue settings for this Source.
+                salesforceSubdomain:
+                    type: string
+                    title: Salesforce subdomain
+                    description: "Your Salesforce My Domain prefix. For production: mycompany. For sandbox: mycompany.sandbox. For developer: mycompany.develop."
+                salesforceCloud:
+                    type: string
+                    title: Cloud
+                    description: Salesforce cloud deployment — determines the domain suffix.
+                salesforceOauthClientId:
+                    type: string
+                    title: OAuth client ID
+                    description: Client ID from your Salesforce connected app
+                textSecret:
+                    type: string
+                    title: OAuth client secret (text secret)
+                    description: Select or create a stored text secret
+                salesforceApiVersion:
+                    type: string
+                    title: API version
+                    description: "Salesforce REST API version (example: v64.0)"
+                contentConfig:
+                    type: array
+                    title: Content Types
+                    description: Salesforce data sources to collect. Each entry specifies a Salesforce object, fields, and a cursor for time filtering — or an EventLogFile download.
+                    minItems: 1
+                    items:
+                        type: object
+                        required:
+                            - contentType
+                        properties:
+                            contentType:
+                                type: string
+                                title: Content type
+                                readOnly: true
+                                description: Content type
+                            disabled:
+                                type: boolean
+                                title: Enabled
+                                description: Enabled
+                            stateTracking:
+                                type: boolean
+                                title: State tracking
+                                description: Track collection progress between consecutive scheduled executions.
+                            stateUpdateExpression:
+                                type: string
+                                title: State update expression
+                                description: JavaScript expression that defines how to update the state from an event. Use the event's data and the current state to compute the new state. See [Understanding State Expression Fields](https://docs.cribl.io/stream/collectors-rest#state-tracking-expression-fields) for more information.
+                            stateMergeExpression:
+                                type: string
+                                title: State merge expression
+                                description: JavaScript expression that defines which state to keep when merging a task's newly reported state with previously saved state. Evaluates `prevState` and `newState` variables, resolving to the state to keep.
+                            manageState:
+                                type: object
+                                description: Controls for viewing and managing the collector state.
+                            contentDescription:
+                                type: string
+                                readOnly: true
+                                description: Brief description of what this content type collects.
+                            objectName:
+                                type: string
+                                title: Object
+                                description: "Salesforce object API name to query (examples: LoginHistory, SetupAuditTrail, Account)"
+                            fields:
+                                type: array
+                                title: Fields
+                                description: Field API names to include in the query.
+                                items:
+                                    type: string
+                                minItems: 1
+                            cursor:
+                                type: string
+                                title: Cursor field
+                                description: "Timestamp field used for time filtering and breaker rule routing (examples: LoginTime, CreatedDate)"
+                            filter:
+                                type: string
+                                title: Filter (advanced)
+                                description: "Optional SOQL WHERE conditions, entered as a Cribl expression that evaluates to a SOQL string. Wrap the value in backticks (example: `CountryIso = 'US'`). The expression is evaluated once when the Source initializes — not per collection run. Combined with cursor-based time filtering using AND. SOQL syntax is not validated locally; invalid conditions will fail at collection time."
+                            cronSchedule:
+                                type: string
+                                title: Cron schedule
+                                description: Schedule on which to run this collection job
+                            earliest:
+                                type: string
+                                title: Earliest
+                                description: Earliest time for data collection, relative to now
+                            latest:
+                                type: string
+                                title: Latest
+                                description: Latest time for data collection, relative to now
+                            jobTimeout:
+                                title: Job timeout
+                                type: string
+                                description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+                            __template_filter:
+                                type: string
+                                description: Binds 'filter' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'filter' at runtime.
+                maxPages:
+                    type: number
+                    title: Max pages per collection
+                    description: Maximum number of pages to fetch per content type per scheduled run. Use 0 for unlimited.
+                    minimum: 0
+                requestTimeout:
+                    type: number
+                    title: Request timeout (seconds)
+                    description: HTTP request inactivity timeout. Use 0 to disable.
+                    minimum: 0
+                    maximum: 2400
+                breakerRulesets:
+                    type: array
+                    title: Event Breaker rulesets
+                    description: A list of event-breaking rulesets that will be applied, in order, to the input data stream
+                    items:
+                        type: string
+                staleChannelFlushMs:
+                    type: number
+                    title: Event Breaker buffer timeout (ms)
+                    description: How long (in milliseconds) the Event Breaker will wait for new data to be sent to a specific channel before flushing the data stream out, as is, to the Pipelines
+                    minimum: 10
+                    maximum: 43200000
+                keepAliveTime:
+                    type: number
+                    title: Keep alive time (seconds)
+                    description: How often workers should check in with the scheduler to keep job subscription alive
+                    minimum: 10
+                maxMissedKeepAlives:
+                    type: number
+                    title: Worker timeout (periods)
+                    description: The number of Keep Alive Time periods before an inactive worker will have its job subscription revoked.
+                    minimum: 2
+                ttl:
+                    type: string
+                    title: Time to live
+                    description: Time to keep the job's artifacts on disk after job completion. This also affects how long a job is listed in the Job Inspector.
+                    pattern: \d+[smh]$
+                ignoreGroupJobsLimit:
+                    type: boolean
+                    title: Ignore Worker Group job limits
+                    description: When enabled, this job's artifacts are not counted toward the Worker Group's finished job artifacts limit. Artifacts will be removed only after the Collector's configured time to live.
+                metadata:
+                    type: array
+                    title: Fields
+                    description: Fields to add to events from this input
+                    items:
+                        $ref: "#/components/schemas/MetadataConfInputCollection"
+                retryRules:
+                    $ref: "#/components/schemas/RetryRulesType"
+                    description: HTTP retry behavior for failed collection requests.
+                description:
+                    type: string
+                    title: Description
+                    description: Optional description for this configuration.
+                __template_environment:
+                    type: string
+                    description: Binds 'environment' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'environment' at runtime.
+                __template_streamtags:
+                    type: string
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                __template_salesforceSubdomain:
+                    type: string
+                    description: Binds 'salesforceSubdomain' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'salesforceSubdomain' at runtime.
+                __template_salesforceCloud:
+                    type: string
+                    description: Binds 'salesforceCloud' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'salesforceCloud' at runtime.
+                __template_salesforceOauthClientId:
+                    type: string
+                    description: Binds 'salesforceOauthClientId' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'salesforceOauthClientId' at runtime.
+                __template_salesforceApiVersion:
+                    type: string
+                    description: Binds 'salesforceApiVersion' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'salesforceApiVersion' at runtime.
+            title: InputSalesforce
         InputSailpointHec:
             type: object
             required:
@@ -33483,6 +33709,160 @@ components:
                     type: string
                     description: Binds 'accessControlAllowHeaders' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'accessControlAllowHeaders' at runtime.
             title: InputTrendMicroVisionOne
+        InputNetskope:
+            type: object
+            required:
+                - type
+                - tenantUrl
+                - textSecret
+                - contentConfig
+            properties:
+                id:
+                    type: string
+                    title: Input ID
+                    description: Unique ID for this input
+                type:
+                    type: string
+                    enum:
+                        - netskope
+                    description: Connector type identifier.
+                disabled:
+                    type: boolean
+                    title: Disabled
+                    description: If true, the Source is disabled and will not collect data.
+                pipeline:
+                    type: string
+                    title: Pipeline
+                    description: Pipeline to process data from this Source before sending it through the Routes
+                sendToRoutes:
+                    type: boolean
+                    description: Select whether to send data to Routes, or directly to Destinations.
+                environment:
+                    type: string
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                pqEnabled:
+                    type: boolean
+                    title: Enable persistent queue
+                    description: Use a disk queue to minimize data loss when connected services block. See [Cribl Docs](https://docs.cribl.io/stream/persistent-queues) for PQ defaults (Cribl-managed Cloud Workers) and configuration options (on-prem and hybrid Workers).
+                streamtags:
+                    type: array
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    items:
+                        type: string
+                criblSourceProvenance:
+                    $ref: "#/components/schemas/InputProvenanceTypeOptional"
+                    description: Read-only metadata that records how the Source was created. Preserved on update when omitted from the request body. Cannot be set on create.
+                connections:
+                    type: array
+                    title: Use QuickConnect
+                    description: Direct connections to Destinations, and optionally via a Pipeline or a Pack
+                    items:
+                        $ref: "#/components/schemas/ConnectionConfInputCollection"
+                pq:
+                    $ref: "#/components/schemas/PqType"
+                    description: Persistent queue settings for this Source.
+                tenantUrl:
+                    type: string
+                    title: Netskope tenant URL
+                    description: "Full base URL of your Netskope tenant (example: https://mycompany.goskope.com). Do not include trailing slashes or API paths."
+                apiToken:
+                    type: string
+                    title: API token
+                    description: API token
+                textSecret:
+                    type: string
+                    title: API token (text secret)
+                    description: Select or create a stored Netskope V2 API token
+                contentConfig:
+                    type: array
+                    title: Content types
+                    items:
+                        type: object
+                        required:
+                            - contentType
+                            - cursorIndex
+                            - cronSchedule
+                        properties:
+                            contentType:
+                                type: string
+                                title: Content type
+                                readOnly: true
+                                description: Content type
+                            contentDescription:
+                                type: string
+                                title: Description
+                                readOnly: true
+                                description: Description
+                            disabled:
+                                type: boolean
+                                title: Enabled
+                                description: Enabled
+                            cursorIndex:
+                                type: string
+                                title: Cursor index
+                                description: Server-side index name Netskope uses for tracking data export state. Change only if you need a separate export cursor.
+                            cronSchedule:
+                                type: string
+                                title: Cron schedule
+                                description: Schedule on which to collect this content type
+                            jobTimeout:
+                                title: Job timeout
+                                type: string
+                                description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+                                pattern: ^\d+[sm]?$
+                            logLevel:
+                                $ref: "#/components/schemas/LogLevelOptionsContentConfigItemsDebugError"
+                                description: Collector runtime log level
+                    description: Content types
+                requestTimeout:
+                    type: number
+                    title: Request timeout (seconds)
+                    description: HTTP request inactivity timeout. Use 0 to disable.
+                    minimum: 0
+                keepAliveTime:
+                    type: number
+                    title: Keep alive time (seconds)
+                    description: How often workers should check in with the scheduler to keep job subscription alive
+                    minimum: 10
+                maxMissedKeepAlives:
+                    type: number
+                    title: Worker timeout (periods)
+                    description: The number of Keep Alive Time periods before an inactive worker will have its job subscription revoked.
+                    minimum: 2
+                ttl:
+                    type: string
+                    title: Time to live
+                    description: Time to keep the job's artifacts on disk after job completion. This also affects how long a job is listed in the Job Inspector.
+                    pattern: \d+[smh]$
+                ignoreGroupJobsLimit:
+                    type: boolean
+                    title: Ignore Worker Group job limits
+                    description: When enabled, this job's artifacts are not counted toward the Worker Group's finished job artifacts limit. Artifacts will be removed only after the Collector's configured time to live.
+                metadata:
+                    type: array
+                    title: Fields
+                    description: Fields to add to events from this input
+                    items:
+                        $ref: "#/components/schemas/MetadataConfInputCollection"
+                retryRules:
+                    $ref: "#/components/schemas/RetryRulesType"
+                    description: HTTP retry behavior for failed collection requests.
+                description:
+                    type: string
+                    title: Description
+                    description: Optional description for this configuration.
+                __template_environment:
+                    type: string
+                    description: Binds 'environment' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'environment' at runtime.
+                __template_streamtags:
+                    type: string
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                __template_tenantUrl:
+                    type: string
+                    description: Binds 'tenantUrl' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'tenantUrl' at runtime.
+            title: InputNetskope
         Input:
             oneOf:
                 - $ref: "#/components/schemas/InputCollection"
@@ -33558,6 +33938,7 @@ components:
                 - $ref: "#/components/schemas/InputSysdigHec"
                 - $ref: "#/components/schemas/InputUpwindHec"
                 - $ref: "#/components/schemas/InputTrellixHec"
+                - $ref: "#/components/schemas/InputSalesforce"
                 - $ref: "#/components/schemas/InputSailpointHec"
                 - $ref: "#/components/schemas/InputExtrahopRevealx360"
                 - $ref: "#/components/schemas/InputAquaSecurityHec"
@@ -33575,6 +33956,7 @@ components:
                 - $ref: "#/components/schemas/InputHashicorpHcpVaultDedicated"
                 - $ref: "#/components/schemas/InputMimecastHec"
                 - $ref: "#/components/schemas/InputTrendMicroVisionOne"
+                - $ref: "#/components/schemas/InputNetskope"
             discriminator:
                 propertyName: type
                 mapping:
@@ -33651,6 +34033,7 @@ components:
                     sysdig_hec: "#/components/schemas/InputSysdigHec"
                     upwind_hec: "#/components/schemas/InputUpwindHec"
                     trellix_hec: "#/components/schemas/InputTrellixHec"
+                    salesforce: "#/components/schemas/InputSalesforce"
                     sailpoint_hec: "#/components/schemas/InputSailpointHec"
                     extrahop_revealx_360: "#/components/schemas/InputExtrahopRevealx360"
                     aqua_security_hec: "#/components/schemas/InputAquaSecurityHec"
@@ -33668,6 +34051,7 @@ components:
                     hashicorp_hcp_vault_dedicated: "#/components/schemas/InputHashicorpHcpVaultDedicated"
                     mimecast_hec: "#/components/schemas/InputMimecastHec"
                     trend_micro_vision_one: "#/components/schemas/InputTrendMicroVisionOne"
+                    netskope: "#/components/schemas/InputNetskope"
             title: Input
         PaginatedInput:
             type: object
@@ -66947,11 +67331,20 @@ components:
         CloudMetadata:
             type: object
             properties:
+                company:
+                    type: string
+                    description: Company or organization of the account holder.
+                completedProfile:
+                    type: boolean
+                    description: Whether the account holder has completed their self-service profile review during onboarding.
                 identityType:
                     $ref: "#/components/schemas/IdentityType"
                     description: The identity type of the user.
                     examples:
                         - SINGLE_SIGN_ON
+                phone:
+                    type: string
+                    description: Phone number of the account holder.
                 ssoGroups:
                     type: array
                     items:
@@ -73214,6 +73607,26 @@ components:
                 - items
                 - limit
             title: AlertHistoryResponse
+        CountedListMonitorInstanceStateRow:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/MonitorInstanceStateRow"
+                offset:
+                    type: integer
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
+                limit:
+                    type: integer
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
         MonitorInstanceStateRow:
             type: object
             properties:
@@ -73235,6 +73648,26 @@ components:
                 - pending_status
                 - status
             title: MonitorInstanceStateRow
+        CountedListMonitorActivityStat:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/MonitorActivityStat"
+                offset:
+                    type: integer
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
+                limit:
+                    type: integer
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
         ActivityStatTriggers:
             type: object
             properties:
@@ -77014,7 +77447,7 @@ components:
                     type: array
                     items:
                         $ref: "#/components/schemas/AuthPolicyEntry"
-                    description: Policy entries declared in the <code>policies.yml</code> file for the App, or an empty array if the file is absent or empty. Omitted entirely when App RBAC is disabled.
+                    description: Policy entries declared in the <code>policies.yml</code> file for the App, or an empty array if the file is absent or empty.
                 proxies:
                     oneOf:
                         - type: "null"
@@ -77022,6 +77455,7 @@ components:
                     description: Parsed contents of the <code>proxies.yml</code> file for the App, or <code>null</code> if the App does not declare any proxy domains.
             required:
                 - dangerousFileTypes
+                - policies
                 - proxies
             description: Response body for the App preview endpoint (<code>POST /apps/preinstall-check</code>).
             title: AppPreinstallCheckResult
@@ -78849,6 +79283,221 @@ components:
                 - status
             description: Worker health status when no Worker Processes are up, or the server is shutting down / in standby.
             title: DownWorkerStatus
+        InsightsInventoryRouterRule:
+            type: object
+            properties:
+                output:
+                    type: string
+                    description: Unique identifier of the Destination that receives events matching this branch.
+            required:
+                - output
+            description: Branch on an Output Router that forwards matching events to a Destination.
+            title: InsightsInventoryRouterRule
+        InsightsInventoryOutput:
+            type: object
+            properties:
+                defaultId:
+                    type: string
+                    description: Unique identifier of the Destination that receives data addressed to the default Destination. Present only on the default Destination.
+                disabled:
+                    type: boolean
+                    description: If <code>true</code>, the Destination is disabled. Otherwise, <code>false</code>.
+                groupId:
+                    type: string
+                    description: Unique identifier of the Worker Group that contains the item.
+                id:
+                    type: string
+                    description: Unique identifier of the Destination.
+                packId:
+                    type: string
+                    description: Unique identifier of the Pack that contains the item. Omitted for items outside a Pack.
+                packedId:
+                    type: string
+                    description: Context-qualified item identifier. Pack items use the Pack identifier as a prefix.
+                pipeline:
+                    type: string
+                    description: Unique identifier of the Pipeline that processes data before delivery to this Destination. Omitted when no post-processing Pipeline is configured.
+                rules:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/InsightsInventoryRouterRule"
+                    description: Branches that forward events to downstream Destinations. Present only on Output Routers.
+                type:
+                    type: string
+                    description: Destination type.
+            required:
+                - groupId
+                - id
+                - packedId
+                - type
+            description: Allowlisted Destination topology metadata for the Data Insights inventory.
+            title: InsightsInventoryOutput
+        InsightsInventoryPipeline:
+            type: object
+            properties:
+                groupId:
+                    type: string
+                    description: Unique identifier of the Worker Group that contains the item.
+                id:
+                    type: string
+                    description: Unique identifier of the Pipeline.
+                packId:
+                    type: string
+                    description: Unique identifier of the Pack that contains the item. Omitted for items outside a Pack.
+                packedId:
+                    type: string
+                    description: Context-qualified item identifier. Pack items use the Pack identifier as a prefix.
+                pipelineIsPassthrough:
+                    type: boolean
+                    description: If <code>true</code>, the Pipeline contains no enabled functions. Otherwise, <code>false</code>.
+            required:
+                - groupId
+                - id
+                - packedId
+                - pipelineIsPassthrough
+            description: Allowlisted Pipeline topology metadata for the Data Insights inventory.
+            title: InsightsInventoryPipeline
+        InsightsInventoryRoute:
+            type: object
+            properties:
+                disabled:
+                    type: boolean
+                    description: If <code>true</code>, the Route is disabled. Otherwise, <code>false</code>.
+                final:
+                    type: boolean
+                    description: If <code>true</code>, matching events stop at this Route. Otherwise, they continue to subsequent Routes.
+                groupId:
+                    type: string
+                    description: Unique identifier of the Worker Group that contains the item.
+                id:
+                    type: string
+                    description: Unique identifier of the Route.
+                name:
+                    type: string
+                    description: Name of the Route.
+                output:
+                    type: string
+                    description: Unique identifier of the Destination that receives matching events.
+                packId:
+                    type: string
+                    description: Unique identifier of the Pack that contains the item. Omitted for items outside a Pack.
+                packedId:
+                    type: string
+                    description: Context-qualified item identifier. Pack items use the Pack identifier as a prefix.
+                pipeline:
+                    type: string
+                    description: Unique identifier of the Pipeline that processes matching events.
+            required:
+                - final
+                - groupId
+                - id
+                - name
+                - packedId
+                - pipeline
+            description: Allowlisted Route topology metadata for the Data Insights inventory.
+            title: InsightsInventoryRoute
+        InsightsInventoryConnection:
+            type: object
+            properties:
+                output:
+                    type: string
+                    description: Unique identifier of the Destination that receives data from the Source.
+                pipeline:
+                    type: string
+                    description: Unique identifier of the Pipeline that processes data before delivery. Omitted when no Pipeline is configured.
+            required:
+                - output
+            description: Direct connection from a Source to a Destination, with optional Pipeline processing.
+            title: InsightsInventoryConnection
+        InsightsInventorySource:
+            type: object
+            properties:
+                connections:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/InsightsInventoryConnection"
+                    description: Direct Destination connections used when the Source does not send data through Routes.
+                disabled:
+                    type: boolean
+                    description: If <code>true</code>, the Source is disabled. Otherwise, <code>false</code>.
+                groupId:
+                    type: string
+                    description: Unique identifier of the Worker Group that contains the item.
+                hasTcpListener:
+                    type: boolean
+                    description: If <code>true</code>, the Source has a configured TCP listener. Omitted otherwise.
+                hasUdpListener:
+                    type: boolean
+                    description: If <code>true</code>, the Source has a configured UDP listener. Omitted otherwise.
+                id:
+                    type: string
+                    description: Unique identifier of the Source.
+                packId:
+                    type: string
+                    description: Unique identifier of the Pack that contains the item. Omitted for items outside a Pack.
+                packedId:
+                    type: string
+                    description: Context-qualified item identifier. Pack items use the Pack identifier as a prefix.
+                pipeline:
+                    type: string
+                    description: Unique identifier of the Pipeline that processes data from the Source.
+                sendToRoutes:
+                    type: boolean
+                    description: If <code>true</code>, send data through Routes. Otherwise, send data through direct connections.
+                type:
+                    type: string
+                    description: Source type.
+            required:
+                - groupId
+                - id
+                - packedId
+                - type
+            description: Allowlisted Source topology metadata for the Data Insights inventory.
+            title: InsightsInventorySource
+        InsightsInventoryResponse:
+            type: object
+            properties:
+                groupId:
+                    type: string
+                    description: Unique identifier of the Worker Group represented by this inventory.
+                outputs:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/InsightsInventoryOutput"
+                    description: Destinations in the Worker Group and its Packs.
+                pipelines:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/InsightsInventoryPipeline"
+                    description: Pipelines in the Worker Group and its Packs.
+                routes:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/InsightsInventoryRoute"
+                    description: Routes in the Worker Group and its Packs.
+                sources:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/InsightsInventorySource"
+                    description: Sources and collection jobs in the Worker Group and its Packs.
+            required:
+                - groupId
+                - outputs
+                - pipelines
+                - routes
+                - sources
+            description: Allowlisted topology inventory for one Worker Group.
+            title: InsightsInventoryResponse
+        SystemInsightsErrorResponse:
+            type: object
+            properties:
+                message:
+                    type: string
+                    description: Error message.
+            required:
+                - message
+            description: Error response returned by System Insights endpoints.
+            title: SystemInsightsErrorResponse
         TimeSeriesPoint:
             type: object
             properties:
@@ -78899,16 +79548,6 @@ components:
             required:
                 - timeSeries
             title: InsightsQueryResponse
-        SystemInsightsErrorResponse:
-            type: object
-            properties:
-                message:
-                    type: string
-                    description: Error message.
-            required:
-                - message
-            description: Error response returned by System Insights endpoints.
-            title: SystemInsightsErrorResponse
         TimeSeriesDimensionFilter:
             oneOf:
                 - type: object
@@ -90880,6 +91519,9 @@ components:
                 - $ref: "#/components/schemas/InputTrellixHecPartialRequest"
                   required:
                     - type
+                - $ref: "#/components/schemas/InputSalesforcePartialRequest"
+                  required:
+                    - type
                 - $ref: "#/components/schemas/InputSailpointHecPartialRequest"
                   required:
                     - type
@@ -90929,6 +91571,9 @@ components:
                   required:
                     - type
                 - $ref: "#/components/schemas/InputTrendMicroVisionOnePartialRequest"
+                  required:
+                    - type
+                - $ref: "#/components/schemas/InputNetskopePartialRequest"
                   required:
                     - type
             discriminator:
@@ -91007,6 +91652,7 @@ components:
                     sysdig_hec: "#/components/schemas/InputSysdigHecPartialRequest"
                     upwind_hec: "#/components/schemas/InputUpwindHecPartialRequest"
                     trellix_hec: "#/components/schemas/InputTrellixHecPartialRequest"
+                    salesforce: "#/components/schemas/InputSalesforcePartialRequest"
                     sailpoint_hec: "#/components/schemas/InputSailpointHecPartialRequest"
                     extrahop_revealx_360: "#/components/schemas/InputExtrahopRevealx360PartialRequest"
                     aqua_security_hec: "#/components/schemas/InputAquaSecurityHecPartialRequest"
@@ -91024,6 +91670,7 @@ components:
                     hashicorp_hcp_vault_dedicated: "#/components/schemas/InputHashicorpHcpVaultDedicatedPartialRequest"
                     mimecast_hec: "#/components/schemas/InputMimecastHecPartialRequest"
                     trend_micro_vision_one: "#/components/schemas/InputTrendMicroVisionOnePartialRequest"
+                    netskope: "#/components/schemas/InputNetskopePartialRequest"
             title: InputPartialRequest
             properties:
                 type:
@@ -124883,6 +125530,467 @@ components:
                         - type: string
                         - type: "null"
             title: InputTrellixHecPartialRequest
+        InputSalesforcePartialRequest:
+            type: object
+            properties:
+                id:
+                    title: Input ID
+                    description: Unique ID for this input
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                type:
+                    type: string
+                    enum:
+                        - salesforce
+                    description: Connector type identifier.
+                disabled:
+                    title: Disabled
+                    description: If true, the Source is disabled and will not collect data.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                pipeline:
+                    title: Pipeline
+                    description: Pipeline to process data from this Source before sending it through the Routes
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                sendToRoutes:
+                    description: Select whether to send data to Routes, or directly to Destinations.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                environment:
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                pqEnabled:
+                    title: Enable persistent queue
+                    description: Use a disk queue to minimize data loss when connected services block. See [Cribl Docs](https://docs.cribl.io/stream/persistent-queues) for PQ defaults (Cribl-managed Cloud Workers) and configuration options (on-prem and hybrid Workers).
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                streamtags:
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                criblSourceProvenance:
+                    title: Input provenance
+                    description: Read-only metadata that records how the Source was created. Preserved on update when omitted from the request body. Cannot be set on create.
+                    readOnly: true
+                    anyOf:
+                        - type: object
+                          additionalProperties: false
+                          properties:
+                            origin:
+                                description: Feature that created the Source.
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - data_source_discovery
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            destinationArn:
+                                description: ARN of the S3 bucket or Firehose delivery stream configured as the Source.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            sourceArn:
+                                description: ARN of the AWS resource that produces the logs.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            sourceService:
+                                description: Resolved DSD source-service offering, when known.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            accountId:
+                                description: Cloud tenant or scope id the Source was configured for (for example an AWS account id, GCP project or folder id, or Azure subscription or resource group id).
+                                anyOf:
+                                    - type: string
+                                      minLength: 1
+                                    - type: "null"
+                            templateFamily:
+                                description: Infrastructure-as-code family that provisioned the AWS resources (absent means cloudformation).
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - cloudformation
+                                        - terraform
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                        - type: "null"
+                connections:
+                    title: Use QuickConnect
+                    description: Direct connections to Destinations, and optionally via a Pipeline or a Pack
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/ConnectionConfInputCollection"
+                        - type: "null"
+                pq:
+                    description: Persistent queue settings for this Source.
+                    anyOf:
+                        - type: object
+                          properties:
+                            mode:
+                                title: Mode
+                                description: With Smart mode (deprecated), PQ will write events to the filesystem only when it detects backpressure from the processing engine. Smart mode will have no new development starting July 2026, followed by End of Support and feature removal (auto-migrating to Always On) in January 2027. We recommend using Always On mode instead. With Always On mode, PQ will always write events directly to the queue before forwarding them to the processing engine.
+                                x-speakeasy-enum-descriptions:
+                                    - Smart (Deprecated)
+                                    - Always On
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - smart
+                                        - always
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            maxBufferSizeBytes:
+                                title: Buffer size limit (bytes)
+                                description: The maximum size to hold in memory before writing events to disk. Enter a numeral with units of KB, MB, etc. The minimum value is 64KB and the maximum value is 10MB.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            maxBufferSize:
+                                title: Buffer size limit (events - deprecated)
+                                description: Maximum number of events to hold in memory before writing the events to disk. Deprecated and only supported in workers < v4.17.0. Use maxBufferSizeBytes instead.
+                                anyOf:
+                                    - type: number
+                                      minimum: 42
+                                    - type: "null"
+                            commitFrequency:
+                                title: Commit frequency
+                                description: The number of events to send downstream before committing that Stream has read them. Lower values increase cursor-write IOPS and can add disk pressure, including on shared storage.
+                                anyOf:
+                                    - type: number
+                                      minimum: 42
+                                    - type: "null"
+                            maxFileSize:
+                                title: File size limit
+                                description: The maximum size to store in each queue file before closing and optionally compressing. Enter a numeral with units of KB, MB, etc.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            maxSize:
+                                title: Queue size limit
+                                description: The maximum disk space that the queue can consume (as an average per Worker Process) before queueing stops. Enter a numeral with units of KB, MB, etc.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            path:
+                                title: Queue file path
+                                description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/inputs/<input-id>"
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            compress:
+                                x-speakeasy-enum-descriptions:
+                                    - None
+                                    - Gzip
+                                title: Compression
+                                description: Codec to use to compress the persisted data
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - none
+                                        - gzip
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            onBackpressure:
+                                title: Queue-full behavior
+                                description: Whether to block or drop events when the queue is exerting backpressure (full capacity or low disk). 'Block' is the same behavior as non-PQ blocking. 'Drop new data' throws away incoming data, while leaving the contents of the PQ unchanged.
+                                x-speakeasy-enum-descriptions:
+                                    - Block
+                                    - Drop new data
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - block
+                                        - drop
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            pqControls:
+                                title: ""
+                                description: Management controls for the persistent queue.
+                                anyOf:
+                                    - type: object
+                                    - type: "null"
+                        - type: "null"
+                salesforceSubdomain:
+                    type: string
+                    title: Salesforce subdomain
+                    description: "Your Salesforce My Domain prefix. For production: mycompany. For sandbox: mycompany.sandbox. For developer: mycompany.develop."
+                salesforceCloud:
+                    type: string
+                    title: Cloud
+                    description: Salesforce cloud deployment — determines the domain suffix.
+                salesforceOauthClientId:
+                    type: string
+                    title: OAuth client ID
+                    description: Client ID from your Salesforce connected app
+                textSecret:
+                    type: string
+                    title: OAuth client secret (text secret)
+                    description: Select or create a stored text secret
+                salesforceApiVersion:
+                    type: string
+                    title: API version
+                    description: "Salesforce REST API version (example: v64.0)"
+                contentConfig:
+                    title: Content Types
+                    description: Salesforce data sources to collect. Each entry specifies a Salesforce object, fields, and a cursor for time filtering — or an EventLogFile download.
+                    anyOf:
+                        - type: array
+                          minItems: 1
+                          items:
+                            type: object
+                            required:
+                                - contentType
+                            properties:
+                                contentType:
+                                    type: string
+                                    title: Content type
+                                    readOnly: true
+                                    description: Content type
+                                disabled:
+                                    type: boolean
+                                    title: Enabled
+                                    description: Enabled
+                                stateTracking:
+                                    type: boolean
+                                    title: State tracking
+                                    description: Track collection progress between consecutive scheduled executions.
+                                stateUpdateExpression:
+                                    type: string
+                                    title: State update expression
+                                    description: JavaScript expression that defines how to update the state from an event. Use the event's data and the current state to compute the new state. See [Understanding State Expression Fields](https://docs.cribl.io/stream/collectors-rest#state-tracking-expression-fields) for more information.
+                                stateMergeExpression:
+                                    type: string
+                                    title: State merge expression
+                                    description: JavaScript expression that defines which state to keep when merging a task's newly reported state with previously saved state. Evaluates `prevState` and `newState` variables, resolving to the state to keep.
+                                manageState:
+                                    type: object
+                                    description: Controls for viewing and managing the collector state.
+                                contentDescription:
+                                    type: string
+                                    readOnly: true
+                                    description: Brief description of what this content type collects.
+                                objectName:
+                                    type: string
+                                    title: Object
+                                    description: "Salesforce object API name to query (examples: LoginHistory, SetupAuditTrail, Account)"
+                                fields:
+                                    type: array
+                                    title: Fields
+                                    description: Field API names to include in the query.
+                                    items:
+                                        type: string
+                                    minItems: 1
+                                cursor:
+                                    type: string
+                                    title: Cursor field
+                                    description: "Timestamp field used for time filtering and breaker rule routing (examples: LoginTime, CreatedDate)"
+                                filter:
+                                    type: string
+                                    title: Filter (advanced)
+                                    description: "Optional SOQL WHERE conditions, entered as a Cribl expression that evaluates to a SOQL string. Wrap the value in backticks (example: `CountryIso = 'US'`). The expression is evaluated once when the Source initializes — not per collection run. Combined with cursor-based time filtering using AND. SOQL syntax is not validated locally; invalid conditions will fail at collection time."
+                                cronSchedule:
+                                    type: string
+                                    title: Cron schedule
+                                    description: Schedule on which to run this collection job
+                                earliest:
+                                    type: string
+                                    title: Earliest
+                                    description: Earliest time for data collection, relative to now
+                                latest:
+                                    type: string
+                                    title: Latest
+                                    description: Latest time for data collection, relative to now
+                                jobTimeout:
+                                    title: Job timeout
+                                    type: string
+                                    description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+                                __template_filter:
+                                    type: string
+                                    description: Binds 'filter' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'filter' at runtime.
+                        - type: "null"
+                maxPages:
+                    title: Max pages per collection
+                    description: Maximum number of pages to fetch per content type per scheduled run. Use 0 for unlimited.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                requestTimeout:
+                    title: Request timeout (seconds)
+                    description: HTTP request inactivity timeout. Use 0 to disable.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                          maximum: 2400
+                        - type: "null"
+                breakerRulesets:
+                    title: Event Breaker rulesets
+                    description: A list of event-breaking rulesets that will be applied, in order, to the input data stream
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                staleChannelFlushMs:
+                    title: Event Breaker buffer timeout (ms)
+                    description: How long (in milliseconds) the Event Breaker will wait for new data to be sent to a specific channel before flushing the data stream out, as is, to the Pipelines
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                          maximum: 43200000
+                        - type: "null"
+                keepAliveTime:
+                    title: Keep alive time (seconds)
+                    description: How often workers should check in with the scheduler to keep job subscription alive
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                        - type: "null"
+                maxMissedKeepAlives:
+                    title: Worker timeout (periods)
+                    description: The number of Keep Alive Time periods before an inactive worker will have its job subscription revoked.
+                    anyOf:
+                        - type: number
+                          minimum: 2
+                        - type: "null"
+                ttl:
+                    title: Time to live
+                    description: Time to keep the job's artifacts on disk after job completion. This also affects how long a job is listed in the Job Inspector.
+                    anyOf:
+                        - type: string
+                          pattern: \d+[smh]$
+                        - type: "null"
+                ignoreGroupJobsLimit:
+                    title: Ignore Worker Group job limits
+                    description: When enabled, this job's artifacts are not counted toward the Worker Group's finished job artifacts limit. Artifacts will be removed only after the Collector's configured time to live.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                metadata:
+                    title: Fields
+                    description: Fields to add to events from this input
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/MetadataConfInputCollection"
+                        - type: "null"
+                retryRules:
+                    description: HTTP retry behavior for failed collection requests.
+                    anyOf:
+                        - type: object
+                          properties:
+                            type:
+                                $ref: "#/components/schemas/RetryTypeOptionsHealthCheckCollectorConfRetryRules"
+                                description: The algorithm to use when performing HTTP retries
+                            interval:
+                                title: Initial retry interval (ms)
+                                description: Time interval between failed request and first retry (kickoff). Maximum allowed value is 20,000 ms (1/3 minute).
+                                anyOf:
+                                    - type: number
+                                      minimum: 0
+                                      maximum: 20000
+                                    - type: "null"
+                            limit:
+                                title: Retry limit
+                                description: The maximum number of times to retry a failed HTTP request
+                                anyOf:
+                                    - type: number
+                                      minimum: 0
+                                      maximum: 20
+                                    - type: "null"
+                            multiplier:
+                                title: Backoff multiplier
+                                description: Base for exponential backoff, e.g., base 2 means that retries will occur after 2, then 4, then 8 seconds, and so on
+                                anyOf:
+                                    - type: number
+                                      minimum: 1
+                                      maximum: 20
+                                    - type: "null"
+                            codes:
+                                title: Retry HTTP codes
+                                description: List of HTTP codes that trigger a retry. Leave empty to use the default list of 429 and 503.
+                                anyOf:
+                                    - type: array
+                                      minItems: 1
+                                      items:
+                                        type: number
+                                        minimum: 100
+                                        maximum: 599
+                                    - type: "null"
+                            enableHeader:
+                                title: Honor Retry-After header
+                                description: Honor any Retry-After header that specifies a delay (in seconds) or a timestamp after which to retry the request. The delay is limited to 20 seconds, even if the Retry-After header specifies a longer delay. When disabled, all Retry-After headers are ignored.
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            retryConnectTimeout:
+                                title: Retry connection timeout
+                                description: Make a single retry attempt when a connection timeout (ETIMEDOUT) error occurs
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            retryConnectReset:
+                                title: Retry connection reset
+                                description: Retry request when a connection reset (ECONNRESET) error occurs
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                        - type: "null"
+                description:
+                    title: Description
+                    description: Optional description for this configuration.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_environment:
+                    description: Binds 'environment' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'environment' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_streamtags:
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_salesforceSubdomain:
+                    description: Binds 'salesforceSubdomain' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'salesforceSubdomain' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_salesforceCloud:
+                    description: Binds 'salesforceCloud' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'salesforceCloud' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_salesforceOauthClientId:
+                    description: Binds 'salesforceOauthClientId' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'salesforceOauthClientId' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_salesforceApiVersion:
+                    description: Binds 'salesforceApiVersion' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'salesforceApiVersion' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+            title: InputSalesforcePartialRequest
         InputSailpointHecPartialRequest:
             type: object
             properties:
@@ -132918,6 +134026,385 @@ components:
                         - type: string
                         - type: "null"
             title: InputTrendMicroVisionOnePartialRequest
+        InputNetskopePartialRequest:
+            type: object
+            properties:
+                id:
+                    title: Input ID
+                    description: Unique ID for this input
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                type:
+                    type: string
+                    enum:
+                        - netskope
+                    description: Connector type identifier.
+                disabled:
+                    title: Disabled
+                    description: If true, the Source is disabled and will not collect data.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                pipeline:
+                    title: Pipeline
+                    description: Pipeline to process data from this Source before sending it through the Routes
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                sendToRoutes:
+                    description: Select whether to send data to Routes, or directly to Destinations.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                environment:
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                pqEnabled:
+                    title: Enable persistent queue
+                    description: Use a disk queue to minimize data loss when connected services block. See [Cribl Docs](https://docs.cribl.io/stream/persistent-queues) for PQ defaults (Cribl-managed Cloud Workers) and configuration options (on-prem and hybrid Workers).
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                streamtags:
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                criblSourceProvenance:
+                    title: Input provenance
+                    description: Read-only metadata that records how the Source was created. Preserved on update when omitted from the request body. Cannot be set on create.
+                    readOnly: true
+                    anyOf:
+                        - type: object
+                          additionalProperties: false
+                          properties:
+                            origin:
+                                description: Feature that created the Source.
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - data_source_discovery
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            destinationArn:
+                                description: ARN of the S3 bucket or Firehose delivery stream configured as the Source.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            sourceArn:
+                                description: ARN of the AWS resource that produces the logs.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            sourceService:
+                                description: Resolved DSD source-service offering, when known.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            accountId:
+                                description: Cloud tenant or scope id the Source was configured for (for example an AWS account id, GCP project or folder id, or Azure subscription or resource group id).
+                                anyOf:
+                                    - type: string
+                                      minLength: 1
+                                    - type: "null"
+                            templateFamily:
+                                description: Infrastructure-as-code family that provisioned the AWS resources (absent means cloudformation).
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - cloudformation
+                                        - terraform
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                        - type: "null"
+                connections:
+                    title: Use QuickConnect
+                    description: Direct connections to Destinations, and optionally via a Pipeline or a Pack
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/ConnectionConfInputCollection"
+                        - type: "null"
+                pq:
+                    description: Persistent queue settings for this Source.
+                    anyOf:
+                        - type: object
+                          properties:
+                            mode:
+                                title: Mode
+                                description: With Smart mode (deprecated), PQ will write events to the filesystem only when it detects backpressure from the processing engine. Smart mode will have no new development starting July 2026, followed by End of Support and feature removal (auto-migrating to Always On) in January 2027. We recommend using Always On mode instead. With Always On mode, PQ will always write events directly to the queue before forwarding them to the processing engine.
+                                x-speakeasy-enum-descriptions:
+                                    - Smart (Deprecated)
+                                    - Always On
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - smart
+                                        - always
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            maxBufferSizeBytes:
+                                title: Buffer size limit (bytes)
+                                description: The maximum size to hold in memory before writing events to disk. Enter a numeral with units of KB, MB, etc. The minimum value is 64KB and the maximum value is 10MB.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            maxBufferSize:
+                                title: Buffer size limit (events - deprecated)
+                                description: Maximum number of events to hold in memory before writing the events to disk. Deprecated and only supported in workers < v4.17.0. Use maxBufferSizeBytes instead.
+                                anyOf:
+                                    - type: number
+                                      minimum: 42
+                                    - type: "null"
+                            commitFrequency:
+                                title: Commit frequency
+                                description: The number of events to send downstream before committing that Stream has read them. Lower values increase cursor-write IOPS and can add disk pressure, including on shared storage.
+                                anyOf:
+                                    - type: number
+                                      minimum: 42
+                                    - type: "null"
+                            maxFileSize:
+                                title: File size limit
+                                description: The maximum size to store in each queue file before closing and optionally compressing. Enter a numeral with units of KB, MB, etc.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            maxSize:
+                                title: Queue size limit
+                                description: The maximum disk space that the queue can consume (as an average per Worker Process) before queueing stops. Enter a numeral with units of KB, MB, etc.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            path:
+                                title: Queue file path
+                                description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/inputs/<input-id>"
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            compress:
+                                x-speakeasy-enum-descriptions:
+                                    - None
+                                    - Gzip
+                                title: Compression
+                                description: Codec to use to compress the persisted data
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - none
+                                        - gzip
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            onBackpressure:
+                                title: Queue-full behavior
+                                description: Whether to block or drop events when the queue is exerting backpressure (full capacity or low disk). 'Block' is the same behavior as non-PQ blocking. 'Drop new data' throws away incoming data, while leaving the contents of the PQ unchanged.
+                                x-speakeasy-enum-descriptions:
+                                    - Block
+                                    - Drop new data
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - block
+                                        - drop
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            pqControls:
+                                title: ""
+                                description: Management controls for the persistent queue.
+                                anyOf:
+                                    - type: object
+                                    - type: "null"
+                        - type: "null"
+                tenantUrl:
+                    type: string
+                    title: Netskope tenant URL
+                    description: "Full base URL of your Netskope tenant (example: https://mycompany.goskope.com). Do not include trailing slashes or API paths."
+                apiToken:
+                    title: API token
+                    description: API token
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                textSecret:
+                    type: string
+                    title: API token (text secret)
+                    description: Select or create a stored Netskope V2 API token
+                contentConfig:
+                    type: array
+                    title: Content types
+                    items:
+                        type: object
+                        required:
+                            - contentType
+                            - cursorIndex
+                            - cronSchedule
+                        properties:
+                            contentType:
+                                type: string
+                                title: Content type
+                                readOnly: true
+                                description: Content type
+                            contentDescription:
+                                type: string
+                                title: Description
+                                readOnly: true
+                                description: Description
+                            disabled:
+                                type: boolean
+                                title: Enabled
+                                description: Enabled
+                            cursorIndex:
+                                type: string
+                                title: Cursor index
+                                description: Server-side index name Netskope uses for tracking data export state. Change only if you need a separate export cursor.
+                            cronSchedule:
+                                type: string
+                                title: Cron schedule
+                                description: Schedule on which to collect this content type
+                            jobTimeout:
+                                title: Job timeout
+                                type: string
+                                description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+                                pattern: ^\d+[sm]?$
+                            logLevel:
+                                $ref: "#/components/schemas/LogLevelOptionsContentConfigItemsDebugError"
+                                description: Collector runtime log level
+                    description: Content types
+                requestTimeout:
+                    title: Request timeout (seconds)
+                    description: HTTP request inactivity timeout. Use 0 to disable.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                keepAliveTime:
+                    title: Keep alive time (seconds)
+                    description: How often workers should check in with the scheduler to keep job subscription alive
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                        - type: "null"
+                maxMissedKeepAlives:
+                    title: Worker timeout (periods)
+                    description: The number of Keep Alive Time periods before an inactive worker will have its job subscription revoked.
+                    anyOf:
+                        - type: number
+                          minimum: 2
+                        - type: "null"
+                ttl:
+                    title: Time to live
+                    description: Time to keep the job's artifacts on disk after job completion. This also affects how long a job is listed in the Job Inspector.
+                    anyOf:
+                        - type: string
+                          pattern: \d+[smh]$
+                        - type: "null"
+                ignoreGroupJobsLimit:
+                    title: Ignore Worker Group job limits
+                    description: When enabled, this job's artifacts are not counted toward the Worker Group's finished job artifacts limit. Artifacts will be removed only after the Collector's configured time to live.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                metadata:
+                    title: Fields
+                    description: Fields to add to events from this input
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/MetadataConfInputCollection"
+                        - type: "null"
+                retryRules:
+                    description: HTTP retry behavior for failed collection requests.
+                    anyOf:
+                        - type: object
+                          properties:
+                            type:
+                                $ref: "#/components/schemas/RetryTypeOptionsHealthCheckCollectorConfRetryRules"
+                                description: The algorithm to use when performing HTTP retries
+                            interval:
+                                title: Initial retry interval (ms)
+                                description: Time interval between failed request and first retry (kickoff). Maximum allowed value is 20,000 ms (1/3 minute).
+                                anyOf:
+                                    - type: number
+                                      minimum: 0
+                                      maximum: 20000
+                                    - type: "null"
+                            limit:
+                                title: Retry limit
+                                description: The maximum number of times to retry a failed HTTP request
+                                anyOf:
+                                    - type: number
+                                      minimum: 0
+                                      maximum: 20
+                                    - type: "null"
+                            multiplier:
+                                title: Backoff multiplier
+                                description: Base for exponential backoff, e.g., base 2 means that retries will occur after 2, then 4, then 8 seconds, and so on
+                                anyOf:
+                                    - type: number
+                                      minimum: 1
+                                      maximum: 20
+                                    - type: "null"
+                            codes:
+                                title: Retry HTTP codes
+                                description: List of HTTP codes that trigger a retry. Leave empty to use the default list of 429 and 503.
+                                anyOf:
+                                    - type: array
+                                      minItems: 1
+                                      items:
+                                        type: number
+                                        minimum: 100
+                                        maximum: 599
+                                    - type: "null"
+                            enableHeader:
+                                title: Honor Retry-After header
+                                description: Honor any Retry-After header that specifies a delay (in seconds) or a timestamp after which to retry the request. The delay is limited to 20 seconds, even if the Retry-After header specifies a longer delay. When disabled, all Retry-After headers are ignored.
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            retryConnectTimeout:
+                                title: Retry connection timeout
+                                description: Make a single retry attempt when a connection timeout (ETIMEDOUT) error occurs
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            retryConnectReset:
+                                title: Retry connection reset
+                                description: Retry request when a connection reset (ECONNRESET) error occurs
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                        - type: "null"
+                description:
+                    title: Description
+                    description: Optional description for this configuration.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_environment:
+                    description: Binds 'environment' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'environment' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_streamtags:
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_tenantUrl:
+                    description: Binds 'tenantUrl' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'tenantUrl' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+            title: InputNetskopePartialRequest
         IoMetricsEntryPartialRequest:
             type: object
             properties:
@@ -181583,12 +183070,27 @@ components:
         CloudMetadataPartialRequest:
             type: object
             properties:
+                company:
+                    description: Company or organization of the account holder.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                completedProfile:
+                    description: Whether the account holder has completed their self-service profile review during onboarding.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
                 identityType:
                     description: The identity type of the user.
                     examples:
                         - SINGLE_SIGN_ON
                     anyOf:
                         - $ref: "#/components/schemas/IdentityType"
+                        - type: "null"
+                phone:
+                    description: Phone number of the account holder.
+                    anyOf:
+                        - type: string
                         - type: "null"
                 ssoGroups:
                     description: SSO group names the user belongs to.
@@ -192362,6 +193864,31 @@ components:
                 sendToRoutes: true
                 pqEnabled: false
             description: Example request body for creating a Okta Source.
+        InputCreateExamplesNetskope:
+            summary: Netskope
+            value:
+                id: netskope-source
+                type: netskope
+                textSecret: netskope-api-token-secret
+                tenantUrl: https://your-tenant.goskope.com
+                contentConfig:
+                    - contentType: Alerts
+                      contentDescription: Netskope alert data including DLP, malware, policy, quarantine, and more
+                      cursorIndex: cribl_netskope_collector_alerts_index
+                      cronSchedule: "*/15 * * * *"
+                      jobTimeout: "300"
+                      logLevel: info
+                      disabled: false
+                    - contentType: Events
+                      contentDescription: Netskope event data including application, audit, network, infrastructure, and more
+                      cursorIndex: cribl_netskope_collector_events_index
+                      cronSchedule: "*/5 * * * *"
+                      jobTimeout: "300"
+                      logLevel: info
+                      disabled: false
+                sendToRoutes: true
+                pqEnabled: false
+            description: Example request body for creating a Netskope Source.
         InputCreateExamplesOpenAI:
             summary: OpenAI
             value:
@@ -192532,6 +194059,44 @@ components:
                 sendToRoutes: true
                 pqEnabled: false
             description: Example request body for creating a Cloud Change Event Source.
+        InputCreateExamplesSalesforce:
+            summary: Salesforce
+            value:
+                id: salesforce-source
+                type: salesforce
+                textSecret: salesforce-client-secret
+                salesforceSubdomain: mycompany
+                salesforceCloud: .my.salesforce.com
+                salesforceApiVersion: v64.0
+                salesforceOauthClientId: your-connected-app-client-id
+                contentConfig:
+                    - contentType: EventLogFile
+                      disabled: true
+                      cronSchedule: "*/5 * * * *"
+                      earliest: -7d@d
+                      latest: now
+                      jobTimeout: 60m
+                      stateTracking: true
+                    - contentType: LoginHistory
+                      objectName: LoginHistory
+                      fields:
+                        - Id
+                        - LoginTime
+                        - UserId
+                        - LoginType
+                        - Status
+                        - SourceIp
+                      cursor: LoginTime
+                      filter: "`CountryIso = 'US'`"
+                      disabled: false
+                      cronSchedule: "*/5 * * * *"
+                      earliest: -7d@d
+                      latest: now
+                      jobTimeout: 60m
+                      stateTracking: true
+                sendToRoutes: true
+                pqEnabled: false
+            description: Example request body for creating a Salesforce Source.
         InputCreateExamplesServiceNowTable:
             summary: ServiceNow Table API
             value:
@@ -201991,6 +203556,98 @@ components:
             description: Example response for getting the health status when one or more Worker Processes are down.
             value:
                 status: down
+        InsightsInventoryResponseExamplesDefaultGroupTopology:
+            summary: Return allowlisted topology for a Worker Group
+            description: Example response for a Worker Group that contains a Source listening for both TCP and UDP traffic, a Source with a direct Destination connection, an Output Router that forwards to two Destinations, the default Destination, a Destination with a post-processing Pipeline, one Route, and two Pipelines.
+            value:
+                groupId: default
+                sources:
+                    - id: syslog1
+                      type: syslog
+                      disabled: false
+                      sendToRoutes: true
+                      tcpPort: 9514
+                      udpPort: 9514
+                      groupId: default
+                      packedId: syslog1
+                    - id: http_in
+                      type: http
+                      disabled: false
+                      sendToRoutes: false
+                      connections:
+                        - output: branch_by_source
+                          pipeline: passthru
+                      groupId: default
+                      packedId: http_in
+                outputs:
+                    - id: default
+                      type: default
+                      disabled: false
+                      defaultId: devnull
+                      groupId: default
+                      packedId: default
+                    - id: branch_by_source
+                      type: router
+                      disabled: false
+                      rules:
+                        - output: archive
+                        - output: devnull
+                      groupId: default
+                      packedId: branch_by_source
+                    - id: archive
+                      type: s3
+                      disabled: false
+                      pipeline: reduce_volume
+                      groupId: default
+                      packedId: archive
+                    - id: devnull
+                      type: devnull
+                      disabled: false
+                      groupId: default
+                      packedId: devnull
+                routes:
+                    - id: default
+                      name: default
+                      disabled: false
+                      pipeline: passthru
+                      output: default
+                      final: true
+                      groupId: default
+                      packedId: default
+                pipelines:
+                    - id: passthru
+                      pipelineIsPassthrough: true
+                      groupId: default
+                      packedId: passthru
+                    - id: reduce_volume
+                      pipelineIsPassthrough: false
+                      groupId: default
+                      packedId: reduce_volume
+        InsightsInventoryBadRequestExamplesMissingGroupId:
+            summary: Missing Worker Group identifier
+            description: Example error response returned when the Worker Group identifier is missing or empty.
+            value:
+                message: Worker Group identifier is required
+        InsightsInventoryNotFoundExamplesUnknownGroup:
+            summary: Worker Group not found
+            description: Example error response returned when the requested Worker Group does not exist.
+            value:
+                message: Worker group "missing-group" was not found
+        InsightsInventoryTooLargeExamplesItemCapExceeded:
+            summary: Inventory exceeds the item limit
+            description: Example error response returned when the Worker Group topology is larger than the supported inventory size.
+            value:
+                message: Insights inventory contains 10001 items; the maximum is 10000
+        InsightsInventoryTooManyRequestsExamplesConfigHelperSpawnRejected:
+            summary: Config Helper cannot be started
+            description: Example error response returned when the Leader cannot start the Config Helper that holds group configuration because of memory or load pressure.
+            value:
+                message: Config helper cannot be booted because the leader is under load (memory, CPU, or event-loop pressure)
+        InsightsInventoryServiceUnavailableExamplesConfigHelperUnavailable:
+            summary: Config Helper unavailable
+            description: Example error response returned when the Config Helper that holds group configuration cannot be reached.
+            value:
+                message: The Config Helper service is not available because a configuration file doesn't exist or the settings are invalid. Please fix it and restart Cribl server.
         InsightsQueryResponseExamplesWorkerThroughput:
             summary: Metric query response
             description: Example response body that contains one time series for the requested metric expression.
@@ -207850,6 +209507,31 @@ components:
                 sendToRoutes: true
                 pqEnabled: false
             description: "Example request body for updating a Okta Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+        UpdateInputExamplesNetskopePartialRequest:
+            summary: Netskope
+            value:
+                id: netskope-source
+                type: netskope
+                textSecret: netskope-api-token-secret
+                tenantUrl: https://your-tenant.goskope.com
+                contentConfig:
+                    - contentType: Alerts
+                      contentDescription: Netskope alert data including DLP, malware, policy, quarantine, and more
+                      cursorIndex: cribl_netskope_collector_alerts_index
+                      cronSchedule: "*/15 * * * *"
+                      jobTimeout: "300"
+                      logLevel: info
+                      disabled: false
+                    - contentType: Events
+                      contentDescription: Netskope event data including application, audit, network, infrastructure, and more
+                      cursorIndex: cribl_netskope_collector_events_index
+                      cronSchedule: "*/5 * * * *"
+                      jobTimeout: "300"
+                      logLevel: info
+                      disabled: false
+                sendToRoutes: true
+                pqEnabled: false
+            description: "Example request body for updating a Netskope Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
         UpdateInputExamplesOpenAIPartialRequest:
             summary: OpenAI
             value:
@@ -208020,6 +209702,44 @@ components:
                 sendToRoutes: true
                 pqEnabled: false
             description: "Example request body for updating a Cloud Change Event Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+        UpdateInputExamplesSalesforcePartialRequest:
+            summary: Salesforce
+            value:
+                id: salesforce-source
+                type: salesforce
+                textSecret: salesforce-client-secret
+                salesforceSubdomain: mycompany
+                salesforceCloud: .my.salesforce.com
+                salesforceApiVersion: v64.0
+                salesforceOauthClientId: your-connected-app-client-id
+                contentConfig:
+                    - contentType: EventLogFile
+                      disabled: true
+                      cronSchedule: "*/5 * * * *"
+                      earliest: -7d@d
+                      latest: now
+                      jobTimeout: 60m
+                      stateTracking: true
+                    - contentType: LoginHistory
+                      objectName: LoginHistory
+                      fields:
+                        - Id
+                        - LoginTime
+                        - UserId
+                        - LoginType
+                        - Status
+                        - SourceIp
+                      cursor: LoginTime
+                      filter: "`CountryIso = 'US'`"
+                      disabled: false
+                      cronSchedule: "*/5 * * * *"
+                      earliest: -7d@d
+                      latest: now
+                      jobTimeout: 60m
+                      stateTracking: true
+                sendToRoutes: true
+                pqEnabled: false
+            description: "Example request body for updating a Salesforce Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
         UpdateInputExamplesServiceNowTablePartialRequest:
             summary: ServiceNow Table API
             value:
@@ -212604,8 +214324,6 @@ paths:
             summary: Delete a Database Connection
             description: Delete the specified Database Connection.
             responses:
-                "200":
-                    description: The deleted Database Connection in a response envelope with <code>count</code> and <code>items</code>.
                 "204":
                     description: No Content
                 "401":
@@ -213052,8 +214770,6 @@ paths:
             summary: Delete a Database Connection within a Pack
             description: Delete the specified Database Connection within the specified Pack.
             responses:
-                "200":
-                    description: The deleted Database Connection in a response envelope with <code>count</code> and <code>items</code>.
                 "204":
                     description: No Content
                 "401":
@@ -216344,6 +218060,8 @@ paths:
                                 $ref: "#/components/examples/InputCreateExamplesOffice365Service"
                             InputCreateExamplesOkta:
                                 $ref: "#/components/examples/InputCreateExamplesOkta"
+                            InputCreateExamplesNetskope:
+                                $ref: "#/components/examples/InputCreateExamplesNetskope"
                             InputCreateExamplesOpenAI:
                                 $ref: "#/components/examples/InputCreateExamplesOpenAI"
                             InputCreateExamplesOpenAIComplianceLogs:
@@ -216372,6 +218090,8 @@ paths:
                                 $ref: "#/components/examples/InputCreateExamplesSecurityLake"
                             InputCreateExamplesCloudChangeEvent:
                                 $ref: "#/components/examples/InputCreateExamplesCloudChangeEvent"
+                            InputCreateExamplesSalesforce:
+                                $ref: "#/components/examples/InputCreateExamplesSalesforce"
                             InputCreateExamplesServiceNowTable:
                                 $ref: "#/components/examples/InputCreateExamplesServiceNowTable"
                             InputCreateExamplesSnmp:
@@ -216653,6 +218373,8 @@ paths:
                                 $ref: "#/components/examples/UpdateInputExamplesOffice365ServicePartialRequest"
                             UpdateInputExamplesOkta:
                                 $ref: "#/components/examples/UpdateInputExamplesOktaPartialRequest"
+                            UpdateInputExamplesNetskope:
+                                $ref: "#/components/examples/UpdateInputExamplesNetskopePartialRequest"
                             UpdateInputExamplesOpenAI:
                                 $ref: "#/components/examples/UpdateInputExamplesOpenAIPartialRequest"
                             UpdateInputExamplesOpenAIComplianceLogs:
@@ -216681,6 +218403,8 @@ paths:
                                 $ref: "#/components/examples/UpdateInputExamplesSecurityLakePartialRequest"
                             UpdateInputExamplesCloudChangeEvent:
                                 $ref: "#/components/examples/UpdateInputExamplesCloudChangeEventPartialRequest"
+                            UpdateInputExamplesSalesforce:
+                                $ref: "#/components/examples/UpdateInputExamplesSalesforcePartialRequest"
                             UpdateInputExamplesServiceNowTable:
                                 $ref: "#/components/examples/UpdateInputExamplesServiceNowTablePartialRequest"
                             UpdateInputExamplesSnmp:
@@ -217267,6 +218991,8 @@ paths:
                                 $ref: "#/components/examples/InputCreateExamplesOffice365Service"
                             InputCreateExamplesOkta:
                                 $ref: "#/components/examples/InputCreateExamplesOkta"
+                            InputCreateExamplesNetskope:
+                                $ref: "#/components/examples/InputCreateExamplesNetskope"
                             InputCreateExamplesOpenAI:
                                 $ref: "#/components/examples/InputCreateExamplesOpenAI"
                             InputCreateExamplesOpenAIComplianceLogs:
@@ -217295,6 +219021,8 @@ paths:
                                 $ref: "#/components/examples/InputCreateExamplesSecurityLake"
                             InputCreateExamplesCloudChangeEvent:
                                 $ref: "#/components/examples/InputCreateExamplesCloudChangeEvent"
+                            InputCreateExamplesSalesforce:
+                                $ref: "#/components/examples/InputCreateExamplesSalesforce"
                             InputCreateExamplesServiceNowTable:
                                 $ref: "#/components/examples/InputCreateExamplesServiceNowTable"
                             InputCreateExamplesSnmp:
@@ -217589,6 +219317,8 @@ paths:
                                 $ref: "#/components/examples/UpdateInputExamplesOffice365ServicePartialRequest"
                             UpdateInputExamplesOkta:
                                 $ref: "#/components/examples/UpdateInputExamplesOktaPartialRequest"
+                            UpdateInputExamplesNetskope:
+                                $ref: "#/components/examples/UpdateInputExamplesNetskopePartialRequest"
                             UpdateInputExamplesOpenAI:
                                 $ref: "#/components/examples/UpdateInputExamplesOpenAIPartialRequest"
                             UpdateInputExamplesOpenAIComplianceLogs:
@@ -217617,6 +219347,8 @@ paths:
                                 $ref: "#/components/examples/UpdateInputExamplesSecurityLakePartialRequest"
                             UpdateInputExamplesCloudChangeEvent:
                                 $ref: "#/components/examples/UpdateInputExamplesCloudChangeEventPartialRequest"
+                            UpdateInputExamplesSalesforce:
+                                $ref: "#/components/examples/UpdateInputExamplesSalesforcePartialRequest"
                             UpdateInputExamplesServiceNowTable:
                                 $ref: "#/components/examples/UpdateInputExamplesServiceNowTablePartialRequest"
                             UpdateInputExamplesSnmp:
@@ -236167,6 +237899,120 @@ paths:
                       type: limit
                 outputs:
                     results: $.items
+    /products/lakehouse_engine_metrics/config-profiles:
+        post:
+            operationId: createMonitorConfigProfile
+            tags:
+                - configProfiles
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: Create a Monitor Configuration Profile
+            description: Create a new Monitor Configuration Profile.
+            responses:
+                "201":
+                    description: The created MonitorConfigProfile object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/MonitorConfigProfile"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: MonitorConfigProfile object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/MonitorConfigProfile"
+                        examples:
+                            ConfigProfileCreateExamplesBasicProfile:
+                                $ref: "#/components/examples/ConfigProfileCreateExamplesBasicProfile"
+        get:
+            operationId: getMonitorConfigProfile
+            tags:
+                - configProfiles
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: List all Monitor Configuration Profiles
+            description: Get a list of all Monitor Configuration Profiles. A profile groups shared configuration that can be referenced by multiple monitor configurations.
+            responses:
+                "200":
+                    description: List of MonitorConfigProfile objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedMonitorConfigProfile"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Pagination offset
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Maximum number of items to return
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /products/lakehouse_engine_metrics/config-profiles/{id}:
         delete:
             operationId: deleteMonitorConfigProfileById
@@ -236309,115 +238155,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Monitor Configuration Profile to update.
-    /products/lakehouse_engine_metrics/config-profiles:
-        post:
-            operationId: createMonitorConfigProfile
-            tags:
-                - configProfiles
-            x-cribl-internal: true
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Create a Monitor Configuration Profile
-            description: Create a new Monitor Configuration Profile.
-            responses:
-                "200":
-                    description: The created MonitorConfigProfile object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/MonitorConfigProfile"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            requestBody:
-                description: MonitorConfigProfile object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/MonitorConfigProfile"
-                        examples:
-                            ConfigProfileCreateExamplesBasicProfile:
-                                $ref: "#/components/examples/ConfigProfileCreateExamplesBasicProfile"
-        get:
-            operationId: getMonitorConfigProfile
-            tags:
-                - configProfiles
-            x-cribl-internal: true
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: List all Monitor Configuration Profiles
-            description: Get a list of all Monitor Configuration Profiles. A profile groups shared configuration that can be referenced by multiple monitor configurations.
-            responses:
-                "200":
-                    description: List of MonitorConfigProfile objects.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/PaginatedMonitorConfigProfile"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Pagination offset
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Maximum number of items to return
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
     /products/lakehouse_engine_metrics/config-profiles/{id}/configs:
         post:
             operationId: createMonitorConfigProfileConfigsById
@@ -236664,6 +238401,120 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the profile to unlink.
+    /products/lakehouse_engine_metrics/monitors:
+        post:
+            operationId: createMonitorConf
+            tags:
+                - monitors
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: Create a Monitor Configuration
+            description: Create a new Monitor Configuration.
+            responses:
+                "201":
+                    description: The created AetosMonitorConf object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/AetosMonitorConf"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: AetosMonitorConf object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/AetosMonitorConf"
+                        examples:
+                            MonitorCreateExamplesBasicMetricsMonitor:
+                                $ref: "#/components/examples/MonitorCreateExamplesBasicMetricsMonitor"
+        get:
+            operationId: getMonitorConf
+            tags:
+                - monitors
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: List all Monitor Configurations
+            description: Get a list of all Monitor Configuration objects.
+            responses:
+                "200":
+                    description: List of AetosMonitorConf objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedAetosMonitorConf"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Pagination offset
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Maximum number of items to return
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /products/lakehouse_engine_metrics/monitors/{id}:
         delete:
             operationId: deleteMonitorConfById
@@ -236806,24 +238657,29 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Monitor Configuration to update.
-    /products/lakehouse_engine_metrics/monitors:
+    /products/lakehouse_engine_metrics/shared-configs:
         post:
-            operationId: createMonitorConf
+            operationId: createSharedConfig
             tags:
-                - monitors
+                - sharedConfigs
             x-cribl-internal: true
             x-cribl-availability: both
             x-cribl-api-context:
                 - leader
-            summary: Create a Monitor Configuration
-            description: Create a new Monitor Configuration.
+            summary: Create a Shared Configuration
+            description: Create a new Shared Configuration.
             responses:
-                "200":
-                    description: The created AetosMonitorConf object.
+                "201":
+                    description: The created SharedConfig object.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/AetosMonitorConf"
+                                $ref: "#/components/schemas/SharedConfig"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -236844,32 +238700,32 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/Error"
             requestBody:
-                description: AetosMonitorConf object.
+                description: SharedConfig object.
                 required: true
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/AetosMonitorConf"
+                            $ref: "#/components/schemas/SharedConfig"
                         examples:
-                            MonitorCreateExamplesBasicMetricsMonitor:
-                                $ref: "#/components/examples/MonitorCreateExamplesBasicMetricsMonitor"
+                            SharedConfigCreateExamplesBasicSharedConfig:
+                                $ref: "#/components/examples/SharedConfigCreateExamplesBasicSharedConfig"
         get:
-            operationId: getMonitorConf
+            operationId: getSharedConfig
             tags:
-                - monitors
+                - sharedConfigs
             x-cribl-internal: true
             x-cribl-availability: both
             x-cribl-api-context:
                 - leader
-            summary: List all Monitor Configurations
-            description: Get a list of all Monitor Configuration objects.
+            summary: List all Shared Configurations
+            description: Get a list of all Shared Configuration objects. Shared configurations define reusable metric collection settings that can be referenced by monitor configuration profiles.
             responses:
                 "200":
-                    description: List of AetosMonitorConf objects.
+                    description: List of SharedConfig objects.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/PaginatedAetosMonitorConf"
+                                $ref: "#/components/schemas/PaginatedSharedConfig"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -237057,115 +238913,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Shared Configuration to update.
-    /products/lakehouse_engine_metrics/shared-configs:
-        post:
-            operationId: createSharedConfig
-            tags:
-                - sharedConfigs
-            x-cribl-internal: true
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Create a Shared Configuration
-            description: Create a new Shared Configuration.
-            responses:
-                "200":
-                    description: The created SharedConfig object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/SharedConfig"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            requestBody:
-                description: SharedConfig object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/SharedConfig"
-                        examples:
-                            SharedConfigCreateExamplesBasicSharedConfig:
-                                $ref: "#/components/examples/SharedConfigCreateExamplesBasicSharedConfig"
-        get:
-            operationId: getSharedConfig
-            tags:
-                - sharedConfigs
-            x-cribl-internal: true
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: List all Shared Configurations
-            description: Get a list of all Shared Configuration objects. Shared configurations define reusable metric collection settings that can be referenced by monitor configuration profiles.
-            responses:
-                "200":
-                    description: List of SharedConfig objects.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/PaginatedSharedConfig"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Pagination offset
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Maximum number of items to return
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
     /products/lakehouse_engine_metrics/migration/connections/{id}/test:
         post:
             operationId: createMigrationConnectionTestById
@@ -242633,8 +244380,6 @@ paths:
             summary: Delete a provisioning token
             description: Permanently delete the specified provisioning token record. The token must be in revoked status before it can be deleted. This operation cannot be undone. Admin role required.
             responses:
-                "200":
-                    description: Deleted provisioning token
                 "204":
                     description: No Content
                 "401":
@@ -243775,8 +245520,6 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
-                "404":
-                    description: The requested resource does not exist — Secret folder not found
                 "409":
                     description: Request conflicts with current resource state — folder still contains secrets; response body includes a <code>secretIds</code> array (up to 10) listing the secret IDs in the folder
                 "500":
@@ -252086,7 +253829,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/MonitorInstanceStateRow"
+                                $ref: "#/components/schemas/CountedListMonitorInstanceStateRow"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -252215,7 +253958,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/MonitorActivityStat"
+                                $ref: "#/components/schemas/CountedListMonitorActivityStat"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -255160,7 +256903,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "404":
-                    description: App not found or App sharing is not enabled
+                    description: App not found
                 "405":
                     description: Sharing is not supported for this resource type
                 "500":
@@ -255220,7 +256963,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "404":
-                    description: App not found or App sharing is not enabled
+                    description: App not found
                 "405":
                     description: Sharing is not supported for this resource type
                 "500":
@@ -255922,7 +257665,7 @@ paths:
                 "403":
                     description: Access Denied
                 "404":
-                    description: App not found or feature not enabled
+                    description: App not found
                 "500":
                     description: Unexpected server error.
                     content:
@@ -256120,7 +257863,7 @@ paths:
             description: Preview an App before you install or upgrade it.<br/><br/>Extracts the proxy declarations, policies, and other configuration for the App. Does not read <code>package.json</code> for the App or install the App.<br/><br/>Accepts the same <code>source</code> formats as <code>POST /apps</code> (staged upload filename, HTTPS URL, or <code>git+</code> URL). For <code>git+</code> sources, pass the same <code>spec</code> (branch, tag, or commit) that you will use to install or upgrade the App to ensure that the correct revision is checked out.<br/><br/>To preview from a file, first upload the file with <code>PUT /apps</code>.
             responses:
                 "200":
-                    description: Check succeeded; <code>proxies</code> is the parsed <code>proxies.yml</code> configuration, or <code>null</code> when the App declares no external proxy domains. <code>policies</code> is the list of policy entries declared in the App's <code>policies.yml</code>, or an empty array when the file is absent or empty (omitted entirely when App policies are not visible — i.e., when both App RBAC and App backend compute are disabled). <code>dangerousFileTypes</code> is a list of relative file paths with dangerous extensions, or an empty array when none are found.
+                    description: Check succeeded; <code>proxies</code> is the parsed <code>proxies.yml</code> configuration, or <code>null</code> when the App declares no external proxy domains. <code>policies</code> is the list of policy entries declared in the App's <code>policies.yml</code>, or an empty array when the file is absent or empty. <code>dangerousFileTypes</code> is a list of relative file paths with dangerous extensions, or an empty array when none are found.
                     content:
                         application/json:
                             schema:
@@ -256265,7 +258008,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "404":
-                    description: App not found or App sharing is not enabled
+                    description: App not found
                 "405":
                     description: Sharing is not supported for this resource type
                 "500":
@@ -256318,7 +258061,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "404":
-                    description: App not found or App sharing is not enabled
+                    description: App not found
                 "405":
                     description: Sharing is not supported for this resource type
                 "500":
@@ -258939,6 +260682,105 @@ paths:
                   schema:
                     $ref: "#/components/schemas/WorkerHealthScope"
                   description: Which Worker Processes to report on. <code>default</code> reflects only the primary Worker Process (<code>w:0</code>). <code>all</code> requires <i>every</i> Worker Process — plus the Load Balancing Worker Process when it exists — to be fully booted, and returns per-process counts.
+    /insights/inventory/{groupId}:
+        get:
+            operationId: getInsightsInventoryByGroupId
+            tags:
+                - insights
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Get Data Insights inventory (Cribl.Cloud only)
+            description: Return allowlisted topology metadata for Sources, Destinations, Routes, and Pipelines in a Worker Group, including Pack-scoped items (Cribl.Cloud only). The response omits credentials and other product configuration.
+            responses:
+                "200":
+                    description: Allowlisted topology inventory for the Worker Group.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/InsightsInventoryResponse"
+                            examples:
+                                InsightsInventoryResponseExamplesDefaultGroupTopology:
+                                    $ref: "#/components/examples/InsightsInventoryResponseExamplesDefaultGroupTopology"
+                "400":
+                    description: The Worker Group identifier is missing or empty.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SystemInsightsErrorResponse"
+                            examples:
+                                InsightsInventoryBadRequestExamplesMissingGroupId:
+                                    $ref: "#/components/examples/InsightsInventoryBadRequestExamplesMissingGroupId"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The Worker Group does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SystemInsightsErrorResponse"
+                            examples:
+                                InsightsInventoryNotFoundExamplesUnknownGroup:
+                                    $ref: "#/components/examples/InsightsInventoryNotFoundExamplesUnknownGroup"
+                "413":
+                    description: The inventory exceeds the maximum number of topology items.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SystemInsightsErrorResponse"
+                            examples:
+                                InsightsInventoryTooLargeExamplesItemCapExceeded:
+                                    $ref: "#/components/examples/InsightsInventoryTooLargeExamplesItemCapExceeded"
+                "429":
+                    description: The Config Helper that holds group configuration cannot be started because of memory or load pressure; retry after the Retry-After interval.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SystemInsightsErrorResponse"
+                            examples:
+                                InsightsInventoryTooManyRequestsExamplesConfigHelperSpawnRejected:
+                                    $ref: "#/components/examples/InsightsInventoryTooManyRequestsExamplesConfigHelperSpawnRejected"
+                    headers:
+                        retry-after:
+                            description: Number of seconds the client should wait before retrying the request
+                            schema:
+                                type: integer
+                                examples:
+                                    - 60
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: The Config Helper that holds group configuration is unavailable.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/SystemInsightsErrorResponse"
+                            examples:
+                                InsightsInventoryServiceUnavailableExamplesConfigHelperUnavailable:
+                                    $ref: "#/components/examples/InsightsInventoryServiceUnavailableExamplesConfigHelperUnavailable"
+            parameters:
+                - name: groupId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Worker Group whose topology to return.
     /insights/metrics/query:
         post:
             operationId: createInsightsMetricsQuery
@@ -259543,8 +261385,6 @@ paths:
             summary: Delete a job
             description: Delete the specified job.
             responses:
-                "200":
-                    description: The deleted job in a response envelope with <code>count</code> and <code>items</code>.
                 "204":
                     description: No Content
                 "400":
@@ -259578,15 +261418,6 @@ paths:
                             examples:
                                 JobsForbiddenResponseExamplesForbidden:
                                     $ref: "#/components/examples/JobsForbiddenResponseExamplesForbidden"
-                "404":
-                    description: The requested resource does not exist — Job not found.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                            examples:
-                                JobsNotFoundResponseExamplesJobNotFound:
-                                    $ref: "#/components/examples/JobsNotFoundResponseExamplesJobNotFound"
                 "500":
                     description: Unexpected server error.
                     content:
