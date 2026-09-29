@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.2-alpha.1790378418779-d0f841d5
+    version: 4.20.2-alpha.1790723452012-668d851e
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -23317,7 +23317,7 @@ components:
                 accessControlAllowMethods:
                     title: CORS allowed methods
                     type: array
-                    description: HTTP methods echoed in Access-Control-Allow-Methods on preflight.
+                    description: HTTP methods echoed in Access-Control-Allow-Methods on preflight
                     minItems: 0
                     items:
                         type: string
@@ -24857,6 +24857,51 @@ components:
                     type: boolean
                     title: Extract logs
                     description: Enable to extract each incoming log record to a separate event
+                accessControlAllowOrigin:
+                    title: CORS allowed origins
+                    type: array
+                    description: "HTTP origins allowed to send CORS requests (example: https://pivot.claude.ai). Supports wildcards. Leave empty to disable CORS. Note: IP allowlist/denylist rules are applied before CORS."
+                    minItems: 0
+                    items:
+                        type: string
+                        minLength: 1
+                        pattern: ^[\t\x20-\x7e\x80-\xff]+$
+                accessControlAllowHeaders:
+                    title: CORS allowed headers
+                    type: array
+                    description: HTTP headers echoed in Access-Control-Allow-Headers on preflight. Use "*" to allow all headers. Leave empty to allow all requested headers from an allowed origin. Origin matching and authentication still apply.
+                    minItems: 0
+                    items:
+                        type: string
+                        minLength: 1
+                        pattern: ^[\t\x20-\x7e\x80-\xff]+$
+                accessControlAllowMethods:
+                    title: CORS allowed methods
+                    type: array
+                    description: HTTP methods echoed in Access-Control-Allow-Methods on preflight
+                    minItems: 0
+                    items:
+                        type: string
+                        minLength: 1
+                        pattern: ^[\t\x20-\x7e\x80-\xff]+$
+                accessControlExposeHeaders:
+                    title: CORS exposed headers
+                    type: array
+                    description: Headers the browser is allowed to access from the response
+                    minItems: 0
+                    items:
+                        type: string
+                        minLength: 1
+                        pattern: ^[\t\x20-\x7e\x80-\xff]+$
+                accessControlAllowCredentials:
+                    type: boolean
+                    title: CORS include credentials
+                    description: Include credentials in cross-origin requests. Cannot be used with wildcard origins.
+                accessControlMaxAge:
+                    type: integer
+                    title: CORS max age (seconds)
+                    description: How long browsers should cache the preflight response, in whole seconds. Fractional values are invalid; browsers that cannot parse the header fall back to 5 seconds.
+                    minimum: 0
                 __template_environment:
                     type: string
                     description: Binds 'environment' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'environment' at runtime.
@@ -24875,6 +24920,12 @@ components:
                 __template_otlpVersion:
                     type: string
                     description: Binds 'otlpVersion' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'otlpVersion' at runtime.
+                __template_accessControlAllowOrigin:
+                    type: string
+                    description: Binds 'accessControlAllowOrigin' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'accessControlAllowOrigin' at runtime.
+                __template_accessControlAllowHeaders:
+                    type: string
+                    description: Binds 'accessControlAllowHeaders' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'accessControlAllowHeaders' at runtime.
             title: InputOpenTelemetry
         InputModelDrivenTelemetry:
             type: object
@@ -35908,6 +35959,7 @@ components:
                         - AWS_EKS_AUDIT_LOGS
                         - AWS_RESOLVER_QUERY_LOGS
                         - AZURE_ACTIVITY_LOGS
+                        - MICROSOFT_ENTRA_ID_AUDIT_LOGS
                         - GCP_AUDIT_LOGS
                         - GITHUB_AUDIT_LOGS
                         - OCI_AUDIT_LOGS
@@ -60525,12 +60577,22 @@ components:
                     additionalProperties:
                         type: integer
                     description: Per-dataset usage counts for the job.
+                engines:
+                    type: object
+                    properties:
+                        local:
+                            type: object
+                            additionalProperties:
+                                type: number
+                    required:
+                        - local
+                    description: Engine-usage statistics for the job. holds per-Local-Search-engine dataset counts.
                 fieldSummaries:
                     type: string
                     enum:
                         - none
                         - pushdown
-                    description: Whether field summaries were pushed down to ClickHouse or computed on the coordinator.
+                    description: Whether field summaries were pushed down to the Search V2 executor or computed on the coordinator.
                     x-speakeasy-unknown-values: allow
                 functions:
                     type: object
@@ -60907,6 +60969,17 @@ components:
                 cacheStatusByDatasetId:
                     $ref: "#/components/schemas/CacheStatusByDatasetId"
                     description: Per-dataset cache resolution status for this stage.
+                computeTypeByDatasetId:
+                    type: object
+                    additionalProperties:
+                        type: string
+                        enum:
+                            - v2
+                            - v1
+                            - local
+                            - lakehouse
+                        x-speakeasy-unknown-values: allow
+                    description: Planned compute type for each dataset in this stage.
                 dependencies:
                     type: array
                     items:
@@ -60950,6 +61023,7 @@ components:
                             - v2
                         x-speakeasy-unknown-values: allow
                     description: Per-dataset search version used in this stage.
+                    deprecated: true
                 status:
                     type: string
                     enum:
@@ -61030,7 +61104,7 @@ components:
                     description: Total log events surviving all pipeline filters.
                 fieldSummaries:
                     $ref: "#/components/schemas/FieldSummariesOptionsSearchAuditMetrics"
-                    description: when ClickHouse computed field summaries; otherwise.
+                    description: when the Search V2 executor computed field summaries; otherwise.
                 instanceTypeCodes:
                     type: array
                     items:
@@ -66583,7 +66657,10 @@ components:
                     x-speakeasy-unknown-values: allow
                 roleToAssume:
                     type: string
-                    description: ARN of the AWS IAM role to assume for accessing the Cribl Lake bucket.
+                    description: ARN of the AWS IAM read/write role to assume for accessing the Cribl Lake bucket.
+                roleToAssumeAdmin:
+                    type: string
+                    description: ARN of the AWS IAM admin role the Leader assumes for bucket administration (lifecycle, inventory, notification, KMS). Highside only.
                 roleToAssumeExternalId:
                     type: string
                     description: External ID to use when assuming the AWS IAM role. For Netskope buckets, this is the external ID for the Netskope-writer IAM role.
@@ -85886,7 +85963,7 @@ components:
                     description: Failure details if the search execution failed, or <code>null</code> if successful.
                 fieldSummaries:
                     $ref: "#/components/schemas/FieldSummariesOptionsSearchAuditMetrics"
-                    description: when ClickHouse computed field summaries; otherwise.
+                    description: when the Search V2 executor computed field summaries; otherwise.
                 firstResultExec:
                     oneOf:
                         - type: "null"
@@ -108040,7 +108117,7 @@ components:
                         - type: "null"
                 accessControlAllowMethods:
                     title: CORS allowed methods
-                    description: HTTP methods echoed in Access-Control-Allow-Methods on preflight.
+                    description: HTTP methods echoed in Access-Control-Allow-Methods on preflight
                     anyOf:
                         - type: array
                           minItems: 0
@@ -111314,6 +111391,63 @@ components:
                     anyOf:
                         - type: boolean
                         - type: "null"
+                accessControlAllowOrigin:
+                    title: CORS allowed origins
+                    description: "HTTP origins allowed to send CORS requests (example: https://pivot.claude.ai). Supports wildcards. Leave empty to disable CORS. Note: IP allowlist/denylist rules are applied before CORS."
+                    anyOf:
+                        - type: array
+                          minItems: 0
+                          items:
+                            type: string
+                            minLength: 1
+                            pattern: ^[\t\x20-\x7e\x80-\xff]+$
+                        - type: "null"
+                accessControlAllowHeaders:
+                    title: CORS allowed headers
+                    description: HTTP headers echoed in Access-Control-Allow-Headers on preflight. Use "*" to allow all headers. Leave empty to allow all requested headers from an allowed origin. Origin matching and authentication still apply.
+                    anyOf:
+                        - type: array
+                          minItems: 0
+                          items:
+                            type: string
+                            minLength: 1
+                            pattern: ^[\t\x20-\x7e\x80-\xff]+$
+                        - type: "null"
+                accessControlAllowMethods:
+                    title: CORS allowed methods
+                    description: HTTP methods echoed in Access-Control-Allow-Methods on preflight
+                    anyOf:
+                        - type: array
+                          minItems: 0
+                          items:
+                            type: string
+                            minLength: 1
+                            pattern: ^[\t\x20-\x7e\x80-\xff]+$
+                        - type: "null"
+                accessControlExposeHeaders:
+                    title: CORS exposed headers
+                    description: Headers the browser is allowed to access from the response
+                    anyOf:
+                        - type: array
+                          minItems: 0
+                          items:
+                            type: string
+                            minLength: 1
+                            pattern: ^[\t\x20-\x7e\x80-\xff]+$
+                        - type: "null"
+                accessControlAllowCredentials:
+                    title: CORS include credentials
+                    description: Include credentials in cross-origin requests. Cannot be used with wildcard origins.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                accessControlMaxAge:
+                    title: CORS max age (seconds)
+                    description: How long browsers should cache the preflight response, in whole seconds. Fractional values are invalid; browsers that cannot parse the header fall back to 5 seconds.
+                    anyOf:
+                        - type: integer
+                          minimum: 0
+                        - type: "null"
                 __template_environment:
                     description: Binds 'environment' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'environment' at runtime.
                     anyOf:
@@ -111341,6 +111475,16 @@ components:
                         - type: "null"
                 __template_otlpVersion:
                     description: Binds 'otlpVersion' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'otlpVersion' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_accessControlAllowOrigin:
+                    description: Binds 'accessControlAllowOrigin' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'accessControlAllowOrigin' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_accessControlAllowHeaders:
+                    description: Binds 'accessControlAllowHeaders' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'accessControlAllowHeaders' at runtime.
                     anyOf:
                         - type: string
                         - type: "null"
@@ -133789,6 +133933,7 @@ components:
                         - AWS_EKS_AUDIT_LOGS
                         - AWS_RESOLVER_QUERY_LOGS
                         - AZURE_ACTIVITY_LOGS
+                        - MICROSOFT_ENTRA_ID_AUDIT_LOGS
                         - GCP_AUDIT_LOGS
                         - GITHUB_AUDIT_LOGS
                         - OCI_AUDIT_LOGS
@@ -178156,7 +178301,12 @@ components:
                     description: "Authentication method used to access the Cribl Lake bucket.<br/><br/> <code>auto</code>: Automatic credential resolution<br/> <code>auto_rpc</code>: RPC-based automatic resolution<br/> <code>manual</code>: Explicit credentials."
                     x-speakeasy-unknown-values: allow
                 roleToAssume:
-                    description: ARN of the AWS IAM role to assume for accessing the Cribl Lake bucket.
+                    description: ARN of the AWS IAM read/write role to assume for accessing the Cribl Lake bucket.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                roleToAssumeAdmin:
+                    description: ARN of the AWS IAM admin role the Leader assumes for bucket administration (lifecycle, inventory, notification, KMS). Highside only.
                     anyOf:
                         - type: string
                         - type: "null"
@@ -178543,21 +178693,6 @@ components:
                                         - private_link
                                       x-speakeasy-unknown-values: allow
                                     - type: "null"
-                            privateLinkResourceId:
-                                description: Canonical Azure resource ID for the Storage Account, generated by Cribl Lake.
-                                readOnly: true
-                                anyOf:
-                                    - type: string
-                                      pattern: ^/subscriptions/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/resourceGroups/[^/]+/providers/Microsoft\.Storage/storageAccounts/[^/]+$
-                                    - type: "null"
-                            privateLinkId:
-                                description: Customer-visible Private Link request label, generated by Cribl Lake.
-                                readOnly: true
-                                anyOf:
-                                    - type: string
-                                      minLength: 1
-                                      maxLength: 50
-                                    - type: "null"
                             retentionPeriodInDays:
                                 description: Storage account-level retention period, in days. Supported only for Azure-backed Cribl Lake Destinations.
                                 anyOf:
@@ -178617,12 +178752,29 @@ components:
                                     - type: string
                                     - type: "null"
                             roleToAssume:
-                                description: AWS IAM role ARN to assume for accessing the storage.
+                                description: AWS IAM read/write role ARN to assume for accessing the storage.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            roleToAssumeAdmin:
+                                description: AWS IAM admin role ARN the Leader assumes for bucket administration (Highside only).
                                 anyOf:
                                     - type: string
                                     - type: "null"
                             roleToAssumeHybrid:
                                 description: AWS IAM role ARN to assume for hybrid deployments.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            workerRoleArns:
+                                description: ARNs of the customer Worker instance roles trusted by the read/write role (Highside only).
+                                anyOf:
+                                    - type: array
+                                      items:
+                                        type: string
+                                    - type: "null"
+                            searchExecutorRoleArn:
+                                description: ARN of the customer search-executor role trusted by the read/write role (Highside only).
                                 anyOf:
                                     - type: string
                                     - type: "null"
@@ -185343,7 +185495,7 @@ components:
             enum:
                 - none
                 - pushdown
-            description: when ClickHouse computed field summaries; otherwise.
+            description: when the Search V2 executor computed field summaries; otherwise.
             x-speakeasy-unknown-values: allow
         PendingComputeNodeStatusesTypeSearchJob:
             type: object
@@ -187184,10 +187336,21 @@ components:
                     description: AWS secret access key (for manual credentials).
                 roleToAssume:
                     type: string
-                    description: AWS IAM role ARN to assume for accessing the storage.
+                    description: AWS IAM read/write role ARN to assume for accessing the storage.
+                roleToAssumeAdmin:
+                    type: string
+                    description: AWS IAM admin role ARN the Leader assumes for bucket administration (Highside only).
                 roleToAssumeHybrid:
                     type: string
                     description: AWS IAM role ARN to assume for hybrid deployments.
+                workerRoleArns:
+                    type: array
+                    description: ARNs of the customer Worker instance roles trusted by the read/write role (Highside only).
+                    items:
+                        type: string
+                searchExecutorRoleArn:
+                    type: string
+                    description: ARN of the customer search-executor role trusted by the read/write role (Highside only).
                 roleToAssumeExternalId:
                     type: string
                     description: External ID required when assuming the IAM role.
@@ -187491,17 +187654,6 @@ components:
                 networkingMethod:
                     $ref: "#/components/schemas/NetworkingMethodOptionsCriblLakeStorageLocationConfig"
                     description: Networking method used to connect to Azure Blob Storage (for azure_blob provider).
-                privateLinkResourceId:
-                    type: string
-                    description: Canonical Azure resource ID for the Storage Account, generated by Cribl Lake.
-                    readOnly: true
-                    pattern: ^/subscriptions/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/resourceGroups/[^/]+/providers/Microsoft\.Storage/storageAccounts/[^/]+$
-                privateLinkId:
-                    type: string
-                    description: Customer-visible Private Link request label, generated by Cribl Lake.
-                    readOnly: true
-                    minLength: 1
-                    maxLength: 50
                 retentionPeriodInDays:
                     type: integer
                     minimum: 1
@@ -196457,7 +196609,7 @@ components:
                           dataTypeId: generic_ndjson
         DatasetCreateExamplesMinimalS3:
             summary: Create an S3 Dataset (v1) with only required fields
-            description: "Example request body for creating a Cribl Search Dataset that uses an existing S3 Dataset Provider using only required fields. The <code>type</code> value must match the Dataset Provider. This is the v1 shape; for ClickHouse/multi-path setups use <code>searchVersion: v2</code> with <code>paths</code> instead."
+            description: "Example request body for creating a Cribl Search Dataset that uses an existing S3 Dataset Provider using only required fields. The <code>type</code> value must match the Dataset Provider. This is the v1 shape; for Search V2 executor/multi-path setups use <code>searchVersion: v2</code> with <code>paths</code> instead."
             value:
                 id: prod_access_logs
                 provider: my_s3_provider
@@ -267274,7 +267426,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Download a log file for a search job (Cribl.Cloud only)
-            description: Download the contents of a specific log file for the specified search job (Cribl.Cloud only). Most log files are Newline Delimited JSON (NDJSON). The <code>explain.log</code> file is plain text (ClickHouse EXPLAIN output).
+            description: Download the contents of a specific log file for the specified search job (Cribl.Cloud only). Most log files are Newline Delimited JSON (NDJSON). The <code>explain.log</code> file is plain text (Search V2 executor EXPLAIN output).
             responses:
                 "200":
                     description: The requested string object.
