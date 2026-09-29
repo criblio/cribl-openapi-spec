@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1790464287881-76ecb845
+    version: 4.21.0-alpha.1790723457417-16f55414
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -63976,6 +63976,9 @@ components:
                 enabled:
                     type: boolean
                     description: Whether the monitor is active and evaluated.
+                evaluationIntervalSec:
+                    type: integer
+                    description: Evaluation cadence in seconds. Integer multiple of 60 between 60 and 3600. Defaults to 60 when omitted.
                 expr:
                     type: array
                     items:
@@ -64100,6 +64103,9 @@ components:
                         enabled:
                             type: boolean
                             description: Whether the monitor is active and evaluated.
+                        evaluationIntervalSec:
+                            type: integer
+                            description: Evaluation cadence in seconds. Integer multiple of 60 between 60 and 3600. Defaults to 60 when omitted.
                         expr:
                             type: array
                             items:
@@ -73535,6 +73541,15 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        MonitorEvalHealth:
+            type: string
+            enum:
+                - ok
+                - no_data
+                - missing_series
+                - error
+            title: MonitorEvalHealth
+            x-speakeasy-unknown-values: allow
         MonitorEvalStatus:
             type: string
             enum:
@@ -73551,6 +73566,12 @@ components:
                 fingerprint:
                     type: string
                     description: Hash identifying the specific alert instance (label-set fingerprint).
+                health:
+                    $ref: "#/components/schemas/MonitorEvalHealth"
+                    description: "Health of the evaluation, independent of breach severity: <code>ok</code> when the instance evaluated normally, <code>no_data</code> when the whole Monitor matched no series, <code>missing_series</code> when this instance's series disappeared while others remained, or <code>error</code> when the evaluation failed to run."
+                health_reason:
+                    type: string
+                    description: Additional detail about the evaluation health. Empty unless the engine recorded a reason.
                 labels:
                     type: object
                     additionalProperties:
@@ -73633,6 +73654,9 @@ components:
                 fingerprint:
                     type: string
                     description: Stable identity of a single monitor instance — one distinct label-set of the monitor's query.
+                health:
+                    $ref: "#/components/schemas/MonitorEvalHealth"
+                    description: "Health of the evaluation, independent of breach severity: <code>ok</code> when the instance evaluated normally, <code>no_data</code> when the whole Monitor matched no series, <code>missing_series</code> when this instance's series disappeared while others remained, or <code>error</code> when the evaluation failed to run."
                 monitor_id:
                     type: string
                     description: The monitor this instance belongs to.
@@ -73644,6 +73668,7 @@ components:
                     description: Confirmed evaluation status with fire/clear delays already applied. One of <code>critical</code>, <code>warning</code>, <code>info</code>, <code>ok</code>, <code>no_data</code>.
             required:
                 - fingerprint
+                - health
                 - monitor_id
                 - pending_status
                 - status
@@ -79454,6 +79479,34 @@ components:
                 - type
             description: Allowlisted Source topology metadata for the Data Insights inventory.
             title: InsightsInventorySource
+        InsightsInventorySubscription:
+            type: object
+            properties:
+                disabled:
+                    type: boolean
+                    description: If <code>true</code>, the Subscription is disabled. Otherwise, <code>false</code>.
+                groupId:
+                    type: string
+                    description: Unique identifier of the Worker Group that contains the item.
+                id:
+                    type: string
+                    description: Unique identifier of the Subscription.
+                packId:
+                    type: string
+                    description: Unique identifier of the Pack that contains the item. Omitted for items outside a Pack.
+                packedId:
+                    type: string
+                    description: Context-qualified item identifier. Pack items use the Pack identifier as a prefix.
+                pipeline:
+                    type: string
+                    description: Unique identifier of the Pipeline that processes matching events.
+            required:
+                - groupId
+                - id
+                - packedId
+                - pipeline
+            description: Allowlisted Subscription topology metadata for the Data Insights inventory. A Subscription is a runtime Route with no persisted routing-table row and no Destination; its data terminates at the Subscription.
+            title: InsightsInventorySubscription
         InsightsInventoryResponse:
             type: object
             properties:
@@ -79480,12 +79533,18 @@ components:
                     items:
                         $ref: "#/components/schemas/InsightsInventorySource"
                     description: Sources and collection jobs in the Worker Group and its Packs.
+                subscriptions:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/InsightsInventorySubscription"
+                    description: Subscriptions in the Worker Group. Subscriptions are never Pack-scoped.
             required:
                 - groupId
                 - outputs
                 - pipelines
                 - routes
                 - sources
+                - subscriptions
             description: Allowlisted topology inventory for one Worker Group.
             title: InsightsInventoryResponse
         SystemInsightsErrorResponse:
@@ -84940,7 +84999,7 @@ components:
                     description: When <code>true</code>, a stop was requested and is honored at the next task or tool-call boundary. An in-flight tool call is allowed to finish.
                 title:
                     type: string
-                    description: Display title for the run. Absent until one is assigned.
+                    description: Display title for the run. New runs receive an immediate derived title that may be refined asynchronously.
                 triggerInput:
                     type: string
                     description: Input the run was started with. Absent when the request omitted <code>input</code> and the trigger has no <code>defaultInput</code>.
@@ -85189,7 +85248,7 @@ components:
                             description: When <code>true</code>, a stop was requested and is honored at the next task or tool-call boundary. An in-flight tool call is allowed to finish.
                         title:
                             type: string
-                            description: Display title for the run. Absent until one is assigned.
+                            description: Display title for the run. New runs receive an immediate derived title that may be refined asynchronously.
                         triggerInput:
                             type: string
                             description: Input the run was started with. Absent when the request omitted <code>input</code> and the trigger has no <code>defaultInput</code>.
@@ -85200,7 +85259,7 @@ components:
                         workflowId:
                             type: string
                             description: Id of the workflow this run belongs to.
-                    description: Run metadata changes caused by this event. Terminal run events contain the complete final metadata.
+                    description: Run metadata changes caused by this event. Terminal events contain final lifecycle fields and omit independently mutable fields such as title.
                 statePatch:
                     $ref: "#/components/schemas/WorkflowRunStatePatch"
                     description: Run state changes caused by this event. Terminal run events contain the complete final state. Omitted on legacy entries and events that do not change state.
@@ -173396,34 +173455,6 @@ components:
                             anyOf:
                                 - type: string
                                 - type: "null"
-        ProfilerItemPartialRequest:
-            type: object
-            properties:
-                createTime:
-                    description: Timestamp (in Unix time) when the profile capture was created.
-                    anyOf:
-                        - type: integer
-                        - type: "null"
-                id:
-                    type: string
-                    description: Filename of the CPU profile capture.
-                profId:
-                    description: Optional suffix embedded in the capture filename. Omit or send an empty string to let the server choose a value. When non-empty, only ASCII letters, digits, and underscores are allowed.
-                    anyOf:
-                        - type: string
-                          pattern: ^[A-Za-z0-9_]*$
-                        - type: "null"
-                size:
-                    description: Size of the profile file, in bytes.
-                    anyOf:
-                        - type: integer
-                        - type: "null"
-                workerId:
-                    description: Identifier for the Worker Process that generated the profile, extracted from the filename of the CPU profile capture.
-                    anyOf:
-                        - type: string
-                        - type: "null"
-            title: ProfilerItemPartialRequest
         RoutesInputPartialRequest:
             type: object
             properties:
@@ -181529,6 +181560,11 @@ components:
                 enabled:
                     type: boolean
                     description: Whether the monitor is active and evaluated.
+                evaluationIntervalSec:
+                    description: Evaluation cadence in seconds. Integer multiple of 60 between 60 and 3600. Defaults to 60 when omitted.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 expr:
                     type: array
                     items:
@@ -181648,6 +181684,11 @@ components:
                             description: Whether the monitor is active and evaluated.
                             anyOf:
                                 - type: boolean
+                                - type: "null"
+                        evaluationIntervalSec:
+                            description: Evaluation cadence in seconds. Integer multiple of 60 between 60 and 3600. Defaults to 60 when omitted.
+                            anyOf:
+                                - type: integer
                                 - type: "null"
                         expr:
                             description: Query expressions evaluated to produce the monitor's series.
@@ -196271,14 +196312,6 @@ components:
                 count: 2
                 offset: 0
                 limit: 20
-        ProfilerUpdateResponseExamplesProfilerUpdated:
-            summary: Update a Profiler capture
-            description: Example response for updating an existing Profiler capture.
-            value:
-                id: profile-w0-1735123456789.cpuprofile
-                workerId: w0
-                size: 524288
-                createTime: 1735123456
         RoutesResponseExamplesDefaultRoutingTable:
             summary: Default Routing table response
             description: Example response for listing the default Routing table with a single pass-through Route.
@@ -203558,7 +203591,7 @@ components:
                 status: down
         InsightsInventoryResponseExamplesDefaultGroupTopology:
             summary: Return allowlisted topology for a Worker Group
-            description: Example response for a Worker Group that contains a Source listening for both TCP and UDP traffic, a Source with a direct Destination connection, an Output Router that forwards to two Destinations, the default Destination, a Destination with a post-processing Pipeline, one Route, and two Pipelines.
+            description: Example response for a Worker Group that contains a Source listening for both TCP and UDP traffic, a Source with a direct Destination connection, an Output Router that forwards to two Destinations, the default Destination, a Destination with a post-processing Pipeline, one Route, two Pipelines, and one Subscription.
             value:
                 groupId: default
                 sources:
@@ -203623,6 +203656,12 @@ components:
                       pipelineIsPassthrough: false
                       groupId: default
                       packedId: reduce_volume
+                subscriptions:
+                    - id: audit_stream
+                      pipeline: reduce_volume
+                      disabled: false
+                      groupId: default
+                      packedId: audit_stream
         InsightsInventoryBadRequestExamplesMissingGroupId:
             summary: Missing Worker Group identifier
             description: Example error response returned when the Worker Group identifier is missing or empty.
@@ -205525,6 +205564,7 @@ components:
                       workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                       revision: published
                       revisionAt: 1723920000000
+                      title: Traffic Spike Investigation
                       status: completed
                       owner: admin
                       displayOwner: Alice Smith
@@ -205537,6 +205577,7 @@ components:
                       workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                       revision: published
                       revisionAt: 1723920000000
+                      title: Investigate Spikes
                       status: running
                       owner: admin
                       displayOwner: admin
@@ -205582,12 +205623,13 @@ components:
                 message: What caused the spike?
         CreateWorkflowRunResponseExamplesRunCreated:
             summary: Run created
-            description: Returns 201 with persisted run metadata after the workflow walk is scheduled. <code>status</code> is initially <code>running</code>; execution continues in the background.
+            description: Returns 201 with persisted run metadata after the workflow walk is scheduled. <code>status</code> is initially <code>running</code>; execution and best-effort title refinement continue in the background.
             value:
                 runId: run_1724000000000_1
                 workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                 revision: published
                 revisionAt: 1723920000000
+                title: Investigate the traffic spike at 14:30 UTC
                 status: running
                 owner: admin
                 displayOwner: Alice Smith
@@ -205615,6 +205657,7 @@ components:
                     workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                     revision: published
                     revisionAt: 1723920000000
+                    title: Traffic Spike Investigation
                     status: completed
                     owner: admin
                     displayOwner: Alice Smith
@@ -205727,6 +205770,7 @@ components:
                 workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
                 revision: published
                 revisionAt: 1723920000000
+                title: Traffic Spike Investigation
                 status: running
                 owner: admin
                 displayOwner: Alice Smith
@@ -211750,14 +211794,6 @@ components:
                             inherit: ^Parent\.(myID|branchLocation)$
                             unrollIdxField: unroll_idx
                             pretty: false
-        UpdateProfilerExamplesUpdateProfilerCapturePartialRequest:
-            summary: Update a Profiler capture
-            description: "Example request body for updating an existing Profiler capture.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
-            value:
-                id: profile-w0-1735123456789.cpuprofile
-                workerId: w0
-                size: 524288
-                createTime: 1735123456
         RoutesUpdateExamplesBasicRoutePartialRequest:
             summary: Update Routes with a basic Route configuration
             description: "Example request body for updating the default Routes table (<code>id: default</code>) with a simple Route that filters access.log events and sends them to the main Pipeline.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
@@ -223373,66 +223409,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Profiler capture to get.
-        patch:
-            operationId: updateProfilerItemById
-            tags:
-                - profiler
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Update a Profiler capture
-            description: "Update the specified Profiler capture.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
-            responses:
-                "200":
-                    description: The updated Profiler capture object in a single-item list.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ProfilerItem"
-                            examples:
-                                ProfilerUpdateResponseExamplesProfilerUpdated:
-                                    $ref: "#/components/examples/ProfilerUpdateResponseExamplesProfilerUpdated"
-                "400":
-                    description: Failed validation or malformed input, such as missing or invalid parameters.
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "404":
-                    description: The requested resource does not exist.
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            requestBody:
-                description: ProfilerItem object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/ProfilerItemPartialRequest"
-                        examples:
-                            UpdateProfilerExamplesUpdateProfilerCapture:
-                                $ref: "#/components/examples/UpdateProfilerExamplesUpdateProfilerCapturePartialRequest"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: The <code>id</code> of the Profiler capture to update.
     /routes/{id}:
         get:
             operationId: getRoutesById
@@ -248741,12 +248717,17 @@ paths:
             summary: Create a Direct Access HTTP Source for a Lake (Cribl.Cloud only)
             description: Create a new Direct Access HTTP Source for the specified Lake (Cribl.Cloud only).
             responses:
-                "200":
+                "201":
                     description: The created CriblLakeDirectAccessItem object.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/CriblLakeDirectAccessItem"
+                    headers:
+                        location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -253822,10 +253803,10 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Current per-instance monitor state
-            description: Returns the current state of each monitor instance from <code>monitor_instances_latest</code> — the confirmed <code>status</code> (fire/clear delays already applied) plus the in-flight <code>pending_status</code>. Unlike <code>/alert_activity/state</code> this is not windowed or paginated; it is the authoritative current state for the Monitor List, and is scoped to the dataset in the path.
+            description: Returns the current state of each monitor instance from <code>monitor_instances_latest</code> — the confirmed <code>status</code> (fire/clear delays already applied) plus the in-flight <code>pending_status</code>, and the evaluation <code>health</code> axis (<code>ok</code>, <code>no_data</code>, or <code>missing_series</code>) which is reported independently of breach severity. Unlike <code>/alert_activity/state</code> this is not windowed or paginated; it is the authoritative current state for the Monitor List, and is scoped to the dataset in the path.
             responses:
                 "200":
-                    description: One row per monitor instance with its current status and pending_status.
+                    description: One row per monitor instance with its current status, pending_status, and evaluation health.
                     content:
                         application/json:
                             schema:
@@ -268716,7 +268697,7 @@ paths:
                 - leader
                 - single
             summary: Start a workflow run
-            description: Validates input, creates the run directory, kicks off the workflow, and returns 201 with the run metadata without waiting for the walk. The authenticated user is stamped as <code>owner</code>. The requested revision defaults to <code>published</code>. When the body omits <code>input</code>, the selected revision's <code>trigger.defaultInput</code> is copied into <code>triggerInput</code> if set.
+            description: Validates input, creates the run directory, kicks off the workflow, and returns 201 with the run metadata without waiting for the walk. The authenticated user is stamped as <code>owner</code>. The requested revision defaults to <code>published</code>. When the body omits <code>input</code>, the selected revision's <code>trigger.defaultInput</code> is copied into <code>triggerInput</code> if set. The response contains an immediate title derived from the trigger input or workflow name; a best-effort background model call may refine it afterward.
             responses:
                 "201":
                     description: The created WorkflowRunMeta object.
@@ -275065,6 +275046,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/CriblLakeSource"
+                    headers:
+                        location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — Missing or invalid sourceType
                 "401":
