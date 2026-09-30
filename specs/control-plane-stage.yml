@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.20.2-alpha.1790291466675-f354bd0d
+  version: 4.20.2-alpha.1790810002512-7c5e9aa7
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -25069,15 +25069,19 @@ components:
           title: Visibility timeout seconds
           description: After messages are retrieved by a ReceiveMessage request,
             @{product} will hide them from subsequent retrieve requests for at
-            least this duration. You can set this as high as 43200 sec. (12
-            hours).
+            least this duration. New Sources default to 600 sec. (10 minutes);
+            existing Sources keep their configured value. You can set this as
+            high as 43200 sec. (12 hours), but a long timeout keeps a message
+            invisible to other pollers for that whole window after a
+            non-graceful shutdown, so redelivery can be hours away.
           minimum: 0
           maximum: 43200
         numReceivers:
           type: number
           title: Number of receivers
           description: How many receiver processes to run. The higher the number, the
-            better the throughput - at the expense of CPU overhead.
+            better the throughput - at the expense of CPU overhead. Not applied
+            when fan-out is enabled.
           minimum: 1
           maximum: 100
         socketTimeout:
@@ -25091,7 +25095,8 @@ components:
           type: boolean
           title: Skip file on error
           description: Skip files that trigger a processing error. Disabled by default,
-            which allows retries after processing errors.
+            which allows retries after processing errors. Not applied when
+            fan-out is enabled.
         includeSqsMetadata:
           type: boolean
           title: Include notification metadata
@@ -25132,9 +25137,28 @@ components:
           title: Share AssumeRole ARN settings
           description: Use the same settings for S3 and SQS
         preprocess:
-          $ref: "#/components/schemas/PreprocessType"
+          type: object
           description: Optional preprocessing step that pipes collected data through an
-            external command before ingestion.
+            external command before ingestion. Not applied when fan-out is
+            enabled.
+          required:
+            - disabled
+          properties:
+            disabled:
+              type: boolean
+              title: Disabled
+              description: Disabled
+            command:
+              type: string
+              title: Command
+              description: Command to feed the data through (via stdin) and process its output
+                (stdout)
+            args:
+              type: array
+              title: Arguments
+              description: Arguments to be added to the custom command
+              items:
+                type: string
         metadata:
           type: array
           title: Fields
@@ -25142,8 +25166,24 @@ components:
           items:
             $ref: "#/components/schemas/MetadataConfInputCollection"
         checkpointing:
-          $ref: "#/components/schemas/CheckpointingType"
-          description: Checkpoint settings used to resume processing after an interruption.
+          type: object
+          description: Checkpoint settings used to resume processing after an
+            interruption. Not applied when fan-out is enabled.
+          required:
+            - enabled
+          properties:
+            enabled:
+              type: boolean
+              title: Enable checkpointing
+              description: Resume processing files after an interruption
+            retries:
+              type: number
+              title: Retries
+              description: The number of times to retry processing when a processing error
+                occurs. If Skip file on error is enabled, this setting is
+                ignored.
+              maximum: 100
+              minimum: 0
         pollTimeout:
           type: number
           title: Poll timeout (secs)
@@ -25159,6 +25199,18 @@ components:
           description: Character encoding to use when parsing ingested data. When not set,
             @{product} will default to UTF-8 but may incorrectly interpret
             multi-byte characters.
+        visibilityTimeoutWarning:
+          type: string
+          description: Warning displayed when the visibility timeout is configured high.
+          readOnly: true
+          const: ""
+        enableFanout:
+          type: boolean
+          title: Enable fan-out
+          description: Spread this Source's file processing across all Worker Processes on
+            the Worker, instead of having one Worker Process handle every file
+            of an SQS message. When enabled, Number of receivers, Skip file on
+            error, Checkpointing and Custom command are not applied.
         description:
           type: string
           title: Description
@@ -25867,7 +25919,7 @@ components:
         accessControlAllowMethods:
           title: CORS allowed methods
           type: array
-          description: HTTP methods echoed in Access-Control-Allow-Methods on preflight.
+          description: HTTP methods echoed in Access-Control-Allow-Methods on preflight
           minItems: 0
           items:
             type: string
@@ -27711,6 +27763,57 @@ components:
           type: boolean
           title: Extract logs
           description: Enable to extract each incoming log record to a separate event
+        accessControlAllowOrigin:
+          title: CORS allowed origins
+          type: array
+          description: "HTTP origins allowed to send CORS requests (example: https://pivot.claude.ai). Supports wildcards. Leave empty to disable CORS. Note: IP allowlist/denylist rules are applied before CORS."
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[\t\x20-\x7e\x80-\xff]+$
+        accessControlAllowHeaders:
+          title: CORS allowed headers
+          type: array
+          description: HTTP headers echoed in Access-Control-Allow-Headers on preflight.
+            Use "*" to allow all headers. Leave empty to allow all requested
+            headers from an allowed origin. Origin matching and authentication
+            still apply.
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[\t\x20-\x7e\x80-\xff]+$
+        accessControlAllowMethods:
+          title: CORS allowed methods
+          type: array
+          description: HTTP methods echoed in Access-Control-Allow-Methods on preflight
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[\t\x20-\x7e\x80-\xff]+$
+        accessControlExposeHeaders:
+          title: CORS exposed headers
+          type: array
+          description: Headers the browser is allowed to access from the response
+          minItems: 0
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[\t\x20-\x7e\x80-\xff]+$
+        accessControlAllowCredentials:
+          type: boolean
+          title: CORS include credentials
+          description: Include credentials in cross-origin requests. Cannot be used with
+            wildcard origins.
+        accessControlMaxAge:
+          type: integer
+          title: CORS max age (seconds)
+          description: How long browsers should cache the preflight response, in whole
+            seconds. Fractional values are invalid; browsers that cannot parse
+            the header fall back to 5 seconds.
+          minimum: 0
         __template_environment:
           type: string
           description: Binds 'environment' to a variable for dynamic value resolution. Set
@@ -27741,6 +27844,18 @@ components:
           description: Binds 'otlpVersion' to a variable for dynamic value resolution. Set
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'otlpVersion' at runtime.
+        __template_accessControlAllowOrigin:
+          type: string
+          description: Binds 'accessControlAllowOrigin' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowOrigin' at runtime.
+        __template_accessControlAllowHeaders:
+          type: string
+          description: Binds 'accessControlAllowHeaders' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'accessControlAllowHeaders' at runtime.
       title: InputOpenTelemetry
     InputModelDrivenTelemetry:
       type: object
@@ -40943,6 +41058,7 @@ components:
             - AWS_EKS_AUDIT_LOGS
             - AWS_RESOLVER_QUERY_LOGS
             - AZURE_ACTIVITY_LOGS
+            - MICROSOFT_ENTRA_ID_AUDIT_LOGS
             - GCP_AUDIT_LOGS
             - GITHUB_AUDIT_LOGS
             - OCI_AUDIT_LOGS
@@ -70162,23 +70278,6 @@ components:
           type: string
           title: Description
           description: Optional description of this rule's purpose
-    CheckpointingType:
-      type: object
-      description: Checkpoint settings used to resume processing after an interruption.
-      required:
-        - enabled
-      properties:
-        enabled:
-          type: boolean
-          title: Enable checkpointing
-          description: Resume processing files after an interruption
-        retries:
-          type: number
-          title: Retries
-          description: The number of times to retry processing when a processing error
-            occurs. If Skip file on error is enabled, this setting is ignored.
-          maximum: 100
-          minimum: 0
     SqsAuthenticationMethodOptions:
       enum:
         - auto
@@ -70201,6 +70300,23 @@ components:
       enum:
         - kinesis
       description: Connector type identifier.
+    CheckpointingType:
+      type: object
+      description: Checkpoint settings used to resume processing after an interruption.
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+          title: Enable checkpointing
+          description: Resume processing files after an interruption
+        retries:
+          type: number
+          title: Retries
+          description: The number of times to retry processing when a processing error
+            occurs. If Skip file on error is enabled, this setting is ignored.
+          maximum: 100
+          minimum: 0
     TypeOptionsS3:
       type: string
       enum:
