@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.20.2-alpha.1790723341719-668d851e
+  version: 4.20.2-alpha.1790982726997-b2cc5d5a
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -24977,15 +24977,19 @@ components:
           title: Visibility timeout seconds
           description: After messages are retrieved by a ReceiveMessage request,
             @{product} will hide them from subsequent retrieve requests for at
-            least this duration. You can set this as high as 43200 sec. (12
-            hours).
+            least this duration. New Sources default to 600 sec. (10 minutes);
+            existing Sources keep their configured value. You can set this as
+            high as 43200 sec. (12 hours), but a long timeout keeps a message
+            invisible to other pollers for that whole window after a
+            non-graceful shutdown, so redelivery can be hours away.
           minimum: 0
           maximum: 43200
         numReceivers:
           type: number
           title: Number of receivers
           description: How many receiver processes to run. The higher the number, the
-            better the throughput - at the expense of CPU overhead.
+            better the throughput - at the expense of CPU overhead. Not applied
+            when fan-out is enabled.
           minimum: 1
           maximum: 100
         socketTimeout:
@@ -24999,7 +25003,8 @@ components:
           type: boolean
           title: Skip file on error
           description: Skip files that trigger a processing error. Disabled by default,
-            which allows retries after processing errors.
+            which allows retries after processing errors. Not applied when
+            fan-out is enabled.
         includeSqsMetadata:
           type: boolean
           title: Include notification metadata
@@ -25040,9 +25045,28 @@ components:
           title: Share AssumeRole ARN settings
           description: Use the same settings for S3 and SQS
         preprocess:
-          $ref: "#/components/schemas/PreprocessType"
+          type: object
           description: Optional preprocessing step that pipes collected data through an
-            external command before ingestion.
+            external command before ingestion. Not applied when fan-out is
+            enabled.
+          required:
+            - disabled
+          properties:
+            disabled:
+              type: boolean
+              title: Disabled
+              description: Disabled
+            command:
+              type: string
+              title: Command
+              description: Command to feed the data through (via stdin) and process its output
+                (stdout)
+            args:
+              type: array
+              title: Arguments
+              description: Arguments to be added to the custom command
+              items:
+                type: string
         metadata:
           type: array
           title: Fields
@@ -25050,8 +25074,24 @@ components:
           items:
             $ref: "#/components/schemas/MetadataConfInputCollection"
         checkpointing:
-          $ref: "#/components/schemas/CheckpointingType"
-          description: Checkpoint settings used to resume processing after an interruption.
+          type: object
+          description: Checkpoint settings used to resume processing after an
+            interruption. Not applied when fan-out is enabled.
+          required:
+            - enabled
+          properties:
+            enabled:
+              type: boolean
+              title: Enable checkpointing
+              description: Resume processing files after an interruption
+            retries:
+              type: number
+              title: Retries
+              description: The number of times to retry processing when a processing error
+                occurs. If Skip file on error is enabled, this setting is
+                ignored.
+              maximum: 100
+              minimum: 0
         pollTimeout:
           type: number
           title: Poll timeout (secs)
@@ -25067,6 +25107,18 @@ components:
           description: Character encoding to use when parsing ingested data. When not set,
             @{product} will default to UTF-8 but may incorrectly interpret
             multi-byte characters.
+        visibilityTimeoutWarning:
+          type: string
+          description: Warning displayed when the visibility timeout is configured high.
+          readOnly: true
+          const: ""
+        enableFanout:
+          type: boolean
+          title: Enable fan-out
+          description: Spread this Source's file processing across all Worker Processes on
+            the Worker, instead of having one Worker Process handle every file
+            of an SQS message. When enabled, Number of receivers, Skip file on
+            error, Checkpointing and Custom command are not applied.
         description:
           type: string
           title: Description
@@ -25936,7 +25988,9 @@ components:
           type: string
           title: Record data format
           description: Format of data inside the Kinesis Stream records. Gzip compression
-            is automatically detected.
+            is automatically detected. Cloudwatch Logs records become one event
+            per log event, keeping the event id, message type, log group, log
+            stream, owner, and subscription filters; other fields are dropped.
           enum:
             - cribl
             - ndjson
@@ -27591,6 +27645,21 @@ components:
             only bounds connections.
           minimum: 1
           maximum: 10000
+        maxConnectionAgeSec:
+          type: number
+          title: Maximum connection age (seconds)
+          description: Maximum time a gRPC connection may stay open, including while idle,
+            before @{product} closes it and frees the slot for new clients. Use
+            0 for unlimited; maximum 86400 sec. (24 hours).
+          minimum: 0
+        maxConnectionAgeGraceSec:
+          type: number
+          title: Connection age grace period (seconds)
+          description: After the maximum connection age is reached, how long @{product}
+            waits for in-flight requests to complete before forcibly closing the
+            connection. Only applies when Maximum connection age is not 0.
+            Maximum 3600 sec. (1 hour).
+          minimum: 0
         description:
           type: string
           title: Description
@@ -89040,8 +89109,11 @@ components:
           title: Visibility timeout seconds
           description: After messages are retrieved by a ReceiveMessage request,
             @{product} will hide them from subsequent retrieve requests for at
-            least this duration. You can set this as high as 43200 sec. (12
-            hours).
+            least this duration. New Sources default to 600 sec. (10 minutes);
+            existing Sources keep their configured value. You can set this as
+            high as 43200 sec. (12 hours), but a long timeout keeps a message
+            invisible to other pollers for that whole window after a
+            non-graceful shutdown, so redelivery can be hours away.
           anyOf:
             - type: number
               minimum: 0
@@ -89050,7 +89122,8 @@ components:
         numReceivers:
           title: Number of receivers
           description: How many receiver processes to run. The higher the number, the
-            better the throughput - at the expense of CPU overhead.
+            better the throughput - at the expense of CPU overhead. Not applied
+            when fan-out is enabled.
           anyOf:
             - type: number
               minimum: 1
@@ -89068,7 +89141,8 @@ components:
         skipOnError:
           title: Skip file on error
           description: Skip files that trigger a processing error. Disabled by default,
-            which allows retries after processing errors.
+            which allows retries after processing errors. Not applied when
+            fan-out is enabled.
           anyOf:
             - type: boolean
             - type: "null"
@@ -89129,7 +89203,8 @@ components:
             - type: "null"
         preprocess:
           description: Optional preprocessing step that pipes collected data through an
-            external command before ingestion.
+            external command before ingestion. Not applied when fan-out is
+            enabled.
           anyOf:
             - type: object
               properties:
@@ -89162,7 +89237,8 @@ components:
                 $ref: "#/components/schemas/MetadataConfInputCollection"
             - type: "null"
         checkpointing:
-          description: Checkpoint settings used to resume processing after an interruption.
+          description: Checkpoint settings used to resume processing after an
+            interruption. Not applied when fan-out is enabled.
           anyOf:
             - type: object
               properties:
@@ -89199,6 +89275,22 @@ components:
             multi-byte characters.
           anyOf:
             - type: string
+            - type: "null"
+        visibilityTimeoutWarning:
+          description: Warning displayed when the visibility timeout is configured high.
+          readOnly: true
+          anyOf:
+            - type: string
+              const: ""
+            - type: "null"
+        enableFanout:
+          title: Enable fan-out
+          description: Spread this Source's file processing across all Worker Processes on
+            the Worker, instead of having one Worker Process handle every file
+            of an SQS message. When enabled, Number of receivers, Skip file on
+            error, Checkpointing and Custom command are not applied.
+          anyOf:
+            - type: boolean
             - type: "null"
         description:
           title: Description
@@ -91114,7 +91206,9 @@ components:
         payloadFormat:
           title: Record data format
           description: Format of data inside the Kinesis Stream records. Gzip compression
-            is automatically detected.
+            is automatically detected. Cloudwatch Logs records become one event
+            per log event, keeping the event id, message type, log group, log
+            stream, owner, and subscription filters; other fields are dropped.
           x-speakeasy-enum-descriptions:
             - Cribl
             - Newline JSON
@@ -94479,6 +94573,25 @@ components:
             - type: number
               minimum: 1
               maximum: 10000
+            - type: "null"
+        maxConnectionAgeSec:
+          title: Maximum connection age (seconds)
+          description: Maximum time a gRPC connection may stay open, including while idle,
+            before @{product} closes it and frees the slot for new clients. Use
+            0 for unlimited; maximum 86400 sec. (24 hours).
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        maxConnectionAgeGraceSec:
+          title: Connection age grace period (seconds)
+          description: After the maximum connection age is reached, how long @{product}
+            waits for in-flight requests to complete before forcibly closing the
+            connection. Only applies when Maximum connection age is not 0.
+            Maximum 3600 sec. (1 hour).
+          anyOf:
+            - type: number
+              minimum: 0
             - type: "null"
         description:
           title: Description
@@ -166794,6 +166907,10 @@ components:
             oneOf:
               - type: string
               - type: number
+        literal:
+          type: boolean
+          description: If <code>true</code>, <code>raw</code> is a constant value rather
+            than a field to read from the event.
     AuthenticationProtocolOptionsV3User:
       type: string
       enum:
@@ -167805,23 +167922,6 @@ components:
           type: string
           title: Description
           description: Optional description of this rule's purpose
-    CheckpointingType:
-      type: object
-      description: Checkpoint settings used to resume processing after an interruption.
-      required:
-        - enabled
-      properties:
-        enabled:
-          type: boolean
-          title: Enable checkpointing
-          description: Resume processing files after an interruption
-        retries:
-          type: number
-          title: Retries
-          description: The number of times to retry processing when a processing error
-            occurs. If Skip file on error is enabled, this setting is ignored.
-          maximum: 100
-          minimum: 0
     SqsAuthenticationMethodOptions:
       enum:
         - auto
@@ -167844,6 +167944,23 @@ components:
       enum:
         - kinesis
       description: Connector type identifier.
+    CheckpointingType:
+      type: object
+      description: Checkpoint settings used to resume processing after an interruption.
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+          title: Enable checkpointing
+          description: Resume processing files after an interruption
+        retries:
+          type: number
+          title: Retries
+          description: The number of times to retry processing when a processing error
+            occurs. If Skip file on error is enabled, this setting is ignored.
+          maximum: 100
+          minimum: 0
     TypeOptionsS3:
       type: string
       enum:
@@ -179127,12 +179244,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       requestBody:
         description: DatabaseConnectionConfig object.
         required: true
@@ -179286,12 +179408,17 @@ paths:
               examples:
                 DatabaseConnectionNotFoundResponseExamplesDatabaseConnectionNotFound:
                   $ref: "#/components/examples/DatabaseConnectionNotFoundResponseExamplesDatabaseConnectionNotFound"
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       requestBody:
         description: DatabaseConnectionConfig object.
         required: true
@@ -179374,12 +179501,17 @@ paths:
         "409":
           description: Request conflicts with current resource state — Database Connection
             is referenced by another entity.
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       parameters:
         - name: id
           in: path
@@ -179504,12 +179636,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       requestBody:
         description: SavedJob object.
         required: true
@@ -179634,12 +179771,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       requestBody:
         description: SavedJob object.
         required: true
@@ -179704,12 +179846,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       parameters:
         - name: id
           in: path
@@ -180853,12 +181000,17 @@ paths:
         "409":
           description: Request conflicts with current resource state — source with the
             same ID already exists.
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: createInputSystemByPack
       parameters:
         - name: pack
@@ -181168,12 +181320,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: updateInputSystemByPackAndId
       parameters:
         - name: id
@@ -181219,12 +181376,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: deleteInputSystemByPackAndId
       parameters:
         - name: id
@@ -181284,12 +181446,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       requestBody:
         description: AddHecTokenRequest object.
         required: true
@@ -181359,12 +181526,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       requestBody:
         description: UpdateHecTokenRequest object.
         required: true
@@ -181839,12 +182011,17 @@ paths:
         "409":
           description: Request conflicts with current resource state — Destination with
             the specified ID already exists.
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: createOutputSystemByPack
       parameters:
         - name: pack
@@ -182150,12 +182327,17 @@ paths:
                     message: Authentication failed (missing or invalid credentials or Bearer token).
         "404":
           description: The requested resource does not exist — Destination not found.
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: updateOutputSystemByPackAndId
       parameters:
         - name: id
@@ -182206,12 +182388,17 @@ paths:
         "409":
           description: Request conflicts with current resource state — Destination is
             referenced by another entity.
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: deleteOutputSystemByPackAndId
       parameters:
         - name: id
@@ -182899,12 +183086,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       requestBody:
         description: packRequestBody object.
         required: true
@@ -183182,12 +183374,17 @@ paths:
           description: Request conflicts with current resource state — Pack
             <code>id</code> is ambiguous because multiple Packs differ only by
             case; specify the exact stored Pack Id
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       requestBody:
         description: PackUpgradeRequest object.
         required: true
@@ -183242,12 +183439,17 @@ paths:
           description: Request conflicts with current resource state — Pack
             <code>id</code> is ambiguous because multiple Packs differ only by
             case; specify the exact stored Pack Id
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       parameters:
         - name: id
           in: path
@@ -185888,12 +186090,17 @@ paths:
         "409":
           description: Request conflicts with current resource state — source with the
             same ID already exists.
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: createInput
   /system/inputs/{id}:
     get:
@@ -186190,12 +186397,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: updateInputById
       parameters:
         - name: id
@@ -186235,12 +186447,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: deleteInputById
       parameters:
         - name: id
@@ -186293,12 +186510,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       requestBody:
         description: AddHecTokenRequest object.
         required: true
@@ -186362,12 +186584,17 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       requestBody:
         description: UpdateHecTokenRequest object.
         required: true
@@ -186817,12 +187044,17 @@ paths:
         "409":
           description: Request conflicts with current resource state — Destination with
             the specified ID already exists.
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: createOutput
   /system/outputs/{id}:
     get:
@@ -187115,12 +187347,17 @@ paths:
                     message: Authentication failed (missing or invalid credentials or Bearer token).
         "404":
           description: The requested resource does not exist — Destination not found.
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: updateOutputById
       parameters:
         - name: id
@@ -187165,12 +187402,17 @@ paths:
         "409":
           description: Request conflicts with current resource state — Destination is
             referenced by another entity.
+        "423":
+          description: The group is locked while a secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The ConfigHelper is unavailable or was replaced while the request
+            was being admitted.
       operationId: deleteOutputById
       parameters:
         - name: id
@@ -188102,6 +188344,8 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: A secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
@@ -188479,6 +188723,8 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: A secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
@@ -188659,6 +188905,8 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "423":
+          description: A secret promotion is in progress.
         "500":
           description: Unexpected server error.
           content:
