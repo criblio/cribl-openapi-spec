@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1790723457417-16f55414
+    version: 4.21.0-alpha.1790982832954-e843b3b8
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -1034,7 +1034,7 @@ components:
                         properties:
                             name:
                                 type: string
-                                title: Name
+                                title: Field Name
                                 description: Name of the field to set or add to the event.
                             value:
                                 type: string
@@ -1047,12 +1047,12 @@ components:
                 lagTolerance:
                     type: string
                     title: Lag tolerance
-                    description: The tumbling window tolerance to late events. Must be a valid time string (such as 10s).
+                    description: The tumbling window tolerance to late events. Must be a valid time string (such as 10s). Defaults to the smaller of Time Window and 1 minute.
                     pattern: \d+[sm]$
                 idleTimeLimit:
                     type: string
                     title: Idle bucket time limit
-                    description: How long to wait before flushing a bucket that has not received events. Must be a valid time string (such as 10s).
+                    description: How long to wait before flushing a bucket that has not received events. Must be a valid time string (such as 10s). Defaults to the smaller of Time Window and 1 minute.
                     pattern: \d+[sm]$
         FunctionAggregateMetrics:
             type: object
@@ -1182,7 +1182,7 @@ components:
                         properties:
                             name:
                                 type: string
-                                title: Name
+                                title: Field Name
                                 description: Name of the field to set or add to the event.
                             value:
                                 type: string
@@ -1203,12 +1203,12 @@ components:
                 lagTolerance:
                     type: string
                     title: Lag tolerance
-                    description: The tumbling window tolerance to late events. Must be a valid time string (such as 10s).
+                    description: The tumbling window tolerance to late events. Must be a valid time string (such as 10s). Defaults to the smaller of Time Window and 1 minute.
                     pattern: \d+[sm]$
                 idleTimeLimit:
                     type: string
                     title: Idle bucket time limit
-                    description: How long to wait before flushing a bucket that has not received events. Must be a valid time string (such as 10s).
+                    description: How long to wait before flushing a bucket that has not received events. Must be a valid time string (such as 10s). Defaults to the smaller of Time Window and 1 minute.
                     pattern: \d+[sm]$
         FunctionAggregation:
             type: object
@@ -2125,10 +2125,10 @@ components:
                         properties:
                             inFieldName:
                                 type: string
-                                title: Lookup field name
+                                title: Lookup Field Name
                                 description: Name of the field containing the hostname or IP address to look up.
                             resourceRecordType:
-                                title: Resource record type
+                                title: Resource Record Type
                                 description: The DNS record type (RR) to return. Defaults to 'A'.
                                 type: string
                                 enum:
@@ -2158,7 +2158,7 @@ components:
                                 x-speakeasy-unknown-values: allow
                             outFieldName:
                                 type: string
-                                title: Output field name
+                                title: Output Field Name
                                 description: Name of field to add lookup results to. Leave blank to overwrite the lookup field.
                 reverseLookupFields:
                     title: Reverse DNS lookup fields
@@ -2169,11 +2169,11 @@ components:
                         properties:
                             inFieldName:
                                 type: string
-                                title: Lookup field name
+                                title: Lookup Field Name
                                 description: Name of the field containing the IP to look up. If the field value is not in IPv4 or IPv6 format, the lookup is skipped.
                             outFieldName:
                                 type: string
-                                title: Output field name
+                                title: Output Field Name
                                 description: Name of field to add the resolved domain to. Leave blank to overwrite the lookup field.
                 dnsServers:
                     title: DNS server overrides
@@ -2522,7 +2522,7 @@ components:
                         properties:
                             name:
                                 type: string
-                                title: Name
+                                title: Field Name
                                 description: Name of the field to set or add to the event.
                             value:
                                 type: string
@@ -4268,7 +4268,7 @@ components:
                         properties:
                             name:
                                 type: string
-                                title: Name
+                                title: Field Name
                                 description: Name of the field to set when one or more masking rules match.
                             value:
                                 type: string
@@ -61551,6 +61551,10 @@ components:
                 - sections
                 - tokens
             title: NotebookTemplateInput
+        FamilyConfig:
+            type: object
+            additionalProperties: true
+            title: FamilyConfig
         ChartConfig:
             type: object
             properties:
@@ -61621,8 +61625,7 @@ components:
                     $ref: "#/components/schemas/ChartType"
                     description: Default chart type for all series.
                 visualization:
-                    type: object
-                    additionalProperties: true
+                    $ref: "#/components/schemas/FamilyConfig"
                     description: Registry-native visualization configuration. Dashboard visualizations narrow this base type to the concrete configurations they support.
                 xAxis:
                     $ref: "#/components/schemas/XAxisTypeChartElementConfig"
@@ -62581,8 +62584,7 @@ components:
                             $ref: "#/components/schemas/ChartType"
                             description: Default chart type for all series.
                         visualization:
-                            type: object
-                            additionalProperties: true
+                            $ref: "#/components/schemas/FamilyConfig"
                             description: Registry-native visualization configuration. Dashboard visualizations narrow this base type to the concrete configurations they support.
                         xAxis:
                             $ref: "#/components/schemas/XAxisTypeChartElementConfig"
@@ -84970,6 +84972,9 @@ components:
                 displayOwner:
                     type: string
                     description: Display name of the user that started the run (full name, email, or user id). Absent on runs created before this field was introduced.
+                endedAt:
+                    type: integer
+                    description: Epoch milliseconds when the run reached a terminal status. Absent while <code>status</code> is <code>running</code>, and on runs that terminated before this field was introduced.
                 error:
                     type: string
                     description: Failure message. Absent unless <code>status</code> is <code>failed</code>.
@@ -85219,6 +85224,9 @@ components:
                         displayOwner:
                             type: string
                             description: Display name of the user that started the run (full name, email, or user id). Absent on runs created before this field was introduced.
+                        endedAt:
+                            type: integer
+                            description: Epoch milliseconds when the run reached a terminal status. Absent while <code>status</code> is <code>running</code>, and on runs that terminated before this field was introduced.
                         error:
                             type: string
                             description: Failure message. Absent unless <code>status</code> is <code>failed</code>.
@@ -181323,8 +181331,7 @@ components:
                 visualization:
                     description: Registry-native visualization configuration. Dashboard visualizations narrow this base type to the concrete configurations they support.
                     anyOf:
-                        - type: object
-                          additionalProperties: true
+                        - $ref: "#/components/schemas/FamilyConfig"
                         - type: "null"
                 xAxis:
                     description: X-axis configuration.
@@ -205572,6 +205579,7 @@ components:
                       triggerInput: Investigate the traffic spike at 14:30 UTC
                       createdAt: 1724000000000
                       modifiedAt: 1724000060000
+                      endedAt: 1724000060000
                       lastActivityAt: 1724000120000
                     - runId: run_1723990000000_1
                       workflowId: 4f2c9e0a-6d1b-4b8e-9f3a-2c7d5e8a1b6f
@@ -205665,6 +205673,7 @@ components:
                     triggerInput: Investigate the traffic spike at 14:30 UTC
                     createdAt: 1724000000000
                     modifiedAt: 1724000060000
+                    endedAt: 1724000060000
                 workflow:
                     trigger:
                         kind: prompt
@@ -205762,6 +205771,7 @@ components:
                         triggerInput: Investigate the traffic spike at 14:30 UTC
                         createdAt: 1724000000000
                         modifiedAt: 1724000060000
+                        endedAt: 1724000060000
         StopWorkflowRunResponseExamplesStopRequested:
             summary: Stop acknowledged
             description: POST /ai/workflows/{id}/runs/{runId}/stop returns immediately with stopRequested recorded; status still reads running until the walk exits.
@@ -228206,6 +228216,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Replication of the uploaded file failed.
             requestBody:
                 description: LookupFileInfo object.
                 required: true
@@ -228933,6 +228945,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Replication of the uploaded file failed.
             requestBody:
                 description: LookupFileInfo object.
                 required: true
@@ -245539,6 +245553,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -245569,7 +245589,38 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/AccessControlSchema"
+                            type: object
+                            additionalProperties: false
+                            anyOf:
+                                - required:
+                                    - add
+                                - required:
+                                    - rm
+                            properties:
+                                add:
+                                    type: object
+                                    additionalProperties: false
+                                    properties:
+                                        FolderSecretsRead:
+                                            type: array
+                                            items:
+                                                type: string
+                                        FolderSecretsMaintain:
+                                            type: array
+                                            items:
+                                                type: string
+                                rm:
+                                    type: object
+                                    additionalProperties: false
+                                    properties:
+                                        FolderSecretsRead:
+                                            type: array
+                                            items:
+                                                type: string
+                                        FolderSecretsMaintain:
+                                            type: array
+                                            items:
+                                                type: string
                         examples:
                             AclApplySecretFolderExamplesGrantAccess:
                                 $ref: "#/components/examples/AclApplySecretFolderExamplesGrantAccess"
@@ -245598,6 +245649,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — invalid command or unsupported policy name.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -245611,6 +245668,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -245658,6 +245721,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -245688,7 +245757,38 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/AccessControlSchema"
+                            type: object
+                            additionalProperties: false
+                            anyOf:
+                                - required:
+                                    - add
+                                - required:
+                                    - rm
+                            properties:
+                                add:
+                                    type: object
+                                    additionalProperties: false
+                                    properties:
+                                        FolderSecretsRead:
+                                            type: array
+                                            items:
+                                                type: string
+                                        FolderSecretsMaintain:
+                                            type: array
+                                            items:
+                                                type: string
+                                rm:
+                                    type: object
+                                    additionalProperties: false
+                                    properties:
+                                        FolderSecretsRead:
+                                            type: array
+                                            items:
+                                                type: string
+                                        FolderSecretsMaintain:
+                                            type: array
+                                            items:
+                                                type: string
                         examples:
                             AclTeamsApplySecretFolderExamplesGrantTeamAccess:
                                 $ref: "#/components/examples/AclTeamsApplySecretFolderExamplesGrantTeamAccess"
@@ -245717,6 +245817,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — invalid command or unsupported policy name.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -245730,6 +245836,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -259345,6 +259457,59 @@ paths:
                     $ref: "#/components/schemas/WorkerFilterExpression"
                   description: Filter expression to evaluate against Nodes for inclusion in the response (for example, <code>status=='healthy'</code>).
     /products/{product}/workers/{id}:
+        delete:
+            operationId: deleteProductsWorkersByProductAndId
+            tags:
+                - workers
+            x-speakeasy-group: nodes
+            x-speakeasy-name-override: delete
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: Delete a disconnected Worker, Edge, or Outpost Node
+            description: Delete the specified disconnected Worker, Edge, or Outpost Node from the Leader. Only disconnected Nodes can be deleted; deleting a connected Node returns a conflict. A Node that later reconnects with a valid token reappears.
+            responses:
+                "204":
+                    description: No Content
+                "400":
+                    description: Failed validation or malformed input if the product is not "stream", "edge", or "outpost".
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to manage Nodes for this product.
+                "409":
+                    description: Request conflicts with current resource state — the Node is still connected.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: product
+                  in: path
+                  required: true
+                  schema:
+                    $ref: "#/components/schemas/ProductsCore"
+                  description: Name of the Cribl product that contains the Node.
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the disconnected Node to delete.
         get:
             operationId: getProductsWorkersByProductAndId
             tags:
@@ -264515,12 +264680,16 @@ paths:
                     description: The requested resource does not exist — Source or destination Worker Group or Edge Fleet not found
                 "405":
                     description: HTTP method not supported for this endpoint — operation not allowed (for example, only available on Leader, cross-product cloning not supported)
+                "422":
+                    description: One or more Packs failed to clone, and others succeeded. The response body contains both <code>installed</code> and <code>errors</code> arrays with per-Pack detail.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: A downstream dependency (config-helper reload or worker broadcast) was unavailable.
             requestBody:
                 description: PackClone object.
                 required: true
@@ -264637,6 +264806,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: A downstream dependency required for export was unavailable.
             parameters:
                 - name: id
                   in: path
@@ -266221,6 +266392,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: The upgrade service could not be reached.
             parameters:
                 - name: limit
                   in: query
@@ -266592,6 +266765,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
     /version/commit:
         post:
             operationId: createVersionCommit
@@ -266651,6 +266826,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
             requestBody:
                 description: GitCommitBody object.
                 required: true
@@ -266707,6 +266884,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
             parameters:
                 - name: commit
                   in: query
@@ -266757,6 +266936,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
     /version/diff:
         get:
             operationId: getVersionDiff
@@ -266801,6 +266982,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
             parameters:
                 - name: commit
                   in: query
@@ -266864,6 +267047,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
             parameters:
                 - name: commit
                   in: query
@@ -266958,6 +267143,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
             parameters:
                 - name: count
                   in: query
@@ -267033,6 +267220,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
     /version/revert:
         post:
             operationId: createVersionRevert
@@ -267077,6 +267266,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
             requestBody:
                 description: GitRevertParams object.
                 required: true
@@ -267133,6 +267324,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
             parameters:
                 - name: commit
                   in: query
@@ -267196,6 +267389,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
     /version/sync:
         post:
             operationId: createVersionSync
@@ -267237,6 +267432,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
     /version/undo:
         post:
             operationId: createVersionUndo
@@ -267281,6 +267478,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Versioning is not available.
     /ai/settings/dataset-intelligence/{datasetId}:
         post:
             operationId: createAiSettingsDatasetIntelligenceByDatasetId
