@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.2-alpha.1790982832723-b2cc5d5a
+    version: 4.20.2-alpha.1791242389649-de8ba006
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -45418,9 +45418,6 @@ components:
                         - Token (text secret)
                         - AWS Signature v4
                     x-speakeasy-unknown-values: allow
-                tls:
-                    $ref: "#/components/schemas/TlsSettingsClientSideTypeCaPathCertPathExtended"
-                    description: TLS settings (client side)
                 description:
                     type: string
                     title: Description
@@ -80747,6 +80744,33 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        SystemDeployment:
+            type: object
+            properties:
+                cloud:
+                    type: string
+                    enum:
+                        - aws
+                        - aws-highside
+                    description: Cloud partition. Absent for commercial on-prem.
+                    x-speakeasy-unknown-values: allow
+                env:
+                    type: string
+                    enum:
+                        - commercial
+                        - fedramp
+                    description: SaaS environment. Present only when <code>type</code> is <code>saas</code>.
+                    x-speakeasy-unknown-values: allow
+                type:
+                    type: string
+                    enum:
+                        - on-prem
+                        - saas
+                    description: Deployment kind.
+                    x-speakeasy-unknown-values: allow
+            required:
+                - type
+            title: SystemDeployment
         LicenseLimits:
             type: object
             properties:
@@ -80970,6 +80994,9 @@ components:
                 criblSecurityEnabled:
                     type: boolean
                     description: Consolidated Cribl Detect enablement status. <code>true</code> only when the <code>feature-cribl-security</code> feature flag is enabled and <code>appPlatformEnabled</code> is also <code>true</code>, since Detect ships as an App Platform app. Acts as the single source of truth for the product UI and Cloud Portal navigation entries.
+                deployment:
+                    $ref: "#/components/schemas/SystemDeployment"
+                    description: "Deployment this instance is running in. Commercial on-prem is <code>{ type: 'on-prem' }</code>. Highside is <code>{ type: 'on-prem', cloud: 'aws-highside' }</code>. SaaS is <code>{ type: 'saas', cloud: 'aws', env: 'commercial' | 'fedramp' }</code>."
                 diskUsage:
                     type: object
                     properties:
@@ -81023,9 +81050,6 @@ components:
                 isFipsEnabled:
                     type: boolean
                     description: If <code>true</code>, FIPS compliance mode is enabled.
-                isHighside:
-                    type: boolean
-                    description: If <code>true</code>, this instance runs in the Highside deployment mode (air-gapped Cribl Search and Lake).
                 license:
                     $ref: "#/components/schemas/LicenseInfo"
                     description: License information for the Cribl instance.
@@ -81117,6 +81141,7 @@ components:
                 - conf
                 - configPath
                 - cpus
+                - deployment
                 - diskUsage
                 - distMode
                 - env
@@ -151710,79 +151735,6 @@ components:
                             - aws_sigv4
                           x-speakeasy-unknown-values: allow
                         - type: "null"
-                tls:
-                    title: TLS settings (client side)
-                    description: TLS settings (client side)
-                    anyOf:
-                        - type: object
-                          properties:
-                            disabled:
-                                title: Disabled
-                                description: Whether TLS is disabled for this connection.
-                                anyOf:
-                                    - type: boolean
-                                    - type: "null"
-                            servername:
-                                title: Server name (SNI)
-                                description: Server name for the SNI (Server Name Indication) TLS extension. It must be a host name, and not an IP address.
-                                anyOf:
-                                    - type: string
-                                    - type: "null"
-                            certificateName:
-                                title: Certificate
-                                description: The name of the predefined certificate
-                                anyOf:
-                                    - type: string
-                                    - type: "null"
-                            caPath:
-                                title: CA certificate path
-                                description: Path on client in which to find CA certificates to verify the server's cert. PEM format. Can reference $ENV_VARS.
-                                anyOf:
-                                    - type: string
-                                    - type: "null"
-                            privKeyPath:
-                                title: Private key path (mutual auth)
-                                description: Path on client in which to find the private key to use. PEM format. Can reference $ENV_VARS.
-                                anyOf:
-                                    - type: string
-                                    - type: "null"
-                            certPath:
-                                title: Certificate path (mutual auth)
-                                description: Path on client in which to find certificates to use. PEM format. Can reference $ENV_VARS.
-                                anyOf:
-                                    - type: string
-                                    - type: "null"
-                            passphrase:
-                                title: Passphrase
-                                description: Passphrase to use to decrypt private key
-                                anyOf:
-                                    - type: string
-                                    - type: "null"
-                            minVersion:
-                                title: Minimum TLS version
-                                description: Minimum TLS version to use for the connection.
-                                anyOf:
-                                    - type: string
-                                      enum:
-                                        - TLSv1
-                                        - TLSv1.1
-                                        - TLSv1.2
-                                        - TLSv1.3
-                                      x-speakeasy-unknown-values: allow
-                                    - type: "null"
-                            maxVersion:
-                                title: Maximum TLS version
-                                description: Maximum TLS version to use for the connection.
-                                anyOf:
-                                    - type: string
-                                      enum:
-                                        - TLSv1
-                                        - TLSv1.1
-                                        - TLSv1.2
-                                        - TLSv1.3
-                                      x-speakeasy-unknown-values: allow
-                                    - type: "null"
-                        - type: "null"
                 description:
                     title: Description
                     description: Optional description for this configuration.
@@ -199522,6 +199474,8 @@ components:
                             sys: 300
                             idle: 25000
                             irq: 0
+                      deployment:
+                        type: on-prem
                       diskUsage:
                         bytesAvailable: 10737418240
                         bytesUsed: 5368709120
