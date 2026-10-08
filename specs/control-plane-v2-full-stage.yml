@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.3-alpha.1791415038911-614f516c
+    version: 4.20.3-alpha.1791501133659-8e01f013
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -62414,7 +62414,7 @@ components:
                     description: Threshold value that the metric is compared against using <code>operator</code>.
                 operator:
                     $ref: "#/components/schemas/ThresholdOperator"
-                    description: Comparison operator applied to the threshold limit. Defaults to <code>gt</code> when absent.
+                    description: Comparison operator applied to the threshold limit.
                 severity:
                     $ref: "#/components/schemas/Severity"
                     description: "Severity assigned when the threshold's condition is met: <code>critical</code>, <code>warning</code>, or <code>info</code>."
@@ -66808,6 +66808,9 @@ components:
         Credentials:
             type: object
             properties:
+                adminSessionTagValue:
+                    type: string
+                    description: Value of the <code>Actor</code> session tag the Leader attaches when assuming the AWS IAM role for bucket administration. Defaults to <code>admin</code> when omitted.
                 apiKey:
                     type: string
                     description: AWS access key ID. Required when <code>method</code> is <code>manual</code>.
@@ -76157,6 +76160,9 @@ components:
         AppPreinstallCheckRequest:
             type: object
             properties:
+                appId:
+                    type: string
+                    description: "Identifier of an already-installed App to preview an upgrade for. When provided, the preview resolves the source the same way <code>PATCH /apps/{id}</code> does: for an App installed from a Git repository the stored repository source is used, so the preview clones with the credentials captured at install, and the submitted <code>source</code> is treated as display data only. Omit for an install preview. The resolved source is never returned."
                 source:
                     type: string
                     description: "Source for the App: the staged file path from a <code>PUT /apps</code> upload, the direct URL of a <code>.crbl</code>, <code>.tgz</code>, or <code>.tar.gz</code> file, or a Git repository URL prefixed with <code>git+</code>."
@@ -178501,6 +178507,11 @@ components:
         CredentialsPartialRequest:
             type: object
             properties:
+                adminSessionTagValue:
+                    description: Value of the <code>Actor</code> session tag the Leader attaches when assuming the AWS IAM role for bucket administration. Defaults to <code>admin</code> when omitted.
+                    anyOf:
+                        - type: string
+                        - type: "null"
                 apiKey:
                     description: AWS access key ID. Required when <code>method</code> is <code>manual</code>.
                     anyOf:
@@ -178999,6 +179010,13 @@ components:
                                       pattern: ^[A-Za-z0-9+=,.@:/-]{2,1224}$
                                       minLength: 2
                                       maxLength: 1224
+                                    - type: "null"
+                            adminSessionTagValue:
+                                description: "Session tag value the Leader attaches when assuming the read/write role for bucket administration. Set at creation. Defaults to admin. Cannot be changed later. Letters, numbers, spaces, and _ . : / = + - @."
+                                anyOf:
+                                    - type: string
+                                      minLength: 1
+                                      maxLength: 256
                                     - type: "null"
                             tenantId:
                                 description: Azure tenant ID (for azure_blob provider).
@@ -187574,6 +187592,11 @@ components:
                     pattern: ^[A-Za-z0-9+=,.@:/-]{2,1224}$
                     minLength: 2
                     maxLength: 1224
+                adminSessionTagValue:
+                    type: string
+                    description: "Session tag value the Leader attaches when assuming the read/write role for bucket administration. Set at creation. Defaults to admin. Cannot be changed later. Letters, numbers, spaces, and _ . : / = + - @."
+                    minLength: 1
+                    maxLength: 256
                 tenantId:
                     type: string
                     description: Azure tenant ID (for azure_blob provider).
@@ -198193,6 +198216,13 @@ components:
             value:
                 source: git+https://github.com/criblio/cribl_ocsf_postprocessing
                 spec: v1.2.0
+        AppPreinstallCheckExamplesGitUpgradePreinstallCheck:
+            summary: Preinstall check for a Git-sourced App upgrade
+            description: Preinstall check for an already-installed Git-sourced App. Supply the installed <code>appId</code> along with the <code>source</code> and an optional <code>spec</code>.
+            value:
+                source: git+https://github.com/criblio/cribl_ocsf_postprocessing
+                appId: cribl_ocsf_postprocessing
+                spec: v1.3.0
         AppReplaceProxiesResponseExamplesEffectiveProxies:
             summary: Effective proxy declarations after replace
             description: The effective list (pack <code>default</code> union local overlay) after the replace, in the same entity shape <code>GET</code> returns.
@@ -251657,8 +251687,10 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to perform this action — <code>appId</code> was supplied and identifies a platform App
                 "404":
-                    description: The requested resource does not exist — staged file not found in the App staging area
+                    description: The requested resource does not exist — staged file not found in the App staging area, or <code>appId</code> does not identify an installed App
                 "500":
                     description: Unexpected server error.
                     content:
@@ -251679,6 +251711,8 @@ paths:
                                 $ref: "#/components/examples/AppPreinstallCheckExamplesHostedUrl"
                             AppPreinstallCheckExamplesGitRepository:
                                 $ref: "#/components/examples/AppPreinstallCheckExamplesGitRepository"
+                            AppPreinstallCheckExamplesGitUpgradePreinstallCheck:
+                                $ref: "#/components/examples/AppPreinstallCheckExamplesGitUpgradePreinstallCheck"
     /apps/{id}/backend/redeploy:
         post:
             operationId: createAppsBackendRedeployById
