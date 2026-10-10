@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1791587826651-ab3ca266
+    version: 4.21.0-alpha.1791673713076-a48693c9
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -62099,6 +62099,9 @@ components:
         SavedQuery:
             type: object
             properties:
+                appId:
+                    type: string
+                    description: App identifier used to attribute search/platform usage to a driving app.
                 chartConfig:
                     $ref: "#/components/schemas/ChartConfig"
                     description: Chart configuration for scheduled or Dashboard-backed runs.
@@ -62998,6 +63001,9 @@ components:
                 aliasOfOriginalJobId:
                     type: string
                     description: For deduplicated or aliased executions, the id of the canonical job this run points to.
+                appId:
+                    type: string
+                    description: App identifier used to attribute search/platform usage to a driving app.
                 chartConfig:
                     type: object
                     properties:
@@ -63316,6 +63322,11 @@ components:
                     type: string
                     title: Expected output type
                     description: Output type expected from the System Insights query
+                appId:
+                    type: string
+                    title: App ID
+                    description: Identifier of the App driving this search. If omitted, ID is derived from the Cribl-App request header or auth token.
+                    minLength: 1
             title: CreateSearchJobSchema
         SearchJobType:
             type: string
@@ -63778,6 +63789,35 @@ components:
                     type: string
                     description: Named IANA timezone used to assign timestamps to seasonal phases.
             title: AnomalyConfig
+        ChangeType:
+            type: string
+            enum:
+                - absolute
+                - percent
+            title: ChangeType
+            x-speakeasy-unknown-values: allow
+        ChangeCompareAgainst:
+            type: string
+            enum:
+                - 5m
+                - 15m
+                - 1h
+                - 4h
+                - 1d
+                - 1w
+            title: ChangeCompareAgainst
+            x-speakeasy-unknown-values: allow
+        ChangeConfig:
+            type: object
+            properties:
+                changeType:
+                    $ref: "#/components/schemas/ChangeType"
+                compareAgainst:
+                    $ref: "#/components/schemas/ChangeCompareAgainst"
+            required:
+                - changeType
+                - compareAgainst
+            title: ChangeConfig
         OutlierConfig:
             type: object
             properties:
@@ -63823,35 +63863,6 @@ components:
                 - pct
                 - thresholdDirection
             title: OutlierConfig
-        ChangeType:
-            type: string
-            enum:
-                - absolute
-                - percent
-            title: ChangeType
-            x-speakeasy-unknown-values: allow
-        ChangeCompareAgainst:
-            type: string
-            enum:
-                - 5m
-                - 15m
-                - 1h
-                - 4h
-                - 1d
-                - 1w
-            title: ChangeCompareAgainst
-            x-speakeasy-unknown-values: allow
-        ChangeConfig:
-            type: object
-            properties:
-                changeType:
-                    $ref: "#/components/schemas/ChangeType"
-                compareAgainst:
-                    $ref: "#/components/schemas/ChangeCompareAgainst"
-            required:
-                - changeType
-                - compareAgainst
-            title: ChangeConfig
         ForecastAlgorithm:
             type: string
             enum:
@@ -64481,7 +64492,7 @@ components:
                 - outlier
             title: MonitorType
             x-speakeasy-unknown-values: allow
-        AetosMonitorConf:
+        ResolvedConfigProfileConfig:
             type: object
             properties:
                 $profileRef:
@@ -64494,7 +64505,7 @@ components:
                     type: string
                     description: Optional human-readable description of the monitor.
                 detectionConfig:
-                    $ref: "#/components/schemas/DetectionConfigTypeAetosMonitorConf"
+                    $ref: "#/components/schemas/DetectionConfigTypeResolvedConfigProfileConfig"
                     description: Type-specific detection configuration. Present for change, anomaly, outlier, and forecast monitors; undefined for threshold and logs monitors.
                 enabled:
                     type: boolean
@@ -64539,7 +64550,96 @@ components:
                         $ref: "#/components/schemas/InheritableIAetosMonitorQuery"
                     description: Monitor queries keyed by query label. Each query is inheritable from a linked profile.
                 searchMode:
-                    $ref: "#/components/schemas/SearchModeOptionsAetosMonitorConf"
+                    $ref: "#/components/schemas/SearchModeOptionsResolvedConfigProfileConfig"
+                    description: Logs monitors only. Distinguishes authoring a fresh search ('new') from selecting a saved one ('saved'). Defaults to 'new' when omitted; ignored for non-logs monitor types.
+                silence:
+                    type: array
+                    items:
+                        type: string
+                    description: IDs of silence windows that suppress this monitor's alerts.
+                team:
+                    $ref: "#/components/schemas/InheritableIScalarValue"
+                    description: Owning team, inheritable from a linked profile.
+                templateParams:
+                    type: object
+                    additionalProperties:
+                        $ref: "#/components/schemas/InheritableTemplateParameters"
+                    description: Template parameter bindings keyed by query label. Baseline values come from the query's shared configs; non-empty values act as user overrides.
+                type:
+                    $ref: "#/components/schemas/MonitorType"
+                    description: Monitor type, which determines the detection strategy (for example threshold, change, anomaly, outlier, forecast, or logs).
+                unit:
+                    type: string
+                    description: Optional unit label applied to the monitor's values.
+            title: ResolvedConfigProfileConfig
+        LinkProfileRequest:
+            type: object
+            properties:
+                parentId:
+                    type: string
+                    description: The <code>id</code> of the parent profile to link the profile under.
+            required:
+                - parentId
+            title: LinkProfileRequest
+        AetosMonitorConf:
+            type: object
+            properties:
+                $profileRef:
+                    $ref: "#/components/schemas/ProfileRef"
+                    description: Profile this monitor is linked to. Used by the UI to rehydrate inherited fields when an overridden field is toggled back to inherited.
+                datasetId:
+                    type: string
+                    description: Default dataset used for query execution and alert history storage. Per-query overrides are set via the query's datasetId.
+                description:
+                    type: string
+                    description: Optional human-readable description of the monitor.
+                detectionConfig:
+                    $ref: "#/components/schemas/DetectionConfigTypeResolvedConfigProfileConfig"
+                    description: Type-specific detection configuration. Present for change, anomaly, outlier, and forecast monitors; undefined for threshold and logs monitors.
+                enabled:
+                    type: boolean
+                    description: Whether the monitor is active and evaluated.
+                evaluationIntervalSec:
+                    type: integer
+                    description: Evaluation cadence in seconds. Integer multiple of 60 between 60 and 3600. Defaults to 60 when omitted.
+                expr:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/QueryExpression"
+                    description: Query expressions evaluated to produce the monitor's series.
+                firingCondition:
+                    $ref: "#/components/schemas/InheritableIFiringCondition"
+                    description: Condition that determines when the monitor fires, inheritable from a linked profile.
+                firingRule:
+                    $ref: "#/components/schemas/InheritableIFiringRule"
+                    description: Rule defining firing thresholds and overrides, inheritable from a linked profile.
+                id:
+                    type: string
+                    description: Unique identifier for the monitor.
+                managedBy:
+                    type: string
+                    description: Identifies the external provisioner (e.g. 'terraform') that owns this monitor. When set, the monitor is read-only from the UI and non-SDK REST mutations are rejected with 403.
+                    examples:
+                        - "'terraform'"
+                metadata:
+                    $ref: "#/components/schemas/InheritableIAetosMetadata"
+                    description: Arbitrary key-value metadata, inheritable from a linked profile.
+                name:
+                    type: string
+                    description: Human-readable name for the monitor.
+                notification:
+                    $ref: "#/components/schemas/InheritableINotificationConfig"
+                    description: Notification configuration for the monitor, inheritable from a linked profile.
+                priority:
+                    $ref: "#/components/schemas/InheritableIScalarValue"
+                    description: Monitor priority, inheritable from a linked profile.
+                query:
+                    type: object
+                    additionalProperties:
+                        $ref: "#/components/schemas/InheritableIAetosMonitorQuery"
+                    description: Monitor queries keyed by query label. Each query is inheritable from a linked profile.
+                searchMode:
+                    $ref: "#/components/schemas/SearchModeOptionsResolvedConfigProfileConfig"
                     description: Logs monitors only. Distinguishes authoring a fresh search ('new') from selecting a saved one ('saved'). Defaults to 'new' when omitted; ignored for non-logs monitor types.
                 silence:
                     type: array
@@ -64576,15 +64676,6 @@ components:
                 - team
                 - type
             title: AetosMonitorConf
-        LinkProfileRequest:
-            type: object
-            properties:
-                parentId:
-                    type: string
-                    description: The <code>id</code> of the parent profile to link the profile under.
-            required:
-                - parentId
-            title: LinkProfileRequest
         PaginatedAetosMonitorConf:
             type: object
             required:
@@ -64621,7 +64712,7 @@ components:
                             type: string
                             description: Optional human-readable description of the monitor.
                         detectionConfig:
-                            $ref: "#/components/schemas/DetectionConfigTypeAetosMonitorConf"
+                            $ref: "#/components/schemas/DetectionConfigTypeResolvedConfigProfileConfig"
                             description: Type-specific detection configuration. Present for change, anomaly, outlier, and forecast monitors; undefined for threshold and logs monitors.
                         enabled:
                             type: boolean
@@ -64666,7 +64757,7 @@ components:
                                 $ref: "#/components/schemas/InheritableIAetosMonitorQuery"
                             description: Monitor queries keyed by query label. Each query is inheritable from a linked profile.
                         searchMode:
-                            $ref: "#/components/schemas/SearchModeOptionsAetosMonitorConf"
+                            $ref: "#/components/schemas/SearchModeOptionsResolvedConfigProfileConfig"
                             description: Logs monitors only. Distinguishes authoring a fresh search ('new') from selecting a saved one ('saved'). Defaults to 'new' when omitted; ignored for non-logs monitor types.
                         silence:
                             type: array
@@ -67115,6 +67206,24 @@ components:
                 - type
             description: The built-in Cribl secret store.
             title: CriblSecretStore
+        SecretStoreAccessViaOutpost:
+            type: object
+            properties:
+                groupId:
+                    type: string
+                    description: Identifier of the Outpost worker group that accesses this store.
+                    examples:
+                        - outpost-prod
+                    pattern: ^[a-zA-Z0-9_\-]+$
+                type:
+                    type: string
+                    const: outpost
+                    description: Delegation target type. Only <code>outpost</code> is supported.
+            required:
+                - groupId
+                - type
+            description: Outpost group that accesses this store.
+            title: SecretStoreAccessViaOutpost
         VaultAuthTokenConfig:
             type: object
             properties:
@@ -67277,6 +67386,9 @@ components:
         VaultSecretStore:
             type: object
             properties:
+                accessVia:
+                    $ref: "#/components/schemas/SecretStoreAccessViaOutpost"
+                    description: When set, this store is accessed through the configured delegation target instead of the Leader.
                 config:
                     $ref: "#/components/schemas/VaultStoreConfig"
                     description: Configuration for the secret store.
@@ -67607,6 +67719,10 @@ components:
         VaultSecretStoreUpdate:
             type: object
             properties:
+                accessVia:
+                    oneOf:
+                        - type: "null"
+                        - $ref: "#/components/schemas/SecretStoreAccessViaOutpost"
                 config:
                     $ref: "#/components/schemas/VaultStoreConfigUpdate"
                     description: Configuration of the Vault secret store.
@@ -77909,6 +78025,466 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        GatewayClientKeyCreateRequest:
+            type: object
+            properties:
+                description:
+                    type: string
+                    description: Optional description of the client key.
+                expiresAt:
+                    type: number
+                    description: Optional expiration time in Unix milliseconds.
+                name:
+                    type: string
+                    description: Human-readable name for the client key.
+                tags:
+                    type: array
+                    items:
+                        type: string
+                    description: Tags associated with the client key.
+            required:
+                - name
+            title: GatewayClientKeyCreateRequest
+        GatewayClientKey:
+            type: object
+            properties:
+                createdAt:
+                    type: number
+                    description: Creation time in Unix milliseconds.
+                description:
+                    type: string
+                    description: Optional description of the client key.
+                enabled:
+                    type: boolean
+                    description: Whether the client key is enabled in the retained metadata; this does not confirm authentication enforcement.
+                expiresAt:
+                    type: number
+                    description: Optional expiration time in Unix milliseconds.
+                id:
+                    type: string
+                    description: Unique identifier for the client key.
+                keyPrefix:
+                    type: string
+                    description: Non-secret prefix used to identify the client key.
+                name:
+                    type: string
+                    description: Human-readable name for the client key.
+                revokedAt:
+                    type: number
+                    description: Optional revocation time in Unix milliseconds.
+                tags:
+                    type: array
+                    items:
+                        type: string
+                    description: Tags associated with the client key.
+            required:
+                - createdAt
+                - enabled
+                - id
+                - keyPrefix
+                - name
+            title: GatewayClientKey
+        GatewayClientKeyUpdateRequest:
+            type: object
+            properties:
+                description:
+                    type:
+                        - "null"
+                        - string
+                    description: Description of the client key, or null to remove it.
+                tags:
+                    oneOf:
+                        - type: "null"
+                        - type: array
+                          items:
+                            type: string
+                    description: Replacement tags, or null to remove them.
+            title: GatewayClientKeyUpdateRequest
+        AssignedGatewayClients:
+            type: object
+            properties:
+                assignedKeyCount:
+                    type: number
+                    description: Number of client keys included in the successful assignment.
+                configVersion:
+                    type: string
+                    description: Synthetic configuration version for the mock mutation; omitted when simulated deployment fails.
+                enforcedWorkerCount:
+                    type: number
+                    description: Simulated number of workers that have applied the policy change.
+                enforcementStatus:
+                    $ref: "#/components/schemas/EnforcementStatusOptionsAssignedGatewayClients"
+                    description: Simulated deployment status. The mock does not deploy configuration to workers.
+                policyId:
+                    type:
+                        - "null"
+                        - string
+                    description: Assigned Policy id. Omitted from HTTP responses when the keys follow Default.
+                targetWorkerCount:
+                    type: number
+                    description: Simulated number of workers targeted by the policy change.
+            required:
+                - assignedKeyCount
+                - enforcedWorkerCount
+                - enforcementStatus
+                - targetWorkerCount
+            title: AssignedGatewayClients
+        AssignGatewayClientsInput:
+            type: object
+            properties:
+                keyIds:
+                    type: array
+                    items:
+                        type: string
+                    description: Unique active key ids; duplicates are rejected and assignment is all-or-nothing.
+                    minItems: 1
+                    maxItems: 1000
+                policyId:
+                    type:
+                        - "null"
+                        - string
+                    description: Policy to assign to the keys. Set to null to restore default-policy inheritance.
+            required:
+                - keyIds
+                - policyId
+            title: AssignGatewayClientsInput
+        GatewayProvider:
+            type: string
+            enum:
+                - openai
+                - anthropic
+            title: GatewayProvider
+            x-speakeasy-unknown-values: allow
+        GatewayModelAccess:
+            type: object
+            properties:
+                accessMode:
+                    $ref: "#/components/schemas/AccessModeOptionsGatewayModelAccess"
+                    description: Allow all providers except blocked ones, or allow only explicitly listed providers.
+                allowedProviders:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/GatewayProvider"
+                    description: Providers allowed when accessMode is only_allow.
+                blockedProviders:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/GatewayProvider"
+                    description: Providers blocked when accessMode is allow_all.
+                modelRules:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ModelRuleConfGatewayModelAccess"
+                    description: Per-model exceptions to provider access rules.
+            required:
+                - accessMode
+                - modelRules
+            title: GatewayModelAccess
+        GatewayPeriod:
+            type: string
+            enum:
+                - day
+                - week
+                - month
+            title: GatewayPeriod
+            x-speakeasy-unknown-values: allow
+        GatewayTokenLimit:
+            type: object
+            properties:
+                limit:
+                    type: integer
+                    description: Maximum number of tokens allowed in each budget period before overage.
+                overage:
+                    type: boolean
+                    description: Whether usage may exceed the token limit by the overage allowance.
+                overageAllowance:
+                    type: number
+                    description: Additional tokens permitted per period when overage is enabled.
+                period:
+                    $ref: "#/components/schemas/GatewayPeriod"
+                    description: Period over which token usage is counted.
+            required:
+                - limit
+                - overage
+                - period
+            title: GatewayTokenLimit
+        GatewayPolicyMutation:
+            type: object
+            properties:
+                configVersion:
+                    type: string
+                    description: Synthetic configuration version for the mock mutation; omitted when simulated deployment fails.
+                controls:
+                    $ref: "#/components/schemas/ControlsTypeGatewayPolicyMutation"
+                    description: Whether token and model restrictions are configured.
+                description:
+                    type: string
+                    description: Human-readable description of the policy.
+                enforcedWorkerCount:
+                    type: number
+                    description: Simulated number of workers that have applied the policy change.
+                enforcementStatus:
+                    $ref: "#/components/schemas/EnforcementStatusOptionsAssignedGatewayClients"
+                    description: Simulated deployment status. The mock does not deploy configuration to workers.
+                id:
+                    type: string
+                    description: Unique policy identifier.
+                isDefault:
+                    type: boolean
+                    description: Whether keys without an explicit policy assignment inherit this policy.
+                keyCount:
+                    type: number
+                    description: Number of active, unexpired client keys explicitly assigned to or inheriting this policy.
+                modelAccess:
+                    $ref: "#/components/schemas/GatewayModelAccess"
+                    description: Provider and model access rules for the policy.
+                name:
+                    type: string
+                    description: Unique policy name with surrounding whitespace removed.
+                revision:
+                    type: number
+                    description: Policy revision, incremented when policy settings are updated.
+                targetWorkerCount:
+                    type: number
+                    description: Simulated number of workers targeted by the policy change.
+                tokenLimit:
+                    $ref: "#/components/schemas/GatewayTokenLimit"
+                    description: Token budget configuration; omitted when token usage is unrestricted.
+            required:
+                - controls
+                - description
+                - enforcedWorkerCount
+                - enforcementStatus
+                - id
+                - isDefault
+                - keyCount
+                - modelAccess
+                - name
+                - revision
+                - targetWorkerCount
+            title: GatewayPolicyMutation
+        GatewayTokenLimitInput:
+            type: object
+            properties:
+                limit:
+                    type: integer
+                    description: Positive whole-number token budget for each period.
+                    minimum: 1
+                    maximum: 9007199254740991
+                overage:
+                    type:
+                        - "null"
+                        - boolean
+                    description: Enable token overage. Omitted, false, or null disables overage.
+                overageAllowance:
+                    type:
+                        - "null"
+                        - integer
+                    description: Additional token budget required when overage is enabled; otherwise omit or set to null.
+                    minimum: 1
+                    maximum: 9007199254740991
+                period:
+                    $ref: "#/components/schemas/GatewayPeriod"
+                    description: Period over which token usage is counted.
+            required:
+                - limit
+                - period
+            title: GatewayTokenLimitInput
+        CreateGatewayPolicyInput:
+            type: object
+            properties:
+                description:
+                    type: string
+                    description: Human-readable policy description. On updates, omit to retain it or use an empty string to clear it.
+                modelAccess:
+                    $ref: "#/components/schemas/ModelAccessTypeCreateGatewayPolicyInput"
+                    description: Model access settings. On updates, omitted settings are retained and supplied rule lists replace existing lists.
+                name:
+                    type: string
+                    description: Unique name for the new policy; surrounding whitespace is removed.
+                tokenLimit:
+                    $ref: "#/components/schemas/TokenLimitTypeCreateGatewayPolicyInput"
+                    description: Token budget configuration. On updates, omit to retain it or set to null to remove the limit.
+            required:
+                - name
+            title: CreateGatewayPolicyInput
+        GatewayPolicy:
+            type: object
+            properties:
+                controls:
+                    $ref: "#/components/schemas/ControlsTypeGatewayPolicyMutation"
+                    description: Whether token and model restrictions are configured.
+                description:
+                    type: string
+                    description: Human-readable description of the policy.
+                id:
+                    type: string
+                    description: Unique policy identifier.
+                isDefault:
+                    type: boolean
+                    description: Whether keys without an explicit policy assignment inherit this policy.
+                keyCount:
+                    type: number
+                    description: Number of active, unexpired client keys explicitly assigned to or inheriting this policy.
+                modelAccess:
+                    $ref: "#/components/schemas/GatewayModelAccess"
+                    description: Provider and model access rules for the policy.
+                name:
+                    type: string
+                    description: Unique policy name with surrounding whitespace removed.
+                revision:
+                    type: number
+                    description: Policy revision, incremented when policy settings are updated.
+                tokenLimit:
+                    $ref: "#/components/schemas/GatewayTokenLimit"
+                    description: Token budget configuration; omitted when token usage is unrestricted.
+            required:
+                - controls
+                - description
+                - id
+                - isDefault
+                - keyCount
+                - modelAccess
+                - name
+                - revision
+            title: GatewayPolicy
+        CountedListGatewayPolicy:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/GatewayPolicy"
+                offset:
+                    type: integer
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
+                limit:
+                    type: integer
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
+        GatewayCatalogEntry:
+            type: object
+            properties:
+                canonicalId:
+                    type: string
+                    description: Canonical model identifier used in policy rules.
+                displayName:
+                    type: string
+                    description: Human-readable model name, when available.
+                firstDiscoveredAt:
+                    type: string
+                    description: Time the model was first discovered, as an ISO 8601 timestamp.
+                host:
+                    type: string
+                    enum:
+                        - azure
+                        - bedrock
+                    description: Platform hosting the model.
+                    x-speakeasy-unknown-values: allow
+                lifecycle:
+                    type: object
+                    properties:
+                        endOfLifeAt:
+                            type: string
+                            description: Scheduled model retirement time as an ISO 8601 timestamp, when known.
+                        status:
+                            type: string
+                            enum:
+                                - ACTIVE
+                                - LEGACY
+                            description: Whether the model is active or retained as a legacy model.
+                            x-speakeasy-unknown-values: allow
+                    required:
+                        - status
+                    description: Model availability and retirement information.
+                provider:
+                    $ref: "#/components/schemas/GatewayProvider"
+                    description: Provider that supplies the model.
+                routableIds:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            hostCreatedAt:
+                                type: number
+                                description: Host-reported creation time as Unix seconds, when available.
+                            id:
+                                type: string
+                                description: Model identifier used when routing a request to the host.
+                        required:
+                            - id
+                    description: Model identifiers accepted by the hosting platform.
+            required:
+                - canonicalId
+                - firstDiscoveredAt
+                - host
+                - lifecycle
+                - provider
+                - routableIds
+            title: GatewayCatalogEntry
+        GatewayCatalogHost:
+            type: object
+            properties:
+                stale:
+                    type: boolean
+                    description: Whether this host's cached model information is considered out of date.
+                updatedAt:
+                    type: string
+                    description: Last refresh time for this host as an ISO 8601 timestamp.
+            required:
+                - stale
+                - updatedAt
+            title: GatewayCatalogHost
+        GatewayCatalog:
+            type: object
+            properties:
+                entries:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/GatewayCatalogEntry"
+                    description: Cached model catalog entries.
+                hosts:
+                    type: object
+                    properties:
+                        azure:
+                            $ref: "#/components/schemas/GatewayCatalogHost"
+                        bedrock:
+                            $ref: "#/components/schemas/GatewayCatalogHost"
+                    description: Refresh status for each model host.
+                stale:
+                    type: boolean
+                    description: Whether the cached catalog is considered out of date.
+                updatedAt:
+                    type: string
+                    description: Last catalog refresh time as an ISO 8601 timestamp.
+            required:
+                - entries
+                - hosts
+                - stale
+                - updatedAt
+            title: GatewayCatalog
+        UpdateGatewayPolicyInput:
+            type: object
+            properties:
+                description:
+                    type: string
+                    description: Human-readable policy description. On updates, omit to retain it or use an empty string to clear it.
+                modelAccess:
+                    $ref: "#/components/schemas/ModelAccessTypeCreateGatewayPolicyInput"
+                    description: Model access settings. On updates, omitted settings are retained and supplied rule lists replace existing lists.
+                name:
+                    type: string
+                    description: Replacement policy name. Omit to retain the current name.
+                tokenLimit:
+                    $ref: "#/components/schemas/TokenLimitTypeCreateGatewayPolicyInput"
+                    description: Token budget configuration. On updates, omit to retain it or set to null to remove the limit.
+            title: UpdateGatewayPolicyInput
         ApiCredential:
             type: object
             properties:
@@ -182757,6 +183333,11 @@ components:
         SavedQueryPartialRequest:
             type: object
             properties:
+                appId:
+                    description: App identifier used to attribute search/platform usage to a driving app.
+                    anyOf:
+                        - type: string
+                        - type: "null"
                 chartConfig:
                     description: Chart configuration for scheduled or Dashboard-backed runs.
                     anyOf:
@@ -183371,8 +183952,8 @@ components:
                     anyOf:
                         - oneOf:
                             - $ref: "#/components/schemas/AnomalyConfig"
-                            - $ref: "#/components/schemas/OutlierConfig"
                             - $ref: "#/components/schemas/ChangeConfig"
+                            - $ref: "#/components/schemas/OutlierConfig"
                             - $ref: "#/components/schemas/ForecastConfig"
                         - type: "null"
                 enabled:
@@ -183494,8 +184075,8 @@ components:
                             anyOf:
                                 - oneOf:
                                     - $ref: "#/components/schemas/AnomalyConfig"
-                                    - $ref: "#/components/schemas/OutlierConfig"
                                     - $ref: "#/components/schemas/ChangeConfig"
+                                    - $ref: "#/components/schemas/OutlierConfig"
                                     - $ref: "#/components/schemas/ForecastConfig"
                                 - type: "null"
                         enabled:
@@ -184652,240 +185233,6 @@ components:
                         - type: "null"
             description: Sharing configuration for a secret folder.
             title: SharingConfigPartialRequest
-        SecretStoreUpdatePartialRequest:
-            oneOf:
-                - $ref: "#/components/schemas/VaultSecretStoreUpdatePartialRequest"
-                  required:
-                    - type
-                - $ref: "#/components/schemas/AzureKeyVaultSecretStoreUpdatePartialRequest"
-                  required:
-                    - type
-                - $ref: "#/components/schemas/CyberArkCcpSecretStoreUpdatePartialRequest"
-                  required:
-                    - type
-            description: Request body for updating fields of an existing secret store backed by an external provider.
-            title: SecretStoreUpdatePartialRequest
-        VaultSecretStoreUpdatePartialRequest:
-            type: object
-            properties:
-                config:
-                    description: Configuration of the Vault secret store.
-                    anyOf:
-                        - $ref: "#/components/schemas/VaultStoreConfigUpdatePartialRequest"
-                        - type: "null"
-                description:
-                    description: Description of the secret store. For the built-in <code>cribl</code> secret store, the value is always <code>Built-in Cribl secret store.</code>.
-                    examples:
-                        - HashiCorp Vault-backed secret store for production credentials
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                id:
-                    type: string
-                    description: Unique identifier of the secret store to update. Cribl does not support updating the built-in <code>cribl</code> secret store.
-                    examples:
-                        - vault-prod
-                    pattern: ^[a-zA-Z0-9_\-]+$
-                type:
-                    type: string
-                    const: vault
-                    description: Secret store type. Use <code>vault</code> for HashiCorp Vault.
-            description: Request body for updating a HashiCorp Vault secret store.
-            title: VaultSecretStoreUpdatePartialRequest
-        VaultStoreConfigUpdatePartialRequest:
-            type: object
-            properties:
-                auth:
-                    anyOf:
-                        - $ref: "#/components/schemas/VaultAuthConfigPatch"
-                        - type: "null"
-                healthCheckEndpoint:
-                    description: Custom endpoint path for HashiCorp Vault health checks. If set, health checks are enabled. If omitted, health checks are disabled.
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                tls:
-                    description: TLS configuration for the HashiCorp Vault connection.
-                    anyOf:
-                        - $ref: "#/components/schemas/VaultTlsClientConfigPartialRequest"
-                        - type: "null"
-            description: Configuration for updating a HashiCorp Vault secret store.
-            title: VaultStoreConfigUpdatePartialRequest
-        VaultTlsClientConfigPartialRequest:
-            type: object
-            properties:
-                caPath:
-                    description: Path to the CA certificate file for verifying the HashiCorp Vault server certificate.
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                certPath:
-                    description: Path to the client certificate file for mutual TLS (mTLS).
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                certificateName:
-                    description: Name of the certificate in the system certificate store to use for mutual TLS (mTLS).
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                maxVersion:
-                    description: Maximum TLS version that Cribl accepts when connecting to HashiCorp Vault.
-                    anyOf:
-                        - $ref: "#/components/schemas/SecureVersion"
-                        - type: "null"
-                minVersion:
-                    description: Minimum TLS version that Cribl accepts when connecting to HashiCorp Vault.
-                    anyOf:
-                        - $ref: "#/components/schemas/SecureVersion"
-                        - type: "null"
-                passphrase:
-                    description: Passphrase for decrypting the client private key used for mutual TLS (mTLS).
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                privKeyPath:
-                    description: Path to the client private key file for mutual TLS (mTLS).
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                rejectUnauthorized:
-                    description: If <code>true</code>, reject connections to HashiCorp Vault when the server certificate cannot be verified against the configured Certificate Authority. Otherwise, <code>false</code>.
-                    anyOf:
-                        - type: boolean
-                        - type: "null"
-                servername:
-                    description: Server Name Indication (SNI) value to send in the TLS handshake. Use when the HashiCorp Vault server certificate Common Name (CN) or Subject Alternative Name (SAN) does not match the Vault URL hostname.
-                    anyOf:
-                        - type: string
-                        - type: "null"
-            title: VaultTlsClientConfigPartialRequest
-        AzureKeyVaultSecretStoreUpdatePartialRequest:
-            type: object
-            properties:
-                config:
-                    description: Configuration of the Azure Key Vault secret store.
-                    anyOf:
-                        - $ref: "#/components/schemas/AzureKeyVaultStoreConfigUpdatePartialRequest"
-                        - type: "null"
-                description:
-                    description: Description of the secret store. For the built-in <code>cribl</code> secret store, the value is always <code>Built-in Cribl secret store.</code>.
-                    examples:
-                        - HashiCorp Vault-backed secret store for production credentials
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                id:
-                    type: string
-                    description: Unique identifier of the secret store to update. Cribl does not support updating the built-in <code>cribl</code> secret store.
-                    examples:
-                        - vault-prod
-                    pattern: ^[a-zA-Z0-9_\-]+$
-                type:
-                    type: string
-                    const: azure-keyvault
-                    description: Secret store type. Use <code>azure-keyvault</code> for Azure Key Vault.
-            description: Request body for updating an Azure Key Vault secret store.
-            title: AzureKeyVaultSecretStoreUpdatePartialRequest
-        AzureKeyVaultStoreConfigUpdatePartialRequest:
-            type: object
-            properties:
-                auth:
-                    description: Authentication fields to update for the Azure Key Vault store.
-                    anyOf:
-                        - oneOf:
-                            - $ref: "#/components/schemas/AzureKeyVaultClientSecretAuthPartialRequest"
-                              required:
-                                - authType
-                            - $ref: "#/components/schemas/AzureKeyVaultClientCertAuthPartialRequest"
-                              required:
-                                - authType
-                        - type: "null"
-            description: Configuration for updating an Azure Key Vault secret store.
-            title: AzureKeyVaultStoreConfigUpdatePartialRequest
-        AzureKeyVaultClientSecretAuthPartialRequest:
-            type: object
-            properties:
-                authType:
-                    type: string
-                    const: clientSecret
-                    description: Authentication method. Always <code>clientSecret</code>.
-                clientId:
-                    type: string
-                    description: Microsoft Entra application (client) ID.
-                clientSecret:
-                    type: string
-                    description: Microsoft Entra client secret.
-                tenantId:
-                    type: string
-                    description: Microsoft Entra tenant ID.
-            description: Client-secret authentication configuration for an Azure Key Vault store.
-            title: AzureKeyVaultClientSecretAuthPartialRequest
-        AzureKeyVaultClientCertAuthPartialRequest:
-            type: object
-            properties:
-                authType:
-                    type: string
-                    const: clientCert
-                    description: Authentication method. Always <code>clientCert</code>.
-                certificateName:
-                    type: string
-                    description: Name of the certificate stored in Cribl's certificate store.
-                clientId:
-                    type: string
-                    description: Microsoft Entra application (client) ID.
-                tenantId:
-                    type: string
-                    description: Microsoft Entra tenant ID.
-            description: Client-certificate authentication configuration for an Azure Key Vault store.
-            title: AzureKeyVaultClientCertAuthPartialRequest
-        CyberArkCcpSecretStoreUpdatePartialRequest:
-            type: object
-            properties:
-                config:
-                    description: Configuration of the CyberArk secret store.
-                    anyOf:
-                        - $ref: "#/components/schemas/CyberArkCcpStoreConfigUpdatePartialRequest"
-                        - type: "null"
-                description:
-                    description: Description of the secret store. For the built-in <code>cribl</code> secret store, the value is always <code>Built-in Cribl secret store.</code>.
-                    examples:
-                        - HashiCorp Vault-backed secret store for production credentials
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                id:
-                    type: string
-                    description: Unique identifier of the secret store to update. Cribl does not support updating the built-in <code>cribl</code> secret store.
-                    examples:
-                        - vault-prod
-                    pattern: ^[a-zA-Z0-9_\-]+$
-                type:
-                    type: string
-                    const: cyberark-ccp
-                    description: Secret store type. Use <code>cyberark-ccp</code> for CyberArk CCP.
-            description: Request body for updating a CyberArk secret store.
-            title: CyberArkCcpSecretStoreUpdatePartialRequest
-        CyberArkCcpStoreConfigUpdatePartialRequest:
-            type: object
-            properties:
-                appId:
-                    description: "Application ID registered in CyberArk (CCP). Treated as a credential: omit it, or send the empty string a read returns, to keep the stored value; send a new value to rotate it."
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                certificateName:
-                    description: Name of the certificate in Cribl's certificate store for IIS mutual TLS. Send an empty string to clear a previously configured certificate.
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                healthCheckSecretId:
-                    description: Object name of an existing secret to retrieve from the configured Safe and Folder on save and during periodic health checks. Omit to preserve the current setting. Send an empty string to clear it and return to a connectivity check that does not verify Safe or Folder access.
-                    anyOf:
-                        - type: string
-                        - type: "null"
-            description: Configuration for updating a CyberArk secret store.
-            title: CyberArkCcpStoreConfigUpdatePartialRequest
         TeamPartialRequest:
             type: object
             properties:
@@ -192737,14 +193084,14 @@ components:
                 - running
             description: Lifecycle state of the job (queued, running, completed, failed, canceled, and so on).
             x-speakeasy-unknown-values: allow
-        DetectionConfigTypeAetosMonitorConf:
+        DetectionConfigTypeResolvedConfigProfileConfig:
             oneOf:
                 - $ref: "#/components/schemas/AnomalyConfig"
-                - $ref: "#/components/schemas/OutlierConfig"
                 - $ref: "#/components/schemas/ChangeConfig"
+                - $ref: "#/components/schemas/OutlierConfig"
                 - $ref: "#/components/schemas/ForecastConfig"
             description: Type-specific detection configuration. Present for change, anomaly, outlier, and forecast monitors; undefined for threshold and logs monitors.
-        SearchModeOptionsAetosMonitorConf:
+        SearchModeOptionsResolvedConfigProfileConfig:
             type: string
             enum:
                 - new
@@ -192983,6 +193330,45 @@ components:
                 - terminated
             description: Provisioning lifecycle status of the lakehouse engine.
             x-speakeasy-unknown-values: allow
+        EnforcementStatusOptionsAssignedGatewayClients:
+            type: string
+            enum:
+                - applied
+                - pending
+            description: Simulated deployment status. The mock does not deploy configuration to workers.
+            x-speakeasy-unknown-values: allow
+        AccessModeOptionsGatewayModelAccess:
+            type: string
+            enum:
+                - allow_all
+                - only_allow
+            description: Allow all providers except blocked ones, or allow only explicitly listed providers.
+            x-speakeasy-unknown-values: allow
+        ActionOptionsGatewayModelAccessModelRulesItems:
+            type: string
+            enum:
+                - allow
+                - block
+            description: Whether to allow or block the model.
+            x-speakeasy-unknown-values: allow
+        ControlsTypeGatewayPolicyMutation:
+            type: object
+            properties:
+                models:
+                    type: boolean
+                    description: Whether provider or model access restrictions are configured.
+                tokens:
+                    type: boolean
+                    description: Whether a token limit is configured.
+            required:
+                - models
+                - tokens
+            description: Whether token and model restrictions are configured.
+        TokenLimitTypeCreateGatewayPolicyInput:
+            oneOf:
+                - type: "null"
+                - $ref: "#/components/schemas/GatewayTokenLimitInput"
+            description: Token budget configuration. On updates, omit to retain it or set to null to remove the limit.
         ProductConfAppRequestBody:
             type: string
             enum:
@@ -194620,6 +195006,18 @@ components:
                 subscriptionId:
                     type: string
                     description: Azure subscription ID (for azure_blob provider)
+        ModelRuleConfGatewayModelAccess:
+            type: object
+            properties:
+                action:
+                    $ref: "#/components/schemas/ActionOptionsGatewayModelAccessModelRulesItems"
+                    description: Whether to allow or block the model.
+                canonicalId:
+                    type: string
+                    description: Canonical model identifier to which this exception applies.
+            required:
+                - action
+                - canonicalId
         ApiTypeSystemSettingsConf:
             type: object
             properties:
@@ -194928,6 +195326,28 @@ components:
                 inventoryConfig:
                     $ref: "#/components/schemas/InventoryConfigTypeCriblLakeStorageLocationConfig"
                     description: S3 Inventory configuration for tracking bucket contents.
+        ModelAccessTypeCreateGatewayPolicyInput:
+            type: object
+            properties:
+                accessMode:
+                    $ref: "#/components/schemas/AccessModeOptionsGatewayModelAccess"
+                    description: Allow all providers except blocked ones, or allow only explicitly listed providers.
+                allowedProviders:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/GatewayProvider"
+                    description: Providers allowed when accessMode is only_allow.
+                blockedProviders:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/GatewayProvider"
+                    description: Providers blocked when accessMode is allow_all.
+                modelRules:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ModelRuleConfGatewayModelAccess"
+                    description: Per-model exceptions to provider access rules.
+            description: Model access settings. On updates, omitted settings are retained and supplied rule lists replace existing lists.
         EventConfPreviewResponseBody:
             allOf:
                 - $ref: "#/components/schemas/PreviewResponseBodyEventsItemsType"
@@ -203022,6 +203442,25 @@ components:
                       description: HashiCorp Vault-backed secret store for production credentials
                 offset: 0
                 limit: 20
+        UpdateSecretStoreExamplesUpdateCyberArkCcpSecretStore:
+            summary: Rotate a CyberArk CCP application ID
+            description: Example request body for rotating the application ID of an existing CyberArk CCP secret store.
+            value:
+                id: cyberark-prod
+                type: cyberark-ccp
+                config:
+                    appId: CriblLeaderRotated
+        UpdateSecretStoreExamplesUpdateVaultSecretStore:
+            summary: Update a secret store
+            description: Example request body for rotating the authentication token of an existing secret store.<br/><br/>This endpoint supports partial updates. The connection-identity fields (<code>url</code>, <code>namespace</code>, and <code>mount</code>) are immutable after creation and cannot be updated — create a new secret store to point at a different Vault location.
+            value:
+                id: vault-prod
+                type: vault
+                description: HashiCorp Vault-backed secret store for production credentials
+                config:
+                    auth:
+                        provider: token
+                        token: rotated-token
         InstanceSettingsResponseExamplesDistributedSettings:
             summary: List distributed Instance Settings
             description: Example response for listing Instance Settings on a distributed Worker Node.
@@ -205280,6 +205719,249 @@ components:
                         - edge
                 offset: 0
                 limit: 20
+        CreateGatewayClientExamplesNamedClient:
+            summary: Create a Gateway client key
+            description: Example request body for creating a Gateway client key for an application.
+            value:
+                name: Orders dashboard
+                description: Gateway key for the orders dashboard
+                tags:
+                    - orders
+                    - production
+        UpdateGatewayClientResponseExamplesTaggedClient:
+            summary: Update Gateway client-key metadata
+            description: Example response for updating an application key for the staging dashboard.
+            value:
+                id: mock-client-active
+                name: Mock application
+                description: Gateway key for the staging dashboard
+                tags:
+                    - orders
+                    - staging
+                keyPrefix: mock-active
+                enabled: true
+                createdAt: 1712345678901
+        UpdateGatewayClientResponseExamplesClearedMetadata:
+            summary: Clear Gateway client-key metadata
+            description: Example response for clearing the description and tags of an application key.
+            value:
+                id: mock-client-active
+                name: Mock application
+                keyPrefix: mock-active
+                enabled: true
+                createdAt: 1712345678901
+        AssignGatewayClientsResponseExamplesExplicitPolicy:
+            summary: Assign two active client keys to a policy
+            value:
+                policyId: policy-example
+                assignedKeyCount: 2
+                enforcementStatus: applied
+                configVersion: mock-1
+                targetWorkerCount: 1
+                enforcedWorkerCount: 1
+        AssignGatewayClientsResponseExamplesInheritDefault:
+            summary: Restore default-policy inheritance; policyId is omitted from the response
+            value:
+                assignedKeyCount: 1
+                enforcementStatus: applied
+                configVersion: mock-1
+                targetWorkerCount: 1
+                enforcedWorkerCount: 1
+        AssignGatewayClientsExamplesExplicitPolicy:
+            summary: Assign active client keys to a policy
+            value:
+                keyIds:
+                    - mock-client-active
+                    - mock-client-expiring
+                policyId: policy-example
+        AssignGatewayClientsExamplesInheritDefault:
+            summary: Restore default-policy inheritance for a client key
+            value:
+                keyIds:
+                    - mock-client-active
+                policyId: null
+        CreateGatewayPolicyResponseExamplesCreated:
+            summary: Create policy metadata with a simulated deployment acknowledgement
+            value:
+                id: policy-example
+                name: Application policy
+                description: Limits for application clients
+                isDefault: false
+                revision: 1
+                keyCount: 0
+                controls:
+                    tokens: true
+                    models: true
+                tokenLimit:
+                    limit: 1000
+                    period: day
+                    overage: true
+                    overageAllowance: 200
+                modelAccess:
+                    accessMode: allow_all
+                    blockedProviders:
+                        - anthropic
+                    modelRules: []
+                enforcementStatus: applied
+                configVersion: mock-1
+                targetWorkerCount: 1
+                enforcedWorkerCount: 1
+        CreateGatewayPolicyExamplesApplicationPolicy:
+            summary: Create a policy with token and provider restrictions
+            value:
+                name: Application policy
+                description: Limits for application clients
+                tokenLimit:
+                    limit: 1000
+                    period: day
+                    overage: true
+                    overageAllowance: 200
+                modelAccess:
+                    accessMode: allow_all
+                    blockedProviders:
+                        - anthropic
+                    modelRules: []
+        GetGatewayPolicyResponseExamplesApplicationPolicy:
+            summary: Read policy settings and the active key count
+            value:
+                id: policy-example
+                name: Application policy
+                description: Limits for application clients
+                isDefault: false
+                revision: 1
+                keyCount: 0
+                controls:
+                    tokens: true
+                    models: true
+                tokenLimit:
+                    limit: 1000
+                    period: day
+                    overage: true
+                    overageAllowance: 200
+                modelAccess:
+                    accessMode: allow_all
+                    blockedProviders:
+                        - anthropic
+                    modelRules: []
+        ListGatewayPoliciesResponseExamplesPolicies:
+            summary: List policies with the default policy first
+            value:
+                items:
+                    - id: policy-default
+                      name: Default
+                      description: ""
+                      isDefault: true
+                      revision: 1
+                      keyCount: 2
+                      controls:
+                        tokens: false
+                        models: false
+                      modelAccess:
+                        accessMode: allow_all
+                        blockedProviders: []
+                        modelRules: []
+                    - id: policy-example
+                      name: Application policy
+                      description: Limits for application clients
+                      isDefault: false
+                      revision: 1
+                      keyCount: 0
+                      controls:
+                        tokens: true
+                        models: true
+                      tokenLimit:
+                        limit: 1000
+                        period: day
+                        overage: true
+                        overageAllowance: 200
+                      modelAccess:
+                        accessMode: allow_all
+                        blockedProviders:
+                            - anthropic
+                        modelRules: []
+                count: 2
+        DefaultGatewayPolicyResponseExamplesDefaultPolicy:
+            summary: Make the policy the default for keys without an explicit assignment
+            value:
+                id: policy-example
+                name: Application policy
+                description: Limits for application clients
+                isDefault: true
+                revision: 1
+                keyCount: 2
+                controls:
+                    tokens: true
+                    models: true
+                tokenLimit:
+                    limit: 1000
+                    period: day
+                    overage: true
+                    overageAllowance: 200
+                modelAccess:
+                    accessMode: allow_all
+                    blockedProviders:
+                        - anthropic
+                    modelRules: []
+                enforcementStatus: applied
+                configVersion: mock-1
+                targetWorkerCount: 1
+                enforcedWorkerCount: 1
+        GetGatewayCatalogResponseExamplesCatalog:
+            summary: Read cached models and host refresh status
+            value:
+                updatedAt: 2026-10-08T12:00:00.000Z
+                stale: false
+                hosts:
+                    azure:
+                        updatedAt: 2026-10-08T12:00:00.000Z
+                        stale: false
+                entries:
+                    - canonicalId: gpt-6
+                      provider: openai
+                      host: azure
+                      displayName: GPT 6
+                      routableIds:
+                        - id: gpt-6
+                          hostCreatedAt: 1791460800
+                      lifecycle:
+                        status: ACTIVE
+                      firstDiscoveredAt: 2026-10-07T12:00:00.000Z
+        UpdateGatewayPolicyResponseExamplesUpdated:
+            summary: Replace the token budget and increment the policy revision
+            value:
+                id: policy-example
+                name: Application policy
+                description: Weekly application budget
+                isDefault: false
+                revision: 2
+                keyCount: 0
+                controls:
+                    tokens: true
+                    models: true
+                tokenLimit:
+                    limit: 2000
+                    period: week
+                    overage: false
+                modelAccess:
+                    accessMode: allow_all
+                    blockedProviders:
+                        - anthropic
+                    modelRules: []
+                enforcementStatus: applied
+                configVersion: mock-1
+                targetWorkerCount: 1
+                enforcedWorkerCount: 1
+        UpdateGatewayPolicyExamplesReplaceBudget:
+            summary: Update the description and replace the token budget
+            value:
+                description: Weekly application budget
+                tokenLimit:
+                    limit: 2000
+                    period: week
+        UpdateGatewayPolicyExamplesRemoveBudget:
+            summary: Remove the token budget while retaining other policy settings
+            value:
+                tokenLimit: null
         GetApiCredentialResponseExamplesSingleCredential:
             summary: Get an API Credential
             description: Example response for getting the specified API Credential within the current Workspace.<br/><br/>To get an API Credential at the Organization level, including its cross-Workspace access assignments, use the <code>GET /organizations/{organizationId}/api-credentials/{apiCredentialId}</code> endpoint in the [management plane API](https://docs.cribl.io/cribl-as-code/api-reference/management-plane/).
@@ -215622,25 +216304,6 @@ components:
                         - team-a
                         - team-b
                     lake: {}
-        UpdateSecretStoreExamplesUpdateCyberArkCcpSecretStorePartialRequest:
-            summary: Rotate a CyberArk CCP application ID
-            description: "Example request body for rotating the application ID of an existing CyberArk CCP secret store.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
-            value:
-                id: cyberark-prod
-                type: cyberark-ccp
-                config:
-                    appId: CriblLeaderRotated
-        UpdateSecretStoreExamplesUpdateVaultSecretStorePartialRequest:
-            summary: Update a secret store
-            description: "Example request body for rotating the authentication token of an existing secret store.<br/><br/>The connection-identity fields (<code>url</code>, <code>namespace</code>, and <code>mount</code>) are immutable after creation and cannot be updated — create a new secret store to point at a different Vault location.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
-            value:
-                id: vault-prod
-                type: vault
-                description: HashiCorp Vault-backed secret store for production credentials
-                config:
-                    auth:
-                        provider: token
-                        token: rotated-token
         UpdateTeamExamplesUpdateTeamRolesPartialRequest:
             summary: Update Team Roles
             description: "Example request body for updating the Roles assigned to an existing Team.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
@@ -215956,6 +216619,20 @@ components:
                 created_by: admin@example.com
                 begins_at: 1710000000000
                 expires_at: 1710003600000
+        UpdateGatewayClientExamplesTaggedClientPartialRequest:
+            summary: Update Gateway client-key metadata
+            description: "Example request for updating the description and tags of an application key.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                description: Gateway key for the staging dashboard
+                tags:
+                    - orders
+                    - staging
+        UpdateGatewayClientExamplesClearMetadataPartialRequest:
+            summary: Remove Gateway client-key metadata
+            description: "Example request for removing the description and tags from a key.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                description: null
+                tags: null
         UpdateLoggerConfigExamplesUpdateChannelsAndRedactionPartialRequest:
             summary: Update Logger channels and redaction settings
             description: "Example request body for updating Logger channel levels and field redaction settings.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
@@ -216024,6 +216701,10 @@ tags:
       x-cribl-api-context:
         - leader
         - single
+    - name: ai-gateway
+      description: Actions related to Ai Gateway
+      x-cribl-internal: true
+      x-cribl-availability: cloud
     - name: ai-settings
       description: Actions related to AI settings, AI features, agents.md instructions, and custom AI Provider configuration.
       x-cribl-availability: both
@@ -241095,7 +241776,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/AetosMonitorConf"
+                                $ref: "#/components/schemas/ResolvedConfigProfileConfig"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -249118,7 +249799,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Update a secret store
-            description: 'Update the specified secret store. Cribl does not support updates to the built-in <code>cribl</code> secret store.<br/><br/>If you change the <code>auth.provider</code>, you must send a complete <code>auth</code> object with the correct configuration for the provider. As long as you do not change the <code>auth.provider</code>, you can update a single setting in <code>auth</code> without resending the entire object.<br/><br/>Secret values (such as <code>auth.token</code> for HashiCorp Vault and <code>appId</code> for CyberArk CCP) are returned masked as an empty string by <code>GET</code>, so a read-modify-write is safe: a secret sent as an empty string is treated as "keep the stored value" and is ignored. To change a secret, send its new value. There is no way to clear a secret through this endpoint.<br/><br/>For Vault stores, omitting <code>config.healthCheckEndpoint</code> preserves the current value. Send an empty string (<code>""</code>) to clear it and disable health checks.<br/><br/>HashiCorp Vault and Azure Key Vault stores run a provider connection check when connection settings change. For Azure Key Vault stores, grant List (<code>Key Vault Reader</code>) or Get (<code>Key Vault Secrets User</code>) at vault scope. If vault-level access is not possible, create a secret named <code>cribl-gsm-connectivity-probe</code> and grant Get on it. Cribl validates the connection with a List call, falling back to a Get on that secret name.<br/><br/>CyberArk CCP stores run a probe when connection settings change and during periodic health checks. By default, Cribl requests the <code>cribl-gsm-connectivity-probe</code> Object in the configured Safe and Folder for a connectivity check. Configure a retrievable health-check secret to retrieve that secret from the configured Safe and Folder instead. Both the application user and Credential Provider user need permission to retrieve it. Successful retrieval verifies access to that secret through CCP only; CCP can use cached authorization information. Without a health-check secret, the check does not verify authentication, Safe or Folder access, or secret retrieval permissions.<br/><br/><b>Deprecated:</b> a <code>config.tls.rejectUnauthorized</code> value supplied through the API is ignored — Cribl enforces HashiCorp Vault server-certificate validation.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration.'
+            description: 'Update the specified secret store. Cribl does not support updates to the built-in <code>cribl</code> secret store.<br/><br/>This endpoint supports partial updates. Include only the fields you want to change. Omitted fields keep their current values.<br/><br/>If you change the <code>auth.provider</code>, you must send a complete <code>auth</code> object with the correct configuration for the provider. As long as you do not change the <code>auth.provider</code>, you can update a single setting in <code>auth</code> without resending the entire object.<br/><br/>Secret values (such as <code>auth.token</code> for HashiCorp Vault and <code>appId</code> for CyberArk CCP) are returned masked as an empty string by <code>GET</code>, so a read-modify-write is safe: a secret sent as an empty string is treated as "keep the stored value" and is ignored. To change a secret, send its new value. There is no way to clear a secret through this endpoint.<br/><br/>For Vault stores, omitting <code>config.healthCheckEndpoint</code> preserves the current value. Send an empty string (<code>""</code>) to clear it and disable health checks.<br/><br/>For Vault stores, an <code>accessVia</code> object replaces the current binding and must include both <code>type</code> and <code>groupId</code>. Send <code>null</code> to clear the binding.<br/><br/>Confirm that the configuration in your request body is correct before sending the request. If the configuration is incorrect, the updated secret store might not function as expected.<br/><br/>HashiCorp Vault and Azure Key Vault stores run a provider connection check when connection settings change. For Azure Key Vault stores, grant List (<code>Key Vault Reader</code>) or Get (<code>Key Vault Secrets User</code>) at vault scope. If vault-level access is not possible, create a secret named <code>cribl-gsm-connectivity-probe</code> and grant Get on it. Cribl validates the connection with a List call, falling back to a Get on that secret name.<br/><br/>CyberArk CCP stores run a probe when connection settings change and during periodic health checks. By default, Cribl requests the <code>cribl-gsm-connectivity-probe</code> Object in the configured Safe and Folder for a connectivity check. Configure a retrievable health-check secret to retrieve that secret from the configured Safe and Folder instead. Both the application user and Credential Provider user need permission to retrieve it. Successful retrieval verifies access to that secret through CCP only; CCP can use cached authorization information. Without a health-check secret, the check does not verify authentication, Safe or Folder access, or secret retrieval permissions.<br/><br/><b>Deprecated:</b> a <code>config.tls.rejectUnauthorized</code> value supplied through the API is ignored — Cribl enforces HashiCorp Vault server-certificate validation.'
             responses:
                 "200":
                     description: The updated SecretStoreWithRuntimeState object.
@@ -249160,12 +249841,12 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/SecretStoreUpdatePartialRequest"
+                            $ref: "#/components/schemas/SecretStoreUpdate"
                         examples:
                             UpdateSecretStoreExamplesUpdateCyberArkCcpSecretStore:
-                                $ref: "#/components/examples/UpdateSecretStoreExamplesUpdateCyberArkCcpSecretStorePartialRequest"
+                                $ref: "#/components/examples/UpdateSecretStoreExamplesUpdateCyberArkCcpSecretStore"
                             UpdateSecretStoreExamplesUpdateVaultSecretStore:
-                                $ref: "#/components/examples/UpdateSecretStoreExamplesUpdateVaultSecretStorePartialRequest"
+                                $ref: "#/components/examples/UpdateSecretStoreExamplesUpdateVaultSecretStore"
             parameters:
                 - name: id
                   in: path
@@ -259856,6 +260537,490 @@ paths:
                       type: limit
                 outputs:
                     results: $.items
+    /system/ai-gateway/client-keys:
+        post:
+            operationId: createSystemAiGatewayClientKeys
+            tags:
+                - ai-gateway
+            x-speakeasy-group: aiGateway
+            x-speakeasy-name-override: create
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Create a Gateway client key and return its plaintext once (Cribl.Cloud only)
+            description: The mock returns a visibly synthetic non-credential value and never activates authentication (Cribl.Cloud only).
+            responses:
+                "202":
+                    description: Stored mock metadata and a synthetic placeholder with pending enforcement status.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: GatewayClientKeyCreateRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/GatewayClientKeyCreateRequest"
+                        examples:
+                            CreateGatewayClientExamplesNamedClient:
+                                $ref: "#/components/examples/CreateGatewayClientExamplesNamedClient"
+    /system/ai-gateway/client-keys/{id}:
+        patch:
+            operationId: updateSystemAiGatewayClientKeysById
+            tags:
+                - ai-gateway
+            x-speakeasy-group: aiGateway
+            x-speakeasy-name-override: update
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Update Gateway client-key metadata (Cribl.Cloud only)
+            description: "Omitted fields remain unchanged (Cribl.Cloud only). Tag arrays replace existing tags; null removes a field.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            responses:
+                "200":
+                    description: The updated GatewayClientKey object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/GatewayClientKey"
+                            examples:
+                                UpdateGatewayClientResponseExamplesTaggedClient:
+                                    $ref: "#/components/examples/UpdateGatewayClientResponseExamplesTaggedClient"
+                                UpdateGatewayClientResponseExamplesClearedMetadata:
+                                    $ref: "#/components/examples/UpdateGatewayClientResponseExamplesClearedMetadata"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: GatewayClientKeyUpdateRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/GatewayClientKeyUpdateRequest"
+                        examples:
+                            UpdateGatewayClientExamplesTaggedClient:
+                                $ref: "#/components/examples/UpdateGatewayClientExamplesTaggedClientPartialRequest"
+                            UpdateGatewayClientExamplesClearMetadata:
+                                $ref: "#/components/examples/UpdateGatewayClientExamplesClearMetadataPartialRequest"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: Unique identifier for the client key.
+    /system/ai-gateway/client-keys/assign:
+        post:
+            operationId: createSystemAiGatewayClientKeysAssign
+            tags:
+                - ai-gateway
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Assign a Policy to client keys (Cribl.Cloud only)
+            description: Atomically assign 1–1000 unique active keys (Cribl.Cloud only). Null policyId restores Default inheritance.
+            responses:
+                "202":
+                    description: The created AssignedGatewayClients object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/AssignedGatewayClients"
+                            examples:
+                                AssignGatewayClientsResponseExamplesExplicitPolicy:
+                                    $ref: "#/components/examples/AssignGatewayClientsResponseExamplesExplicitPolicy"
+                                AssignGatewayClientsResponseExamplesInheritDefault:
+                                    $ref: "#/components/examples/AssignGatewayClientsResponseExamplesInheritDefault"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: AssignGatewayClientsInput object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/AssignGatewayClientsInput"
+                        examples:
+                            AssignGatewayClientsExamplesExplicitPolicy:
+                                $ref: "#/components/examples/AssignGatewayClientsExamplesExplicitPolicy"
+                            AssignGatewayClientsExamplesInheritDefault:
+                                $ref: "#/components/examples/AssignGatewayClientsExamplesInheritDefault"
+    /system/ai-gateway/policies:
+        post:
+            operationId: createSystemAiGatewayPolicies
+            tags:
+                - ai-gateway
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Create an AI Gateway policy (Cribl.Cloud only)
+            description: Create a non-Default Policy and return its deployment acknowledgement (Cribl.Cloud only).
+            responses:
+                "202":
+                    description: The created GatewayPolicyMutation object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/GatewayPolicyMutation"
+                            examples:
+                                CreateGatewayPolicyResponseExamplesCreated:
+                                    $ref: "#/components/examples/CreateGatewayPolicyResponseExamplesCreated"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: CreateGatewayPolicyInput object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/CreateGatewayPolicyInput"
+                        examples:
+                            CreateGatewayPolicyExamplesApplicationPolicy:
+                                $ref: "#/components/examples/CreateGatewayPolicyExamplesApplicationPolicy"
+        get:
+            operationId: getSystemAiGatewayPolicies
+            tags:
+                - ai-gateway
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List AI Gateway policies (Cribl.Cloud only)
+            description: Read Policies with their effective controls and active key counts, Default first (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: List of GatewayPolicy objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListGatewayPolicy"
+                            examples:
+                                ListGatewayPoliciesResponseExamplesPolicies:
+                                    $ref: "#/components/examples/ListGatewayPoliciesResponseExamplesPolicies"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+    /system/ai-gateway/policies/{id}:
+        delete:
+            operationId: deleteSystemAiGatewayPoliciesById
+            tags:
+                - ai-gateway
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Delete an AI Gateway policy (Cribl.Cloud only)
+            description: Assigned keys fall back to Default (Cribl.Cloud only). The Default policy cannot be deleted.
+            responses:
+                "204":
+                    description: No Content
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The Policy id.
+        get:
+            operationId: getSystemAiGatewayPoliciesById
+            tags:
+                - ai-gateway
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Get an AI Gateway policy (Cribl.Cloud only)
+            description: Read one Policy, including Model access and any Token limit (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: The requested GatewayPolicy object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/GatewayPolicy"
+                            examples:
+                                GetGatewayPolicyResponseExamplesApplicationPolicy:
+                                    $ref: "#/components/examples/GetGatewayPolicyResponseExamplesApplicationPolicy"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The Policy id.
+        patch:
+            operationId: updateSystemAiGatewayPoliciesById
+            tags:
+                - ai-gateway
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Update an AI Gateway policy (Cribl.Cloud only)
+            description: Omitted fields are retained (Cribl.Cloud only). Token limits and rule lists replace their previous values; a null token limit removes it.
+            responses:
+                "202":
+                    description: The updated GatewayPolicyMutation object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/GatewayPolicyMutation"
+                            examples:
+                                UpdateGatewayPolicyResponseExamplesUpdated:
+                                    $ref: "#/components/examples/UpdateGatewayPolicyResponseExamplesUpdated"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: UpdateGatewayPolicyInput object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdateGatewayPolicyInput"
+                        examples:
+                            UpdateGatewayPolicyExamplesReplaceBudget:
+                                $ref: "#/components/examples/UpdateGatewayPolicyExamplesReplaceBudget"
+                            UpdateGatewayPolicyExamplesRemoveBudget:
+                                $ref: "#/components/examples/UpdateGatewayPolicyExamplesRemoveBudget"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The Policy id.
+    /system/ai-gateway/policies/{id}/default:
+        post:
+            operationId: createSystemAiGatewayPoliciesDefaultById
+            tags:
+                - ai-gateway
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Make an AI Gateway policy the Default (Cribl.Cloud only)
+            description: Move Default to this Policy (Cribl.Cloud only). Keys without an explicit assignment follow it.
+            responses:
+                "202":
+                    description: The created GatewayPolicyMutation object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/GatewayPolicyMutation"
+                            examples:
+                                DefaultGatewayPolicyResponseExamplesDefaultPolicy:
+                                    $ref: "#/components/examples/DefaultGatewayPolicyResponseExamplesDefaultPolicy"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The Policy id.
+    /system/ai-gateway/models:
+        get:
+            operationId: getSystemAiGatewayModels
+            tags:
+                - ai-gateway
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Read the AI Gateway Model catalog (Cribl.Cloud only)
+            description: Read cached models and host freshness (Cribl.Cloud only). Management reads are not filtered by Policy.
+            responses:
+                "200":
+                    description: The requested GatewayCatalog object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/GatewayCatalog"
+                            examples:
+                                GetGatewayCatalogResponseExamplesCatalog:
+                                    $ref: "#/components/examples/GetGatewayCatalogResponseExamplesCatalog"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
     /system/credentials/{id}:
         get:
             operationId: getSystemCredentialsById
