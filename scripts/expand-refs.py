@@ -103,32 +103,6 @@ def expand_refs(obj, root_doc, path="root", depth=0, visited_paths=None):
         return obj
 
 
-class NoAliasDumper(yaml.SafeDumper):
-    """Custom YAML dumper that ignores anchors and aliases."""
-    def ignore_aliases(self, data):
-        return True
-    
-    def increase_indent(self, flow=False, indentless=False):
-        return super(NoAliasDumper, self).increase_indent(flow, False)
-
-
-def str_representer(dumper, data):
-    """Use double quotes for strings that need quoting, matching OpenAPI style."""
-    # Use double quotes for:
-    # - Empty strings ("")
-    # - HTTP status codes (3-digit numbers like "200", "404", "502")
-    if not data:  # Empty string
-        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
-    if len(data) == 3 and data.isdigit():  # HTTP status codes like "200"
-        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
-    # Let YAML decide for other strings (plain style when safe, quoted when needed)
-    return dumper.represent_scalar('tag:yaml.org,2002:str', data)
-
-
-# Register the custom string representer
-NoAliasDumper.add_representer(str, str_representer)
-
-
 def remove_unused_components(doc):
     """Remove the components section since all refs are expanded."""
     if 'components' in doc:
@@ -163,11 +137,11 @@ def process_file(input_path, output_path):
     expanded = remove_unused_components(expanded)
     
     print(f"Saving to {output_path}...")
+    # Minified JSON for both .json and .yml outputs (JSON is valid YAML); ~50% smaller than
+    # block YAML, keeps resolved specs under GitHub's 100 MB file limit.
+    # Default handles YAML timestamps (e.g. example createdAt values).
     with open(output_path, 'w') as f:
-        if output_path.endswith('.json'):
-            json.dump(expanded, f, indent=2)
-        else:
-            yaml.dump(expanded, f, Dumper=NoAliasDumper, default_flow_style=False, sort_keys=False, width=120, indent=2)
+        json.dump(expanded, f, separators=(',', ':'), default=lambda o: o.isoformat())
     
     print(f"✓ Done!")
 
