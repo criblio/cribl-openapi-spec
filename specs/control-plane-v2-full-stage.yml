@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.3-alpha.1791588022935-a3657dbe
+    version: 4.20.3-alpha.1791933528035-27c07ace
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -60655,6 +60655,19 @@ components:
             enum:
                 - budget_error
                 - compute_provisioning_error
+                - cpe_allocation_mismatch
+                - cpe_allocation_timeout
+                - cpe_capacity_drift
+                - cpe_cold_start_timeout
+                - cpe_config_error
+                - cpe_connection_error
+                - cpe_connection_timeout
+                - cpe_external_service_transient
+                - cpe_fleet_at_capacity
+                - cpe_init_failure
+                - cpe_node_error
+                - cpe_node_not_found
+                - cpe_node_removed
                 - external_service_error
                 - fleet_update_error
                 - heartbeat_error
@@ -83198,6 +83211,61 @@ components:
                 - count
                 - items
             title: MCPServersListResponse
+        CountedListLeaderMcpCatalogTool:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/LeaderMcpCatalogTool"
+                offset:
+                    type: integer
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
+                limit:
+                    type: integer
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
+        LeaderMcpCatalogTool:
+            type: object
+            properties:
+                accessType:
+                    type: string
+                    enum:
+                        - read
+                        - write
+                    description: Whether the tool mutates configuration (<code>write</code>) or only reads it (<code>read</code>).
+                    x-speakeasy-unknown-values: allow
+                available:
+                    type: boolean
+                    description: If <code>true</code>, the caller can see this tool in MCP <code>tools/list</code>.
+                category:
+                    type: string
+                    enum:
+                        - monitors
+                        - platform
+                        - search
+                        - stream
+                    description: Product grouping used to section the Settings catalog.
+                    x-speakeasy-unknown-values: allow
+                description:
+                    type: string
+                    description: Short description of what the tool does.
+                name:
+                    type: string
+                    description: Registered MCP tool name (for example <code>cribl_getPipelines</code>).
+            required:
+                - accessType
+                - available
+                - category
+                - description
+                - name
+            title: LeaderMcpCatalogTool
         AiProviderListModelsResponse:
             type: object
             properties:
@@ -200557,6 +200625,27 @@ components:
                       enabled: true
                       headers:
                         Authorization: "***"
+        ListLeaderMcpToolsResponseExamplesCatalog:
+            summary: List Leader MCP tools for Settings
+            description: Example response for listing Leader MCP tools with category, access type, and availability for the caller.
+            value:
+                count: 3
+                items:
+                    - name: cribl_getPipelines
+                      description: Retrieve Pipeline definitions
+                      category: stream
+                      accessType: read
+                      available: true
+                    - name: cribl_setPipelineConfig
+                      description: Apply a new configuration to a Pipeline
+                      category: stream
+                      accessType: write
+                      available: true
+                    - name: cribl_getSystemMetrics
+                      description: Retrieve system metrics
+                      category: platform
+                      accessType: read
+                      available: false
         ListProviderModelsResponseExamplesBedrockModelsResponse:
             summary: List available models for Amazon Bedrock
             description: Example response for listing available models and tier suggestions for an Amazon Bedrock custom AI Provider.
@@ -232524,6 +232613,12 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the profile to resolve.
+                - name: type
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: "Scope resolution to this monitor type: type-specific SharedConfigs apply only when they match; type-agnostic SharedConfigs always apply. Valid values are <code>threshold</code>, <code>change</code>, <code>anomaly</code>, <code>forecast</code>, <code>outlier</code>, <code>logs</code>; any other value is rejected. Omit to merge every SharedConfig regardless of type."
     /products/lakehouse_engine_metrics/config-profiles/{id}/link:
         post:
             operationId: createMonitorConfigProfileLinkById
@@ -262145,6 +262240,49 @@ paths:
                         examples:
                             AddMCPServerExamplesPagerDutyServer:
                                 $ref: "#/components/examples/AddMCPServerExamplesPagerDutyServer"
+    /ai/settings/leader-mcp/tools:
+        get:
+            operationId: getAiSettingsLeaderMcpTools
+            tags:
+                - ai-settings
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: List Leader MCP tools for Settings
+            description: Return the Leader MCP tool catalog for the MCP Server Settings page. Each item includes a product category, read or write access type, and whether the caller can use the tool.
+            responses:
+                "200":
+                    description: Leader MCP tools with availability for the caller
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListLeaderMcpCatalogTool"
+                            examples:
+                                ListLeaderMcpToolsResponseExamplesCatalog:
+                                    $ref: "#/components/examples/ListLeaderMcpToolsResponseExamplesCatalog"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist — MCP catalog is unavailable
+                "500":
+                    description: Unexpected server error — failed to list tools
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
     /ai/settings/providers/models:
         post:
             operationId: createAiSettingsProvidersModels
