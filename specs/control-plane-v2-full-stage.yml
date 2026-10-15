@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.3-alpha.1792023102175-a1608301
+    version: 4.20.3-alpha.1792101434991-8b93f08d
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -4875,6 +4875,30 @@ components:
                     type: boolean
                     title: Deduplicate
                     description: Toggle deduplication.
+                mode:
+                    type:
+                        - string
+                        - "null"
+                    enum:
+                        - windowed
+                        - null
+                    title: Internal processing mode
+                    description: Internal no-data window processing
+                    x-speakeasy-unknown-values: allow
+                lagToleranceSec:
+                    type: number
+                    minimum: 0
+                    title: Lag tolerance in seconds
+                    description: Minimum no-data window age
+                maxAgeSec:
+                    type: number
+                    minimum: 0
+                    title: Maximum window age in seconds
+                    description: Maximum no-data window age
+                retroMonitor:
+                    type: boolean
+                    title: Internal retro monitor
+                    description: Internal no-data retro-monitor processing
         FunctionNotifications:
             type: object
             properties:
@@ -55775,6 +55799,9 @@ components:
                     type: string
                     description: Highest accepted value for individual integrations' persistent queue 'Max queue size' parameters. Consult Cribl Support before increasing the default 1 TB.
                     pattern: ^\d+\s*(?:[kmgtpKMGTP](b|B))?$
+                maxPipelinesPerPack:
+                    type: integer
+                    description: Maximum number of pipelines allowed in a single Pack. Packs above this limit are rejected at install time, because loading very large Packs can exhaust a worker group's config helper memory. Consult Cribl Support before updating this value.
                 maxReconnectInterval:
                     type: string
                     description: The maximum time to wait before attempting to reconnect to the Leader after being disconnected.
@@ -61607,6 +61634,9 @@ components:
                 pendingComputeNodeStatuses:
                     $ref: "#/components/schemas/PendingComputeNodeStatusesTypeSearchJob"
                     description: Counts of compute Nodes still pending allocation for this job, split into warm and cold pools.
+                preservePrivateResults:
+                    type: boolean
+                    description: If <code>true</code>, results remain accessible only to the job owner or an administrator after the job is moved to a Notebook. Ordinary Notebook jobs are unaffected.
                 query:
                     type: string
                     description: Kusto query text as submitted before macro expansion and server-side normalization.
@@ -61818,7 +61848,18 @@ components:
                 isPrivate:
                     type: boolean
                     title: Private results
-                    description: Whether the results of the job are accessible to all users or only to the owner.
+                    description: Whether the results of the job are accessible to all users or only to the owner
+                type:
+                    type: string
+                    title: Job type
+                    description: Hands this completed job over to a Notebook instead of re-running its query there.
+                    enum:
+                        - notebook
+                    x-speakeasy-unknown-values: allow
+                notebookId:
+                    type: string
+                    title: Notebook
+                    description: The Notebook that takes over the job
             title: UpdateSearchJobSchema
         SearchJobSettings:
             type: object
@@ -67815,6 +67856,9 @@ components:
                 jobId:
                     type: string
                     description: Unique identifier of the search job that most recently produced the results for the Notebook section.
+                preservePrivateResults:
+                    type: boolean
+                    description: Indicates that the original private results were moved into the Notebook and must not be automatically re-run. Access is enforced by the search job, not this display hint.
                 runBy:
                     type: string
                     description: Username of the user who most recently ran the search for the Notebook section.
@@ -71738,23 +71782,6 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
-        EngineSize:
-            type: string
-            enum:
-                - 3xsmall
-                - 2xsmall
-                - xsmall
-                - small
-                - medium
-                - large
-                - xlarge
-                - 2xlarge
-                - 3xlarge
-                - 4xlarge
-                - 5xlarge
-                - 6xlarge
-            title: EngineSize
-            x-speakeasy-unknown-values: allow
         LocalSearchEngineApi:
             type: object
             properties:
@@ -71814,18 +71841,66 @@ components:
                 lastProvisionedMs:
                     type: integer
                     description: Timestamp (in Unix time) when the lakehouse engine was last provisioned or updated, in milliseconds.
+                maximumTierSize:
+                    type: string
+                    enum:
+                        - 2xlarge
+                        - 2xsmall
+                        - 3xlarge
+                        - 3xsmall
+                        - 4xlarge
+                        - 5xlarge
+                        - 6xlarge
+                        - large
+                        - medium
+                        - small
+                        - xlarge
+                        - xsmall
+                    description: Largest engine size to which this lakehouse engine may be resized. Omitted when no additional maximum applies. Derived on read and ignored in request bodies.
+                    x-speakeasy-unknown-values: allow
                 metricsDatasetId:
                     type: string
                     description: The <code>id</code> of the Cribl-managed customer-metrics Dataset linked to this engine, resolved by ownership (not by name). Absent when the engine has no metrics Dataset we own.
                 metricsLastPublishedAt:
                     type: integer
                     description: Timestamp (in Unix time) when the lakehouse engine metrics were last published, in milliseconds.
+                minimumTierSize:
+                    type: string
+                    enum:
+                        - 2xlarge
+                        - 2xsmall
+                        - 3xlarge
+                        - 3xsmall
+                        - 4xlarge
+                        - 5xlarge
+                        - 6xlarge
+                        - large
+                        - medium
+                        - small
+                        - xlarge
+                        - xsmall
+                    description: Smallest engine size to which this lakehouse engine may be resized. Omitted when no additional minimum applies. Derived on read and ignored in request bodies.
+                    x-speakeasy-unknown-values: allow
                 status:
                     $ref: "#/components/schemas/StatusOptionsLocalSearchEngineApi"
                     description: Provisioning lifecycle status of the lakehouse engine.
                 tierSize:
-                    $ref: "#/components/schemas/EngineSize"
+                    type: string
+                    enum:
+                        - 2xlarge
+                        - 2xsmall
+                        - 3xlarge
+                        - 3xsmall
+                        - 4xlarge
+                        - 5xlarge
+                        - 6xlarge
+                        - large
+                        - medium
+                        - small
+                        - xlarge
+                        - xsmall
                     description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code>, <code>4xlarge</code>,<code>5xlarge</code>, and <code>6xlarge</code> requires the <code>cribl_operator</code> role.
+                    x-speakeasy-unknown-values: allow
             required:
                 - engineType
                 - id
@@ -75796,13 +75871,6 @@ components:
                         createAppScriptVersion:
                             type: string
                             description: Version of the scaffold script that originally created the App. Populated automatically.
-                        appAuthMode:
-                            type: string
-                            enum:
-                                - legacy
-                                - policiesOnly
-                            description: Authorization mode for the App. Managed by Cribl; if omitted, the platform applies the default for the install.
-                            x-speakeasy-unknown-values: allow
                 force:
                     type: boolean
                     description: Overwrite any existing App that has the same identifier. If disabled, installing over an existing App with the same identifier fails.
@@ -83875,6 +83943,38 @@ components:
                 - pipeline
                 - total_detections
             title: ShadowDetectionAggregation
+        ApplyGuardRecommendationResponse:
+            type: object
+            properties:
+                fullyApplied:
+                    type: boolean
+                    description: Whether every action has been applied and matching new detections have been marked mitigated.
+            required:
+                - fullyApplied
+            title: ApplyGuardRecommendationResponse
+        ApplyGuardRecommendationRequest:
+            type: object
+            properties:
+                actionKeys:
+                    type: array
+                    items:
+                        type: string
+                    description: Action keys to record as applied. Each key must match an action on the recommendation.
+                entityType:
+                    type: string
+                    description: Type of entity that the recommendation applies to.
+                jobId:
+                    type: string
+                    description: Identifier of the mitigation job that produced the recommendation being applied.
+                pipeline:
+                    type: string
+                    description: The <code>id</code> of the Pipeline that the recommendation applies to.
+            required:
+                - actionKeys
+                - entityType
+                - jobId
+                - pipeline
+            title: ApplyGuardRecommendationRequest
         Consent:
             type: object
             properties:
@@ -169311,6 +169411,11 @@ components:
                         - type: string
                           pattern: ^\d+\s*(?:[kmgtpKMGTP](b|B))?$
                         - type: "null"
+                maxPipelinesPerPack:
+                    description: Maximum number of pipelines allowed in a single Pack. Packs above this limit are rejected at install time, because loading very large Packs can exhaust a worker group's config helper memory. Consult Cribl Support before updating this value.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 maxReconnectInterval:
                     description: The maximum time to wait before attempting to reconnect to the Leader after being disconnected.
                     anyOf:
@@ -177079,9 +177184,24 @@ components:
                         - type: "null"
                 isPrivate:
                     title: Private results
-                    description: Whether the results of the job are accessible to all users or only to the owner.
+                    description: Whether the results of the job are accessible to all users or only to the owner
                     anyOf:
                         - type: boolean
+                        - type: "null"
+                type:
+                    title: Job type
+                    description: Hands this completed job over to a Notebook instead of re-running its query there.
+                    anyOf:
+                        - type: string
+                          enum:
+                            - notebook
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                notebookId:
+                    title: Notebook
+                    description: The Notebook that takes over the job
+                    anyOf:
+                        - type: string
                         - type: "null"
             title: UpdateSearchJobSchemaPartialRequest
         MonitorConfigProfilePartialRequest:
@@ -183133,6 +183253,25 @@ components:
                     anyOf:
                         - type: integer
                         - type: "null"
+                maximumTierSize:
+                    description: Largest engine size to which this lakehouse engine may be resized. Omitted when no additional maximum applies. Derived on read and ignored in request bodies.
+                    anyOf:
+                        - type: string
+                          enum:
+                            - 2xlarge
+                            - 2xsmall
+                            - 3xlarge
+                            - 3xsmall
+                            - 4xlarge
+                            - 5xlarge
+                            - 6xlarge
+                            - large
+                            - medium
+                            - small
+                            - xlarge
+                            - xsmall
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
                 metricsDatasetId:
                     description: The <code>id</code> of the Cribl-managed customer-metrics Dataset linked to this engine, resolved by ownership (not by name). Absent when the engine has no metrics Dataset we own.
                     anyOf:
@@ -183142,6 +183281,25 @@ components:
                     description: Timestamp (in Unix time) when the lakehouse engine metrics were last published, in milliseconds.
                     anyOf:
                         - type: integer
+                        - type: "null"
+                minimumTierSize:
+                    description: Smallest engine size to which this lakehouse engine may be resized. Omitted when no additional minimum applies. Derived on read and ignored in request bodies.
+                    anyOf:
+                        - type: string
+                          enum:
+                            - 2xlarge
+                            - 2xsmall
+                            - 3xlarge
+                            - 3xsmall
+                            - 4xlarge
+                            - 5xlarge
+                            - 6xlarge
+                            - large
+                            - medium
+                            - small
+                            - xlarge
+                            - xsmall
+                          x-speakeasy-unknown-values: allow
                         - type: "null"
                 status:
                     description: Provisioning lifecycle status of the lakehouse engine.
@@ -183158,8 +183316,22 @@ components:
                           x-speakeasy-unknown-values: allow
                         - type: "null"
                 tierSize:
+                    type: string
+                    enum:
+                        - 2xlarge
+                        - 2xsmall
+                        - 3xlarge
+                        - 3xsmall
+                        - 4xlarge
+                        - 5xlarge
+                        - 6xlarge
+                        - large
+                        - medium
+                        - small
+                        - xlarge
+                        - xsmall
                     description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code>, <code>4xlarge</code>,<code>5xlarge</code>, and <code>6xlarge</code> requires the <code>cribl_operator</code> role.
-                    $ref: "#/components/schemas/EngineSize"
+                    x-speakeasy-unknown-values: allow
             description: "Lakehouse engine: provisioned storage and compute for ingest and search."
             title: LocalSearchEngineApiPartialRequest
         DatasetRulesetPartialRequest:
@@ -201181,6 +201353,20 @@ components:
                 total_detections: 128
                 status: new
                 destination_id: dest-s3-prod
+        ApplyGuardRecommendationResponseExamplesFullyApplied:
+            summary: Confirm a recommendation is fully applied
+            description: Example response for confirming a recommendation is fully applied.
+            value:
+                fullyApplied: true
+        ApplyGuardRecommendationExamplesLinkExistingRule:
+            summary: Apply a rule-linking recommendation action
+            description: Example request body for applying a rule-linking recommendation action to a Pipeline.
+            value:
+                pipeline: pipe-a
+                entityType: EMAIL
+                actionKeys:
+                    - pii_email
+                jobId: job-1
         GetAiConsentResponseExamplesAccepted:
             summary: Get consent status when accepted
             description: Example response for getting the AI consent setting when consent has been granted.
@@ -207331,6 +207517,12 @@ components:
             description: "Example request body for updating a search job by setting <code>isPrivate</code> to <code>false</code>, so that results follow the job <code>group</code> visibility rules instead of owner-only access.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             value:
                 isPrivate: false
+        SearchJobUpdateExamplesMoveToNotebookPartialRequest:
+            summary: Hand a completed job over to a Notebook
+            description: "Example request body for moving a completed, non-scheduled search job into a Notebook by setting <code>type</code> to <code>notebook</code> together with <code>notebookId</code>.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                type: notebook
+                notebookId: <notebook-id>
         ConfigProfileUpdateExamplesRenameProfilePartialRequest:
             summary: Update a config profile name
             description: "Example request body for renaming an existing config profile.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
@@ -231989,7 +232181,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update a search job (Cribl.Cloud only)
-            description: "Update the specified search job (Cribl.Cloud only). Only the <code>status</code> and <code>isPrivate</code> fields are mutable.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified search job (Cribl.Cloud only). Only the <code>status</code> and <code>isPrivate</code> fields are mutable, plus <code>type</code> and <code>notebookId</code> together to hand a completed job over to a Notebook. Only the job's owner can hand it over, and doing so requires update permission on the target Notebook. Handing a job over is rejected with 409 for jobs that are still running, scheduled, saved search runs, aliases of another job, or already owned by a Notebook.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated SearchJob object.
@@ -232000,6 +232192,8 @@ paths:
                             examples:
                                 SearchJobCreateResponseExamplesSyntheticCompleted:
                                     $ref: "#/components/examples/SearchJobCreateResponseExamplesSyntheticCompleted"
+                "400":
+                    description: Failed validation or malformed input — <code>type</code> and <code>notebookId</code> must be supplied together to move a job to a Notebook.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -232015,6 +232209,8 @@ paths:
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "404":
                     description: The requested resource does not exist — Search job not found.
+                "409":
+                    description: The search job cannot be moved — only completed standard jobs that are not scheduled, saved-search runs, aliases, or already owned by a Notebook are eligible.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -232033,6 +232229,8 @@ paths:
                                 $ref: "#/components/examples/SearchJobUpdateExamplesCancelPartialRequest"
                             SearchJobUpdateExamplesMakeResultsPublic:
                                 $ref: "#/components/examples/SearchJobUpdateExamplesMakeResultsPublicPartialRequest"
+                            SearchJobUpdateExamplesMoveToNotebook:
+                                $ref: "#/components/examples/SearchJobUpdateExamplesMoveToNotebookPartialRequest"
             parameters:
                 - name: id
                   in: path
@@ -261477,7 +261675,7 @@ paths:
                 - leader
                 - single
             summary: Generate dataset intelligence for a dataset
-            description: Kicks off an asynchronous run of the dataset intelligence agent. Writes a <code>processing</code> marker to disk and returns 201 immediately. Poll the <code>GET</code> endpoint to track progress until <code>status</code> becomes <code>complete</code>, <code>partial</code>, or <code>failed</code>.<br/><br/>The caller must have read access to the specified dataset.
+            description: Kicks off an asynchronous run of the dataset intelligence agent. Writes a <code>processing</code> marker to disk and returns 201 immediately. Poll the <code>GET</code> endpoint to track progress until <code>status</code> becomes <code>complete</code>, <code>partial</code>, or <code>failed</code>.<br/><br/>The caller must have maintainer rights on the specified dataset (or, for default/ built-in datasets, search admin privileges).
             responses:
                 "201":
                     description: Processing marker written; agent run dispatched
@@ -261504,7 +261702,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: AI is disabled or consent not accepted
+                    description: AI is disabled or consent not accepted, or caller lacks permission to manage dataset intelligence
                 "404":
                     description: The requested resource does not exist — Dataset not found or caller lacks read access
                 "409":
@@ -261552,7 +261750,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: AI is disabled or consent not accepted
+                    description: AI is disabled or consent not accepted, or caller lacks permission to manage dataset intelligence
                 "404":
                     description: The requested resource does not exist — Dataset not found or caller lacks read access
                 "500":
@@ -261658,7 +261856,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: AI is disabled or consent not accepted
+                    description: AI is disabled or consent not accepted, or caller lacks permission to manage dataset intelligence
                 "404":
                     description: The requested resource does not exist — Dataset not found, no intelligence file exists, or caller lacks read access
                 "409":
@@ -263331,6 +263529,57 @@ paths:
                   schema:
                     type: string
                   description: Restrict results to a single capture pipeline id.
+    /ai/guard/recommendations/apply:
+        post:
+            operationId: createAiGuardRecommendationsApply
+            tags:
+                - AI
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Record applied Guard recommendation actions
+            description: Records applied actions for a reviewed recommendation. Rejects requests when a newer recommendation exists. When all actions are applied, marks matching new detections mitigated in the same write.
+            responses:
+                "200":
+                    description: Whether every action for the recommendation has now been applied. When true, matching new detections were marked mitigated.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ApplyGuardRecommendationResponse"
+                            examples:
+                                ApplyGuardRecommendationResponseExamplesFullyApplied:
+                                    $ref: "#/components/examples/ApplyGuardRecommendationResponseExamplesFullyApplied"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: ApplyGuardRecommendationRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ApplyGuardRecommendationRequest"
+                        examples:
+                            ApplyGuardRecommendationExamplesLinkExistingRule:
+                                $ref: "#/components/examples/ApplyGuardRecommendationExamplesLinkExistingRule"
     /ai/guard/findings/mitigate:
         post:
             operationId: createAiGuardFindingsMitigate
