@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1792101212280-1ebec040
+    version: 4.21.0-alpha.1792105475125-987b44b2
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -90844,26 +90844,26 @@ components:
             required:
                 - metrics
             title: SearchMetrics
-        PaginatedSearchMetric:
+        CountedListSearchMetric:
             type: object
             required:
                 - items
                 - count
             properties:
-                items:
-                    type: array
-                    description: The pre-limited items in the list of results
-                    items:
-                        $ref: "#/components/schemas/SearchMetric"
                 count:
                     type: integer
-                    description: Total number of items available
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/SearchMetric"
                 offset:
                     type: integer
-                    description: Pagination offset
+                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
                 limit:
                     type: integer
-                    description: Pagination limit
+                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
         PaginatedSearchLakeDestination:
             type: object
             required:
@@ -91322,13 +91322,26 @@ components:
                 - metrics
                 - searchQuery
             title: SearchQueryToMetricDef
-        SearchVpcEndpointIdsSchema:
-            type: array
-            description: S3 interface VPC endpoint IDs for AWS regions where Cribl Search runs. Use these values when configuring attribute-based access control tags in IAM trust and permission policies.
-            items:
-                type: string
-                description: A VPC endpoint identifier.
-            title: SearchVpcEndpointIdsSchema
+        CountedListString:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        type: string
+                offset:
+                    type: integer
+                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
+                limit:
+                    type: integer
+                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
         TrustPolicyId:
             type: string
             enum:
@@ -93137,26 +93150,6 @@ components:
                 items:
                     type: string
             title: MetricLabels
-        CountedListString:
-            type: object
-            required:
-                - items
-                - count
-            properties:
-                count:
-                    type: integer
-                    description: Number of items returned in the items array.
-                items:
-                    type: array
-                    description: The list of items returned in this response.
-                    items:
-                        type: string
-                offset:
-                    type: integer
-                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
-                limit:
-                    type: integer
-                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
         SystemInsightsHealthCheckStatus:
             oneOf:
                 - type: object
@@ -202814,8 +202807,6 @@ components:
                           earliest: 1699998200000
                 totalEventCount: 250
                 partial: false
-                offset: 0
-                limit: 20
         SearchJobLogsResponseExamplesLogFiles:
             summary: List log files for a search job
             description: Example response for listing available log files for a search job.
@@ -212324,8 +212315,6 @@ components:
                       processStartupMs: 800
                       processFromWarmPool: true
                 count: 1
-                offset: 0
-                limit: 20
         SearchLakeDestinationsListExamplesDataLakeS3:
             summary: List Data Lake Amazon S3 Destinations
             description: Example response for listing Data Lake Amazon S3 Destinations available to Cribl Search Dataset Providers.
@@ -212577,14 +212566,22 @@ components:
             summary: List multiple S3 interface VPC endpoint IDs
             description: Example response for listing multiple S3 interface VPC endpoint IDs resolved for AWS regions where Cribl Search runs.
             value:
-                - vpce-0123456789abcdef0
-                - vpce-0fedcba9876543210
-                - vpce-0abc123def4567890
+                items:
+                    - vpce-0123456789abcdef0
+                    - vpce-0fedcba9876543210
+                    - vpce-0abc123def4567890
+                count: 3
+                offset: 0
+                limit: 3
         SearchVpcEndpointIdsListExamplesSingleRegion:
             summary: List a single S3 interface VPC endpoint ID
             description: Example response for listing a single S3 interface VPC endpoint ID when only one resolved endpoint is returned.
             value:
-                - vpce-0123456789abcdef0
+                items:
+                    - vpce-0123456789abcdef0
+                count: 1
+                offset: 0
+                limit: 1
         SearchVpcEndpointIdsRateLimitResponseExamplesRateLimit:
             summary: Return rate limit for S3 interface VPC endpoint IDs
             description: Example response for returning an error when the request rate limit is exceeded.
@@ -242956,31 +242953,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the search job to get field summaries for.
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Pagination offset
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Maximum number of items to return
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
     /search/jobs/{id}/logs:
         get:
             operationId: getSearchJobLogsById
@@ -282368,7 +282340,7 @@ paths:
             description: Get performance and execution metrics for the specified search job (Cribl.Cloud only).
             responses:
                 "200":
-                    description: The metrics object for the search job in a single-item list.
+                    description: The metrics object for the search job.
                     content:
                         application/json:
                             schema:
@@ -282421,10 +282393,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/PaginatedSearchMetric"
+                                $ref: "#/components/schemas/CountedListSearchMetric"
                             examples:
                                 SearchJobMetricsListExamplesCompletedJob:
                                     $ref: "#/components/examples/SearchJobMetricsListExamplesCompletedJob"
+                "400":
+                    description: Failed validation or malformed input, such as an invalid <code>groupId</code>.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -282444,32 +282418,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-            parameters:
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Pagination offset
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Maximum number of items to return
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
     /search/lake-destinations:
         get:
             operationId: getSearchLakeDestinations
@@ -282999,7 +282947,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/SearchVpcEndpointIdsSchema"
+                                $ref: "#/components/schemas/CountedListString"
                             examples:
                                 SearchVpcEndpointIdsListExamplesMultipleRegions:
                                     $ref: "#/components/examples/SearchVpcEndpointIdsListExamplesMultipleRegions"
