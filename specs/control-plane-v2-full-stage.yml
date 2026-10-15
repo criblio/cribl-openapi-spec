@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.20.3-alpha.1791933528035-27c07ace
+    version: 4.20.3-alpha.1792023102175-a1608301
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -18600,9 +18600,18 @@ components:
                 interval:
                     type: number
                     title: Poll interval
-                    description: How often, in minutes, to scrape targets for metrics. Maximum of 60 minutes. 60 must be evenly divisible by the value you enter.
+                    description: How often to scrape targets for metrics, in the unit set by Interval unit. Maximum of 60. 60 must be evenly divisible by the value you enter.
                     minimum: 1
                     maximum: 60
+                intervalUnit:
+                    type: string
+                    title: Interval unit
+                    description: "Unit for the poll interval. Choose Seconds for sub-minute scraping. Each Worker Process generates and registers the scrape job, and the Leader keeps one schedule for the @{group}. Before enabling Seconds, upgrade every @{node} in the @{group}: a Worker Process on @{product} version 4.20.2 or older registers a minute-based cron and replaces that @{group} schedule."
+                maxConcurrentRuns:
+                    type: number
+                    title: Concurrent run limit
+                    description: Maximum number of scrape runs that can overlap. Set this (for example, to 1) for sub-minute intervals, so a slow scrape cycle can't pile up overlapping runs.
+                    minimum: 1
                 logLevel:
                     $ref: "#/components/schemas/LogLevelOptions"
                     description: Collector runtime log level
@@ -26611,6 +26620,10 @@ components:
                     type: boolean
                     title: Include empty JSON fields
                     description: Preserve fields with empty values (such as '-') in the JSON output instead of omitting them
+                resolveParameterCodes:
+                    type: boolean
+                    title: Resolve EventData message table codes
+                    description: "Resolve Windows message table parameter codes (%%NNNN) in EventData fields to their human-readable strings (for example: %%14592 → Inbound)"
                 disableXmlRendering:
                     type: boolean
                     title: Render event message strings
@@ -33811,7 +33824,6 @@ components:
                         - 6
                         - 7
                         - 8
-                        - 9
                     x-speakeasy-enums:
                         - Initializing
                         - Pending
@@ -33822,7 +33834,6 @@ components:
                         - Failed
                         - Orphaned
                         - Unknown
-                        - Length
                     x-speakeasy-unknown-values: allow
             required:
                 - state
@@ -49317,6 +49328,13 @@ components:
                 onBackpressure:
                     $ref: "#/components/schemas/BackpressureBehaviorOptions"
                     description: How to handle events when all receivers are exerting backpressure
+                exceptionRetrySettings:
+                    type: array
+                    title: Settings for ClickHouse exception codes
+                    description: Retry automatically when ClickHouse reports a matching exception code, such as 241 (memory limit exceeded) or 202 (too many simultaneous queries). These settings take precedence over Settings for failed HTTP requests.
+                    minItems: 0
+                    items:
+                        $ref: "#/components/schemas/ExceptionRetrySettingConfOutputLocalSearchStorage"
                 statsDestination:
                     type: object
                     description: Internal destination settings for batch metadata and statistics.
@@ -49348,6 +49366,13 @@ components:
                         concurrency:
                             type: number
                             description: Maximum number of concurrent requests to the statistics destination.
+                        exceptionRetrySettings:
+                            type: array
+                            title: Settings for ClickHouse exception codes
+                            description: Retry automatically when ClickHouse reports a matching exception code, such as 241 (memory limit exceeded) or 202 (too many simultaneous queries). These settings take precedence over Settings for failed HTTP requests.
+                            minItems: 0
+                            items:
+                                $ref: "#/components/schemas/ExceptionRetrySettingConfOutputLocalSearchStorage"
                 description:
                     type: string
                     title: Description
@@ -79379,6 +79404,125 @@ components:
                 - group
             title: LogsRequestType
             x-speakeasy-unknown-values: allow
+        CountedListNetworkConnection:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/NetworkConnection"
+                offset:
+                    type: integer
+                    description: Pagination offset. Returned when offset/limit query parameters are provided.
+                limit:
+                    type: integer
+                    description: Pagination limit. Returned when offset/limit query parameters are provided.
+        NetworkProtocol:
+            type: string
+            enum:
+                - tcp
+                - tcp6
+                - udp
+                - udp6
+            title: NetworkProtocol
+            x-speakeasy-unknown-values: allow
+        NetworkConnection:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Unique identifier for the connection within the response.
+                    examples:
+                        - tcp-0
+                local_ip:
+                    type: string
+                    description: The local IP address.
+                    examples:
+                        - 127.0.0.1
+                local_port:
+                    type: integer
+                    description: The local port.
+                    examples:
+                        - 8000
+                protocol:
+                    $ref: "#/components/schemas/NetworkProtocol"
+                    description: The network protocol used.
+                    examples:
+                        - tcp
+                receive_q:
+                    type: integer
+                    description: Bytes received and not yet read by the application, except on <code>LISTEN</code> sockets, where it is instead the number of connections waiting to be accepted.
+                    examples:
+                        - 0
+                remote_ip:
+                    type: string
+                    description: The remote IP address.
+                    examples:
+                        - 10.0.0.5
+                remote_port:
+                    type: integer
+                    description: The remote port.
+                    examples:
+                        - 443
+                send_q:
+                    type: integer
+                    description: Size of the send queue, in bytes.
+                    examples:
+                        - 0
+                status:
+                    type: string
+                    description: Connection status, upper-cased to match <code>netstat</code> (e.g. ESTABLISHED, TIME_WAIT, LISTEN).
+                    examples:
+                        - ESTABLISHED
+            required:
+                - id
+                - local_ip
+                - local_port
+                - protocol
+                - receive_q
+                - remote_ip
+                - remote_port
+                - send_q
+                - status
+            title: NetworkConnection
+        NetworkStatusRequest:
+            type: object
+            properties:
+                localPorts:
+                    type: array
+                    items:
+                        type: number
+                    description: Local ports to filter by. A connection matches when its local port is in this list. When omitted, all local ports match.
+                    examples:
+                        - - 8000
+                protocols:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/NetworkProtocol"
+                    description: Protocols to filter by. Supported values are <code>tcp</code>, <code>tcp6</code>, <code>udp</code> and <code>udp6</code>. Defaults to <code>tcp</code> and <code>tcp6</code> when omitted; an explicit empty list matches no protocols. An unsupported value is rejected with a <code>400</code>.
+                    examples:
+                        - - tcp
+                          - tcp6
+                remotePorts:
+                    type: array
+                    items:
+                        type: number
+                    description: Remote ports to filter by. A connection matches when its remote port is in this list. When omitted, all remote ports match.
+                    examples:
+                        - - 443
+                status:
+                    type: string
+                    description: Caseless substring match against the connection status (e.g. <code>est</code> matches <code>ESTABLISHED</code>). When omitted, all statuses match.
+                    examples:
+                        - est
+            title: NetworkStatusRequest
         OverlayEntrySource:
             type: string
             enum:
@@ -83091,15 +83235,15 @@ components:
             properties:
                 frontier:
                     type: string
-                    description: Model ID for the frontier (high-capability) tier.
+                    description: Model ID for the Balanced tier.
                 reasoning:
                     type: array
                     items:
                         type: string
-                    description: Model IDs for the reasoning tier. The first entry is the primary model.
+                    description: Model IDs for the Deep tier. The first entry is the primary model.
                 small:
                     type: string
-                    description: Model ID for the small (fast, low-cost) tier.
+                    description: Model ID for the Fast tier.
             title: ModelTierAssignment
         AiCustomProviderPublic:
             type: object
@@ -83277,15 +83421,15 @@ components:
                     properties:
                         frontier:
                             type: string
-                            description: Suggested model ID for the frontier tier.
+                            description: Suggested model ID for the Balanced tier.
                         reasoning:
                             type: array
                             items:
                                 type: string
-                            description: Suggested model IDs for the reasoning tier.
+                            description: Suggested model IDs for the Deep tier.
                         small:
                             type: string
-                            description: Suggested model ID for the small tier.
+                            description: Suggested model ID for the Fast tier.
                     required:
                         - frontier
                         - reasoning
@@ -83298,17 +83442,17 @@ components:
                             type: array
                             items:
                                 type: string
-                            description: Model IDs for the frontier (highest-capability) tier.
+                            description: Model IDs for the Balanced tier.
                         reasoning:
                             type: array
                             items:
                                 type: string
-                            description: Model IDs for the reasoning (chain-of-thought) tier.
+                            description: Model IDs for the Deep tier.
                         small:
                             type: array
                             items:
                                 type: string
-                            description: Model IDs for the small (fast, low-cost) tier.
+                            description: Model IDs for the Fast tier.
                     required:
                         - frontier
                         - reasoning
@@ -97221,9 +97365,22 @@ components:
                 interval:
                     type: number
                     title: Poll interval
-                    description: How often, in minutes, to scrape targets for metrics. Maximum of 60 minutes. 60 must be evenly divisible by the value you enter.
+                    description: How often to scrape targets for metrics, in the unit set by Interval unit. Maximum of 60. 60 must be evenly divisible by the value you enter.
                     minimum: 1
                     maximum: 60
+                intervalUnit:
+                    title: Interval unit
+                    description: "Unit for the poll interval. Choose Seconds for sub-minute scraping. Each Worker Process generates and registers the scrape job, and the Leader keeps one schedule for the @{group}. Before enabling Seconds, upgrade every @{node} in the @{group}: a Worker Process on @{product} version 4.20.2 or older registers a minute-based cron and replaces that @{group} schedule."
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                maxConcurrentRuns:
+                    title: Concurrent run limit
+                    description: Maximum number of scrape runs that can overlap. Set this (for example, to 1) for sub-minute intervals, so a slow scrape cycle can't pile up overlapping runs.
+                    anyOf:
+                        - type: number
+                          minimum: 1
+                        - type: "null"
                 logLevel:
                     $ref: "#/components/schemas/LogLevelOptions"
                     description: Collector runtime log level
@@ -115254,6 +115411,12 @@ components:
                 includeEmptyJsonFields:
                     title: Include empty JSON fields
                     description: Preserve fields with empty values (such as '-') in the JSON output instead of omitting them
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                resolveParameterCodes:
+                    title: Resolve EventData message table codes
+                    description: "Resolve Windows message table parameter codes (%%NNNN) in EventData fields to their human-readable strings (for example: %%14592 → Inbound)"
                     anyOf:
                         - type: boolean
                         - type: "null"
@@ -159245,6 +159408,15 @@ components:
                             - queue
                           x-speakeasy-unknown-values: allow
                         - type: "null"
+                exceptionRetrySettings:
+                    title: Settings for ClickHouse exception codes
+                    description: Retry automatically when ClickHouse reports a matching exception code, such as 241 (memory limit exceeded) or 202 (too many simultaneous queries). These settings take precedence over Settings for failed HTTP requests.
+                    anyOf:
+                        - type: array
+                          minItems: 0
+                          items:
+                            $ref: "#/components/schemas/ExceptionRetrySettingConfOutputLocalSearchStorage"
+                        - type: "null"
                 statsDestination:
                     description: Internal destination settings for batch metadata and statistics.
                     anyOf:
@@ -159294,6 +159466,15 @@ components:
                                 description: Maximum number of concurrent requests to the statistics destination.
                                 anyOf:
                                     - type: number
+                                    - type: "null"
+                            exceptionRetrySettings:
+                                title: Settings for ClickHouse exception codes
+                                description: Retry automatically when ClickHouse reports a matching exception code, such as 241 (memory limit exceeded) or 202 (too many simultaneous queries). These settings take precedence over Settings for failed HTTP requests.
+                                anyOf:
+                                    - type: array
+                                      minItems: 0
+                                      items:
+                                        $ref: "#/components/schemas/ExceptionRetrySettingConfOutputLocalSearchStorage"
                                     - type: "null"
                         - type: "null"
                 description:
@@ -179066,7 +179247,7 @@ components:
                                     - type: string
                                     - type: "null"
                             roleToAssumeAdmin:
-                                description: AWS IAM admin role ARN the Leader assumes for bucket administration (Highside only).
+                                description: AWS IAM admin role ARN the Leader assumes for bucket administration. Required in Highside.
                                 anyOf:
                                     - type: string
                                     - type: "null"
@@ -185347,6 +185528,34 @@ components:
                     type: string
                     title: Column value
                     description: JavaScript expression to compute value to be inserted into ClickHouse table
+        ExceptionRetrySettingConfOutputLocalSearchStorage:
+            type: object
+            required:
+                - chErrorCode
+            properties:
+                chErrorCode:
+                    type: number
+                    title: ClickHouse exception code
+                    description: The ClickHouse exception code (from the x-clickhouse-exception-code header) that triggers retries
+                    minimum: 0
+                initialBackoff:
+                    type: number
+                    title: Pre-backoff interval (ms)
+                    description: How long, in milliseconds, Cribl Stream should wait before initiating backoff. Maximum interval is 600,000 ms (10 minutes).
+                    minimum: 0
+                    maximum: 600000
+                backoffRate:
+                    type: number
+                    title: Backoff multiplier
+                    description: Base for exponential backoff. A value of 2 (default) means Cribl Stream will retry after 2 seconds, then 4 seconds, then 8 seconds, etc.
+                    minimum: 1
+                    maximum: 20
+                maxBackoff:
+                    type: number
+                    title: Backoff limit (ms)
+                    description: The maximum backoff interval, in milliseconds, Cribl Stream should apply. Default (and minimum) is 10,000 ms (10 seconds); maximum is 180,000 ms (180 seconds).
+                    minimum: 10000
+                    maximum: 180000
         AuthenticationMethodOptionsSecret:
             type: string
             title: Authentication method
@@ -187658,7 +187867,7 @@ components:
                     description: AWS IAM read/write role ARN to assume for accessing the storage.
                 roleToAssumeAdmin:
                     type: string
-                    description: AWS IAM admin role ARN the Leader assumes for bucket administration (Highside only).
+                    description: AWS IAM admin role ARN the Leader assumes for bucket administration. Required in Highside.
                 roleToAssumeHybrid:
                     type: string
                     description: AWS IAM role ARN to assume for hybrid deployments.
@@ -199504,6 +199713,29 @@ components:
                 offset:
                     - cribl.log:0:256:true
                 endOfResults: false
+        NetworkConnectionListResponseExamplesListConnections:
+            summary: List active network connections
+            description: Example response for capturing the Worker Node's active network connections.
+            value:
+                count: 1
+                items:
+                    - id: tcp-0
+                      protocol: tcp
+                      local_ip: 127.0.0.1
+                      local_port: 8000
+                      remote_ip: 10.0.0.5
+                      remote_port: 51820
+                      receive_q: 0
+                      send_q: 0
+                      status: ESTABLISHED
+        NetworkStatusRequestExamplesFilterByLocalPort:
+            summary: Filter connections by local port
+            description: Example request body for capturing TCP connections bound to local port 8000.
+            value:
+                localPorts:
+                    - 8000
+                protocols:
+                    - tcp
         OverlaySideloadDeleteResponseExamplesDeletedSideload:
             summary: Active sideload deleted
             description: Example response after deleting the active sideload.
@@ -208134,6 +208366,14 @@ tags:
       x-cribl-availability: both
       x-cribl-api-context:
         - leader
+    - name: network
+      description: Actions related to Network
+      x-cribl-internal: true
+      x-cribl-availability: both
+      x-cribl-api-context:
+        - leader
+        - node
+        - single
     - name: notebook-templates
       description: Actions related to Notebook Templates
       x-cribl-api-context:
@@ -238676,7 +238916,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action — admin role required
+                    description: Not authorized or licensed to perform this action — admin role required, or deleting the legacy auth token is disabled in this deployment.
                 "404":
                     description: Token not found
                 "409":
@@ -245503,7 +245743,7 @@ paths:
                   required: false
                   schema:
                     type: boolean
-                  description: If <code>true</code>, include 30-day search counts and, for supported local Datasets, event and byte totals with minimum and maximum event timestamps.
+                  description: If <code>true</code>, include 30-day search counts and, for supported local Datasets, event and byte totals with minimum and maximum event timestamps limited to each Dataset's retention period.
                 - name: lastUsed
                   in: query
                   required: false
@@ -257420,6 +257660,62 @@ paths:
                     errorLevel:
                         summary: Filter to error-level log events
                         value: level=='error'
+    /system/network:
+        post:
+            operationId: createSystemNetwork
+            tags:
+                - network
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - node
+                - single
+            summary: Capture a Worker Node's active network connections
+            description: Capture the Worker Node's active network connections, read directly from <code>/proc</code>. Supported on Linux Worker Nodes only; other platforms return <code>405</code>. Optionally filter by local port, remote port, protocol, and connection status.
+            responses:
+                "200":
+                    description: The created NetworkConnection object in a single-item list.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListNetworkConnection"
+                            examples:
+                                NetworkConnectionListResponseExamplesListConnections:
+                                    $ref: "#/components/examples/NetworkConnectionListResponseExamplesListConnections"
+                "400":
+                    description: Invalid port or protocol filter.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "405":
+                    description: Capturing network status is supported on Linux Worker Nodes only.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: NetworkStatusRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/NetworkStatusRequest"
+                        examples:
+                            NetworkStatusRequestExamplesFilterByLocalPort:
+                                $ref: "#/components/examples/NetworkStatusRequestExamplesFilterByLocalPort"
     /overlay/artifacts/{binaryVersion}/{overlayId}/metadata:
         get:
             operationId: getOverlayArtifactsMetadataByBinaryVersionAndOverlayId
@@ -261282,7 +261578,7 @@ paths:
                 - leader
                 - single
             summary: Get dataset intelligence for a dataset
-            description: Returns the persisted dataset intelligence envelope for the specified dataset, including the agent's lifecycle <code>status</code> and the markdown <code>content</code>. Use this endpoint to poll for completion after creating a new run with <code>POST</code>.
+            description: Returns the persisted dataset intelligence envelope for the specified dataset, including the agent's lifecycle <code>status</code> and the markdown <code>content</code>. Use this endpoint to poll for completion after creating a new run with <code>POST</code>. A run left in <code>processing</code> past the server timeout is returned as <code>failed</code>. The on-disk marker stays <code>processing</code> until a new <code>POST</code> replaces it.
             responses:
                 "200":
                     description: Dataset intelligence envelope
@@ -269234,7 +269530,7 @@ paths:
             description: Get aggregated event and byte count statistics for a lakehouse engine Dataset (Cribl.Cloud only).
             responses:
                 "200":
-                    description: Totals and per-bucket time series for event counts and bytes.
+                    description: Totals within the Dataset retention period and per-bucket time series for the requested window.
                     content:
                         application/json:
                             schema:
