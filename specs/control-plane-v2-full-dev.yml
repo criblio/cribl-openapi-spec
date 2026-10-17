@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1792192342869-30ef6523
+    version: 4.21.0-alpha.1792278320064-538b7474
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -4935,6 +4935,30 @@ components:
                     type: boolean
                     title: Deduplicate
                     description: Toggle deduplication.
+                mode:
+                    type:
+                        - string
+                        - "null"
+                    enum:
+                        - windowed
+                        - null
+                    title: Internal processing mode
+                    description: Internal no-data window processing
+                    x-speakeasy-unknown-values: allow
+                lagToleranceSec:
+                    type: number
+                    minimum: 0
+                    title: Lag tolerance in seconds
+                    description: Minimum no-data window age
+                maxAgeSec:
+                    type: number
+                    minimum: 0
+                    title: Maximum window age in seconds
+                    description: Maximum no-data window age
+                retroMonitor:
+                    type: boolean
+                    title: Internal retro monitor
+                    description: Internal no-data retro-monitor processing
         FunctionNotifications:
             type: object
             properties:
@@ -18706,9 +18730,18 @@ components:
                 interval:
                     type: number
                     title: Poll interval
-                    description: How often, in minutes, to scrape targets for metrics. Maximum of 60 minutes. 60 must be evenly divisible by the value you enter.
+                    description: How often to scrape targets for metrics, in the unit set by Interval unit. Maximum of 60. 60 must be evenly divisible by the value you enter.
                     minimum: 1
                     maximum: 60
+                intervalUnit:
+                    type: string
+                    title: Interval unit
+                    description: "Unit for the poll interval. Choose Seconds for sub-minute scraping. Each Worker Process generates and registers the scrape job, and the Leader keeps one schedule for the @{group}. Before enabling Seconds, upgrade every @{node} in the @{group}: a Worker Process on @{product} version 4.20.2 or older registers a minute-based cron and replaces that @{group} schedule."
+                maxConcurrentRuns:
+                    type: number
+                    title: Concurrent run limit
+                    description: Maximum number of scrape runs that can overlap. Set this (for example, to 1) for sub-minute intervals, so a slow scrape cycle can't pile up overlapping runs.
+                    minimum: 1
                 logLevel:
                     $ref: "#/components/schemas/LogLevelOptions"
                     description: Collector runtime log level
@@ -26870,6 +26903,10 @@ components:
                     type: boolean
                     title: Include empty JSON fields
                     description: Preserve fields with empty values (such as '-') in the JSON output instead of omitting them
+                resolveParameterCodes:
+                    type: boolean
+                    title: Resolve EventData message table codes
+                    description: "Resolve Windows message table parameter codes (%%NNNN) in EventData fields to their human-readable strings (for example: %%14592 → Inbound)"
                 disableXmlRendering:
                     type: boolean
                     title: Render event message strings
@@ -34733,7 +34770,6 @@ components:
                         - 6
                         - 7
                         - 8
-                        - 9
                     x-speakeasy-enums:
                         - Initializing
                         - Pending
@@ -34744,7 +34780,6 @@ components:
                         - Failed
                         - Orphaned
                         - Unknown
-                        - Length
                     x-speakeasy-unknown-values: allow
             required:
                 - state
@@ -51341,6 +51376,13 @@ components:
                 onBackpressure:
                     $ref: "#/components/schemas/BackpressureBehaviorOptions"
                     description: How to handle events when all receivers are exerting backpressure
+                exceptionRetrySettings:
+                    type: array
+                    title: Settings for ClickHouse exception codes
+                    description: Retry automatically when ClickHouse reports a matching exception code, such as 241 (memory limit exceeded) or 202 (too many simultaneous queries). These settings take precedence over Settings for failed HTTP requests.
+                    minItems: 0
+                    items:
+                        $ref: "#/components/schemas/ExceptionRetrySettingConfOutputLocalSearchStorage"
                 statsDestination:
                     type: object
                     description: Internal destination settings for batch metadata and statistics.
@@ -51372,6 +51414,13 @@ components:
                         concurrency:
                             type: number
                             description: Maximum number of concurrent requests to the statistics destination.
+                        exceptionRetrySettings:
+                            type: array
+                            title: Settings for ClickHouse exception codes
+                            description: Retry automatically when ClickHouse reports a matching exception code, such as 241 (memory limit exceeded) or 202 (too many simultaneous queries). These settings take precedence over Settings for failed HTTP requests.
+                            minItems: 0
+                            items:
+                                $ref: "#/components/schemas/ExceptionRetrySettingConfOutputLocalSearchStorage"
                 description:
                     type: string
                     title: Description
@@ -58494,6 +58543,9 @@ components:
                     type: string
                     description: Highest accepted value for individual integrations' persistent queue 'Max queue size' parameters. Consult Cribl Support before increasing the default 1 TB.
                     pattern: ^\d+\s*(?:[kmgtpKMGTP](b|B))?$
+                maxPipelinesPerPack:
+                    type: integer
+                    description: Maximum number of pipelines allowed in a single Pack. Packs above this limit are rejected at install time, because loading very large Packs can exhaust a worker group's config helper memory. Consult Cribl Support before updating this value.
                 maxReconnectInterval:
                     type: string
                     description: The maximum time to wait before attempting to reconnect to the Leader after being disconnected.
@@ -63730,6 +63782,19 @@ components:
             enum:
                 - budget_error
                 - compute_provisioning_error
+                - cpe_allocation_mismatch
+                - cpe_allocation_timeout
+                - cpe_capacity_drift
+                - cpe_cold_start_timeout
+                - cpe_config_error
+                - cpe_connection_error
+                - cpe_connection_timeout
+                - cpe_external_service_transient
+                - cpe_fleet_at_capacity
+                - cpe_init_failure
+                - cpe_node_error
+                - cpe_node_not_found
+                - cpe_node_removed
                 - external_service_error
                 - fleet_update_error
                 - heartbeat_error
@@ -64647,6 +64712,9 @@ components:
                 pendingComputeNodeStatuses:
                     $ref: "#/components/schemas/PendingComputeNodeStatusesTypeSearchJob"
                     description: Counts of compute Nodes still pending allocation for this job, split into warm and cold pools.
+                preservePrivateResults:
+                    type: boolean
+                    description: If <code>true</code>, results remain accessible only to the job owner or an administrator after the job is moved to a Notebook. Ordinary Notebook jobs are unaffected.
                 query:
                     type: string
                     description: Kusto query text as submitted before macro expansion and server-side normalization.
@@ -64858,7 +64926,18 @@ components:
                 isPrivate:
                     type: boolean
                     title: Private results
-                    description: Whether the results of the job are accessible to all users or only to the owner.
+                    description: Whether the results of the job are accessible to all users or only to the owner
+                type:
+                    type: string
+                    title: Job type
+                    description: Hands this completed job over to a Notebook instead of re-running its query there.
+                    enum:
+                        - notebook
+                    x-speakeasy-unknown-values: allow
+                notebookId:
+                    type: string
+                    title: Notebook
+                    description: The Notebook that takes over the job
             title: UpdateSearchJobSchema
         SearchJobSettings:
             type: object
@@ -65187,6 +65266,35 @@ components:
                 - fingerprint
                 - id
             title: ProfileRef
+        ChangeType:
+            type: string
+            enum:
+                - absolute
+                - percent
+            title: ChangeType
+            x-speakeasy-unknown-values: allow
+        ChangeCompareAgainst:
+            type: string
+            enum:
+                - 5m
+                - 15m
+                - 1h
+                - 4h
+                - 1d
+                - 1w
+            title: ChangeCompareAgainst
+            x-speakeasy-unknown-values: allow
+        ChangeConfig:
+            type: object
+            properties:
+                changeType:
+                    $ref: "#/components/schemas/ChangeType"
+                compareAgainst:
+                    $ref: "#/components/schemas/ChangeCompareAgainst"
+            required:
+                - changeType
+                - compareAgainst
+            title: ChangeConfig
         AnomalyAlgorithm:
             type: string
             enum:
@@ -65271,80 +65379,6 @@ components:
                     type: string
                     description: Named IANA timezone used to assign timestamps to seasonal phases.
             title: AnomalyConfig
-        ChangeType:
-            type: string
-            enum:
-                - absolute
-                - percent
-            title: ChangeType
-            x-speakeasy-unknown-values: allow
-        ChangeCompareAgainst:
-            type: string
-            enum:
-                - 5m
-                - 15m
-                - 1h
-                - 4h
-                - 1d
-                - 1w
-            title: ChangeCompareAgainst
-            x-speakeasy-unknown-values: allow
-        ChangeConfig:
-            type: object
-            properties:
-                changeType:
-                    $ref: "#/components/schemas/ChangeType"
-                compareAgainst:
-                    $ref: "#/components/schemas/ChangeCompareAgainst"
-            required:
-                - changeType
-                - compareAgainst
-            title: ChangeConfig
-        OutlierConfig:
-            type: object
-            properties:
-                algorithm:
-                    type: string
-                    const: mad
-                    description: Detector family (the outlier fit). Currently MAD — median absolute deviation from peers.
-                cohortLabels:
-                    type: array
-                    items:
-                        type: string
-                    description: Labels that group series into peer cohorts; empty means one global cohort across all series.
-                evaluationWindowMs:
-                    type: number
-                    description: Window in milliseconds the pooled cohort median/MAD is computed over.
-                minCoverage:
-                    type: number
-                    description: Percentage (1–100) of expected window points a series needs before it is graded.
-                mode:
-                    type: string
-                    enum:
-                        - instant
-                        - windowed
-                    description: "How the peer cohort is pooled: per-instant cross-section, or pooled over the window."
-                    x-speakeasy-unknown-values: allow
-                pct:
-                    type: number
-                    description: Percentage (1–100) of a series' window points that must breach before it is flagged.
-                thresholdDirection:
-                    type: string
-                    enum:
-                        - above
-                        - below
-                        - either
-                    description: "Which side flags an outlier: above the cohort spread, below it, or either."
-                    x-speakeasy-unknown-values: allow
-            required:
-                - algorithm
-                - cohortLabels
-                - evaluationWindowMs
-                - minCoverage
-                - mode
-                - pct
-                - thresholdDirection
-            title: OutlierConfig
         ForecastAlgorithm:
             type: string
             enum:
@@ -65404,6 +65438,51 @@ components:
                 - seasonality
                 - window
             title: ForecastConfig
+        OutlierConfig:
+            type: object
+            properties:
+                algorithm:
+                    type: string
+                    const: mad
+                    description: Detector family (the outlier fit). Currently MAD — median absolute deviation from peers.
+                cohortLabels:
+                    type: array
+                    items:
+                        type: string
+                    description: Labels that group series into peer cohorts; empty means one global cohort across all series.
+                evaluationWindowMs:
+                    type: number
+                    description: Window in milliseconds the pooled cohort median/MAD is computed over.
+                minCoverage:
+                    type: number
+                    description: Percentage (1–100) of expected window points a series needs before it is graded.
+                mode:
+                    type: string
+                    enum:
+                        - instant
+                        - windowed
+                    description: "How the peer cohort is pooled: per-instant cross-section, or pooled over the window."
+                    x-speakeasy-unknown-values: allow
+                pct:
+                    type: number
+                    description: Percentage (1–100) of a series' window points that must breach before it is flagged.
+                thresholdDirection:
+                    type: string
+                    enum:
+                        - above
+                        - below
+                        - either
+                    description: "Which side flags an outlier: above the cohort spread, below it, or either."
+                    x-speakeasy-unknown-values: allow
+            required:
+                - algorithm
+                - cohortLabels
+                - evaluationWindowMs
+                - minCoverage
+                - mode
+                - pct
+                - thresholdDirection
+            title: OutlierConfig
         ExpressionOperation:
             type: string
             enum:
@@ -71082,6 +71161,9 @@ components:
                 jobId:
                     type: string
                     description: Unique identifier of the search job that most recently produced the results for the Notebook section.
+                preservePrivateResults:
+                    type: boolean
+                    description: Indicates that the original private results were moved into the Notebook and must not be automatically re-run. Access is enforced by the search job, not this display hint.
                 runBy:
                     type: string
                     description: Username of the user who most recently ran the search for the Notebook section.
@@ -80085,13 +80167,6 @@ components:
                         createAppScriptVersion:
                             type: string
                             description: Version of the scaffold script that originally created the App. Populated automatically.
-                        appAuthMode:
-                            type: string
-                            enum:
-                                - legacy
-                                - policiesOnly
-                            description: Authorization mode for the App. Managed by Cribl; if omitted, the platform applies the default for the install.
-                            x-speakeasy-unknown-values: allow
                 force:
                     type: boolean
                     description: Overwrite any existing App that has the same identifier. If disabled, installing over an existing App with the same identifier fails.
@@ -83932,6 +84007,125 @@ components:
                 - group
             title: LogsRequestType
             x-speakeasy-unknown-values: allow
+        CountedListNetworkConnection:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/NetworkConnection"
+                offset:
+                    type: integer
+                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
+                limit:
+                    type: integer
+                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
+        NetworkProtocol:
+            type: string
+            enum:
+                - tcp
+                - tcp6
+                - udp
+                - udp6
+            title: NetworkProtocol
+            x-speakeasy-unknown-values: allow
+        NetworkConnection:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Unique identifier for the connection within the response.
+                    examples:
+                        - tcp-0
+                local_ip:
+                    type: string
+                    description: The local IP address.
+                    examples:
+                        - 127.0.0.1
+                local_port:
+                    type: integer
+                    description: The local port.
+                    examples:
+                        - 8000
+                protocol:
+                    $ref: "#/components/schemas/NetworkProtocol"
+                    description: The network protocol used.
+                    examples:
+                        - tcp
+                receive_q:
+                    type: integer
+                    description: Bytes received and not yet read by the application, except on <code>LISTEN</code> sockets, where it is instead the number of connections waiting to be accepted.
+                    examples:
+                        - 0
+                remote_ip:
+                    type: string
+                    description: The remote IP address.
+                    examples:
+                        - 10.0.0.5
+                remote_port:
+                    type: integer
+                    description: The remote port.
+                    examples:
+                        - 443
+                send_q:
+                    type: integer
+                    description: Size of the send queue, in bytes.
+                    examples:
+                        - 0
+                status:
+                    type: string
+                    description: Connection status, upper-cased to match <code>netstat</code> (e.g. ESTABLISHED, TIME_WAIT, LISTEN).
+                    examples:
+                        - ESTABLISHED
+            required:
+                - id
+                - local_ip
+                - local_port
+                - protocol
+                - receive_q
+                - remote_ip
+                - remote_port
+                - send_q
+                - status
+            title: NetworkConnection
+        NetworkStatusRequest:
+            type: object
+            properties:
+                localPorts:
+                    type: array
+                    items:
+                        type: number
+                    description: Local ports to filter by. A connection matches when its local port is in this list. When omitted, all local ports match.
+                    examples:
+                        - - 8000
+                protocols:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/NetworkProtocol"
+                    description: Protocols to filter by. Supported values are <code>tcp</code>, <code>tcp6</code>, <code>udp</code> and <code>udp6</code>. Defaults to <code>tcp</code> and <code>tcp6</code> when omitted; an explicit empty list matches no protocols. An unsupported value is rejected with a <code>400</code>.
+                    examples:
+                        - - tcp
+                          - tcp6
+                remotePorts:
+                    type: array
+                    items:
+                        type: number
+                    description: Remote ports to filter by. A connection matches when its remote port is in this list. When omitted, all remote ports match.
+                    examples:
+                        - - 443
+                status:
+                    type: string
+                    description: Caseless substring match against the connection status (e.g. <code>est</code> matches <code>ESTABLISHED</code>). When omitted, all statuses match.
+                    examples:
+                        - est
+            title: NetworkStatusRequest
         OverlayEntrySource:
             type: string
             enum:
@@ -87615,15 +87809,15 @@ components:
             properties:
                 frontier:
                     type: string
-                    description: Model ID for the frontier (high-capability) tier.
+                    description: Model ID for the Balanced tier.
                 reasoning:
                     type: array
                     items:
                         type: string
-                    description: Model IDs for the reasoning tier. The first entry is the primary model.
+                    description: Model IDs for the Deep tier. The first entry is the primary model.
                 small:
                     type: string
-                    description: Model ID for the small (fast, low-cost) tier.
+                    description: Model ID for the Fast tier.
             title: ModelTierAssignment
         AiCustomProviderPublic:
             type: object
@@ -87735,6 +87929,61 @@ components:
                 - count
                 - items
             title: MCPServersListResponse
+        CountedListLeaderMcpCatalogTool:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/LeaderMcpCatalogTool"
+                offset:
+                    type: integer
+                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
+                limit:
+                    type: integer
+                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
+        LeaderMcpCatalogTool:
+            type: object
+            properties:
+                accessType:
+                    type: string
+                    enum:
+                        - read
+                        - write
+                    description: Whether the tool mutates configuration (<code>write</code>) or only reads it (<code>read</code>).
+                    x-speakeasy-unknown-values: allow
+                available:
+                    type: boolean
+                    description: If <code>true</code>, the caller can see this tool in MCP <code>tools/list</code>.
+                category:
+                    type: string
+                    enum:
+                        - monitors
+                        - platform
+                        - search
+                        - stream
+                    description: Product grouping used to section the Settings catalog.
+                    x-speakeasy-unknown-values: allow
+                description:
+                    type: string
+                    description: Short description of what the tool does.
+                name:
+                    type: string
+                    description: Registered MCP tool name (for example <code>cribl_getPipelines</code>).
+            required:
+                - accessType
+                - available
+                - category
+                - description
+                - name
+            title: LeaderMcpCatalogTool
         AiProviderListModelsResponse:
             type: object
             properties:
@@ -87746,15 +87995,15 @@ components:
                     properties:
                         frontier:
                             type: string
-                            description: Suggested model ID for the frontier tier.
+                            description: Suggested model ID for the Balanced tier.
                         reasoning:
                             type: array
                             items:
                                 type: string
-                            description: Suggested model IDs for the reasoning tier.
+                            description: Suggested model IDs for the Deep tier.
                         small:
                             type: string
-                            description: Suggested model ID for the small tier.
+                            description: Suggested model ID for the Fast tier.
                     required:
                         - frontier
                         - reasoning
@@ -87767,17 +88016,17 @@ components:
                             type: array
                             items:
                                 type: string
-                            description: Model IDs for the frontier (highest-capability) tier.
+                            description: Model IDs for the Balanced tier.
                         reasoning:
                             type: array
                             items:
                                 type: string
-                            description: Model IDs for the reasoning (chain-of-thought) tier.
+                            description: Model IDs for the Deep tier.
                         small:
                             type: array
                             items:
                                 type: string
-                            description: Model IDs for the small (fast, low-cost) tier.
+                            description: Model IDs for the Fast tier.
                     required:
                         - frontier
                         - reasoning
@@ -89028,6 +89277,38 @@ components:
                 - pipeline
                 - total_detections
             title: ShadowDetectionAggregation
+        ApplyGuardRecommendationResponse:
+            type: object
+            properties:
+                fullyApplied:
+                    type: boolean
+                    description: Whether every action has been applied and matching new detections have been marked mitigated.
+            required:
+                - fullyApplied
+            title: ApplyGuardRecommendationResponse
+        ApplyGuardRecommendationRequest:
+            type: object
+            properties:
+                actionKeys:
+                    type: array
+                    items:
+                        type: string
+                    description: Action keys to record as applied. Each key must match an action on the recommendation.
+                entityType:
+                    type: string
+                    description: Type of entity that the recommendation applies to.
+                jobId:
+                    type: string
+                    description: Identifier of the mitigation job that produced the recommendation being applied.
+                pipeline:
+                    type: string
+                    description: The <code>id</code> of the Pipeline that the recommendation applies to.
+            required:
+                - actionKeys
+                - entityType
+                - jobId
+                - pipeline
+            title: ApplyGuardRecommendationRequest
         Consent:
             type: object
             properties:
@@ -103070,9 +103351,22 @@ components:
                 interval:
                     type: number
                     title: Poll interval
-                    description: How often, in minutes, to scrape targets for metrics. Maximum of 60 minutes. 60 must be evenly divisible by the value you enter.
+                    description: How often to scrape targets for metrics, in the unit set by Interval unit. Maximum of 60. 60 must be evenly divisible by the value you enter.
                     minimum: 1
                     maximum: 60
+                intervalUnit:
+                    title: Interval unit
+                    description: "Unit for the poll interval. Choose Seconds for sub-minute scraping. Each Worker Process generates and registers the scrape job, and the Leader keeps one schedule for the @{group}. Before enabling Seconds, upgrade every @{node} in the @{group}: a Worker Process on @{product} version 4.20.2 or older registers a minute-based cron and replaces that @{group} schedule."
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                maxConcurrentRuns:
+                    title: Concurrent run limit
+                    description: Maximum number of scrape runs that can overlap. Set this (for example, to 1) for sub-minute intervals, so a slow scrape cycle can't pile up overlapping runs.
+                    anyOf:
+                        - type: number
+                          minimum: 1
+                        - type: "null"
                 logLevel:
                     $ref: "#/components/schemas/LogLevelOptions"
                     description: Collector runtime log level
@@ -121523,6 +121817,12 @@ components:
                 includeEmptyJsonFields:
                     title: Include empty JSON fields
                     description: Preserve fields with empty values (such as '-') in the JSON output instead of omitting them
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                resolveParameterCodes:
+                    title: Resolve EventData message table codes
+                    description: "Resolve Windows message table parameter codes (%%NNNN) in EventData fields to their human-readable strings (for example: %%14592 → Inbound)"
                     anyOf:
                         - type: boolean
                         - type: "null"
@@ -168518,6 +168818,15 @@ components:
                             - queue
                           x-speakeasy-unknown-values: allow
                         - type: "null"
+                exceptionRetrySettings:
+                    title: Settings for ClickHouse exception codes
+                    description: Retry automatically when ClickHouse reports a matching exception code, such as 241 (memory limit exceeded) or 202 (too many simultaneous queries). These settings take precedence over Settings for failed HTTP requests.
+                    anyOf:
+                        - type: array
+                          minItems: 0
+                          items:
+                            $ref: "#/components/schemas/ExceptionRetrySettingConfOutputLocalSearchStorage"
+                        - type: "null"
                 statsDestination:
                     description: Internal destination settings for batch metadata and statistics.
                     anyOf:
@@ -168567,6 +168876,15 @@ components:
                                 description: Maximum number of concurrent requests to the statistics destination.
                                 anyOf:
                                     - type: number
+                                    - type: "null"
+                            exceptionRetrySettings:
+                                title: Settings for ClickHouse exception codes
+                                description: Retry automatically when ClickHouse reports a matching exception code, such as 241 (memory limit exceeded) or 202 (too many simultaneous queries). These settings take precedence over Settings for failed HTTP requests.
+                                anyOf:
+                                    - type: array
+                                      minItems: 0
+                                      items:
+                                        $ref: "#/components/schemas/ExceptionRetrySettingConfOutputLocalSearchStorage"
                                     - type: "null"
                         - type: "null"
                 description:
@@ -179627,6 +179945,11 @@ components:
                         - type: string
                           pattern: ^\d+\s*(?:[kmgtpKMGTP](b|B))?$
                         - type: "null"
+                maxPipelinesPerPack:
+                    description: Maximum number of pipelines allowed in a single Pack. Packs above this limit are rejected at install time, because loading very large Packs can exhaust a worker group's config helper memory. Consult Cribl Support before updating this value.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
                 maxReconnectInterval:
                     description: The maximum time to wait before attempting to reconnect to the Leader after being disconnected.
                     anyOf:
@@ -187437,9 +187760,24 @@ components:
                         - type: "null"
                 isPrivate:
                     title: Private results
-                    description: Whether the results of the job are accessible to all users or only to the owner.
+                    description: Whether the results of the job are accessible to all users or only to the owner
                     anyOf:
                         - type: boolean
+                        - type: "null"
+                type:
+                    title: Job type
+                    description: Hands this completed job over to a Notebook instead of re-running its query there.
+                    anyOf:
+                        - type: string
+                          enum:
+                            - notebook
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                notebookId:
+                    title: Notebook
+                    description: The Notebook that takes over the job
+                    anyOf:
+                        - type: string
                         - type: "null"
             title: UpdateSearchJobSchemaPartialRequest
         MonitorConfigProfilePartialRequest:
@@ -187487,10 +187825,10 @@ components:
                     description: Type-specific detection configuration. Present for change, anomaly, outlier, and forecast monitors; undefined for threshold and logs monitors.
                     anyOf:
                         - oneOf:
-                            - $ref: "#/components/schemas/AnomalyConfig"
                             - $ref: "#/components/schemas/ChangeConfig"
-                            - $ref: "#/components/schemas/OutlierConfig"
+                            - $ref: "#/components/schemas/AnomalyConfig"
                             - $ref: "#/components/schemas/ForecastConfig"
+                            - $ref: "#/components/schemas/OutlierConfig"
                         - type: "null"
                 enabled:
                     type: boolean
@@ -187610,10 +187948,10 @@ components:
                             description: Type-specific detection configuration. Present for change, anomaly, outlier, and forecast monitors; undefined for threshold and logs monitors.
                             anyOf:
                                 - oneOf:
-                                    - $ref: "#/components/schemas/AnomalyConfig"
                                     - $ref: "#/components/schemas/ChangeConfig"
-                                    - $ref: "#/components/schemas/OutlierConfig"
+                                    - $ref: "#/components/schemas/AnomalyConfig"
                                     - $ref: "#/components/schemas/ForecastConfig"
+                                    - $ref: "#/components/schemas/OutlierConfig"
                                 - type: "null"
                         enabled:
                             description: Whether the monitor is active and evaluated.
@@ -189367,7 +189705,7 @@ components:
                                     - type: string
                                     - type: "null"
                             roleToAssumeAdmin:
-                                description: AWS IAM admin role ARN the Leader assumes for bucket administration (Highside only).
+                                description: AWS IAM admin role ARN the Leader assumes for bucket administration. Required in Highside.
                                 anyOf:
                                     - type: string
                                     - type: "null"
@@ -196013,6 +196351,34 @@ components:
                     type: string
                     title: Column value
                     description: JavaScript expression to compute value to be inserted into ClickHouse table
+        ExceptionRetrySettingConfOutputLocalSearchStorage:
+            type: object
+            required:
+                - chErrorCode
+            properties:
+                chErrorCode:
+                    type: number
+                    title: ClickHouse exception code
+                    description: The ClickHouse exception code (from the x-clickhouse-exception-code header) that triggers retries
+                    minimum: 0
+                initialBackoff:
+                    type: number
+                    title: Pre-backoff interval (ms)
+                    description: How long, in milliseconds, Cribl Stream should wait before initiating backoff. Maximum interval is 600,000 ms (10 minutes).
+                    minimum: 0
+                    maximum: 600000
+                backoffRate:
+                    type: number
+                    title: Backoff multiplier
+                    description: Base for exponential backoff. A value of 2 (default) means Cribl Stream will retry after 2 seconds, then 4 seconds, then 8 seconds, etc.
+                    minimum: 1
+                    maximum: 20
+                maxBackoff:
+                    type: number
+                    title: Backoff limit (ms)
+                    description: The maximum backoff interval, in milliseconds, Cribl Stream should apply. Default (and minimum) is 10,000 ms (10 seconds); maximum is 180,000 ms (180 seconds).
+                    minimum: 10000
+                    maximum: 180000
         AuthenticationMethodOptionsSecret:
             type: string
             title: Authentication method
@@ -196509,10 +196875,10 @@ components:
             x-speakeasy-unknown-values: allow
         DetectionConfigTypeResolvedConfigProfileConfig:
             oneOf:
-                - $ref: "#/components/schemas/AnomalyConfig"
                 - $ref: "#/components/schemas/ChangeConfig"
-                - $ref: "#/components/schemas/OutlierConfig"
+                - $ref: "#/components/schemas/AnomalyConfig"
                 - $ref: "#/components/schemas/ForecastConfig"
+                - $ref: "#/components/schemas/OutlierConfig"
             description: Type-specific detection configuration. Present for change, anomaly, outlier, and forecast monitors; undefined for threshold and logs monitors.
         SearchModeOptionsResolvedConfigProfileConfig:
             type: string
@@ -198439,7 +198805,7 @@ components:
                     description: AWS IAM read/write role ARN to assume for accessing the storage.
                 roleToAssumeAdmin:
                     type: string
-                    description: AWS IAM admin role ARN the Leader assumes for bucket administration (Highside only).
+                    description: AWS IAM admin role ARN the Leader assumes for bucket administration. Required in Highside.
                 roleToAssumeHybrid:
                     type: string
                     description: AWS IAM role ARN to assume for hybrid deployments.
@@ -211050,6 +211416,29 @@ components:
                 offset:
                     - cribl.log:0:256:true
                 endOfResults: false
+        NetworkConnectionListResponseExamplesListConnections:
+            summary: List active network connections
+            description: Example response for capturing the Worker Node's active network connections.
+            value:
+                count: 1
+                items:
+                    - id: tcp-0
+                      protocol: tcp
+                      local_ip: 127.0.0.1
+                      local_port: 8000
+                      remote_ip: 10.0.0.5
+                      remote_port: 51820
+                      receive_q: 0
+                      send_q: 0
+                      status: ESTABLISHED
+        NetworkStatusRequestExamplesFilterByLocalPort:
+            summary: Filter connections by local port
+            description: Example request body for capturing TCP connections bound to local port 8000.
+            value:
+                localPorts:
+                    - 8000
+                protocols:
+                    - tcp
         OverlaySideloadDeleteResponseExamplesDeletedSideload:
             summary: Active sideload deleted
             description: Example response after deleting the active sideload.
@@ -212173,6 +212562,27 @@ components:
                       enabled: true
                       headers:
                         Authorization: "***"
+        ListLeaderMcpToolsResponseExamplesCatalog:
+            summary: List Leader MCP tools for Settings
+            description: Example response for listing Leader MCP tools with category, access type, and availability for the caller.
+            value:
+                count: 3
+                items:
+                    - name: cribl_getPipelines
+                      description: Retrieve Pipeline definitions
+                      category: stream
+                      accessType: read
+                      available: true
+                    - name: cribl_setPipelineConfig
+                      description: Apply a new configuration to a Pipeline
+                      category: stream
+                      accessType: write
+                      available: true
+                    - name: cribl_getSystemMetrics
+                      description: Retrieve system metrics
+                      category: platform
+                      accessType: read
+                      available: false
         ListProviderModelsResponseExamplesBedrockModelsResponse:
             summary: List available models for Amazon Bedrock
             description: Example response for listing available models and tier suggestions for an Amazon Bedrock custom AI Provider.
@@ -213301,6 +213711,20 @@ components:
                 total_detections: 128
                 status: new
                 destination_id: dest-s3-prod
+        ApplyGuardRecommendationResponseExamplesFullyApplied:
+            summary: Confirm a recommendation is fully applied
+            description: Example response for confirming a recommendation is fully applied.
+            value:
+                fullyApplied: true
+        ApplyGuardRecommendationExamplesLinkExistingRule:
+            summary: Apply a rule-linking recommendation action
+            description: Example request body for applying a rule-linking recommendation action to a Pipeline.
+            value:
+                pipeline: pipe-a
+                entityType: EMAIL
+                actionKeys:
+                    - pii_email
+                jobId: job-1
         GetAiConsentResponseExamplesAccepted:
             summary: Get consent status when accepted
             description: Example response for getting the AI consent setting when consent has been granted.
@@ -219836,6 +220260,12 @@ components:
             description: "Example request body for updating a search job by setting <code>isPrivate</code> to <code>false</code>, so that results follow the job <code>group</code> visibility rules instead of owner-only access.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             value:
                 isPrivate: false
+        SearchJobUpdateExamplesMoveToNotebookPartialRequest:
+            summary: Hand a completed job over to a Notebook
+            description: "Example request body for moving a completed, non-scheduled search job into a Notebook by setting <code>type</code> to <code>notebook</code> together with <code>notebookId</code>.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                type: notebook
+                notebookId: <notebook-id>
         ConfigProfileUpdateExamplesRenameProfilePartialRequest:
             summary: Update a config profile name
             description: "Example request body for renaming an existing config profile.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
@@ -220882,6 +221312,14 @@ tags:
       x-cribl-availability: both
       x-cribl-api-context:
         - leader
+    - name: network
+      description: Actions related to Network
+      x-cribl-internal: true
+      x-cribl-availability: both
+      x-cribl-api-context:
+        - leader
+        - node
+        - single
     - name: notebook-templates
       description: Actions related to Notebook Templates
       x-cribl-api-context:
@@ -245123,7 +245561,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update a search job (Cribl.Cloud only)
-            description: "Update the specified search job (Cribl.Cloud only). Only the <code>status</code> and <code>isPrivate</code> fields are mutable.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified search job (Cribl.Cloud only). Only the <code>status</code> and <code>isPrivate</code> fields are mutable, plus <code>type</code> and <code>notebookId</code> together to hand a completed job over to a Notebook. Only the job's owner can hand it over, and doing so requires update permission on the target Notebook. Handing a job over is rejected with 409 for jobs that are still running, scheduled, saved search runs, aliases of another job, or already owned by a Notebook.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated SearchJob object.
@@ -245134,6 +245572,8 @@ paths:
                             examples:
                                 SearchJobCreateResponseExamplesSyntheticCompleted:
                                     $ref: "#/components/examples/SearchJobCreateResponseExamplesSyntheticCompleted"
+                "400":
+                    description: Failed validation or malformed input — <code>type</code> and <code>notebookId</code> must be supplied together to move a job to a Notebook.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -245149,6 +245589,8 @@ paths:
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "404":
                     description: The requested resource does not exist — Search job not found.
+                "409":
+                    description: The search job cannot be moved — only completed standard jobs that are not scheduled, saved-search runs, aliases, or already owned by a Notebook are eligible.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -245167,6 +245609,8 @@ paths:
                                 $ref: "#/components/examples/SearchJobUpdateExamplesCancelPartialRequest"
                             SearchJobUpdateExamplesMakeResultsPublic:
                                 $ref: "#/components/examples/SearchJobUpdateExamplesMakeResultsPublicPartialRequest"
+                            SearchJobUpdateExamplesMoveToNotebook:
+                                $ref: "#/components/examples/SearchJobUpdateExamplesMoveToNotebookPartialRequest"
             parameters:
                 - name: id
                   in: path
@@ -245973,6 +246417,12 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the profile to resolve.
+                - name: type
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: "Scope resolution to this monitor type: type-specific SharedConfigs apply only when they match; type-agnostic SharedConfigs always apply. Valid values are <code>threshold</code>, <code>change</code>, <code>anomaly</code>, <code>forecast</code>, <code>outlier</code>, <code>logs</code>; any other value is rejected. Omit to merge every SharedConfig regardless of type."
     /products/lakehouse_engine_metrics/config-profiles/{id}/link:
         post:
             operationId: createMonitorConfigProfileLinkById
@@ -252250,7 +252700,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action — admin role required
+                    description: Not authorized or licensed to perform this action — admin role required, or deleting the legacy auth token is disabled in this deployment.
                 "404":
                     description: Token not found
                 "409":
@@ -259375,7 +259825,7 @@ paths:
                   required: false
                   schema:
                     type: boolean
-                  description: If <code>true</code>, include 30-day search counts and, for supported local Datasets, event and byte totals with minimum and maximum event timestamps.
+                  description: If <code>true</code>, include 30-day search counts and, for supported local Datasets, event and byte totals with minimum and maximum event timestamps limited to each Dataset's retention period.
                 - name: lastUsed
                   in: query
                   required: false
@@ -272175,6 +272625,62 @@ paths:
                     errorLevel:
                         summary: Filter to error-level log events
                         value: level=='error'
+    /system/network:
+        post:
+            operationId: createSystemNetwork
+            tags:
+                - network
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - node
+                - single
+            summary: Capture a Worker Node's active network connections
+            description: Capture the Worker Node's active network connections, read directly from <code>/proc</code>. Supported on Linux Worker Nodes only; other platforms return <code>405</code>. Optionally filter by local port, remote port, protocol, and connection status.
+            responses:
+                "200":
+                    description: The created NetworkConnection object in a single-item list.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListNetworkConnection"
+                            examples:
+                                NetworkConnectionListResponseExamplesListConnections:
+                                    $ref: "#/components/examples/NetworkConnectionListResponseExamplesListConnections"
+                "400":
+                    description: Invalid port or protocol filter.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "405":
+                    description: Capturing network status is supported on Linux Worker Nodes only.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: NetworkStatusRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/NetworkStatusRequest"
+                        examples:
+                            NetworkStatusRequestExamplesFilterByLocalPort:
+                                $ref: "#/components/examples/NetworkStatusRequestExamplesFilterByLocalPort"
     /overlay/artifacts/{binaryVersion}/{overlayId}/metadata:
         get:
             operationId: getOverlayArtifactsMetadataByBinaryVersionAndOverlayId
@@ -275998,7 +276504,7 @@ paths:
                 - leader
                 - single
             summary: Generate dataset intelligence for a dataset
-            description: Kicks off an asynchronous run of the dataset intelligence agent. Writes a <code>processing</code> marker to disk and returns 201 immediately. Poll the <code>GET</code> endpoint to track progress until <code>status</code> becomes <code>complete</code>, <code>partial</code>, or <code>failed</code>.<br/><br/>The caller must have read access to the specified dataset.
+            description: Kicks off an asynchronous run of the dataset intelligence agent. Writes a <code>processing</code> marker to disk and returns 201 immediately. Poll the <code>GET</code> endpoint to track progress until <code>status</code> becomes <code>complete</code>, <code>partial</code>, or <code>failed</code>.<br/><br/>The caller must have maintainer rights on the specified dataset (or, for default/ built-in datasets, search admin privileges).
             responses:
                 "201":
                     description: Processing marker written; agent run dispatched
@@ -276025,7 +276531,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: AI is disabled or consent not accepted
+                    description: AI is disabled or consent not accepted, or caller lacks permission to manage dataset intelligence
                 "404":
                     description: The requested resource does not exist — Dataset not found or caller lacks read access
                 "409":
@@ -276073,7 +276579,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: AI is disabled or consent not accepted
+                    description: AI is disabled or consent not accepted, or caller lacks permission to manage dataset intelligence
                 "404":
                     description: The requested resource does not exist — Dataset not found or caller lacks read access
                 "500":
@@ -276099,7 +276605,7 @@ paths:
                 - leader
                 - single
             summary: Get dataset intelligence for a dataset
-            description: Returns the persisted dataset intelligence envelope for the specified dataset, including the agent's lifecycle <code>status</code> and the markdown <code>content</code>. Use this endpoint to poll for completion after creating a new run with <code>POST</code>.
+            description: Returns the persisted dataset intelligence envelope for the specified dataset, including the agent's lifecycle <code>status</code> and the markdown <code>content</code>. Use this endpoint to poll for completion after creating a new run with <code>POST</code>. A run left in <code>processing</code> past the server timeout is returned as <code>failed</code>. The on-disk marker stays <code>processing</code> until a new <code>POST</code> replaces it.
             responses:
                 "200":
                     description: Dataset intelligence envelope
@@ -276179,7 +276685,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: AI is disabled or consent not accepted
+                    description: AI is disabled or consent not accepted, or caller lacks permission to manage dataset intelligence
                 "404":
                     description: The requested resource does not exist — Dataset not found, no intelligence file exists, or caller lacks read access
                 "409":
@@ -277057,6 +277563,49 @@ paths:
                         examples:
                             AddMCPServerExamplesPagerDutyServer:
                                 $ref: "#/components/examples/AddMCPServerExamplesPagerDutyServer"
+    /ai/settings/leader-mcp/tools:
+        get:
+            operationId: getAiSettingsLeaderMcpTools
+            tags:
+                - ai-settings
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: List Leader MCP tools for Settings
+            description: Return the Leader MCP tool catalog for the MCP Server Settings page. Each item includes a product category, read or write access type, and whether the caller can use the tool.
+            responses:
+                "200":
+                    description: Leader MCP tools with availability for the caller
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListLeaderMcpCatalogTool"
+                            examples:
+                                ListLeaderMcpToolsResponseExamplesCatalog:
+                                    $ref: "#/components/examples/ListLeaderMcpToolsResponseExamplesCatalog"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist — MCP catalog is unavailable
+                "500":
+                    description: Unexpected server error — failed to list tools
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
     /ai/settings/providers/models:
         post:
             operationId: createAiSettingsProvidersModels
@@ -279238,6 +279787,57 @@ paths:
                   schema:
                     type: string
                   description: Restrict results to a single capture pipeline id.
+    /ai/guard/recommendations/apply:
+        post:
+            operationId: createAiGuardRecommendationsApply
+            tags:
+                - AI
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Record applied Guard recommendation actions
+            description: Records applied actions for a reviewed recommendation. Rejects requests when a newer recommendation exists. When all actions are applied, marks matching new detections mitigated in the same write.
+            responses:
+                "200":
+                    description: Whether every action for the recommendation has now been applied. When true, matching new detections were marked mitigated.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ApplyGuardRecommendationResponse"
+                            examples:
+                                ApplyGuardRecommendationResponseExamplesFullyApplied:
+                                    $ref: "#/components/examples/ApplyGuardRecommendationResponseExamplesFullyApplied"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: ApplyGuardRecommendationRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ApplyGuardRecommendationRequest"
+                        examples:
+                            ApplyGuardRecommendationExamplesLinkExistingRule:
+                                $ref: "#/components/examples/ApplyGuardRecommendationExamplesLinkExistingRule"
     /ai/guard/findings/mitigate:
         post:
             operationId: createAiGuardFindingsMitigate
@@ -284312,7 +284912,7 @@ paths:
             description: Preview the Event Breaker rule against the supplied input and return split events with processing timing (Cribl.Cloud only).
             responses:
                 "200":
-                    description: The requested preview object in a single-item list.
+                    description: The created PreviewResponseBody object.
                     content:
                         application/json:
                             schema:
@@ -286041,7 +286641,7 @@ paths:
             description: Get aggregated event and byte count statistics for a lakehouse engine Dataset (Cribl.Cloud only).
             responses:
                 "200":
-                    description: Totals and per-bucket time series for event counts and bytes.
+                    description: Totals within the Dataset retention period and per-bucket time series for the requested window.
                     content:
                         application/json:
                             schema:
