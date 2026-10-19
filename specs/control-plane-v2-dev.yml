@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.21.0-alpha.1792278253441-538b7474
+  version: 4.21.0-alpha.1792452547293-1ead780f
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -17708,33 +17708,7 @@ components:
           title: Auth tokens
           description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
           items:
-            type: object
-            oneOf:
-              - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
-              - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
-            properties:
-              authType:
-                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
-                description: Select Manual to enter an auth token directly, or select Secret to
-                  use a text secret to authenticate
-              tokenSecret:
-                type: string
-                title: Token secret (text secret)
-                description: Select or create a stored text secret
-              token:
-                type: string
-                title: Token
-                description: "Shared secret to be provided by any client (Authorization: <token>)"
-              description:
-                type: string
-                title: Description
-                description: Description
-              metadata:
-                type: array
-                title: Fields
-                description: Fields to add to events referencing this token
-                items:
-                  $ref: "#/components/schemas/MetadataConfInputCollection"
+            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
         description:
           type: string
           title: Description
@@ -38864,6 +38838,203 @@ components:
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'tenantUrl' at runtime.
       title: InputNetskope
+    InputLitellm:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - criblAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique name for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - litellm
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          items:
+            type: string
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set to 0 for unlimited. Caution: Increasing the limit above the default value, or setting it to unlimited, may degrade performance and reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        captureHeadersWarning:
+          type: string
+          description: Warning displayed when request-header capture is enabled.
+          readOnly: true
+          const: ""
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        enableHealthCheck:
+          type: boolean
+          title: Health check endpoint
+          description: Expose the /cribl_health endpoint, which returns 200 OK when this
+            Source is healthy
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        criblAPI:
+          type: string
+          title: Cribl HTTP event API
+          description: Absolute path on which to listen for LiteLLM generic API logger
+            requests. Only _bulk (default /cribl/_bulk) is available. Each log
+            record becomes one event, whether LiteLLM sends a JSON array or
+            NDJSON.
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        authTokensExt:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_authTokens:
+          type: string
+          description: Binds 'authTokens' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'authTokens' at runtime.
+        __template_criblAPI:
+          type: string
+          description: Binds 'criblAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'criblAPI' at runtime.
+      title: InputLitellm
     Input:
       oneOf:
         - $ref: "#/components/schemas/InputCollection"
@@ -38958,6 +39129,7 @@ components:
         - $ref: "#/components/schemas/InputMimecastHec"
         - $ref: "#/components/schemas/InputTrendMicroVisionOne"
         - $ref: "#/components/schemas/InputNetskope"
+        - $ref: "#/components/schemas/InputLitellm"
       discriminator:
         propertyName: type
         mapping:
@@ -39053,6 +39225,7 @@ components:
           mimecast_hec: "#/components/schemas/InputMimecastHec"
           trend_micro_vision_one: "#/components/schemas/InputTrendMicroVisionOne"
           netskope: "#/components/schemas/InputNetskope"
+          litellm: "#/components/schemas/InputLitellm"
       title: Input
     AddHecTokenRequest:
       type: object
@@ -42014,6 +42187,11 @@ components:
             the delay to 180 seconds, even if the Retry-After header specifies a
             longer delay. When enabled, takes precedence over user-configured
             retry options. When disabled, all Retry-After headers are ignored.
+        throttleRatePerSec:
+          type: string
+          title: Throttling
+          description: "Rate (in bytes per second) to throttle while writing to an output. Accepts values with multiple-byte units, such as KB, MB, and GB. (Example: 42 MB) Default value of 0 specifies no throttling."
+          pattern: ^[\d.]+(\s[KMGTPEZYkmgtpezy][Bb])?$
         nextQueue:
           type: string
           title: Next Processing Queue
@@ -42337,6 +42515,11 @@ components:
             the delay to 180 seconds, even if the Retry-After header specifies a
             longer delay. When enabled, takes precedence over user-configured
             retry options. When disabled, all Retry-After headers are ignored.
+        throttleRatePerSec:
+          type: string
+          title: Throttling
+          description: "Rate (in bytes per second) to throttle while writing to an output. Accepts values with multiple-byte units, such as KB, MB, and GB. (Example: 42 MB) Default value of 0 specifies no throttling."
+          pattern: ^[\d.]+(\s[KMGTPEZYkmgtpezy][Bb])?$
         wiz_connector_id:
           type: string
           title: Wiz connector ID
@@ -61835,6 +62018,11 @@ components:
             the delay to 180 seconds, even if the Retry-After header specifies a
             longer delay. When enabled, takes precedence over user-configured
             retry options. When disabled, all Retry-After headers are ignored.
+        throttleRatePerSec:
+          type: string
+          title: Throttling
+          description: "Rate (in bytes per second) to throttle while writing to an output. Accepts values with multiple-byte units, such as KB, MB, and GB. (Example: 42 MB) Default value of 0 specifies no throttling."
+          pattern: ^[\d.]+(\s[KMGTPEZYkmgtpezy][Bb])?$
         region:
           type: string
           title: Region
@@ -72553,6 +72741,9 @@ components:
         - $ref: "#/components/schemas/InputNetskopePartialRequest"
           required:
             - type
+        - $ref: "#/components/schemas/InputLitellmPartialRequest"
+          required:
+            - type
       discriminator:
         propertyName: type
         mapping:
@@ -72648,6 +72839,7 @@ components:
           mimecast_hec: "#/components/schemas/InputMimecastHecPartialRequest"
           trend_micro_vision_one: "#/components/schemas/InputTrendMicroVisionOnePartialRequest"
           netskope: "#/components/schemas/InputNetskopePartialRequest"
+          litellm: "#/components/schemas/InputLitellmPartialRequest"
       title: InputPartialRequest
       properties:
         type:
@@ -75376,33 +75568,7 @@ components:
           anyOf:
             - type: array
               items:
-                type: object
-                oneOf:
-                  - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
-                  - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
-                properties:
-                  authType:
-                    $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
-                    description: Select Manual to enter an auth token directly, or select Secret to
-                      use a text secret to authenticate
-                  tokenSecret:
-                    type: string
-                    title: Token secret (text secret)
-                    description: Select or create a stored text secret
-                  token:
-                    type: string
-                    title: Token
-                    description: "Shared secret to be provided by any client (Authorization: <token>)"
-                  description:
-                    type: string
-                    title: Description
-                    description: Description
-                  metadata:
-                    type: array
-                    title: Fields
-                    description: Fields to add to events referencing this token
-                    items:
-                      $ref: "#/components/schemas/MetadataConfInputCollection"
+                $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
             - type: "null"
         description:
           title: Description
@@ -122051,6 +122217,502 @@ components:
             - type: string
             - type: "null"
       title: InputNetskopePartialRequest
+    InputLitellmPartialRequest:
+      type: object
+      properties:
+        id:
+          title: Input ID
+          description: Unique name for this input
+          anyOf:
+            - type: string
+            - type: "null"
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - litellm
+        disabled:
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        pipeline:
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+          anyOf:
+            - type: string
+            - type: "null"
+        sendToRoutes:
+          description: Select whether to send data to Routes, or directly to Destinations.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        environment:
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+          anyOf:
+            - type: string
+            - type: "null"
+        pqEnabled:
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+          anyOf:
+            - type: boolean
+            - type: "null"
+        streamtags:
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: "null"
+        criblSourceProvenance:
+          title: Input provenance
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+          readOnly: true
+          anyOf:
+            - type: object
+              additionalProperties: false
+              properties:
+                origin:
+                  description: Feature that created the Source.
+                  anyOf:
+                    - type: string
+                      enum:
+                        - data_source_discovery
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                destinationArn:
+                  description: ARN of the S3 bucket or Firehose delivery stream configured as the
+                    Source.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                sourceArn:
+                  description: ARN of the AWS resource that produces the logs.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                sourceService:
+                  description: Resolved DSD source-service offering, when known.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                accountId:
+                  description: Cloud tenant or scope id the Source was configured for (for example
+                    an AWS account id, GCP project or folder id, or Azure
+                    subscription or resource group id).
+                  anyOf:
+                    - type: string
+                      minLength: 1
+                    - type: "null"
+                templateFamily:
+                  description: Infrastructure-as-code family that provisioned the AWS resources
+                    (absent means cloudformation).
+                  anyOf:
+                    - type: string
+                      enum:
+                        - cloudformation
+                        - terraform
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+            - type: "null"
+        connections:
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/ConnectionConfInputCollection"
+            - type: "null"
+        pq:
+          description: Persistent queue settings for this Source.
+          anyOf:
+            - type: object
+              properties:
+                mode:
+                  title: Mode
+                  description: With Smart mode (deprecated), PQ will write events to the
+                    filesystem only when it detects backpressure from the
+                    processing engine. Smart mode will have no new development
+                    starting July 2026, followed by End of Support and feature
+                    removal (auto-migrating to Always On) in January 2027. We
+                    recommend using Always On mode instead. With Always On mode,
+                    PQ will always write events directly to the queue before
+                    forwarding them to the processing engine.
+                  x-speakeasy-enum-descriptions:
+                    - Smart (Deprecated)
+                    - Always On
+                  anyOf:
+                    - type: string
+                      enum:
+                        - smart
+                        - always
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                maxBufferSizeBytes:
+                  title: Buffer size limit (bytes)
+                  description: The maximum size to hold in memory before writing events to disk.
+                    Enter a numeral with units of KB, MB, etc. The minimum value
+                    is 64KB and the maximum value is 10MB.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                maxBufferSize:
+                  title: Buffer size limit (events - deprecated)
+                  description: Maximum number of events to hold in memory before writing the
+                    events to disk. Deprecated and only supported in workers <
+                    v4.17.0. Use maxBufferSizeBytes instead.
+                  anyOf:
+                    - type: number
+                      minimum: 42
+                    - type: "null"
+                commitFrequency:
+                  title: Commit frequency
+                  description: The number of events to send downstream before committing that
+                    Stream has read them. Lower values increase cursor-write
+                    IOPS and can add disk pressure, including on shared storage.
+                  anyOf:
+                    - type: number
+                      minimum: 42
+                    - type: "null"
+                maxFileSize:
+                  title: File size limit
+                  description: The maximum size to store in each queue file before closing and
+                    optionally compressing. Enter a numeral with units of KB,
+                    MB, etc.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                maxSize:
+                  title: Queue size limit
+                  description: The maximum disk space that the queue can consume (as an average
+                    per Worker Process) before queueing stops. Enter a numeral
+                    with units of KB, MB, etc.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                path:
+                  title: Queue file path
+                  description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/inputs/<input-id>"
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                compress:
+                  x-speakeasy-enum-descriptions:
+                    - None
+                    - Gzip
+                  title: Compression
+                  description: Codec to use to compress the persisted data
+                  anyOf:
+                    - type: string
+                      enum:
+                        - none
+                        - gzip
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                onBackpressure:
+                  title: Queue-full behavior
+                  description: Whether to block or drop events when the queue is exerting
+                    backpressure (full capacity or low disk). 'Block' is the
+                    same behavior as non-PQ blocking. 'Drop new data' throws
+                    away incoming data, while leaving the contents of the PQ
+                    unchanged.
+                  x-speakeasy-enum-descriptions:
+                    - Block
+                    - Drop new data
+                  anyOf:
+                    - type: string
+                      enum:
+                        - block
+                        - drop
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                pqControls:
+                  title: ""
+                  description: Management controls for the persistent queue.
+                  anyOf:
+                    - type: object
+                    - type: "null"
+            - type: "null"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: "null"
+        tls:
+          title: TLS settings (server side)
+          description: TLS settings (server side)
+          anyOf:
+            - type: object
+              properties:
+                disabled:
+                  title: Disabled
+                  description: If true, TLS is disabled on this connection.
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                requestCert:
+                  title: Authenticate client (mutual auth)
+                  description: Require clients to present their certificates. Used to perform
+                    client authentication using SSL certs.
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                caPath:
+                  title: CA certificate path
+                  description: Path on server containing CA certificates to use. PEM format. Can
+                    reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                rejectUnauthorized:
+                  title: Validate client certificates
+                  description: Reject certificates not authorized by a CA in the CA certificate
+                    path or by another trusted CA (such as the system's)
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                commonNameRegex:
+                  title: Common name
+                  description: Regex matching allowable common names in peer certificates' subject
+                    attribute
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                certificateName:
+                  title: Certificate
+                  description: The name of the predefined certificate
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                privKeyPath:
+                  title: Private key path
+                  description: Path on server containing the private key to use. PEM format. Can
+                    reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                passphrase:
+                  title: Passphrase
+                  description: Passphrase to use to decrypt private key
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                certPath:
+                  title: Certificate path
+                  description: Path on server containing certificates to use. PEM format. Can
+                    reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                minVersion:
+                  title: Minimum TLS version
+                  description: Minimum TLS version to accept from clients.
+                  anyOf:
+                    - type: string
+                      enum:
+                        - TLSv1
+                        - TLSv1.1
+                        - TLSv1.2
+                        - TLSv1.3
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                maxVersion:
+                  title: Maximum TLS version
+                  description: Maximum TLS version to accept from clients.
+                  anyOf:
+                    - type: string
+                      enum:
+                        - TLSv1
+                        - TLSv1.1
+                        - TLSv1.2
+                        - TLSv1.3
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+            - type: "null"
+        maxActiveReq:
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set to 0 for unlimited. Caution: Increasing the limit above the default value, or setting it to unlimited, may degrade performance and reduce throughput."
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        maxRequestsPerSocket:
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          anyOf:
+            - type: integer
+              minimum: 0
+            - type: "null"
+        captureHeaders:
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+          anyOf:
+            - type: boolean
+            - type: "null"
+        captureHeadersWarning:
+          description: Warning displayed when request-header capture is enabled.
+          readOnly: true
+          anyOf:
+            - type: string
+              const: ""
+            - type: "null"
+        activityLogSampleRate:
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          anyOf:
+            - type: number
+              minimum: 1
+            - type: "null"
+        requestTimeout:
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        socketTimeout:
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        keepAliveTimeout:
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          anyOf:
+            - type: number
+              minimum: 1
+              maximum: 600
+            - type: "null"
+        enableHealthCheck:
+          title: Health check endpoint
+          description: Expose the /cribl_health endpoint, which returns 200 OK when this
+            Source is healthy
+          anyOf:
+            - type: boolean
+            - type: "null"
+        ipAllowlistRegex:
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+          anyOf:
+            - type: string
+            - type: "null"
+        ipDenylistRegex:
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+          anyOf:
+            - type: string
+            - type: "null"
+        criblAPI:
+          type: string
+          title: Cribl HTTP event API
+          description: Absolute path on which to listen for LiteLLM generic API logger
+            requests. Only _bulk (default /cribl/_bulk) is available. Each log
+            record becomes one event, whether LiteLLM sends a JSON array or
+            NDJSON.
+          pattern: ^/
+        metadata:
+          title: Fields
+          description: Fields to add to events from this input
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/MetadataConfInputCollection"
+            - type: "null"
+        authTokensExt:
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+            - type: "null"
+        description:
+          title: Description
+          description: Optional description for this configuration.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_environment:
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_streamtags:
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_host:
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_port:
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_authTokens:
+          description: Binds 'authTokens' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'authTokens' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_criblAPI:
+          description: Binds 'criblAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'criblAPI' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+      title: InputLitellmPartialRequest
     OutputPartialRequest:
       oneOf:
         - $ref: "#/components/schemas/OutputDefaultPartialRequest"
@@ -126010,6 +126672,13 @@ components:
           anyOf:
             - type: boolean
             - type: "null"
+        throttleRatePerSec:
+          title: Throttling
+          description: "Rate (in bytes per second) to throttle while writing to an output. Accepts values with multiple-byte units, such as KB, MB, and GB. (Example: 42 MB) Default value of 0 specifies no throttling."
+          anyOf:
+            - type: string
+              pattern: ^[\d.]+(\s[KMGTPEZYkmgtpezy][Bb])?$
+            - type: "null"
         nextQueue:
           title: Next Processing Queue
           description: In the Splunk app, define which Splunk processing queue to send the
@@ -126584,6 +127253,13 @@ components:
             retry options. When disabled, all Retry-After headers are ignored.
           anyOf:
             - type: boolean
+            - type: "null"
+        throttleRatePerSec:
+          title: Throttling
+          description: "Rate (in bytes per second) to throttle while writing to an output. Accepts values with multiple-byte units, such as KB, MB, and GB. (Example: 42 MB) Default value of 0 specifies no throttling."
+          anyOf:
+            - type: string
+              pattern: ^[\d.]+(\s[KMGTPEZYkmgtpezy][Bb])?$
             - type: "null"
         wiz_connector_id:
           type: string
@@ -159807,6 +160483,13 @@ components:
           anyOf:
             - type: boolean
             - type: "null"
+        throttleRatePerSec:
+          title: Throttling
+          description: "Rate (in bytes per second) to throttle while writing to an output. Accepts values with multiple-byte units, such as KB, MB, and GB. (Example: 42 MB) Default value of 0 specifies no throttling."
+          anyOf:
+            - type: string
+              pattern: ^[\d.]+(\s[KMGTPEZYkmgtpezy][Bb])?$
+            - type: "null"
         region:
           type: string
           title: Region
@@ -175578,6 +176261,7 @@ components:
                 - outpost
                 - search
                 - stream
+                - stream_ai
               x-speakeasy-unknown-values: allow
             - type: "null"
         upgradeVersion:
@@ -178186,6 +178870,7 @@ components:
         - outpost
         - search
         - stream
+        - stream_ai
       description: Explicit type of the Worker Group, Outpost Group, or Edge Fleet.
       x-speakeasy-unknown-values: allow
     FormatOptionsCriblLakeDataset:
@@ -178980,6 +179665,34 @@ components:
           $ref: "#/components/schemas/MaximumTlsVersionOptionsTlsTlSv1TlSv11"
           description: Maximum TLS version to accept from clients.
       description: TLS settings (server side)
+    AuthTokensExtConfInputHttp:
+      type: object
+      oneOf:
+        - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
+        - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+      properties:
+        authType:
+          $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+          description: Select Manual to enter an auth token directly, or select Secret to
+            use a text secret to authenticate
+        tokenSecret:
+          type: string
+          title: Token secret (text secret)
+          description: Select or create a stored text secret
+        token:
+          type: string
+          title: Token
+          description: "Shared secret to be provided by any client (Authorization: <token>)"
+        description:
+          type: string
+          title: Description
+          description: Description
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events referencing this token
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
     RetryRulesType:
       type: object
       description: HTTP retry behavior for failed collection requests.
@@ -180717,6 +181430,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Kubernetes Metrics Source.
+    InputCreateExamplesLiteLLM:
+      summary: LiteLLM
+      value:
+        id: litellm-source
+        type: litellm
+        host: 0.0.0.0
+        port: 10080
+        criblAPI: /cribl
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a LiteLLM Source.
     InputCreateExamplesLoki:
       summary: Loki
       value:
@@ -185328,6 +186052,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: "Example request body for updating a Kubernetes Metrics Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+    UpdateInputExamplesLiteLLMPartialRequest:
+      summary: LiteLLM
+      value:
+        id: litellm-source
+        type: litellm
+        host: 0.0.0.0
+        port: 10080
+        criblAPI: /cribl
+        sendToRoutes: true
+        pqEnabled: false
+      description: "Example request body for updating a LiteLLM Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesLokiPartialRequest:
       summary: Loki
       value:
@@ -190360,6 +191095,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesKubeLogs"
               InputCreateExamplesKubeMetrics:
                 $ref: "#/components/examples/InputCreateExamplesKubeMetrics"
+              InputCreateExamplesLiteLLM:
+                $ref: "#/components/examples/InputCreateExamplesLiteLLM"
               InputCreateExamplesLoki:
                 $ref: "#/components/examples/InputCreateExamplesLoki"
               InputCreateExamplesMetrics:
@@ -190696,6 +191433,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesKubeLogsPartialRequest"
               UpdateInputExamplesKubeMetrics:
                 $ref: "#/components/examples/UpdateInputExamplesKubeMetricsPartialRequest"
+              UpdateInputExamplesLiteLLM:
+                $ref: "#/components/examples/UpdateInputExamplesLiteLLMPartialRequest"
               UpdateInputExamplesLoki:
                 $ref: "#/components/examples/UpdateInputExamplesLokiPartialRequest"
               UpdateInputExamplesMetrics:
@@ -194772,6 +195511,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CriblLakeDataset"
+        "400":
+          description: Failed validation or malformed input — for example, a read-only
+            field or an <code>id</code> is set, the <code>storageClass</code> is
+            not supported, or the Storage Location does not exist.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -194787,6 +195530,13 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action — when a single
+            Lake Dataset object is sent; in an array request, per-item failures
+            are reported in <code>errors</code>.
+        "422":
+          description: The maximum number of Direct Access HTTP Lake Datasets has been
+            reached.
         "500":
           description: Unexpected server error.
           content:
@@ -194974,6 +195724,10 @@ paths:
       responses:
         "204":
           description: No Content
+        "400":
+          description: Failed validation or malformed input — the Lake Dataset is a
+            default Dataset, is used in Stream, or is already marked for
+            deletion.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -195571,6 +196325,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesKubeLogs"
               InputCreateExamplesKubeMetrics:
                 $ref: "#/components/examples/InputCreateExamplesKubeMetrics"
+              InputCreateExamplesLiteLLM:
+                $ref: "#/components/examples/InputCreateExamplesLiteLLM"
               InputCreateExamplesLoki:
                 $ref: "#/components/examples/InputCreateExamplesLoki"
               InputCreateExamplesMetrics:
@@ -195894,6 +196650,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesKubeLogsPartialRequest"
               UpdateInputExamplesKubeMetrics:
                 $ref: "#/components/examples/UpdateInputExamplesKubeMetricsPartialRequest"
+              UpdateInputExamplesLiteLLM:
+                $ref: "#/components/examples/UpdateInputExamplesLiteLLMPartialRequest"
               UpdateInputExamplesLoki:
                 $ref: "#/components/examples/UpdateInputExamplesLokiPartialRequest"
               UpdateInputExamplesMetrics:
