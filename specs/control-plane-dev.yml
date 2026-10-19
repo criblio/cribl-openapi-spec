@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.21.0-alpha.1792278196762-538b7474
+  version: 4.21.0-alpha.1792452484950-1ead780f
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -17802,33 +17802,7 @@ components:
           title: Auth tokens
           description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
           items:
-            type: object
-            oneOf:
-              - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
-              - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
-            properties:
-              authType:
-                $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
-                description: Select Manual to enter an auth token directly, or select Secret to
-                  use a text secret to authenticate
-              tokenSecret:
-                type: string
-                title: Token secret (text secret)
-                description: Select or create a stored text secret
-              token:
-                type: string
-                title: Token
-                description: "Shared secret to be provided by any client (Authorization: <token>)"
-              description:
-                type: string
-                title: Description
-                description: Description
-              metadata:
-                type: array
-                title: Fields
-                description: Fields to add to events referencing this token
-                items:
-                  $ref: "#/components/schemas/MetadataConfInputCollection"
+            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
         description:
           type: string
           title: Description
@@ -38958,6 +38932,203 @@ components:
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'tenantUrl' at runtime.
       title: InputNetskope
+    InputLitellm:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - criblAPI
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique name for this input
+        type:
+          type: string
+          description: Source type identifier.
+          enum:
+            - litellm
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. Defaults to 0.0.0.0 (all addresses).
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: Port to listen on
+        authTokens:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          items:
+            type: string
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        maxActiveReq:
+          type: number
+          title: Active request limit
+          description: "Maximum number of active requests allowed per Worker Process. Set to 0 for unlimited. Caution: Increasing the limit above the default value, or setting it to unlimited, may degrade performance and reduce throughput."
+          minimum: 0
+        maxRequestsPerSocket:
+          type: integer
+          title: Requests-per-socket limit
+          description: Maximum number of requests per socket before @{product} instructs
+            the client to close the connection. Default is 0 (unlimited).
+          minimum: 0
+        captureHeaders:
+          type: boolean
+          title: Capture request headers
+          description: Add request headers to events, in the __headers field
+        captureHeadersWarning:
+          type: string
+          description: Warning displayed when request-header capture is enabled.
+          readOnly: true
+          const: ""
+        activityLogSampleRate:
+          type: number
+          title: Activity log sample rate
+          description: How often request activity is logged at the `info` level. A value
+            of 1 would log every request, 10 every 10th request, etc.
+          minimum: 1
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: How long to wait for an incoming request to complete before
+            aborting it. Use 0 to disable.
+          minimum: 0
+        socketTimeout:
+          type: number
+          title: Socket timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. To wait forever, set to 0.
+          minimum: 0
+        keepAliveTimeout:
+          type: number
+          title: Keep-alive timeout (seconds)
+          description: After the last response is sent, @{product} will wait this long for
+            additional data before closing the socket connection. Minimum 1
+            second, maximum 600 seconds (10 minutes).
+          minimum: 1
+          maximum: 600
+        enableHealthCheck:
+          type: boolean
+          title: Health check endpoint
+          description: Expose the /cribl_health endpoint, which returns 200 OK when this
+            Source is healthy
+        ipAllowlistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Messages from matched IP addresses will be processed, unless also
+            matched by the denylist
+        ipDenylistRegex:
+          type: string
+          title: IP denylist regex
+          description: Messages from matched IP addresses will be ignored. This takes
+            precedence over the allowlist.
+        criblAPI:
+          type: string
+          title: Cribl HTTP event API
+          description: Absolute path on which to listen for LiteLLM generic API logger
+            requests. Only _bulk (default /cribl/_bulk) is available. Each log
+            record becomes one event, whether LiteLLM sends a JSON array or
+            NDJSON.
+          pattern: ^/
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        authTokensExt:
+          type: array
+          title: Auth tokens
+          description: "Shared secrets to be provided by any client (Authorization: <token>). If empty, unauthorized access is permitted."
+          items:
+            $ref: "#/components/schemas/AuthTokensExtConfInputHttp"
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+        __template_authTokens:
+          type: string
+          description: Binds 'authTokens' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'authTokens' at runtime.
+        __template_criblAPI:
+          type: string
+          description: Binds 'criblAPI' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'criblAPI' at runtime.
+      title: InputLitellm
     Input:
       oneOf:
         - $ref: "#/components/schemas/InputCollection"
@@ -39052,6 +39223,7 @@ components:
         - $ref: "#/components/schemas/InputMimecastHec"
         - $ref: "#/components/schemas/InputTrendMicroVisionOne"
         - $ref: "#/components/schemas/InputNetskope"
+        - $ref: "#/components/schemas/InputLitellm"
       discriminator:
         propertyName: type
         mapping:
@@ -39147,6 +39319,7 @@ components:
           mimecast_hec: "#/components/schemas/InputMimecastHec"
           trend_micro_vision_one: "#/components/schemas/InputTrendMicroVisionOne"
           netskope: "#/components/schemas/InputNetskope"
+          litellm: "#/components/schemas/InputLitellm"
       title: Input
     CountedInputSplunkHec:
       type: object
@@ -42171,6 +42344,11 @@ components:
             the delay to 180 seconds, even if the Retry-After header specifies a
             longer delay. When enabled, takes precedence over user-configured
             retry options. When disabled, all Retry-After headers are ignored.
+        throttleRatePerSec:
+          type: string
+          title: Throttling
+          description: "Rate (in bytes per second) to throttle while writing to an output. Accepts values with multiple-byte units, such as KB, MB, and GB. (Example: 42 MB) Default value of 0 specifies no throttling."
+          pattern: ^[\d.]+(\s[KMGTPEZYkmgtpezy][Bb])?$
         nextQueue:
           type: string
           title: Next Processing Queue
@@ -42494,6 +42672,11 @@ components:
             the delay to 180 seconds, even if the Retry-After header specifies a
             longer delay. When enabled, takes precedence over user-configured
             retry options. When disabled, all Retry-After headers are ignored.
+        throttleRatePerSec:
+          type: string
+          title: Throttling
+          description: "Rate (in bytes per second) to throttle while writing to an output. Accepts values with multiple-byte units, such as KB, MB, and GB. (Example: 42 MB) Default value of 0 specifies no throttling."
+          pattern: ^[\d.]+(\s[KMGTPEZYkmgtpezy][Bb])?$
         wiz_connector_id:
           type: string
           title: Wiz connector ID
@@ -61992,6 +62175,11 @@ components:
             the delay to 180 seconds, even if the Retry-After header specifies a
             longer delay. When enabled, takes precedence over user-configured
             retry options. When disabled, all Retry-After headers are ignored.
+        throttleRatePerSec:
+          type: string
+          title: Throttling
+          description: "Rate (in bytes per second) to throttle while writing to an output. Accepts values with multiple-byte units, such as KB, MB, and GB. (Example: 42 MB) Default value of 0 specifies no throttling."
+          pattern: ^[\d.]+(\s[KMGTPEZYkmgtpezy][Bb])?$
         region:
           type: string
           title: Region
@@ -75050,6 +75238,7 @@ components:
         - outpost
         - search
         - stream
+        - stream_ai
       description: Explicit type of the Worker Group, Outpost Group, or Edge Fleet.
       x-speakeasy-unknown-values: allow
     FormatOptionsCriblLakeDataset:
@@ -75844,6 +76033,34 @@ components:
           $ref: "#/components/schemas/MaximumTlsVersionOptionsTlsTlSv1TlSv11"
           description: Maximum TLS version to accept from clients.
       description: TLS settings (server side)
+    AuthTokensExtConfInputHttp:
+      type: object
+      oneOf:
+        - $ref: "#/components/schemas/InputHttpAuthTokensExtItemsType"
+        - $ref: "#/components/schemas/InputHttpAuthTypeSecretConstraint"
+      properties:
+        authType:
+          $ref: "#/components/schemas/AuthenticationMethodOptionsAuthTokensExtItems"
+          description: Select Manual to enter an auth token directly, or select Secret to
+            use a text secret to authenticate
+        tokenSecret:
+          type: string
+          title: Token secret (text secret)
+          description: Select or create a stored text secret
+        token:
+          type: string
+          title: Token
+          description: "Shared secret to be provided by any client (Authorization: <token>)"
+        description:
+          type: string
+          title: Description
+          description: Description
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events referencing this token
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
     RetryRulesType:
       type: object
       description: HTTP retry behavior for failed collection requests.
@@ -77752,6 +77969,17 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Kubernetes Metrics Source.
+    InputCreateExamplesLiteLLM:
+      summary: LiteLLM
+      value:
+        id: litellm-source
+        type: litellm
+        host: 0.0.0.0
+        port: 10080
+        criblAPI: /cribl
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a LiteLLM Source.
     InputCreateExamplesLoki:
       summary: Loki
       value:
@@ -78946,6 +79174,19 @@ components:
         Source.<br/><br/>The request body must include a complete representation
         of the Source that you want to update. This endpoint does not support
         partial updates.
+    UpdateInputExamplesLiteLLM:
+      summary: LiteLLM
+      value:
+        id: litellm-source
+        type: litellm
+        host: 0.0.0.0
+        port: 10080
+        criblAPI: /cribl
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a LiteLLM Source.<br/><br/>The
+        request body must include a complete representation of the Source that
+        you want to update. This endpoint does not support partial updates.
     UpdateInputExamplesLoki:
       summary: Loki
       value:
@@ -88072,6 +88313,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesKubeLogs"
               InputCreateExamplesKubeMetrics:
                 $ref: "#/components/examples/InputCreateExamplesKubeMetrics"
+              InputCreateExamplesLiteLLM:
+                $ref: "#/components/examples/InputCreateExamplesLiteLLM"
               InputCreateExamplesLoki:
                 $ref: "#/components/examples/InputCreateExamplesLoki"
               InputCreateExamplesMetrics:
@@ -88408,6 +88651,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesKubeLogs"
               UpdateInputExamplesKubeMetrics:
                 $ref: "#/components/examples/UpdateInputExamplesKubeMetrics"
+              UpdateInputExamplesLiteLLM:
+                $ref: "#/components/examples/UpdateInputExamplesLiteLLM"
               UpdateInputExamplesLoki:
                 $ref: "#/components/examples/UpdateInputExamplesLoki"
               UpdateInputExamplesMetrics:
@@ -92455,6 +92700,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedCriblLakeDataset"
+        "400":
+          description: Failed validation or malformed input — for example, a read-only
+            field or an <code>id</code> is set, the <code>storageClass</code> is
+            not supported, or the Storage Location does not exist.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -92470,6 +92719,13 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action — when a single
+            Lake Dataset object is sent; in an array request, per-item failures
+            are reported in <code>errors</code>.
+        "422":
+          description: The maximum number of Direct Access HTTP Lake Datasets has been
+            reached.
         "500":
           description: Unexpected server error.
           content:
@@ -92656,6 +92912,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CountedCriblLakeDataset"
+        "400":
+          description: Failed validation or malformed input — the Lake Dataset is a
+            default Dataset, is used in Stream, or is already marked for
+            deletion.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -93246,6 +93506,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesKubeLogs"
               InputCreateExamplesKubeMetrics:
                 $ref: "#/components/examples/InputCreateExamplesKubeMetrics"
+              InputCreateExamplesLiteLLM:
+                $ref: "#/components/examples/InputCreateExamplesLiteLLM"
               InputCreateExamplesLoki:
                 $ref: "#/components/examples/InputCreateExamplesLoki"
               InputCreateExamplesMetrics:
@@ -93568,6 +93830,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesKubeLogs"
               UpdateInputExamplesKubeMetrics:
                 $ref: "#/components/examples/UpdateInputExamplesKubeMetrics"
+              UpdateInputExamplesLiteLLM:
+                $ref: "#/components/examples/UpdateInputExamplesLiteLLM"
               UpdateInputExamplesLoki:
                 $ref: "#/components/examples/UpdateInputExamplesLoki"
               UpdateInputExamplesMetrics:
