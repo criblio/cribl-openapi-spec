@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.21.0-alpha.1792452547293-1ead780f
+  version: 4.21.0-alpha.1792537882411-ba58c477
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -28854,6 +28854,234 @@ components:
             - host
             - tcpPort
       title: InputSyslog
+    InputCheckPointSaseSyslog:
+      type: object
+      required:
+        - type
+        - host
+        - tcpPort
+        - tls
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique name for this input
+        type:
+          type: string
+          enum:
+            - check_point_sase_syslog
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. For IPv4 (all addresses), use the default
+            '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP
+            address.
+        udpPort:
+          type: number
+          title: UDP port
+          description: Not supported for this Source — it listens on TCP only.
+          minimum: 1
+          exclusiveMaximum: 1
+        tcpPort:
+          type: number
+          title: TCP port
+          maximum: 65535
+          description: Enter TCP port number to listen on. Not required if listening on UDP.
+        ipWhitelistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Regex matching IP addresses that are allowed to send data
+        timestampTimezone:
+          type: string
+          title: Default timezone
+          description: Timezone to assign to timestamps without timezone info
+        keepFieldsList:
+          type: array
+          title: Fields to keep
+          description: Wildcard list of fields to keep from source data; * = ALL (default)
+          minItems: 0
+          items:
+            type: string
+        inferFraming:
+          type: boolean
+          title: Infer Syslog framing
+          description: Enable if we should infer the syslog framing of the incoming
+            messages.
+        maxActiveCxn:
+          type: number
+          title: Active connection limit
+          description: Maximum number of active connections allowed per Worker Process for
+            TCP connections. Use 0 for unlimited.
+          minimum: 0
+        socketIdleTimeout:
+          type: number
+          title: TCP socket idle timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. After this time, the connection will be
+            closed. Leave at 0 for no inactive socket monitoring.
+          minimum: 0
+        socketEndingMaxWait:
+          type: number
+          title: TCP forced socket termination timeout (seconds)
+          description: How long the server will wait after initiating a closure for a
+            client to close its end of the connection. If the client doesn't
+            close the connection within this time, the server will forcefully
+            terminate the socket to prevent resource leaks and ensure efficient
+            connection cleanup and system stability. Leave at 0 for no inactive
+            socket monitoring.
+          minimum: 0
+        socketMaxLifespan:
+          type: number
+          title: TCP Socket max lifespan (seconds)
+          description: The maximum duration a socket can remain open, even if active. This
+            helps manage resources and mitigate issues caused by TCP pinning.
+            Set to 0 to disable.
+          minimum: 0
+        tls:
+          type: object
+          title: TLS settings (server side)
+          properties:
+            disabled:
+              type: boolean
+              title: Disabled
+              description: If true, TLS is disabled on this connection.
+            requestCert:
+              type: boolean
+              title: Authenticate client (mutual auth)
+              description: Require clients to present their certificates. Used to perform
+                client authentication using SSL certs.
+            caPath:
+              type: string
+              title: CA certificate path
+              description: Path on server containing CA certificates to use. PEM format. Can
+                reference $ENV_VARS.
+            rejectUnauthorized:
+              type: boolean
+              title: Validate client certificates
+              description: Reject certificates not authorized by a CA in the CA certificate
+                path or by another trusted CA (such as the system's)
+            commonNameRegex:
+              type: string
+              title: Common name
+              description: Regex matching allowable common names in peer certificates' subject
+                attribute
+            certificateName:
+              type: string
+              title: Certificate
+              description: The name of the predefined certificate
+            privKeyPath:
+              type: string
+              title: Private key path
+              description: Path on server containing the private key to use. PEM format. Can
+                reference $ENV_VARS.
+            passphrase:
+              type: string
+              title: Passphrase
+              description: Passphrase to use to decrypt private key
+            certPath:
+              type: string
+              title: Certificate path
+              description: Path on server containing certificates to use. PEM format. Can
+                reference $ENV_VARS.
+            minVersion:
+              $ref: "#/components/schemas/MinimumTlsVersionOptionsTlsTlSv1TlSv11"
+              description: Minimum TLS version to accept from clients.
+            maxVersion:
+              $ref: "#/components/schemas/MaximumTlsVersionOptionsTlsTlSv1TlSv11"
+              description: Maximum TLS version to accept from clients.
+          required:
+            - disabled
+          description: TLS settings (server side)
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        autoParse:
+          type: boolean
+          title: Auto parse
+          description: Detect the datatype of each event and extract its top-level fields
+            before the data reaches any of the processing pipelines
+            (pre-processing, main processing, post-processing).
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_tcpPort:
+          type: string
+          description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tcpPort' at runtime.
+        __template_timestampTimezone:
+          type: string
+          description: Binds 'timestampTimezone' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'timestampTimezone' at runtime.
+      title: InputCheckPointSaseSyslog
     InputFile:
       type: object
       properties:
@@ -36569,6 +36797,258 @@ components:
             to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'oktaDomain' at runtime.
       title: InputOkta
+    InputSentinelone:
+      type: object
+      required:
+        - type
+        - contentConfig
+        - textSecret
+        - managementHost
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique name for this input
+        type:
+          type: string
+          enum:
+            - sentinelone
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        managementHost:
+          type: string
+          title: Management hostname
+          description: "Your SentinelOne management console hostname, without the domain suffix (example: usea1-yourorg)"
+          pattern: ^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$
+        managementDomainSuffix:
+          type: string
+          title: Domain suffix
+          description: Host suffix for your SentinelOne management console. Defaults to
+            sentinelone.net (global). Choose sentinelone.mil for US military
+            environments, or enter a custom domain.
+          pattern: ^$|^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+$
+        apiToken:
+          type: string
+          title: SentinelOne API token
+          description: SentinelOne API token
+        textSecret:
+          type: string
+          title: SentinelOne API token (text secret)
+          description: Select or create a stored text secret
+        contentConfig:
+          type: array
+          title: Content Types
+          items:
+            type: object
+            required:
+              - contentType
+              - collectPath
+              - paginationType
+              - cronSchedule
+              - earliest
+              - latest
+            properties:
+              contentType:
+                type: string
+                title: Content type
+                readOnly: true
+                description: Content type
+              contentDescription:
+                type: string
+                title: Description
+                readOnly: true
+                description: Description
+              collectPath:
+                type: string
+                title: Endpoint
+                description: SentinelOne API path
+                readOnly: true
+              collectMethod:
+                type: string
+                title: HTTP method
+                readOnly: false
+                description: HTTP method
+              collectBody:
+                type: string
+                title: Request body
+                description: Request body
+              disabled:
+                type: boolean
+                title: Enabled
+                description: Enabled
+              stateTracking:
+                type: boolean
+                title: State tracking
+                description: Track collection progress between consecutive scheduled executions
+              stateUpdateExpression:
+                type: string
+                title: State update expression
+                description: JavaScript expression that defines how to update the state from an
+                  event. Use the event's data and the current state to compute
+                  the new state. See [Understanding State Expression
+                  Fields](https://docs.cribl.io/stream/collectors-rest#state-tracking-expression-fields)
+                  for more information.
+              stateMergeExpression:
+                type: string
+                title: State merge expression
+                description: JavaScript expression that defines which state to keep when merging
+                  a task's newly reported state with previously saved state.
+                  Evaluates `prevState` and `newState` variables, resolving to
+                  the state to keep.
+              manageState:
+                type: object
+                description: Controls for viewing and managing the collector state.
+              requestParams:
+                type: array
+                title: Query parameters
+                description: Query-string parameters to send with this endpoint
+                items:
+                  $ref: "#/components/schemas/RefreshRequestParamConfHealthCheckAuthenticationOauthSecret"
+              paginationType:
+                type: string
+                title: Pagination type
+                description: Pagination type
+              paginationAttribute:
+                type: array
+                title: Pagination attributes
+                items:
+                  type: string
+                description: Pagination attributes
+              paginationLastPageExpr:
+                type: string
+                title: Last page expression
+                description: Last page expression
+              maxPages:
+                type: number
+                title: Page limit
+                description: Maximum number of pages to retrieve per collection task. Set to 0
+                  for unlimited.
+                minimum: 0
+              cronSchedule:
+                type: string
+                title: Cron schedule
+                description: A cron schedule on which to run this job
+              earliest:
+                type: string
+                title: Earliest time
+                description: Relative to the current time
+              latest:
+                type: string
+                title: Latest time
+                description: Relative to the current time
+              jobTimeout:
+                title: Job timeout
+                type: string
+                description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+              logLevel:
+                type: string
+                title: Log level
+                description: Collector runtime log level
+          description: Content Types
+        requestTimeout:
+          type: number
+          title: Request timeout (seconds)
+          description: HTTP request inactivity timeout. Use 0 to disable.
+          minimum: 0
+        keepAliveTime:
+          type: number
+          title: Keep alive time (seconds)
+          description: How often workers should check in with the scheduler to keep job
+            subscription alive
+          minimum: 10
+        maxMissedKeepAlives:
+          type: number
+          title: Worker timeout (periods)
+          description: The number of Keep Alive Time periods before an inactive worker
+            will have its job subscription revoked.
+          minimum: 2
+        ttl:
+          type: string
+          title: Time to live
+          description: Time to keep the job's artifacts on disk after job completion. This
+            also affects how long a job is listed in the Job Inspector.
+          pattern: \d+[smh]$
+        ignoreGroupJobsLimit:
+          type: boolean
+          title: Ignore Worker Group job limits
+          description: When enabled, this job's artifacts are not counted toward the
+            Worker Group's finished job artifacts limit. Artifacts will be
+            removed only after the Collector's configured time to live.
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        retryRules:
+          $ref: "#/components/schemas/RetryRulesType"
+          description: HTTP retry behavior for failed collection requests.
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_managementHost:
+          type: string
+          description: Binds 'managementHost' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'managementHost' at
+            runtime.
+      title: InputSentinelone
     InputAkamaiHec:
       type: object
       required:
@@ -39088,6 +39568,7 @@ components:
         - $ref: "#/components/schemas/InputModelDrivenTelemetry"
         - $ref: "#/components/schemas/InputSqs"
         - $ref: "#/components/schemas/InputSyslog"
+        - $ref: "#/components/schemas/InputCheckPointSaseSyslog"
         - $ref: "#/components/schemas/InputFile"
         - $ref: "#/components/schemas/InputTcp"
         - $ref: "#/components/schemas/InputAppscope"
@@ -39119,6 +39600,7 @@ components:
         - $ref: "#/components/schemas/InputAnthropicEnterpriseAnalytics"
         - $ref: "#/components/schemas/InputMicrosoftCopilot"
         - $ref: "#/components/schemas/InputOkta"
+        - $ref: "#/components/schemas/InputSentinelone"
         - $ref: "#/components/schemas/InputAkamaiHec"
         - $ref: "#/components/schemas/InputPingIdentityPingone"
         - $ref: "#/components/schemas/InputGigamonHec"
@@ -39184,6 +39666,7 @@ components:
           model_driven_telemetry: "#/components/schemas/InputModelDrivenTelemetry"
           sqs: "#/components/schemas/InputSqs"
           syslog: "#/components/schemas/InputSyslog"
+          check_point_sase_syslog: "#/components/schemas/InputCheckPointSaseSyslog"
           file: "#/components/schemas/InputFile"
           tcp: "#/components/schemas/InputTcp"
           appscope: "#/components/schemas/InputAppscope"
@@ -39215,6 +39698,7 @@ components:
           anthropic_enterprise_analytics: "#/components/schemas/InputAnthropicEnterpriseAnalytics"
           microsoft_copilot: "#/components/schemas/InputMicrosoftCopilot"
           okta: "#/components/schemas/InputOkta"
+          sentinelone: "#/components/schemas/InputSentinelone"
           akamai_hec: "#/components/schemas/InputAkamaiHec"
           ping_identity_pingone: "#/components/schemas/InputPingIdentityPingone"
           gigamon_hec: "#/components/schemas/InputGigamonHec"
@@ -39432,11 +39916,13 @@ components:
                   type: integer
                   title: Where to capture
                   enum:
+                    - 4
                     - 0
                     - 1
                     - 2
                     - 3
                   x-speakeasy-enum-descriptions:
+                    - 0. Before the event breaker (raw data)
                     - 1. Before pre-processing Pipeline
                     - 2. Before the Routes
                     - 3. Before post-processing Pipeline
@@ -39444,6 +39930,7 @@ components:
                   description: Where to capture
                   x-speakeasy-unknown-values: allow
                   x-speakeasy-enums:
+                    - BeforeTheEventBreakerRawData
                     - BeforePreProcessingPipeline
                     - BeforeTheRoutes
                     - BeforePostProcessingPipeline
@@ -69540,6 +70027,20 @@ components:
       examples:
         - {}
       title: EmptyObject
+    BulkItemError:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The <code>id</code> of the item that failed.
+        reason:
+          type: string
+          description: Human-readable reason the item failed.
+      required:
+        - id
+        - reason
+      description: A per-item failure from a bulk operation.
+      title: BulkItemError
     LakehouseConnectionType:
       type: string
       enum:
@@ -69800,6 +70301,23 @@ components:
       required:
         - id
       title: CriblLakeDataset
+    BulkDatasetResult:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/BulkItemError"
+          description: A per-item failure for each entity that failed.
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CriblLakeDataset"
+          description: The entities that succeeded.
+      required:
+        - errors
+        - items
+      title: BulkDatasetResult
     PaginatedCriblLakeDataset:
       type: object
       required:
@@ -69820,6 +70338,11 @@ components:
         limit:
           type: integer
           description: Pagination limit
+    CriblLakeDatasetCreateResult:
+      oneOf:
+        - $ref: "#/components/schemas/CriblLakeDataset"
+        - $ref: "#/components/schemas/BulkDatasetResult"
+      title: CriblLakeDatasetCreateResult
     AuthToken:
       type: object
       properties:
@@ -69866,20 +70389,24 @@ components:
         - 1
         - 2
         - 3
+        - 4
       description: Stage at which events are captured. <br><code>0</code> == Before
         pre-processing Pipeline <br><code>1</code> == Before the Routes
         <br><code>2</code> == Before post-processing Pipeline <br><code>3</code>
-        == Before the Destination.
+        == Before the Destination <br><code>4</code> == Before the event
+        breaker, i.e. raw incoming data (TCP Sources only).
       x-speakeasy-enum-descriptions:
         - 1. Before pre-processing Pipeline
         - 2. Before the Routes
         - 3. Before post-processing Pipeline
         - 4. Before the Destination
+        - 0. Before the event breaker (raw data)
       x-speakeasy-enums:
         - BeforePreProcessingPipeline
         - BeforeRoutes
         - BeforePostProcessingPipeline
         - BeforeDestination
+        - BeforeEventBreaker
       title: CaptureLevel
       x-speakeasy-unknown-values: allow
     CaptureParamsReq:
@@ -69901,7 +70428,7 @@ components:
           description: Stage at which events are captured. If not provided, the default is
             0.
           minimum: 0
-          maximum: 3
+          maximum: 4
         maxEvents:
           type: integer
           description: Maximum number of events to capture. If not provided, the default
@@ -72618,6 +73145,9 @@ components:
         - $ref: "#/components/schemas/InputSyslogPartialRequest"
           required:
             - type
+        - $ref: "#/components/schemas/InputCheckPointSaseSyslogPartialRequest"
+          required:
+            - type
         - $ref: "#/components/schemas/InputFilePartialRequest"
           required:
             - type
@@ -72711,6 +73241,9 @@ components:
         - $ref: "#/components/schemas/InputOktaPartialRequest"
           required:
             - type
+        - $ref: "#/components/schemas/InputSentinelonePartialRequest"
+          required:
+            - type
         - $ref: "#/components/schemas/InputAkamaiHecPartialRequest"
           required:
             - type
@@ -72798,6 +73331,7 @@ components:
           model_driven_telemetry: "#/components/schemas/InputModelDrivenTelemetryPartialRequest"
           sqs: "#/components/schemas/InputSqsPartialRequest"
           syslog: "#/components/schemas/InputSyslogPartialRequest"
+          check_point_sase_syslog: "#/components/schemas/InputCheckPointSaseSyslogPartialRequest"
           file: "#/components/schemas/InputFilePartialRequest"
           tcp: "#/components/schemas/InputTcpPartialRequest"
           appscope: "#/components/schemas/InputAppscopePartialRequest"
@@ -72829,6 +73363,7 @@ components:
           anthropic_enterprise_analytics: "#/components/schemas/InputAnthropicEnterpriseAnalyticsPartialRequest"
           microsoft_copilot: "#/components/schemas/InputMicrosoftCopilotPartialRequest"
           okta: "#/components/schemas/InputOktaPartialRequest"
+          sentinelone: "#/components/schemas/InputSentinelonePartialRequest"
           akamai_hec: "#/components/schemas/InputAkamaiHecPartialRequest"
           ping_identity_pingone: "#/components/schemas/InputPingIdentityPingonePartialRequest"
           gigamon_hec: "#/components/schemas/InputGigamonHecPartialRequest"
@@ -100527,6 +101062,469 @@ components:
             - type: string
             - type: "null"
       title: InputSyslogPartialRequest
+    InputCheckPointSaseSyslogPartialRequest:
+      type: object
+      properties:
+        id:
+          title: Input ID
+          description: Unique name for this input
+          anyOf:
+            - type: string
+            - type: "null"
+        type:
+          type: string
+          enum:
+            - check_point_sase_syslog
+          description: Connector type identifier.
+        disabled:
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        pipeline:
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+          anyOf:
+            - type: string
+            - type: "null"
+        sendToRoutes:
+          description: Select whether to send data to Routes, or directly to Destinations.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        environment:
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+          anyOf:
+            - type: string
+            - type: "null"
+        pqEnabled:
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+          anyOf:
+            - type: boolean
+            - type: "null"
+        streamtags:
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: "null"
+        criblSourceProvenance:
+          title: Input provenance
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+          readOnly: true
+          anyOf:
+            - type: object
+              additionalProperties: false
+              properties:
+                origin:
+                  description: Feature that created the Source.
+                  anyOf:
+                    - type: string
+                      enum:
+                        - data_source_discovery
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                destinationArn:
+                  description: ARN of the S3 bucket or Firehose delivery stream configured as the
+                    Source.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                sourceArn:
+                  description: ARN of the AWS resource that produces the logs.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                sourceService:
+                  description: Resolved DSD source-service offering, when known.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                accountId:
+                  description: Cloud tenant or scope id the Source was configured for (for example
+                    an AWS account id, GCP project or folder id, or Azure
+                    subscription or resource group id).
+                  anyOf:
+                    - type: string
+                      minLength: 1
+                    - type: "null"
+                templateFamily:
+                  description: Infrastructure-as-code family that provisioned the AWS resources
+                    (absent means cloudformation).
+                  anyOf:
+                    - type: string
+                      enum:
+                        - cloudformation
+                        - terraform
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+            - type: "null"
+        connections:
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/ConnectionConfInputCollection"
+            - type: "null"
+        pq:
+          description: Persistent queue settings for this Source.
+          anyOf:
+            - type: object
+              properties:
+                mode:
+                  title: Mode
+                  description: With Smart mode (deprecated), PQ will write events to the
+                    filesystem only when it detects backpressure from the
+                    processing engine. Smart mode will have no new development
+                    starting July 2026, followed by End of Support and feature
+                    removal (auto-migrating to Always On) in January 2027. We
+                    recommend using Always On mode instead. With Always On mode,
+                    PQ will always write events directly to the queue before
+                    forwarding them to the processing engine.
+                  x-speakeasy-enum-descriptions:
+                    - Smart (Deprecated)
+                    - Always On
+                  anyOf:
+                    - type: string
+                      enum:
+                        - smart
+                        - always
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                maxBufferSizeBytes:
+                  title: Buffer size limit (bytes)
+                  description: The maximum size to hold in memory before writing events to disk.
+                    Enter a numeral with units of KB, MB, etc. The minimum value
+                    is 64KB and the maximum value is 10MB.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                maxBufferSize:
+                  title: Buffer size limit (events - deprecated)
+                  description: Maximum number of events to hold in memory before writing the
+                    events to disk. Deprecated and only supported in workers <
+                    v4.17.0. Use maxBufferSizeBytes instead.
+                  anyOf:
+                    - type: number
+                      minimum: 42
+                    - type: "null"
+                commitFrequency:
+                  title: Commit frequency
+                  description: The number of events to send downstream before committing that
+                    Stream has read them. Lower values increase cursor-write
+                    IOPS and can add disk pressure, including on shared storage.
+                  anyOf:
+                    - type: number
+                      minimum: 42
+                    - type: "null"
+                maxFileSize:
+                  title: File size limit
+                  description: The maximum size to store in each queue file before closing and
+                    optionally compressing. Enter a numeral with units of KB,
+                    MB, etc.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                maxSize:
+                  title: Queue size limit
+                  description: The maximum disk space that the queue can consume (as an average
+                    per Worker Process) before queueing stops. Enter a numeral
+                    with units of KB, MB, etc.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                path:
+                  title: Queue file path
+                  description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/inputs/<input-id>"
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                compress:
+                  x-speakeasy-enum-descriptions:
+                    - None
+                    - Gzip
+                  title: Compression
+                  description: Codec to use to compress the persisted data
+                  anyOf:
+                    - type: string
+                      enum:
+                        - none
+                        - gzip
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                onBackpressure:
+                  title: Queue-full behavior
+                  description: Whether to block or drop events when the queue is exerting
+                    backpressure (full capacity or low disk). 'Block' is the
+                    same behavior as non-PQ blocking. 'Drop new data' throws
+                    away incoming data, while leaving the contents of the PQ
+                    unchanged.
+                  x-speakeasy-enum-descriptions:
+                    - Block
+                    - Drop new data
+                  anyOf:
+                    - type: string
+                      enum:
+                        - block
+                        - drop
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                pqControls:
+                  title: ""
+                  description: Management controls for the persistent queue.
+                  anyOf:
+                    - type: object
+                    - type: "null"
+            - type: "null"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. For IPv4 (all addresses), use the default
+            '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP
+            address.
+        udpPort:
+          title: UDP port
+          description: Not supported for this Source — it listens on TCP only.
+          anyOf:
+            - type: number
+              minimum: 1
+              exclusiveMaximum: 1
+            - type: "null"
+        tcpPort:
+          type: number
+          title: TCP port
+          maximum: 65535
+          description: Enter TCP port number to listen on. Not required if listening on UDP.
+        ipWhitelistRegex:
+          title: IP allowlist regex
+          description: Regex matching IP addresses that are allowed to send data
+          anyOf:
+            - type: string
+            - type: "null"
+        timestampTimezone:
+          title: Default timezone
+          description: Timezone to assign to timestamps without timezone info
+          anyOf:
+            - type: string
+            - type: "null"
+        keepFieldsList:
+          title: Fields to keep
+          description: Wildcard list of fields to keep from source data; * = ALL (default)
+          anyOf:
+            - type: array
+              minItems: 0
+              items:
+                type: string
+            - type: "null"
+        inferFraming:
+          title: Infer Syslog framing
+          description: Enable if we should infer the syslog framing of the incoming
+            messages.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        maxActiveCxn:
+          title: Active connection limit
+          description: Maximum number of active connections allowed per Worker Process for
+            TCP connections. Use 0 for unlimited.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        socketIdleTimeout:
+          title: TCP socket idle timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. After this time, the connection will be
+            closed. Leave at 0 for no inactive socket monitoring.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        socketEndingMaxWait:
+          title: TCP forced socket termination timeout (seconds)
+          description: How long the server will wait after initiating a closure for a
+            client to close its end of the connection. If the client doesn't
+            close the connection within this time, the server will forcefully
+            terminate the socket to prevent resource leaks and ensure efficient
+            connection cleanup and system stability. Leave at 0 for no inactive
+            socket monitoring.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        socketMaxLifespan:
+          title: TCP Socket max lifespan (seconds)
+          description: The maximum duration a socket can remain open, even if active. This
+            helps manage resources and mitigate issues caused by TCP pinning.
+            Set to 0 to disable.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        tls:
+          type: object
+          title: TLS settings (server side)
+          properties:
+            disabled:
+              type: boolean
+              title: Disabled
+              description: If true, TLS is disabled on this connection.
+            requestCert:
+              title: Authenticate client (mutual auth)
+              description: Require clients to present their certificates. Used to perform
+                client authentication using SSL certs.
+              anyOf:
+                - type: boolean
+                - type: "null"
+            caPath:
+              title: CA certificate path
+              description: Path on server containing CA certificates to use. PEM format. Can
+                reference $ENV_VARS.
+              anyOf:
+                - type: string
+                - type: "null"
+            rejectUnauthorized:
+              title: Validate client certificates
+              description: Reject certificates not authorized by a CA in the CA certificate
+                path or by another trusted CA (such as the system's)
+              anyOf:
+                - type: boolean
+                - type: "null"
+            commonNameRegex:
+              title: Common name
+              description: Regex matching allowable common names in peer certificates' subject
+                attribute
+              anyOf:
+                - type: string
+                - type: "null"
+            certificateName:
+              title: Certificate
+              description: The name of the predefined certificate
+              anyOf:
+                - type: string
+                - type: "null"
+            privKeyPath:
+              title: Private key path
+              description: Path on server containing the private key to use. PEM format. Can
+                reference $ENV_VARS.
+              anyOf:
+                - type: string
+                - type: "null"
+            passphrase:
+              title: Passphrase
+              description: Passphrase to use to decrypt private key
+              anyOf:
+                - type: string
+                - type: "null"
+            certPath:
+              title: Certificate path
+              description: Path on server containing certificates to use. PEM format. Can
+                reference $ENV_VARS.
+              anyOf:
+                - type: string
+                - type: "null"
+            minVersion:
+              title: Minimum TLS version
+              description: Minimum TLS version to accept from clients.
+              anyOf:
+                - type: string
+                  enum:
+                    - TLSv1
+                    - TLSv1.1
+                    - TLSv1.2
+                    - TLSv1.3
+                  x-speakeasy-unknown-values: allow
+                - type: "null"
+            maxVersion:
+              title: Maximum TLS version
+              description: Maximum TLS version to accept from clients.
+              anyOf:
+                - type: string
+                  enum:
+                    - TLSv1
+                    - TLSv1.1
+                    - TLSv1.2
+                    - TLSv1.3
+                  x-speakeasy-unknown-values: allow
+                - type: "null"
+          description: TLS settings (server side)
+        metadata:
+          title: Fields
+          description: Fields to add to events from this input
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/MetadataConfInputCollection"
+            - type: "null"
+        autoParse:
+          title: Auto parse
+          description: Detect the datatype of each event and extract its top-level fields
+            before the data reaches any of the processing pipelines
+            (pre-processing, main processing, post-processing).
+          anyOf:
+            - type: boolean
+            - type: "null"
+        description:
+          title: Description
+          description: Optional description for this configuration.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_environment:
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_streamtags:
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_host:
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_tcpPort:
+          description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tcpPort' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_timestampTimezone:
+          description: Binds 'timestampTimezone' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'timestampTimezone' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+      title: InputCheckPointSaseSyslogPartialRequest
     InputFilePartialRequest:
       type: object
       properties:
@@ -116923,6 +117921,518 @@ components:
             - type: string
             - type: "null"
       title: InputOktaPartialRequest
+    InputSentinelonePartialRequest:
+      type: object
+      properties:
+        id:
+          title: Input ID
+          description: Unique name for this input
+          anyOf:
+            - type: string
+            - type: "null"
+        type:
+          type: string
+          enum:
+            - sentinelone
+          description: Connector type identifier.
+        disabled:
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        pipeline:
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+          anyOf:
+            - type: string
+            - type: "null"
+        sendToRoutes:
+          description: Select whether to send data to Routes, or directly to Destinations.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        environment:
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+          anyOf:
+            - type: string
+            - type: "null"
+        pqEnabled:
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+          anyOf:
+            - type: boolean
+            - type: "null"
+        streamtags:
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: "null"
+        criblSourceProvenance:
+          title: Input provenance
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+          readOnly: true
+          anyOf:
+            - type: object
+              additionalProperties: false
+              properties:
+                origin:
+                  description: Feature that created the Source.
+                  anyOf:
+                    - type: string
+                      enum:
+                        - data_source_discovery
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                destinationArn:
+                  description: ARN of the S3 bucket or Firehose delivery stream configured as the
+                    Source.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                sourceArn:
+                  description: ARN of the AWS resource that produces the logs.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                sourceService:
+                  description: Resolved DSD source-service offering, when known.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                accountId:
+                  description: Cloud tenant or scope id the Source was configured for (for example
+                    an AWS account id, GCP project or folder id, or Azure
+                    subscription or resource group id).
+                  anyOf:
+                    - type: string
+                      minLength: 1
+                    - type: "null"
+                templateFamily:
+                  description: Infrastructure-as-code family that provisioned the AWS resources
+                    (absent means cloudformation).
+                  anyOf:
+                    - type: string
+                      enum:
+                        - cloudformation
+                        - terraform
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+            - type: "null"
+        connections:
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/ConnectionConfInputCollection"
+            - type: "null"
+        pq:
+          description: Persistent queue settings for this Source.
+          anyOf:
+            - type: object
+              properties:
+                mode:
+                  title: Mode
+                  description: With Smart mode (deprecated), PQ will write events to the
+                    filesystem only when it detects backpressure from the
+                    processing engine. Smart mode will have no new development
+                    starting July 2026, followed by End of Support and feature
+                    removal (auto-migrating to Always On) in January 2027. We
+                    recommend using Always On mode instead. With Always On mode,
+                    PQ will always write events directly to the queue before
+                    forwarding them to the processing engine.
+                  x-speakeasy-enum-descriptions:
+                    - Smart (Deprecated)
+                    - Always On
+                  anyOf:
+                    - type: string
+                      enum:
+                        - smart
+                        - always
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                maxBufferSizeBytes:
+                  title: Buffer size limit (bytes)
+                  description: The maximum size to hold in memory before writing events to disk.
+                    Enter a numeral with units of KB, MB, etc. The minimum value
+                    is 64KB and the maximum value is 10MB.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                maxBufferSize:
+                  title: Buffer size limit (events - deprecated)
+                  description: Maximum number of events to hold in memory before writing the
+                    events to disk. Deprecated and only supported in workers <
+                    v4.17.0. Use maxBufferSizeBytes instead.
+                  anyOf:
+                    - type: number
+                      minimum: 42
+                    - type: "null"
+                commitFrequency:
+                  title: Commit frequency
+                  description: The number of events to send downstream before committing that
+                    Stream has read them. Lower values increase cursor-write
+                    IOPS and can add disk pressure, including on shared storage.
+                  anyOf:
+                    - type: number
+                      minimum: 42
+                    - type: "null"
+                maxFileSize:
+                  title: File size limit
+                  description: The maximum size to store in each queue file before closing and
+                    optionally compressing. Enter a numeral with units of KB,
+                    MB, etc.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                maxSize:
+                  title: Queue size limit
+                  description: The maximum disk space that the queue can consume (as an average
+                    per Worker Process) before queueing stops. Enter a numeral
+                    with units of KB, MB, etc.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                path:
+                  title: Queue file path
+                  description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/inputs/<input-id>"
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                compress:
+                  x-speakeasy-enum-descriptions:
+                    - None
+                    - Gzip
+                  title: Compression
+                  description: Codec to use to compress the persisted data
+                  anyOf:
+                    - type: string
+                      enum:
+                        - none
+                        - gzip
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                onBackpressure:
+                  title: Queue-full behavior
+                  description: Whether to block or drop events when the queue is exerting
+                    backpressure (full capacity or low disk). 'Block' is the
+                    same behavior as non-PQ blocking. 'Drop new data' throws
+                    away incoming data, while leaving the contents of the PQ
+                    unchanged.
+                  x-speakeasy-enum-descriptions:
+                    - Block
+                    - Drop new data
+                  anyOf:
+                    - type: string
+                      enum:
+                        - block
+                        - drop
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                pqControls:
+                  title: ""
+                  description: Management controls for the persistent queue.
+                  anyOf:
+                    - type: object
+                    - type: "null"
+            - type: "null"
+        managementHost:
+          type: string
+          title: Management hostname
+          description: "Your SentinelOne management console hostname, without the domain suffix (example: usea1-yourorg)"
+          pattern: ^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$
+        managementDomainSuffix:
+          title: Domain suffix
+          description: Host suffix for your SentinelOne management console. Defaults to
+            sentinelone.net (global). Choose sentinelone.mil for US military
+            environments, or enter a custom domain.
+          anyOf:
+            - type: string
+              pattern: ^$|^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+$
+            - type: "null"
+        apiToken:
+          title: SentinelOne API token
+          description: SentinelOne API token
+          anyOf:
+            - type: string
+            - type: "null"
+        textSecret:
+          type: string
+          title: SentinelOne API token (text secret)
+          description: Select or create a stored text secret
+        contentConfig:
+          type: array
+          title: Content Types
+          items:
+            type: object
+            required:
+              - contentType
+              - collectPath
+              - paginationType
+              - cronSchedule
+              - earliest
+              - latest
+            properties:
+              contentType:
+                type: string
+                title: Content type
+                readOnly: true
+                description: Content type
+              contentDescription:
+                type: string
+                title: Description
+                readOnly: true
+                description: Description
+              collectPath:
+                type: string
+                title: Endpoint
+                description: SentinelOne API path
+                readOnly: true
+              collectMethod:
+                type: string
+                title: HTTP method
+                readOnly: false
+                description: HTTP method
+              collectBody:
+                type: string
+                title: Request body
+                description: Request body
+              disabled:
+                type: boolean
+                title: Enabled
+                description: Enabled
+              stateTracking:
+                type: boolean
+                title: State tracking
+                description: Track collection progress between consecutive scheduled executions
+              stateUpdateExpression:
+                type: string
+                title: State update expression
+                description: JavaScript expression that defines how to update the state from an
+                  event. Use the event's data and the current state to compute
+                  the new state. See [Understanding State Expression
+                  Fields](https://docs.cribl.io/stream/collectors-rest#state-tracking-expression-fields)
+                  for more information.
+              stateMergeExpression:
+                type: string
+                title: State merge expression
+                description: JavaScript expression that defines which state to keep when merging
+                  a task's newly reported state with previously saved state.
+                  Evaluates `prevState` and `newState` variables, resolving to
+                  the state to keep.
+              manageState:
+                type: object
+                description: Controls for viewing and managing the collector state.
+              requestParams:
+                type: array
+                title: Query parameters
+                description: Query-string parameters to send with this endpoint
+                items:
+                  $ref: "#/components/schemas/RefreshRequestParamConfHealthCheckAuthenticationOauthSecret"
+              paginationType:
+                type: string
+                title: Pagination type
+                description: Pagination type
+              paginationAttribute:
+                type: array
+                title: Pagination attributes
+                items:
+                  type: string
+                description: Pagination attributes
+              paginationLastPageExpr:
+                type: string
+                title: Last page expression
+                description: Last page expression
+              maxPages:
+                type: number
+                title: Page limit
+                description: Maximum number of pages to retrieve per collection task. Set to 0
+                  for unlimited.
+                minimum: 0
+              cronSchedule:
+                type: string
+                title: Cron schedule
+                description: A cron schedule on which to run this job
+              earliest:
+                type: string
+                title: Earliest time
+                description: Relative to the current time
+              latest:
+                type: string
+                title: Latest time
+                description: Relative to the current time
+              jobTimeout:
+                title: Job timeout
+                type: string
+                description: "Maximum time the job is allowed to run (examples: 30, 45s, 15m). Enter 0 for unlimited time."
+              logLevel:
+                type: string
+                title: Log level
+                description: Collector runtime log level
+          description: Content Types
+        requestTimeout:
+          title: Request timeout (seconds)
+          description: HTTP request inactivity timeout. Use 0 to disable.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        keepAliveTime:
+          title: Keep alive time (seconds)
+          description: How often workers should check in with the scheduler to keep job
+            subscription alive
+          anyOf:
+            - type: number
+              minimum: 10
+            - type: "null"
+        maxMissedKeepAlives:
+          title: Worker timeout (periods)
+          description: The number of Keep Alive Time periods before an inactive worker
+            will have its job subscription revoked.
+          anyOf:
+            - type: number
+              minimum: 2
+            - type: "null"
+        ttl:
+          title: Time to live
+          description: Time to keep the job's artifacts on disk after job completion. This
+            also affects how long a job is listed in the Job Inspector.
+          anyOf:
+            - type: string
+              pattern: \d+[smh]$
+            - type: "null"
+        ignoreGroupJobsLimit:
+          title: Ignore Worker Group job limits
+          description: When enabled, this job's artifacts are not counted toward the
+            Worker Group's finished job artifacts limit. Artifacts will be
+            removed only after the Collector's configured time to live.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        metadata:
+          title: Fields
+          description: Fields to add to events from this input
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/MetadataConfInputCollection"
+            - type: "null"
+        retryRules:
+          description: HTTP retry behavior for failed collection requests.
+          anyOf:
+            - type: object
+              properties:
+                type:
+                  $ref: "#/components/schemas/RetryTypeOptionsHealthCheckCollectorConfRetryRules"
+                  description: The algorithm to use when performing HTTP retries
+                interval:
+                  title: Initial retry interval (ms)
+                  description: Time interval between failed request and first retry (kickoff).
+                    Maximum allowed value is 20,000 ms (1/3 minute).
+                  anyOf:
+                    - type: number
+                      minimum: 0
+                      maximum: 20000
+                    - type: "null"
+                limit:
+                  title: Retry limit
+                  description: The maximum number of times to retry a failed HTTP request
+                  anyOf:
+                    - type: number
+                      minimum: 0
+                      maximum: 20
+                    - type: "null"
+                multiplier:
+                  title: Backoff multiplier
+                  description: Base for exponential backoff, e.g., base 2 means that retries will
+                    occur after 2, then 4, then 8 seconds, and so on
+                  anyOf:
+                    - type: number
+                      minimum: 1
+                      maximum: 20
+                    - type: "null"
+                codes:
+                  title: Retry HTTP codes
+                  description: List of HTTP codes that trigger a retry. Leave empty to use the
+                    default list of 429 and 503.
+                  anyOf:
+                    - type: array
+                      minItems: 1
+                      items:
+                        type: number
+                        minimum: 100
+                        maximum: 599
+                    - type: "null"
+                enableHeader:
+                  title: Honor Retry-After header
+                  description: Honor any Retry-After header that specifies a delay (in seconds) or
+                    a timestamp after which to retry the request. The delay is
+                    limited to 20 seconds, even if the Retry-After header
+                    specifies a longer delay. When disabled, all Retry-After
+                    headers are ignored.
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                retryConnectTimeout:
+                  title: Retry connection timeout
+                  description: Make a single retry attempt when a connection timeout (ETIMEDOUT)
+                    error occurs
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                retryConnectReset:
+                  title: Retry connection reset
+                  description: Retry request when a connection reset (ECONNRESET) error occurs
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+            - type: "null"
+        description:
+          title: Description
+          description: Optional description for this configuration.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_environment:
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_streamtags:
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_managementHost:
+          description: Binds 'managementHost' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'managementHost' at
+            runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+      title: InputSentinelonePartialRequest
     InputAkamaiHecPartialRequest:
       type: object
       properties:
@@ -181754,6 +183264,29 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a SailPoint Source.
+    InputCreateExamplesSentinelOneSearch:
+      summary: SentinelOne Search
+      value:
+        id: sentinelone-source
+        type: sentinelone
+        textSecret: sentinelone-api-token-secret
+        managementHost: usea1-yourorg
+        managementDomainSuffix: sentinelone.net
+        contentConfig:
+          - contentType: Alerts
+            contentDescription: Cloud detection alerts via MGMT REST API
+            collectPath: /web/api/v2.1/cloud-detection/alerts
+            collectMethod: get
+            paginationType: response_body
+            paginationAttribute:
+              - nextCursor
+            cronSchedule: "*/5 * * * *"
+            earliest: -6m@m
+            latest: -1m@m
+            disabled: false
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a SentinelOne Search Source.
     InputCreateExamplesSecurityLake:
       summary: Security Lake
       value:
@@ -181897,6 +183430,20 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Sysdig Cloud NSS Source.
+    InputCreateExamplesCheckPointSaseSyslog:
+      summary: Check Point SASE
+      value:
+        id: check-point-sase-syslog-source
+        type: check_point_sase_syslog
+        host: 0.0.0.0
+        tcpPort: 6514
+        tls:
+          disabled: false
+          privKeyPath: $CRIBL_HOME/local/cribl/auth/certs/check-point-sase.key
+          certPath: $CRIBL_HOME/local/cribl/auth/certs/check-point-sase.crt
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Check Point SASE Source.
     InputCreateExamplesSyslog:
       summary: Syslog
       value:
@@ -186375,6 +187922,29 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: "Example request body for updating a SailPoint Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+    UpdateInputExamplesSentinelOneSearchPartialRequest:
+      summary: SentinelOne Search
+      value:
+        id: sentinelone-source
+        type: sentinelone
+        textSecret: sentinelone-api-token-secret
+        managementHost: usea1-yourorg
+        managementDomainSuffix: sentinelone.net
+        contentConfig:
+          - contentType: Alerts
+            contentDescription: Cloud detection alerts via MGMT REST API
+            collectPath: /web/api/v2.1/cloud-detection/alerts
+            collectMethod: get
+            paginationType: response_body
+            paginationAttribute:
+              - nextCursor
+            cronSchedule: "*/5 * * * *"
+            earliest: -6m@m
+            latest: -1m@m
+            disabled: false
+        sendToRoutes: true
+        pqEnabled: false
+      description: "Example request body for updating a SentinelOne Search Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesSecurityLakePartialRequest:
       summary: Security Lake
       value:
@@ -186518,6 +188088,20 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: "Example request body for updating a Sysdig Cloud NSS Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+    UpdateInputExamplesCheckPointSaseSyslogPartialRequest:
+      summary: Check Point SASE
+      value:
+        id: check-point-sase-syslog-source
+        type: check_point_sase_syslog
+        host: 0.0.0.0
+        tcpPort: 6514
+        tls:
+          disabled: false
+          privKeyPath: $CRIBL_HOME/local/cribl/auth/certs/check-point-sase.key
+          certPath: $CRIBL_HOME/local/cribl/auth/certs/check-point-sase.crt
+        sendToRoutes: true
+        pqEnabled: false
+      description: "Example request body for updating a Check Point SASE Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesSyslogPartialRequest:
       summary: Syslog
       value:
@@ -191147,6 +192731,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesS3Inventory"
               InputCreateExamplesSailpointHec:
                 $ref: "#/components/examples/InputCreateExamplesSailpointHec"
+              InputCreateExamplesSentinelOneSearch:
+                $ref: "#/components/examples/InputCreateExamplesSentinelOneSearch"
               InputCreateExamplesSecurityLake:
                 $ref: "#/components/examples/InputCreateExamplesSecurityLake"
               InputCreateExamplesCloudChangeEvent:
@@ -191167,6 +192753,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesSqs"
               InputCreateExamplesSysdigHec:
                 $ref: "#/components/examples/InputCreateExamplesSysdigHec"
+              InputCreateExamplesCheckPointSaseSyslog:
+                $ref: "#/components/examples/InputCreateExamplesCheckPointSaseSyslog"
               InputCreateExamplesSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesSyslogWithPQ:
@@ -191485,6 +193073,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesS3InventoryPartialRequest"
               UpdateInputExamplesSailpointHec:
                 $ref: "#/components/examples/UpdateInputExamplesSailpointHecPartialRequest"
+              UpdateInputExamplesSentinelOneSearch:
+                $ref: "#/components/examples/UpdateInputExamplesSentinelOneSearchPartialRequest"
               UpdateInputExamplesSecurityLake:
                 $ref: "#/components/examples/UpdateInputExamplesSecurityLakePartialRequest"
               UpdateInputExamplesCloudChangeEvent:
@@ -191505,6 +193095,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesSqsPartialRequest"
               UpdateInputExamplesSysdigHec:
                 $ref: "#/components/examples/UpdateInputExamplesSysdigHecPartialRequest"
+              UpdateInputExamplesCheckPointSaseSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesCheckPointSaseSyslogPartialRequest"
               UpdateInputExamplesSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSyslogPartialRequest"
               UpdateInputExamplesSyslogWithPQ:
@@ -195506,11 +197098,16 @@ paths:
         fail the rest of the batch.
       responses:
         "201":
-          description: The created CriblLakeDataset object.
+          description: The created CriblLakeDatasetCreateResult object.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CriblLakeDataset"
+                $ref: "#/components/schemas/CriblLakeDatasetCreateResult"
+          headers:
+            location:
+              description: The canonical URL of the newly created resource.
+              schema:
+                type: string
         "400":
           description: Failed validation or malformed input — for example, a read-only
             field or an <code>id</code> is set, the <code>storageClass</code> is
@@ -196377,6 +197974,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesS3Inventory"
               InputCreateExamplesSailpointHec:
                 $ref: "#/components/examples/InputCreateExamplesSailpointHec"
+              InputCreateExamplesSentinelOneSearch:
+                $ref: "#/components/examples/InputCreateExamplesSentinelOneSearch"
               InputCreateExamplesSecurityLake:
                 $ref: "#/components/examples/InputCreateExamplesSecurityLake"
               InputCreateExamplesCloudChangeEvent:
@@ -196397,6 +197996,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesSqs"
               InputCreateExamplesSysdigHec:
                 $ref: "#/components/examples/InputCreateExamplesSysdigHec"
+              InputCreateExamplesCheckPointSaseSyslog:
+                $ref: "#/components/examples/InputCreateExamplesCheckPointSaseSyslog"
               InputCreateExamplesSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesSyslogWithPQ:
@@ -196702,6 +198303,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesS3InventoryPartialRequest"
               UpdateInputExamplesSailpointHec:
                 $ref: "#/components/examples/UpdateInputExamplesSailpointHecPartialRequest"
+              UpdateInputExamplesSentinelOneSearch:
+                $ref: "#/components/examples/UpdateInputExamplesSentinelOneSearchPartialRequest"
               UpdateInputExamplesSecurityLake:
                 $ref: "#/components/examples/UpdateInputExamplesSecurityLakePartialRequest"
               UpdateInputExamplesCloudChangeEvent:
@@ -196722,6 +198325,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesSqsPartialRequest"
               UpdateInputExamplesSysdigHec:
                 $ref: "#/components/examples/UpdateInputExamplesSysdigHecPartialRequest"
+              UpdateInputExamplesCheckPointSaseSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesCheckPointSaseSyslogPartialRequest"
               UpdateInputExamplesSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSyslogPartialRequest"
               UpdateInputExamplesSyslogWithPQ:
