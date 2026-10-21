@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1792538035493-ba58c477
+    version: 4.21.0-alpha.1792624400567-79bb739d
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -58,6 +58,43 @@ components:
                     description: Human-readable message describing the error.
                 details:
                     description: Optional structured details about the error (e.g. validation failures).
+        DiffLine:
+            description: Array of lines in a Git diff hunk.
+            type: array
+            items:
+                oneOf:
+                    - $ref: "#/components/schemas/DiffLineDelete"
+                    - $ref: "#/components/schemas/DiffLineInsert"
+                    - $ref: "#/components/schemas/DiffLineContext"
+                discriminator:
+                    propertyName: type
+                    mapping:
+                        delete: "#/components/schemas/DiffLineDelete"
+                        insert: "#/components/schemas/DiffLineInsert"
+                        context: "#/components/schemas/DiffLineContext"
+        DiffLineContext:
+            type: object
+            description: Unchanged context line in a Git diff hunk.
+            properties:
+                type:
+                    type: string
+                    enum:
+                        - context
+                    description: Line change type. Always <code>context</code> for unchanged lines.
+                newNumber:
+                    type: integer
+                    description: Line number in the new file.
+                oldNumber:
+                    type: integer
+                    description: Line number in the original file.
+                content:
+                    type: string
+                    description: Full content of the line, including the diff prefix character.
+            required:
+                - type
+                - newNumber
+                - oldNumber
+                - content
         DiffLineDelete:
             type: object
             description: Deleted line in a Git diff hunk.
@@ -96,43 +133,6 @@ components:
                 - type
                 - newNumber
                 - content
-        DiffLineContext:
-            type: object
-            description: Unchanged context line in a Git diff hunk.
-            properties:
-                type:
-                    type: string
-                    enum:
-                        - context
-                    description: Line change type. Always <code>context</code> for unchanged lines.
-                newNumber:
-                    type: integer
-                    description: Line number in the new file.
-                oldNumber:
-                    type: integer
-                    description: Line number in the original file.
-                content:
-                    type: string
-                    description: Full content of the line, including the diff prefix character.
-            required:
-                - type
-                - newNumber
-                - oldNumber
-                - content
-        DiffLine:
-            description: Array of lines in a Git diff hunk.
-            type: array
-            items:
-                oneOf:
-                    - $ref: "#/components/schemas/DiffLineDelete"
-                    - $ref: "#/components/schemas/DiffLineInsert"
-                    - $ref: "#/components/schemas/DiffLineContext"
-                discriminator:
-                    propertyName: type
-                    mapping:
-                        delete: "#/components/schemas/DiffLineDelete"
-                        insert: "#/components/schemas/DiffLineInsert"
-                        context: "#/components/schemas/DiffLineContext"
         EnrichedFields:
             type: object
             properties:
@@ -64130,6 +64130,71 @@ components:
                 - sections
                 - tokens
             title: NotebookTemplateInput
+        PaginatedNotebookTemplateListItem:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/NotebookTemplateListItem"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
+        NotebookTemplateListItem:
+            type: object
+            properties:
+                config:
+                    $ref: "#/components/schemas/TemplateConfig"
+                    description: Configuration for Notebook template display, interaction, and generation behavior.
+                favoriteCount:
+                    type: integer
+                    description: Number of users who favorited the Notebook template. Returned when <code>favorites=true</code>.
+                id:
+                    type: string
+                    description: Unique identifier for the Notebook.
+                info:
+                    $ref: "#/components/schemas/TemplateInfo"
+                    description: Metadata for the Notebook template.
+                isFavorited:
+                    type: boolean
+                    description: Whether the requesting user favorited the Notebook template. Returned when <code>favorites=true</code>.
+                resolvedDatasetIds:
+                    type: array
+                    items:
+                        type: string
+                    description: List of the <code>id</code> for each Dataset that the Dashboard references.
+                schemaVersion:
+                    $ref: "#/components/schemas/V1"
+                    description: Schema version of the Notebook format.
+                sectionCount:
+                    type: integer
+                    description: Number of sections in the Notebook.
+                sections:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/TemplateSection"
+                    description: Ordered array of sections in the Notebook template.
+                tokens:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/TemplateToken"
+                    description: Substitution tokens that are resolved when generating a Notebook from the template. Each token defines a variable with a type and optional default value.
+            required:
+                - id
+                - info
+                - sections
+                - tokens
+            title: NotebookTemplateListItem
         FamilyConfig:
             type: object
             additionalProperties: true
@@ -69529,6 +69594,11 @@ components:
                 sharing:
                     $ref: "#/components/schemas/SharingConfig"
                     description: Sharing configuration for the secret folder.
+                builtIn:
+                    type: boolean
+                    description: True for the built-in folder that ships with the product. A built-in folder can't be updated or deleted; its secrets are managed as usual. Omitted for other folders.
+                    examples:
+                        - true
                 lastReloadAt:
                     type: integer
                     description: Timestamp (in Unix time) when the global secrets in the secret folder were last re-fetched from the backing secret store, in milliseconds.
@@ -80369,6 +80439,63 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        GatewayClientKeyCreation:
+            type: object
+            properties:
+                createdAt:
+                    type: number
+                    description: Creation time in Unix milliseconds.
+                description:
+                    type: string
+                    description: Optional description of the client key.
+                enabled:
+                    type: boolean
+                    description: Whether the client key is enabled in the retained metadata; this does not confirm authentication enforcement.
+                enforcementReason:
+                    type: string
+                    description: Why enforcement has the reported status.
+                enforcementStatus:
+                    $ref: "#/components/schemas/EnforcementStatusOptionsGatewayClientKeyCreation"
+                    description: Whether Workers are verified to enforce the published keys. Publication alone leaves this <code>pending</code>.
+                expiresAt:
+                    type: number
+                    description: Optional expiration time in Unix milliseconds.
+                id:
+                    type: string
+                    description: Unique identifier for the client key.
+                key:
+                    type: string
+                    description: Plaintext client key. It is returned only in this response and cannot be retrieved again.
+                keyPrefix:
+                    type: string
+                    description: Non-secret prefix used to identify the client key.
+                lookupVersion:
+                    type: string
+                    description: Version of the published key snapshot, when publication succeeded; not proof of enforcement.
+                name:
+                    type: string
+                    description: Human-readable name for the client key.
+                policyId:
+                    type: string
+                    description: Explicit policy assignment; omitted when the key inherits the default policy.
+                revokedAt:
+                    type: number
+                    description: Optional revocation time in Unix milliseconds.
+                tags:
+                    type: array
+                    items:
+                        type: string
+                    description: Tags associated with the client key.
+            required:
+                - createdAt
+                - enabled
+                - enforcementReason
+                - enforcementStatus
+                - id
+                - key
+                - keyPrefix
+                - name
+            title: GatewayClientKeyCreation
         GatewayClientKeyCreateRequest:
             type: object
             properties:
@@ -80431,6 +80558,104 @@ components:
                 - keyPrefix
                 - name
             title: GatewayClientKey
+        GatewayKeyStatus:
+            type: object
+            properties:
+                enforcementReason:
+                    type: string
+                    description: Why enforcement has the reported status.
+                enforcementStatus:
+                    $ref: "#/components/schemas/EnforcementStatusOptionsGatewayClientKeyCreation"
+                    description: Whether Workers are verified to enforce the published keys. Publication alone leaves this <code>pending</code>.
+                lookupVersion:
+                    type: string
+                    description: Version of the published key snapshot, when publication succeeded; not proof of enforcement.
+                reason:
+                    type: string
+                    description: Why listener readiness is not verified.
+                status:
+                    type: string
+                    const: unverified
+                    description: Listener readiness. Always <code>unverified</code>, because Workers do not report it.
+            required:
+                - enforcementReason
+                - enforcementStatus
+                - reason
+                - status
+            title: GatewayKeyStatus
+        CountedListGatewayClientKey:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Number of items returned in the items array.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/GatewayClientKey"
+                offset:
+                    type: integer
+                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
+                limit:
+                    type: integer
+                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
+        GatewayClientKeyRevocation:
+            type: object
+            properties:
+                createdAt:
+                    type: number
+                    description: Creation time in Unix milliseconds.
+                description:
+                    type: string
+                    description: Optional description of the client key.
+                enabled:
+                    type: boolean
+                    description: Whether the client key is enabled in the retained metadata; this does not confirm authentication enforcement.
+                enforcementReason:
+                    type: string
+                    description: Why enforcement has the reported status.
+                enforcementStatus:
+                    $ref: "#/components/schemas/EnforcementStatusOptionsGatewayClientKeyCreation"
+                    description: Whether Workers are verified to enforce the published keys. Publication alone leaves this <code>pending</code>.
+                expiresAt:
+                    type: number
+                    description: Optional expiration time in Unix milliseconds.
+                id:
+                    type: string
+                    description: Unique identifier for the client key.
+                keyPrefix:
+                    type: string
+                    description: Non-secret prefix used to identify the client key.
+                lookupVersion:
+                    type: string
+                    description: Version of the published key snapshot, when publication succeeded; not proof of enforcement.
+                name:
+                    type: string
+                    description: Human-readable name for the client key.
+                policyId:
+                    type: string
+                    description: Explicit policy assignment; omitted when the key inherits the default policy.
+                revokedAt:
+                    type: number
+                    description: Optional revocation time in Unix milliseconds.
+                tags:
+                    type: array
+                    items:
+                        type: string
+                    description: Tags associated with the client key.
+            required:
+                - createdAt
+                - enabled
+                - enforcementReason
+                - enforcementStatus
+                - id
+                - keyPrefix
+                - name
+            title: GatewayClientKeyRevocation
         GatewayClientKeyUpdateRequest:
             type: object
             properties:
@@ -80535,26 +80760,61 @@ components:
                 - month
             title: GatewayPeriod
             x-speakeasy-unknown-values: allow
-        GatewayTokenLimit:
+        GatewayTokenUsageLimit:
             type: object
             properties:
                 limit:
                     type: integer
-                    description: Maximum number of tokens allowed in each budget period before overage.
+                    description: Maximum number of tokens allowed in each period before overage.
                 overage:
                     type: boolean
-                    description: Whether usage may exceed the token limit by the overage allowance.
+                    description: Whether usage may exceed the limit by the overage allowance.
                 overageAllowance:
-                    type: number
-                    description: Additional tokens permitted per period when overage is enabled.
+                    type: integer
+                    description: Additional usage permitted per period when overage is enabled, in the unit of the limit.
                 period:
                     $ref: "#/components/schemas/GatewayPeriod"
-                    description: Period over which token usage is counted.
+                    description: UTC calendar period after which counted usage resets.
+                type:
+                    type: string
+                    const: tokens
+                    description: Counts tokens.
             required:
                 - limit
                 - overage
                 - period
-            title: GatewayTokenLimit
+                - type
+            title: GatewayTokenUsageLimit
+        GatewayCostUsageLimit:
+            type: object
+            properties:
+                amountMicros:
+                    type: integer
+                    description: Maximum spend allowed in each period before overage, in micro-USD (one millionth of a US dollar).
+                overage:
+                    type: boolean
+                    description: Whether usage may exceed the limit by the overage allowance.
+                overageAllowance:
+                    type: integer
+                    description: Additional usage permitted per period when overage is enabled, in the unit of the limit.
+                period:
+                    $ref: "#/components/schemas/GatewayPeriod"
+                    description: UTC calendar period after which counted usage resets.
+                type:
+                    type: string
+                    const: cost
+                    description: Counts spend.
+            required:
+                - amountMicros
+                - overage
+                - period
+                - type
+            title: GatewayCostUsageLimit
+        GatewayUsageLimit:
+            oneOf:
+                - $ref: "#/components/schemas/GatewayTokenUsageLimit"
+                - $ref: "#/components/schemas/GatewayCostUsageLimit"
+            title: GatewayUsageLimit
         GatewayPolicyMutation:
             type: object
             properties:
@@ -80563,7 +80823,7 @@ components:
                     description: Published authorization snapshot version, when available; not proof of enforcement.
                 controls:
                     $ref: "#/components/schemas/ControlsTypeGatewayPolicyMutation"
-                    description: Whether token and model restrictions are configured.
+                    description: Whether usage and model restrictions are configured.
                 description:
                     type: string
                     description: Human-readable description of the policy.
@@ -80591,12 +80851,15 @@ components:
                 revision:
                     type: number
                     description: Policy revision, incremented when policy settings are updated.
+                sensitiveDataScanning:
+                    type: boolean
+                    description: Whether requests under this policy are scanned for sensitive data.
                 targetWorkerCount:
                     type: number
                     description: Observed target count; zero when worker reporting is unavailable.
-                tokenLimit:
-                    $ref: "#/components/schemas/GatewayTokenLimit"
-                    description: Token budget configuration; omitted when token usage is unrestricted.
+                usageLimit:
+                    $ref: "#/components/schemas/GatewayUsageLimit"
+                    description: Token or cost budget; omitted when usage is unrestricted.
             required:
                 - controls
                 - description
@@ -80608,9 +80871,10 @@ components:
                 - modelAccess
                 - name
                 - revision
+                - sensitiveDataScanning
                 - targetWorkerCount
             title: GatewayPolicyMutation
-        GatewayTokenLimitInput:
+        GatewayTokenUsageLimitInput:
             type: object
             properties:
                 limit:
@@ -80622,21 +80886,63 @@ components:
                     type:
                         - "null"
                         - boolean
-                    description: Enable token overage. Omitted, false, or null disables overage.
+                    description: Enable overage. Omitted, false, or null disables overage.
                 overageAllowance:
                     type:
                         - "null"
                         - integer
-                    description: Additional token budget required when overage is enabled; otherwise omit or set to null.
+                    description: Additional usage, in the unit of the limit, required when overage is enabled; otherwise omit or set to null.
                     minimum: 1
                     maximum: 9007199254740991
                 period:
                     $ref: "#/components/schemas/GatewayPeriod"
-                    description: Period over which token usage is counted.
+                    description: UTC calendar period after which counted usage resets.
+                type:
+                    type: string
+                    const: tokens
+                    description: Counts tokens.
             required:
                 - limit
                 - period
-            title: GatewayTokenLimitInput
+                - type
+            title: GatewayTokenUsageLimitInput
+        GatewayCostUsageLimitInput:
+            type: object
+            properties:
+                amountMicros:
+                    type: integer
+                    description: Positive whole-number spend budget for each period, in micro-USD (one millionth of a US dollar).
+                    minimum: 1
+                    maximum: 9007199254740991
+                overage:
+                    type:
+                        - "null"
+                        - boolean
+                    description: Enable overage. Omitted, false, or null disables overage.
+                overageAllowance:
+                    type:
+                        - "null"
+                        - integer
+                    description: Additional usage, in the unit of the limit, required when overage is enabled; otherwise omit or set to null.
+                    minimum: 1
+                    maximum: 9007199254740991
+                period:
+                    $ref: "#/components/schemas/GatewayPeriod"
+                    description: UTC calendar period after which counted usage resets.
+                type:
+                    type: string
+                    const: cost
+                    description: Counts spend.
+            required:
+                - amountMicros
+                - period
+                - type
+            title: GatewayCostUsageLimitInput
+        GatewayUsageLimitInput:
+            oneOf:
+                - $ref: "#/components/schemas/GatewayTokenUsageLimitInput"
+                - $ref: "#/components/schemas/GatewayCostUsageLimitInput"
+            title: GatewayUsageLimitInput
         CreateGatewayPolicyInput:
             type: object
             properties:
@@ -80649,9 +80955,12 @@ components:
                 name:
                     type: string
                     description: Unique name for the new policy; surrounding whitespace is removed.
-                tokenLimit:
-                    $ref: "#/components/schemas/TokenLimitTypeCreateGatewayPolicyInput"
-                    description: Token budget configuration. On updates, omit to retain it or set to null to remove the limit.
+                sensitiveDataScanning:
+                    type: boolean
+                    description: Whether requests under this policy are scanned for sensitive data. New policies default to off.
+                usageLimit:
+                    $ref: "#/components/schemas/UsageLimitTypeCreateGatewayPolicyInput"
+                    description: Token or cost budget. On updates, omit to retain it, send a limit to replace it, or set to null to remove it.
             required:
                 - name
             title: CreateGatewayPolicyInput
@@ -80660,7 +80969,7 @@ components:
             properties:
                 controls:
                     $ref: "#/components/schemas/ControlsTypeGatewayPolicyMutation"
-                    description: Whether token and model restrictions are configured.
+                    description: Whether usage and model restrictions are configured.
                 description:
                     type: string
                     description: Human-readable description of the policy.
@@ -80682,9 +80991,12 @@ components:
                 revision:
                     type: number
                     description: Policy revision, incremented when policy settings are updated.
-                tokenLimit:
-                    $ref: "#/components/schemas/GatewayTokenLimit"
-                    description: Token budget configuration; omitted when token usage is unrestricted.
+                sensitiveDataScanning:
+                    type: boolean
+                    description: Whether requests under this policy are scanned for sensitive data.
+                usageLimit:
+                    $ref: "#/components/schemas/GatewayUsageLimit"
+                    description: Token or cost budget; omitted when usage is unrestricted.
             required:
                 - controls
                 - description
@@ -80694,6 +81006,7 @@ components:
                 - modelAccess
                 - name
                 - revision
+                - sensitiveDataScanning
             title: GatewayPolicy
         CountedListGatewayPolicy:
             type: object
@@ -80828,9 +81141,12 @@ components:
                 name:
                     type: string
                     description: Replacement policy name. Omit to retain the current name.
-                tokenLimit:
-                    $ref: "#/components/schemas/TokenLimitTypeCreateGatewayPolicyInput"
-                    description: Token budget configuration. On updates, omit to retain it or set to null to remove the limit.
+                sensitiveDataScanning:
+                    type: boolean
+                    description: Whether requests under this policy are scanned for sensitive data. New policies default to off.
+                usageLimit:
+                    $ref: "#/components/schemas/UsageLimitTypeCreateGatewayPolicyInput"
+                    description: Token or cost budget. On updates, omit to retain it, send a limit to replace it, or set to null to remove it.
             title: UpdateGatewayPolicyInput
         ApiCredential:
             type: object
@@ -92627,6 +92943,7 @@ components:
             enum:
                 - dashboards
                 - notebooks
+                - notebook-templates
             title: SearchFavoriteTypeParam
             x-speakeasy-unknown-values: allow
         SearchFavoriteWriteBody:
@@ -92637,37 +92954,37 @@ components:
                     description: The <code>id</code> of the object to favorite. A Dashboard <code>id</code> may carry a Pack prefix.
                 type:
                     $ref: "#/components/schemas/SearchFavoriteTypeParam"
-                    description: The type of the object to favorite.
+                    description: "The type of the object to favorite: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>."
             required:
                 - id
                 - type
             title: SearchFavoriteWriteBody
-        CountedListSearchFavoriteItem:
+        PaginatedSearchFavoriteItem:
             type: object
             required:
                 - items
                 - count
             properties:
-                count:
-                    type: integer
-                    description: Number of items returned in the items array.
                 items:
                     type: array
-                    description: The list of items returned in this response.
+                    description: The pre-limited items in the list of results
                     items:
                         $ref: "#/components/schemas/SearchFavoriteItem"
+                count:
+                    type: integer
+                    description: Total number of items available
                 offset:
                     type: integer
-                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
+                    description: Pagination offset
                 limit:
                     type: integer
-                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
+                    description: Pagination limit
         SearchFavoriteItem:
             type: object
             properties:
                 context:
                     type: string
-                    description: The Pack that contains the Dashboard. Omitted for the default Pack and for Notebooks.
+                    description: The Pack that contains the Dashboard. Omitted for the default Pack, Notebooks, and Notebook templates.
                 favoriteCount:
                     type: integer
                     description: How many users have favorited this object.
@@ -199891,6 +200208,13 @@ components:
                 - terminated
             description: Provisioning lifecycle status of the lakehouse engine.
             x-speakeasy-unknown-values: allow
+        EnforcementStatusOptionsGatewayClientKeyCreation:
+            type: string
+            enum:
+                - applied
+                - pending
+            description: Whether Workers are verified to enforce the published keys. Publication alone leaves this <code>pending</code>.
+            x-speakeasy-unknown-values: allow
         EnforcementStatusOptionsAssignedGatewayClients:
             type: string
             enum:
@@ -199915,21 +200239,25 @@ components:
         ControlsTypeGatewayPolicyMutation:
             type: object
             properties:
+                cost:
+                    type: boolean
+                    description: Whether a cost usage limit is configured.
                 models:
                     type: boolean
                     description: Whether provider or model access restrictions are configured.
                 tokens:
                     type: boolean
-                    description: Whether a token limit is configured.
+                    description: Whether a token usage limit is configured.
             required:
+                - cost
                 - models
                 - tokens
-            description: Whether token and model restrictions are configured.
-        TokenLimitTypeCreateGatewayPolicyInput:
+            description: Whether usage and model restrictions are configured.
+        UsageLimitTypeCreateGatewayPolicyInput:
             oneOf:
                 - type: "null"
-                - $ref: "#/components/schemas/GatewayTokenLimitInput"
-            description: Token budget configuration. On updates, omit to retain it or set to null to remove the limit.
+                - $ref: "#/components/schemas/GatewayUsageLimitInput"
+            description: Token or cost budget. On updates, omit to retain it, send a limit to replace it, or set to null to remove it.
         ProductConfAppRequestBody:
             type: string
             enum:
@@ -206299,6 +206627,18 @@ components:
                 compressObjectCacheArtifacts: false
                 writeOnlyProviderSecrets: true
                 scheduledSearchJitterPercent: 20
+        SearchLimitsError400ExamplesInvalidSearchLimits:
+            summary: Return a validation error for an invalid search limits configuration
+            description: Example response for returning a validation error when the request body is malformed or fails validation.
+            value:
+                status: error
+                message: Cannot modify maxConcurrentSearches while dynamic concurrency is active. Disable the feature flag (feature-search-dynamic-concurrency) or set dynamicMaxConcurrentSearches.enabled=false first.
+        SearchLimitsError403ExamplesLimitAboveCap:
+            summary: Return a forbidden error for a limit above its cap
+            description: Example response for returning a forbidden error when a requested limit exceeds the maximum this deployment allows.
+            value:
+                status: error
+                message: The maximum allowed for maxExecutorsPerSearch is 50
         GetSearchLimitsResponseExamplesSearchLimits:
             summary: Get search limits
             description: Example v1 response ({@code count} and {@code items}) for getting search limits configuration.
@@ -210928,12 +211268,6 @@ components:
                     maxBytesReadPerSearch:
                         type: maxBytesReadPerSearch
                         limit: 1073741824
-        UsageGroupError404ExamplesUsageGroupNotFound:
-            summary: Return a not-found error for a missing Usage Group
-            description: Example response for returning a not-found error when the specified Usage Group does not exist.
-            value:
-                status: error
-                message: Usage Group 'power_users' not found
         UsageGroupGetResponseExamplesUsageGroup:
             summary: Get a Usage Group
             description: Example response for getting the specified Usage Group.
@@ -210949,6 +211283,12 @@ components:
                         type: maxConcurrentAdhocSearchesPerUser
                         limit: 50%
                 usersCount: 12
+        UsageGroupError404ExamplesUsageGroupNotFound:
+            summary: Return a not-found error for a missing Usage Group
+            description: Example response for returning a not-found error when the specified Usage Group does not exist.
+            value:
+                status: error
+                message: Usage Group 'power_users' not found
         UsageGroupListResponseExamplesUsageGroups:
             summary: List Usage Groups
             description: Example response for listing all Usage Groups visible to the caller.
@@ -211088,6 +211428,24 @@ components:
                 enableAssumeRole: true
                 enableAbacTagging: false
                 durationSeconds: 3600
+        DatasetProviderError400ExamplesInvalidDatasetProvider:
+            summary: Return a validation error for an invalid Dataset Provider
+            description: Example response for returning a validation error when the configured endpoint rejects the credentials. The message carries the provider check result as a JSON string.
+            value:
+                status: error
+                message: '{"message":"Invalid client ID. Verify the application (client) ID is correct.","code":"invalid_client_id"}'
+        DatasetProviderCreateError409ExamplesDatasetProviderIdTaken:
+            summary: Return a conflict error for a duplicate Dataset Provider id
+            description: Example response for returning a conflict error when a Dataset Provider with the requested <code>id</code> already exists.
+            value:
+                status: error
+                message: Entity with "my_s3_provider" ID already exists.
+        DatasetProviderCreateError409ExamplesDatasetProviderTypeUnknown:
+            summary: Return a conflict error for an unknown Dataset Provider type
+            description: Example response for returning a conflict error when the requested <code>type</code> is not an available Dataset Provider type.
+            value:
+                status: error
+                message: Dataset provider type 'my_custom_type' does not exist
         DatasetProviderCreateExamplesAzureBlobConnectionString:
             summary: Create an Azure Blob Dataset Provider with connection string authentication
             description: Example request body for creating an Azure Blob Dataset Provider using connection string authentication.
@@ -211226,6 +211584,12 @@ components:
                 clientId: 00000000-0000-0000-0000-000000000000
                 clientSecret: "***************"
                 workspaceId: 550e8400-e29b-41d4-a716-446655440000
+        DatasetProviderDeleteError409ExamplesDatasetProviderInUse:
+            summary: Return a conflict error for a Dataset Provider still in use
+            description: Example response for returning a conflict error when Datasets still reference the Dataset Provider.
+            value:
+                status: error
+                message: 'Cannot delete provider "my_s3_provider": there are datasets using it'
         DatasetProviderConnectionTestResponseExamplesSuccess:
             summary: Test a Prometheus Dataset Provider connection
             description: Example response when the configured Prometheus endpoint is reachable and compatible.
@@ -211302,6 +211666,30 @@ components:
                 provider: my_s3_provider
                 type: s3
                 bucket: company-access-logs
+        DatasetError400ExamplesInvalidDataset:
+            summary: Return a validation error for an invalid Dataset
+            description: Example response for returning a validation error when the request body is malformed or fails validation.
+            value:
+                status: error
+                message: The Dataset Provider is configured with Private Link routing, which is not compatible with v1 Datasets. Please choose a v2 Dataset type to proceed.
+        DatasetCreateError403ExamplesDatasetCreateNotPermitted:
+            summary: Return a forbidden error when the caller may not create the Dataset
+            description: Example response for returning a forbidden error when the authenticated caller lacks permission to create the Dataset.
+            value:
+                status: error
+                message: Forbidden
+        DatasetCreateError403ExamplesDatasetProviderNotReadable:
+            summary: Return a forbidden error when the referenced Dataset Provider is not readable
+            description: Example response for returning a forbidden error when the Dataset enables migration mode for a Dataset Provider the caller cannot read.
+            value:
+                status: error
+                message: 'Cannot enable migration mode: no read access to Dataset Provider "my_s3_provider"'
+        DatasetError409ExamplesDatasetIdTaken:
+            summary: Return a conflict error for a duplicate Dataset id
+            description: Example response for returning a conflict error when a Dataset with the requested <code>id</code> already exists.
+            value:
+                status: error
+                message: Entity with "prod_access_logs" ID already exists.
         DatasetCreateExamplesS3V2WithPaths:
             summary: Create an S3 Dataset with search execution v2 and multi-bucket paths
             description: Example request body for creating an S3 Dataset using search execution v2. The v2 schema uses a <code>paths</code> array instead of a top-level <code>bucket</code> field. Each path entry specifies a bucket and one or more glob-to-datatype filter mappings.
@@ -211440,6 +211828,12 @@ components:
                 table: SigninLogs | where ResultType != 0
                 timestampField: TimeGenerated
                 timestampFieldContents: kusto_datetime
+        DatasetDeleteError403ExamplesDatasetNotMutable:
+            summary: Return a forbidden error for a protected Dataset
+            description: Example response for returning a forbidden error when the caller may not delete the Dataset, such as a Cribl-managed or reserved Dataset.
+            value:
+                status: error
+                message: Forbidden
         FederatedSearchEngineCountedResponseExamplesSingleEngine:
             summary: List a single federated search engine
             description: Example response for listing a single federated search engine.
@@ -211448,6 +211842,18 @@ components:
                 engineType: federated
                 tierSize: usage_based
                 description: Federated Engine
+        FederatedSearchEngineError400ExamplesInvalidEngine:
+            summary: Return a validation error for an invalid federated search engine
+            description: Example response for returning a validation error when the request body is malformed or fails validation.
+            value:
+                status: error
+                message: data.tierSize should be equal to one of the allowed values
+        FederatedSearchEngineError404ExamplesEngineNotFound:
+            summary: Return a not-found error for a missing federated search engine
+            description: Example response for returning a not-found error when the specified federated search engine does not exist.
+            value:
+                status: error
+                message: Item not found
         LocalSearchEngineCountedResponseExamplesSingleEngine:
             summary: Single lakehouse engine object
             description: Example response for listing a single lakehouse engine.
@@ -212507,6 +212913,24 @@ components:
                         - edge
                 offset: 0
                 limit: 20
+        CreateGatewayClientResponseExamplesCreated:
+            summary: Create a client key and receive its plaintext once
+            description: The plaintext key appears only in this response; later reads return its prefix.
+            value:
+                id: 6f1c2a9e-4b7d-4e2a-9c3f-2d8b5e7a1c40
+                name: Orders dashboard
+                description: Gateway key for the orders dashboard
+                tags:
+                    - orders
+                    - production
+                keyPrefix: Xq3vL9aB
+                enabled: true
+                createdAt: 1792000000000
+                expiresAt: 1794592000000
+                key: Xq3vL9aB-example-not-a-real-gateway-key-000
+                enforcementStatus: pending
+                lookupVersion: 0b9e4d2c-7a31-4f58-b6e0-9c2d1a8f3e75
+                enforcementReason: key and policy snapshot published; policy enforcement is not implemented; worker auth activation is unverified
         CreateGatewayClientExamplesNamedClient:
             summary: Create a Gateway client key
             description: Example request body for creating a Gateway client key for an application.
@@ -212516,6 +212940,71 @@ components:
                 tags:
                     - orders
                     - production
+        GetGatewayClientResponseExamplesActiveClient:
+            summary: Read the metadata of one client key
+            value:
+                id: 6f1c2a9e-4b7d-4e2a-9c3f-2d8b5e7a1c40
+                name: Orders dashboard
+                description: Gateway key for the orders dashboard
+                tags:
+                    - orders
+                    - production
+                keyPrefix: Xq3vL9aB
+                enabled: true
+                createdAt: 1792000000000
+                expiresAt: 1794592000000
+        GetGatewayStatusResponseExamplesPublished:
+            summary: Read the publication state of the Gateway key store
+            description: The latest keys and policies were published to Workers, whose enforcement is not yet reported.
+            value:
+                status: unverified
+                reason: listener readiness not verified
+                enforcementStatus: pending
+                lookupVersion: 0b9e4d2c-7a31-4f58-b6e0-9c2d1a8f3e75
+                enforcementReason: key and policy snapshot published; policy enforcement is not implemented; worker auth activation is unverified
+        ListGatewayClientsResponseExamplesActiveAndRevoked:
+            summary: List client keys in creation order
+            description: One active key and one key that was revoked after a leak.
+            value:
+                items:
+                    - id: 6f1c2a9e-4b7d-4e2a-9c3f-2d8b5e7a1c40
+                      name: Orders dashboard
+                      description: Gateway key for the orders dashboard
+                      tags:
+                        - orders
+                        - production
+                      keyPrefix: Xq3vL9aB
+                      enabled: true
+                      createdAt: 1792000000000
+                      expiresAt: 1794592000000
+                    - id: 9a2e7c41-5d3b-4f86-a1c9-7e4b2d6f8a13
+                      name: Legacy batch job
+                      description: Revoked after rotation
+                      tags:
+                        - batch
+                      keyPrefix: Lm7pQ2xR
+                      enabled: false
+                      createdAt: 1792000000000
+                      expiresAt: 1794592000000
+                      revokedAt: 1792086400000
+                count: 2
+        RevokeGatewayClientResponseExamplesRevoked:
+            summary: Revoke a client key
+            value:
+                id: 6f1c2a9e-4b7d-4e2a-9c3f-2d8b5e7a1c40
+                name: Orders dashboard
+                description: Gateway key for the orders dashboard
+                tags:
+                    - orders
+                    - production
+                keyPrefix: Xq3vL9aB
+                enabled: false
+                createdAt: 1792000000000
+                expiresAt: 1794592000000
+                revokedAt: 1792086400000
+                enforcementStatus: pending
+                lookupVersion: 0b9e4d2c-7a31-4f58-b6e0-9c2d1a8f3e75
+                enforcementReason: key and policy snapshot published; policy enforcement is not implemented; worker auth activation is unverified
         UpdateGatewayClientResponseExamplesTaggedClient:
             summary: Update Gateway client-key metadata
             description: Example response for updating an application key for the staging dashboard.
@@ -212577,10 +213066,13 @@ components:
                 isDefault: false
                 revision: 1
                 keyCount: 0
+                sensitiveDataScanning: false
                 controls:
                     tokens: true
+                    cost: false
                     models: true
-                tokenLimit:
+                usageLimit:
+                    type: tokens
                     limit: 1000
                     period: day
                     overage: true
@@ -212599,7 +213091,8 @@ components:
             value:
                 name: Application policy
                 description: Limits for application clients
-                tokenLimit:
+                usageLimit:
+                    type: tokens
                     limit: 1000
                     period: day
                     overage: true
@@ -212609,6 +213102,15 @@ components:
                     blockedProviders:
                         - anthropic
                     modelRules: []
+        CreateGatewayPolicyExamplesCostPolicy:
+            summary: Create a policy with a monthly cost budget and sensitive-data scanning
+            value:
+                name: Cost policy
+                usageLimit:
+                    type: cost
+                    amountMicros: 250000000
+                    period: month
+                sensitiveDataScanning: true
         GetGatewayPolicyResponseExamplesApplicationPolicy:
             summary: Read policy settings and the active key count
             value:
@@ -212618,10 +213120,13 @@ components:
                 isDefault: false
                 revision: 1
                 keyCount: 0
+                sensitiveDataScanning: false
                 controls:
                     tokens: true
+                    cost: false
                     models: true
-                tokenLimit:
+                usageLimit:
+                    type: tokens
                     limit: 1000
                     period: day
                     overage: true
@@ -212641,8 +213146,10 @@ components:
                       isDefault: true
                       revision: 1
                       keyCount: 2
+                      sensitiveDataScanning: false
                       controls:
                         tokens: false
+                        cost: false
                         models: false
                       modelAccess:
                         accessMode: allow_all
@@ -212654,10 +213161,13 @@ components:
                       isDefault: false
                       revision: 1
                       keyCount: 0
+                      sensitiveDataScanning: false
                       controls:
                         tokens: true
+                        cost: false
                         models: true
-                      tokenLimit:
+                      usageLimit:
+                        type: tokens
                         limit: 1000
                         period: day
                         overage: true
@@ -212677,10 +213187,13 @@ components:
                 isDefault: true
                 revision: 1
                 keyCount: 2
+                sensitiveDataScanning: false
                 controls:
                     tokens: true
+                    cost: false
                     models: true
-                tokenLimit:
+                usageLimit:
+                    type: tokens
                     limit: 1000
                     period: day
                     overage: true
@@ -212715,7 +213228,7 @@ components:
                         status: ACTIVE
                       firstDiscoveredAt: 2026-10-07T12:00:00.000Z
         UpdateGatewayPolicyResponseExamplesUpdated:
-            summary: Replace the token budget and increment the policy revision
+            summary: Replace the usage budget and increment the policy revision
             value:
                 id: policy-example
                 name: Application policy
@@ -212723,10 +213236,13 @@ components:
                 isDefault: false
                 revision: 2
                 keyCount: 0
+                sensitiveDataScanning: false
                 controls:
                     tokens: true
+                    cost: false
                     models: true
-                tokenLimit:
+                usageLimit:
+                    type: tokens
                     limit: 2000
                     period: week
                     overage: false
@@ -212739,17 +213255,56 @@ components:
                 configVersion: mock-1
                 targetWorkerCount: 1
                 enforcedWorkerCount: 1
+        UpdateGatewayPolicyResponseExamplesSwitchedToCost:
+            summary: Replace a token budget with a cost budget in micro-USD
+            value:
+                id: policy-example
+                name: Application policy
+                description: Limits for application clients
+                isDefault: false
+                revision: 2
+                keyCount: 0
+                sensitiveDataScanning: false
+                controls:
+                    tokens: false
+                    cost: true
+                    models: true
+                usageLimit:
+                    type: cost
+                    amountMicros: 10000000
+                    period: day
+                    overage: true
+                    overageAllowance: 2000000
+                modelAccess:
+                    accessMode: allow_all
+                    blockedProviders:
+                        - anthropic
+                    modelRules: []
+                enforcementStatus: applied
+                configVersion: mock-1
+                targetWorkerCount: 1
+                enforcedWorkerCount: 1
         UpdateGatewayPolicyExamplesReplaceBudget:
-            summary: Update the description and replace the token budget
+            summary: Update the description and replace the usage budget
             value:
                 description: Weekly application budget
-                tokenLimit:
+                usageLimit:
+                    type: tokens
                     limit: 2000
                     period: week
-        UpdateGatewayPolicyExamplesRemoveBudget:
-            summary: Remove the token budget while retaining other policy settings
+        UpdateGatewayPolicyExamplesSwitchToCost:
+            summary: Replace a token budget with a daily cost budget that allows overage
             value:
-                tokenLimit: null
+                usageLimit:
+                    type: cost
+                    amountMicros: 10000000
+                    period: day
+                    overage: true
+                    overageAllowance: 2000000
+        UpdateGatewayPolicyExamplesRemoveBudget:
+            summary: Remove the usage budget while retaining other policy settings
+            value:
+                usageLimit: null
         GetApiCredentialResponseExamplesSingleCredential:
             summary: Get an API Credential
             description: Example response for getting the specified API Credential within the current Workspace.<br/><br/>To get an API Credential at the Organization level, including its cross-Workspace access assignments, use the <code>GET /organizations/{organizationId}/api-credentials/{apiCredentialId}</code> endpoint in the [management plane API](https://docs.cribl.io/cribl-as-code/api-reference/management-plane/).
@@ -217976,9 +218531,15 @@ components:
             value:
                 type: notebooks
                 id: incident_triage
+        SearchFavoriteWriteExamplesNotebookTemplate:
+            summary: Add a favorite for a Notebook template
+            description: Example request body for adding a favorite for a Notebook template.
+            value:
+                type: notebook-templates
+                id: incident_response
         SearchFavoritesListResponseExamplesMixedFavorites:
             summary: List the requesting user favorites
-            description: Example response for listing the requesting user favorites across Dashboards, Notebooks, and Packs.
+            description: Example response for listing the requesting user favorites across Dashboards, Notebooks, Notebook templates, and Packs.
             value:
                 items:
                     - type: dashboards
@@ -217991,7 +218552,12 @@ components:
                     - type: notebooks
                       id: incident_triage
                       favoriteCount: 2
-                count: 3
+                    - type: notebook-templates
+                      id: incident_response
+                      favoriteCount: 4
+                count: 4
+                offset: 0
+                limit: 20
         MetricPanelRunResponseExamplesNotebookSnapshot:
             summary: Saved metric panel rows
             description: Example response body containing a readable Search job id, resolved execution metadata, chart-ready rows, query snapshots, and bounded-result warnings.
@@ -218721,6 +219287,12 @@ components:
                 count: 2
                 offset: 0
                 limit: 2
+        DatasetFavoritesError400ExamplesMissingUserId:
+            summary: Return a validation error when the caller has no user identity
+            description: Example response for returning a validation error when the request carries no user identity to record or remove the favorite for.
+            value:
+                status: error
+                message: User ID is required
         DatasetStatsExamplesOneDayHourly:
             summary: Dataset statistics over a 1-day window with hourly granularity
             description: Example response body with Dataset statistics over a 24-hour window with 1-hour buckets showing event and byte counts.
@@ -224200,6 +224772,8 @@ tags:
       description: Actions related to Ai Gateway
       x-cribl-internal: true
       x-cribl-availability: cloud
+      x-cribl-api-context:
+        - group
     - name: ai-settings
       description: Actions related to AI settings, AI features, agents.md instructions, and custom AI Provider configuration.
       x-cribl-availability: both
@@ -237174,6 +237748,15 @@ paths:
                             examples:
                                 UpdateSearchLimitsResponseExamplesSearchLimits:
                                     $ref: "#/components/examples/UpdateSearchLimitsResponseExamplesSearchLimits"
+                "400":
+                    description: Failed validation or malformed input, such as changing <code>maxConcurrentSearches</code> while dynamic concurrency is active.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                SearchLimitsError400ExamplesInvalidSearchLimits:
+                                    $ref: "#/components/examples/SearchLimitsError400ExamplesInvalidSearchLimits"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -237187,6 +237770,15 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: A requested limit is outside the range this deployment allows.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                SearchLimitsError403ExamplesLimitAboveCap:
+                                    $ref: "#/components/examples/SearchLimitsError403ExamplesLimitAboveCap"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -239867,7 +240459,7 @@ paths:
                 - node
                 - single
             summary: Update Lookup file content
-            description: Apply row-level patch operations to the specified Lookup file content.<br/><br/>Use this endpoint to add, replace, or remove rows in CSV Lookup files. D atabase Lookup files cannot be modified through this endpoint.
+            description: Apply row-level patch operations to the specified Lookup file content.<br/><br/>Use this endpoint to add, replace, or remove rows in CSV Lookup files. Database Lookup files cannot be modified through this endpoint.
             responses:
                 "200":
                     description: The applied patch operations.
@@ -240639,7 +241231,7 @@ paths:
                 - node
                 - single
             summary: Update Lookup file content within a Pack
-            description: Apply row-level patch operations to the specified Lookup file content.<br/><br/>Use this endpoint to add, replace, or remove rows in CSV Lookup files. D atabase Lookup files cannot be modified through this endpoint within the specified Pack.
+            description: Apply row-level patch operations to the specified Lookup file content.<br/><br/>Use this endpoint to add, replace, or remove rows in CSV Lookup files. Database Lookup files cannot be modified through this endpoint within the specified Pack.
             responses:
                 "200":
                     description: The applied patch operations.
@@ -246884,11 +247476,11 @@ paths:
             description: Get a list of all Notebook templates.
             responses:
                 "200":
-                    description: List of NotebookTemplate objects.
+                    description: List of NotebookTemplateListItem objects.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/PaginatedNotebookTemplate"
+                                $ref: "#/components/schemas/PaginatedNotebookTemplateListItem"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -246916,6 +247508,12 @@ paths:
                                 $ref: "#/components/schemas/Error"
             operationId: getNotebookTemplate
             parameters:
+                - name: favorites
+                  in: query
+                  required: false
+                  schema:
+                    type: boolean
+                  description: If <code>true</code>, includes the favorite count and whether the requesting user favorited each Notebook template. Defaults to <code>false</code>.
                 - name: offset
                   in: query
                   required: false
@@ -246942,25 +247540,15 @@ paths:
                 outputs:
                     results: $.items
         post:
+            operationId: createSearchNotebookTemplates
+            tags:
+                - notebook-templates
             x-cribl-internal: false
             x-cribl-availability: both
             x-cribl-api-context:
                 - searchGroup
-            x-speakeasy-name-override: create
-            tags:
-                - notebook-templates
             summary: Create a Notebook template
             description: Create a new Notebook template.
-            requestBody:
-                description: NotebookTemplateInput object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/NotebookTemplateInput"
-                        examples:
-                            CreateNotebookTemplateExamplesSimpleTemplate:
-                                $ref: "#/components/examples/CreateNotebookTemplateExamplesSimpleTemplate"
             responses:
                 "201":
                     description: The created NotebookTemplate object.
@@ -246992,16 +247580,25 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-            operationId: createNotebookTemplate
+            requestBody:
+                description: NotebookTemplateInput object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/NotebookTemplateInput"
+                        examples:
+                            CreateNotebookTemplateExamplesSimpleTemplate:
+                                $ref: "#/components/examples/CreateNotebookTemplateExamplesSimpleTemplate"
     /search/notebook-templates/{id}:
         get:
+            operationId: getSearchNotebookTemplatesById
+            tags:
+                - notebook-templates
             x-cribl-internal: false
             x-cribl-availability: both
             x-cribl-api-context:
                 - searchGroup
-            x-speakeasy-name-override: get
-            tags:
-                - notebook-templates
             summary: Get a Notebook template
             description: Get the specified Notebook template.
             responses:
@@ -247026,17 +247623,12 @@ paths:
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "404":
                     description: The requested resource does not exist — Notebook template not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-            operationId: getNotebookTemplateById
             parameters:
                 - name: id
                   in: path
@@ -247045,25 +247637,15 @@ paths:
                     type: string
                   description: The <code>id</code> of the Notebook template to get.
         patch:
+            operationId: updateSearchNotebookTemplatesById
+            tags:
+                - notebook-templates
             x-cribl-internal: false
             x-cribl-availability: both
             x-cribl-api-context:
                 - searchGroup
-            x-speakeasy-name-override: update
-            tags:
-                - notebook-templates
             summary: Update a Notebook template
             description: "Update the specified Notebook template.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
-            requestBody:
-                description: NotebookTemplateInput object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/NotebookTemplateInputPartialRequest"
-                        examples:
-                            UpdateNotebookTemplateExamplesUpdateTemplate:
-                                $ref: "#/components/examples/UpdateNotebookTemplateExamplesUpdateTemplatePartialRequest"
             responses:
                 "200":
                     description: The updated NotebookTemplate object.
@@ -247092,7 +247674,16 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-            operationId: updateNotebookTemplateById
+            requestBody:
+                description: NotebookTemplateInput object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/NotebookTemplateInputPartialRequest"
+                        examples:
+                            UpdateNotebookTemplateExamplesUpdateTemplate:
+                                $ref: "#/components/examples/UpdateNotebookTemplateExamplesUpdateTemplatePartialRequest"
             parameters:
                 - name: id
                   in: path
@@ -258293,6 +258884,8 @@ paths:
                     description: The requested resource does not exist — secret folder not found
                 "405":
                     description: A requested feature is disabled in this deployment — for example, sharing the folder with Cribl Search
+                "409":
+                    description: Request conflicts with current resource state — the folder is built in and read-only
                 "500":
                     description: Unexpected server error.
                     content:
@@ -258335,7 +258928,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "409":
-                    description: Request conflicts with current resource state — folder still contains secrets; response body includes a <code>secretIds</code> array (up to 10) listing the secret IDs in the folder
+                    description: Request conflicts with current resource state — the folder is built in and read-only, or it still contains secrets; when it still contains secrets the response body includes a <code>secretIds</code> array (up to 10) listing the secret IDs in the folder
                 "500":
                     description: Unexpected server error.
                     content:
@@ -258734,6 +259327,8 @@ paths:
                     description: The requested resource does not exist — source secret folder not found
                 "405":
                     description: A requested feature is disabled in this deployment — for example, sharing the folder with Cribl Search
+                "409":
+                    description: Request conflicts with current resource state — the folder is built in and read-only
                 "500":
                     description: Unexpected server error.
                     content:
@@ -263347,15 +263942,6 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
-                "404":
-                    description: The specified Usage Group does not exist.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                            examples:
-                                UsageGroupError404ExamplesUsageGroupNotFound:
-                                    $ref: "#/components/examples/UsageGroupError404ExamplesUsageGroupNotFound"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -263762,6 +264348,15 @@ paths:
                             description: The canonical URL of the newly created resource.
                             schema:
                                 type: string
+                "400":
+                    description: Failed validation or malformed input, such as credentials the configured endpoint rejects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                DatasetProviderError400ExamplesInvalidDatasetProvider:
+                                    $ref: "#/components/examples/DatasetProviderError400ExamplesInvalidDatasetProvider"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -263775,6 +264370,17 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "409":
+                    description: A Dataset Provider with the requested <code>id</code> already exists, or the requested <code>type</code> is not available.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                DatasetProviderCreateError409ExamplesDatasetProviderIdTaken:
+                                    $ref: "#/components/examples/DatasetProviderCreateError409ExamplesDatasetProviderIdTaken"
+                                DatasetProviderCreateError409ExamplesDatasetProviderTypeUnknown:
+                                    $ref: "#/components/examples/DatasetProviderCreateError409ExamplesDatasetProviderTypeUnknown"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -263928,6 +264534,15 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "409":
+                    description: Datasets still reference the Dataset Provider, so it cannot be deleted.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                DatasetProviderDeleteError409ExamplesDatasetProviderInUse:
+                                    $ref: "#/components/examples/DatasetProviderDeleteError409ExamplesDatasetProviderInUse"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -264441,6 +265056,15 @@ paths:
                             description: The canonical URL of the newly created resource.
                             schema:
                                 type: string
+                "400":
+                    description: Failed validation or malformed input, such as a Dataset configuration that is incompatible with its Dataset Provider.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                DatasetError400ExamplesInvalidDataset:
+                                    $ref: "#/components/examples/DatasetError400ExamplesInvalidDataset"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -264454,6 +265078,26 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: The authenticated caller lacks permission to create the Dataset, or to read the Dataset Provider it references.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                DatasetCreateError403ExamplesDatasetCreateNotPermitted:
+                                    $ref: "#/components/examples/DatasetCreateError403ExamplesDatasetCreateNotPermitted"
+                                DatasetCreateError403ExamplesDatasetProviderNotReadable:
+                                    $ref: "#/components/examples/DatasetCreateError403ExamplesDatasetProviderNotReadable"
+                "409":
+                    description: A Dataset with the requested <code>id</code> already exists.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                DatasetError409ExamplesDatasetIdTaken:
+                                    $ref: "#/components/examples/DatasetError409ExamplesDatasetIdTaken"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -264607,6 +265251,15 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: The authenticated caller lacks permission to delete the Dataset, which is the case for Cribl-managed and reserved Datasets.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                DatasetDeleteError403ExamplesDatasetNotMutable:
+                                    $ref: "#/components/examples/DatasetDeleteError403ExamplesDatasetNotMutable"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -264936,6 +265589,15 @@ paths:
                             examples:
                                 FederatedSearchEngineCountedResponseExamplesSingleEngine:
                                     $ref: "#/components/examples/FederatedSearchEngineCountedResponseExamplesSingleEngine"
+                "400":
+                    description: Failed validation or malformed input, such as an unsupported billing/compute tier.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                FederatedSearchEngineError400ExamplesInvalidEngine:
+                                    $ref: "#/components/examples/FederatedSearchEngineError400ExamplesInvalidEngine"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -264949,6 +265611,15 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The specified federated search engine does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                FederatedSearchEngineError404ExamplesEngineNotFound:
+                                    $ref: "#/components/examples/FederatedSearchEngineError404ExamplesEngineNotFound"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -269714,17 +270385,30 @@ paths:
             tags:
                 - ai-gateway
             x-speakeasy-group: aiGateway
-            x-speakeasy-name-override: create
+            x-speakeasy-name-override: createClientKey
             x-cribl-internal: true
             x-cribl-availability: cloud
             x-cribl-api-context:
-                - leader
-                - single
+                - group
             summary: Create a Gateway client key and return its plaintext once (Cribl.Cloud only)
-            description: The mock returns a visibly synthetic non-credential value and never activates authentication (Cribl.Cloud only).
+            description: Stores a credential without claiming runtime authentication enforcement (Cribl.Cloud only).
             responses:
-                "202":
-                    description: Stored mock metadata and a synthetic placeholder with pending enforcement status.
+                "201":
+                    description: The created GatewayClientKeyCreation object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/GatewayClientKeyCreation"
+                            examples:
+                                CreateGatewayClientResponseExamplesCreated:
+                                    $ref: "#/components/examples/CreateGatewayClientResponseExamplesCreated"
+                    headers:
+                        location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
+                "400":
+                    description: Failed validation, such as a missing name or an expiration that is not a future millisecond timestamp.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -269738,12 +270422,20 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to manage AI Gateway client keys.
+                "404":
+                    description: The group is not the AI Gateway group.
+                "409":
+                    description: The active client-key limit is reached.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Client-key storage is unavailable.
             requestBody:
                 description: GatewayClientKeyCreateRequest object.
                 required: true
@@ -269754,18 +270446,144 @@ paths:
                         examples:
                             CreateGatewayClientExamplesNamedClient:
                                 $ref: "#/components/examples/CreateGatewayClientExamplesNamedClient"
+        get:
+            operationId: getSystemAiGatewayClientKeys
+            tags:
+                - ai-gateway
+            x-speakeasy-group: aiGateway
+            x-speakeasy-name-override: listClientKeys
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - group
+            summary: List retained Gateway client-key metadata (Cribl.Cloud only)
+            description: List client-key metadata in creation order, including revoked and expired keys (Cribl.Cloud only). Plaintext keys are never returned.
+            responses:
+                "200":
+                    description: List of GatewayClientKey objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListGatewayClientKey"
+                            examples:
+                                ListGatewayClientsResponseExamplesActiveAndRevoked:
+                                    $ref: "#/components/examples/ListGatewayClientsResponseExamplesActiveAndRevoked"
+                "400":
+                    description: Invalid <code>limit</code> or <code>offset</code>.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to read AI Gateway client keys.
+                "404":
+                    description: The group is not the AI Gateway group.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: Client-key storage is unavailable.
+            parameters:
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of client keys to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches. In v2, an omitted or zero value uses the configured default page size, and a value above the configured maximum is clamped to it; in v1, all client keys are returned when both <code>limit</code> and <code>offset</code> are omitted, while supplying <code>offset</code> without <code>limit</code> uses the legacy default page size of <code>100</code>.
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches. In v1, pagination applies only when <code>offset</code> is provided; in v2, an omitted value defaults to <code>0</code>.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /system/ai-gateway/client-keys/{id}:
+        get:
+            operationId: getSystemAiGatewayClientKeysById
+            tags:
+                - ai-gateway
+            x-speakeasy-group: aiGateway
+            x-speakeasy-name-override: getClientKey
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - group
+            summary: Get Gateway client-key metadata (Cribl.Cloud only)
+            description: Read the metadata of one client key (Cribl.Cloud only). The plaintext key is returned only once, when the key is created.
+            responses:
+                "200":
+                    description: The requested GatewayClientKey object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/GatewayClientKey"
+                            examples:
+                                GetGatewayClientResponseExamplesActiveClient:
+                                    $ref: "#/components/examples/GetGatewayClientResponseExamplesActiveClient"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to read AI Gateway client keys.
+                "404":
+                    description: The client key does not exist, or the group is not the AI Gateway group.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: Client-key storage is unavailable.
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: Unique identifier for the client key to get.
         patch:
             operationId: updateSystemAiGatewayClientKeysById
             tags:
                 - ai-gateway
             x-speakeasy-group: aiGateway
-            x-speakeasy-name-override: update
+            x-speakeasy-name-override: updateClientKey
             x-cribl-internal: true
             x-cribl-availability: cloud
             x-cribl-api-context:
-                - leader
-                - single
+                - group
             summary: Update Gateway client-key metadata (Cribl.Cloud only)
             description: "Omitted fields remain unchanged (Cribl.Cloud only). Tag arrays replace existing tags; null removes a field.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
@@ -269780,6 +270598,8 @@ paths:
                                     $ref: "#/components/examples/UpdateGatewayClientResponseExamplesTaggedClient"
                                 UpdateGatewayClientResponseExamplesClearedMetadata:
                                     $ref: "#/components/examples/UpdateGatewayClientResponseExamplesClearedMetadata"
+                "400":
+                    description: Failed validation or malformed input.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -269793,12 +270613,18 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to manage AI Gateway client keys.
+                "404":
+                    description: The client key does not exist, or the group is not the AI Gateway group.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Client-key storage is unavailable.
             requestBody:
                 description: GatewayClientKeyUpdateRequest object.
                 required: true
@@ -269818,29 +270644,29 @@ paths:
                   schema:
                     type: string
                   description: Unique identifier for the client key.
-    /system/ai-gateway/client-keys/assign:
-        post:
-            operationId: createSystemAiGatewayClientKeysAssign
+    /system/ai-gateway:
+        get:
+            operationId: getSystemAiGateway
             tags:
                 - ai-gateway
+            x-speakeasy-group: aiGateway
+            x-speakeasy-name-override: getStatus
             x-cribl-internal: true
             x-cribl-availability: cloud
             x-cribl-api-context:
-                - leader
-            summary: Assign a Policy to client keys (Cribl.Cloud only)
-            description: Atomically assign 1–1000 unique active keys (Cribl.Cloud only). Null policyId restores Default inheritance.
+                - group
+            summary: Get Gateway lookup status without claiming listener readiness (Cribl.Cloud only)
+            description: Read whether the latest client keys and policies were published to Workers (Cribl.Cloud only). Publication does not confirm that Workers enforce them.
             responses:
-                "202":
-                    description: The created AssignedGatewayClients object.
+                "200":
+                    description: The requested GatewayKeyStatus object.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/AssignedGatewayClients"
+                                $ref: "#/components/schemas/GatewayKeyStatus"
                             examples:
-                                AssignGatewayClientsResponseExamplesExplicitPolicy:
-                                    $ref: "#/components/examples/AssignGatewayClientsResponseExamplesExplicitPolicy"
-                                AssignGatewayClientsResponseExamplesInheritDefault:
-                                    $ref: "#/components/examples/AssignGatewayClientsResponseExamplesInheritDefault"
+                                GetGatewayStatusResponseExamplesPublished:
+                                    $ref: "#/components/examples/GetGatewayStatusResponseExamplesPublished"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -269854,12 +270680,125 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to read the AI Gateway.
+                "404":
+                    description: The group is not the AI Gateway group.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Client-key storage is unavailable.
+    /system/ai-gateway/client-keys/{id}/revoke:
+        post:
+            operationId: createSystemAiGatewayClientKeysRevokeById
+            tags:
+                - ai-gateway
+            x-speakeasy-group: aiGateway
+            x-speakeasy-name-override: revokeClientKey
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - group
+            summary: Permanently revoke a Gateway client key (Cribl.Cloud only)
+            description: Disable a client key permanently (Cribl.Cloud only). Revoking a key that is already revoked keeps its original revocation time.
+            responses:
+                "200":
+                    description: The created GatewayClientKeyRevocation object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/GatewayClientKeyRevocation"
+                            examples:
+                                RevokeGatewayClientResponseExamplesRevoked:
+                                    $ref: "#/components/examples/RevokeGatewayClientResponseExamplesRevoked"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to manage AI Gateway client keys.
+                "404":
+                    description: The client key does not exist, or the group is not the AI Gateway group.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: Client-key storage is unavailable.
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: Stable client-key identity.
+    /system/ai-gateway/client-keys/assign:
+        post:
+            operationId: createSystemAiGatewayClientKeysAssign
+            tags:
+                - ai-gateway
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - group
+            summary: Assign a Policy to client keys (Cribl.Cloud only)
+            description: Atomically assign 1–1000 unique active keys (Cribl.Cloud only). Null policyId restores Default inheritance.
+            responses:
+                "200":
+                    description: The created AssignedGatewayClients object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/AssignedGatewayClients"
+                            examples:
+                                AssignGatewayClientsResponseExamplesExplicitPolicy:
+                                    $ref: "#/components/examples/AssignGatewayClientsResponseExamplesExplicitPolicy"
+                                AssignGatewayClientsResponseExamplesInheritDefault:
+                                    $ref: "#/components/examples/AssignGatewayClientsResponseExamplesInheritDefault"
+                "400":
+                    description: Failed validation or malformed input.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to manage AI Gateway policies.
+                "404":
+                    description: A client key or the policy does not exist, or the group is not the AI Gateway group.
+                "409":
+                    description: A client key is revoked, disabled or expired.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: Policy storage is unavailable.
             requestBody:
                 description: AssignGatewayClientsInput object.
                 required: true
@@ -269880,11 +270819,11 @@ paths:
             x-cribl-internal: true
             x-cribl-availability: cloud
             x-cribl-api-context:
-                - leader
+                - group
             summary: Create an AI Gateway policy (Cribl.Cloud only)
-            description: Create a non-Default Policy and return its deployment acknowledgement (Cribl.Cloud only).
+            description: Store a non-Default policy and publish its snapshot (Cribl.Cloud only). Runtime policy enforcement remains unverified.
             responses:
-                "202":
+                "201":
                     description: The created GatewayPolicyMutation object.
                     content:
                         application/json:
@@ -269893,6 +270832,13 @@ paths:
                             examples:
                                 CreateGatewayPolicyResponseExamplesCreated:
                                     $ref: "#/components/examples/CreateGatewayPolicyResponseExamplesCreated"
+                    headers:
+                        location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
+                "400":
+                    description: Failed validation or malformed input.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -269906,12 +270852,20 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to manage AI Gateway policies.
+                "404":
+                    description: The group is not the AI Gateway group.
+                "409":
+                    description: A policy with this name already exists.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Policy storage is unavailable.
             requestBody:
                 description: CreateGatewayPolicyInput object.
                 required: true
@@ -269922,6 +270876,8 @@ paths:
                         examples:
                             CreateGatewayPolicyExamplesApplicationPolicy:
                                 $ref: "#/components/examples/CreateGatewayPolicyExamplesApplicationPolicy"
+                            CreateGatewayPolicyExamplesCostPolicy:
+                                $ref: "#/components/examples/CreateGatewayPolicyExamplesCostPolicy"
         get:
             operationId: getSystemAiGatewayPolicies
             tags:
@@ -269929,7 +270885,7 @@ paths:
             x-cribl-internal: true
             x-cribl-availability: cloud
             x-cribl-api-context:
-                - leader
+                - group
             summary: List AI Gateway policies (Cribl.Cloud only)
             description: Read Policies with their effective controls and active key counts, Default first (Cribl.Cloud only).
             responses:
@@ -269955,12 +270911,18 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to read AI Gateway policies.
+                "404":
+                    description: The group is not the AI Gateway group.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Policy storage is unavailable.
     /system/ai-gateway/policies/{id}:
         delete:
             operationId: deleteSystemAiGatewayPoliciesById
@@ -269969,7 +270931,7 @@ paths:
             x-cribl-internal: true
             x-cribl-availability: cloud
             x-cribl-api-context:
-                - leader
+                - group
             summary: Delete an AI Gateway policy (Cribl.Cloud only)
             description: Assigned keys fall back to Default (Cribl.Cloud only). The Default policy cannot be deleted.
             responses:
@@ -269988,12 +270950,20 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to manage AI Gateway policies.
+                "404":
+                    description: The group is not the AI Gateway group; in v1, also when the policy does not exist.
+                "409":
+                    description: The Default policy cannot be deleted.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Policy storage is unavailable.
             parameters:
                 - name: id
                   in: path
@@ -270008,7 +270978,7 @@ paths:
             x-cribl-internal: true
             x-cribl-availability: cloud
             x-cribl-api-context:
-                - leader
+                - group
             summary: Get an AI Gateway policy (Cribl.Cloud only)
             description: Read one Policy, including Model access and any Token limit (Cribl.Cloud only).
             responses:
@@ -270034,12 +271004,18 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to read AI Gateway policies.
+                "404":
+                    description: The policy does not exist, or the group is not the AI Gateway group.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Policy storage is unavailable.
             parameters:
                 - name: id
                   in: path
@@ -270054,11 +271030,11 @@ paths:
             x-cribl-internal: true
             x-cribl-availability: cloud
             x-cribl-api-context:
-                - leader
+                - group
             summary: Update an AI Gateway policy (Cribl.Cloud only)
             description: Omitted fields are retained (Cribl.Cloud only). Token limits and rule lists replace their previous values; a null token limit removes it.
             responses:
-                "202":
+                "200":
                     description: The updated GatewayPolicyMutation object.
                     content:
                         application/json:
@@ -270067,6 +271043,10 @@ paths:
                             examples:
                                 UpdateGatewayPolicyResponseExamplesUpdated:
                                     $ref: "#/components/examples/UpdateGatewayPolicyResponseExamplesUpdated"
+                                UpdateGatewayPolicyResponseExamplesSwitchedToCost:
+                                    $ref: "#/components/examples/UpdateGatewayPolicyResponseExamplesSwitchedToCost"
+                "400":
+                    description: Failed validation or malformed input.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -270080,12 +271060,20 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to manage AI Gateway policies.
+                "404":
+                    description: The policy does not exist, or the group is not the AI Gateway group.
+                "409":
+                    description: Another policy has this name, or the policy revision limit is reached.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Policy storage is unavailable.
             requestBody:
                 description: UpdateGatewayPolicyInput object.
                 required: true
@@ -270096,6 +271084,8 @@ paths:
                         examples:
                             UpdateGatewayPolicyExamplesReplaceBudget:
                                 $ref: "#/components/examples/UpdateGatewayPolicyExamplesReplaceBudget"
+                            UpdateGatewayPolicyExamplesSwitchToCost:
+                                $ref: "#/components/examples/UpdateGatewayPolicyExamplesSwitchToCost"
                             UpdateGatewayPolicyExamplesRemoveBudget:
                                 $ref: "#/components/examples/UpdateGatewayPolicyExamplesRemoveBudget"
             parameters:
@@ -270113,11 +271103,11 @@ paths:
             x-cribl-internal: true
             x-cribl-availability: cloud
             x-cribl-api-context:
-                - leader
+                - group
             summary: Make an AI Gateway policy the Default (Cribl.Cloud only)
             description: Move Default to this Policy (Cribl.Cloud only). Keys without an explicit assignment follow it.
             responses:
-                "202":
+                "200":
                     description: The created GatewayPolicyMutation object.
                     content:
                         application/json:
@@ -270139,12 +271129,18 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to manage AI Gateway policies.
+                "404":
+                    description: The policy does not exist, or the group is not the AI Gateway group.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: Policy storage is unavailable.
             parameters:
                 - name: id
                   in: path
@@ -270160,7 +271156,7 @@ paths:
             x-cribl-internal: true
             x-cribl-availability: cloud
             x-cribl-api-context:
-                - leader
+                - group
             summary: Read the AI Gateway Model catalog (Cribl.Cloud only)
             description: Read cached models and host freshness (Cribl.Cloud only). Management reads are not filtered by Policy.
             responses:
@@ -270186,6 +271182,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to read the AI Gateway Model catalog.
+                "404":
+                    description: The group is not the AI Gateway group.
+                "405":
+                    description: The Model catalog is not implemented yet.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -279940,6 +280942,10 @@ paths:
                                     $ref: "#/components/examples/UpdateInsightsSettingsResponseExamplesEnableCollection"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -290384,7 +291390,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Add a favorite (Cribl.Cloud only)
-            description: Add a favorite marker for the specified Dashboard or Notebook on behalf of the requesting user (Cribl.Cloud only). Adding an existing favorite changes nothing.
+            description: Add a favorite marker for the specified Dashboard, Notebook, or Notebook template on behalf of the requesting user (Cribl.Cloud only). Adding an existing favorite changes nothing.
             responses:
                 "201":
                     description: The favorite count for the object after the favorite is added.
@@ -290428,6 +291434,8 @@ paths:
                                 $ref: "#/components/examples/SearchFavoriteWriteExamplesPackDashboard"
                             SearchFavoriteWriteExamplesNotebook:
                                 $ref: "#/components/examples/SearchFavoriteWriteExamplesNotebook"
+                            SearchFavoriteWriteExamplesNotebookTemplate:
+                                $ref: "#/components/examples/SearchFavoriteWriteExamplesNotebookTemplate"
         delete:
             operationId: deleteSearchFavorites
             tags:
@@ -290437,7 +291445,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Remove a favorite (Cribl.Cloud only)
-            description: Remove the requesting user's favorite marker for the specified Dashboard or Notebook (Cribl.Cloud only). Removing a favorite that does not exist changes nothing. A favorite can be removed after its object is deleted or the user loses access to it.
+            description: Remove the requesting user's favorite marker for the specified Dashboard, Notebook, or Notebook template (Cribl.Cloud only). Removing a favorite that does not exist changes nothing. A favorite can be removed after its object is deleted or the user loses access to it.
             responses:
                 "204":
                     description: The favorite was removed successfully.
@@ -290466,7 +291474,7 @@ paths:
                   required: true
                   schema:
                     type: string
-                  description: "The type of the object: <code>dashboards</code> or <code>notebooks</code>."
+                  description: "The type of the object: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>."
                 - name: id
                   in: query
                   required: true
@@ -290482,17 +291490,23 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: List favorites (Cribl.Cloud only)
-            description: Get the Dashboards and Notebooks that the requesting user has favorited, across every Pack (Cribl.Cloud only). Objects that no longer exist or that the user cannot read are omitted.
+            description: Get the Dashboards, Notebooks, and Notebook templates that the requesting user has favorited, across every Pack (Cribl.Cloud only). Objects that no longer exist or that the user cannot read are omitted.
             responses:
                 "200":
                     description: The requesting user's favorites.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/CountedListSearchFavoriteItem"
+                                $ref: "#/components/schemas/PaginatedSearchFavoriteItem"
                             examples:
                                 SearchFavoritesListResponseExamplesMixedFavorites:
                                     $ref: "#/components/examples/SearchFavoritesListResponseExamplesMixedFavorites"
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -290518,7 +291532,30 @@ paths:
                   required: false
                   schema:
                     type: string
-                  description: "Limits the response to one object type: <code>dashboards</code> or <code>notebooks</code>. Omit to list both types."
+                  description: "Limits the response to one object type: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>. Omit to list every type."
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of favorites to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /search/metrics/query:
         post:
             operationId: createSearchMetricsQuery
@@ -291918,6 +292955,15 @@ paths:
             responses:
                 "204":
                     description: The favorite was removed successfully.
+                "400":
+                    description: The request carries no user identity, so there is no favorite to remove.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                DatasetFavoritesError400ExamplesMissingUserId:
+                                    $ref: "#/components/examples/DatasetFavoritesError400ExamplesMissingUserId"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
