@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.21.0-alpha.1792797068571-ad0cfe6d
+  version: 4.21.0-alpha.1792883476576-2bf2b5e7
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -70784,6 +70784,56 @@ components:
         - perms
         - team
       title: TeamAccessControlList
+    CountedListUserAccessControlList:
+      type: object
+      description: A counted response envelope containing the collection of user
+        access control entries returned by this operation, along with the number
+        of items included.
+      required:
+        - items
+        - count
+      properties:
+        count:
+          type: integer
+          description: Total number of items available
+        items:
+          type: array
+          description: The list of items returned in this response.
+          items:
+            $ref: "#/components/schemas/UserAccessControlList"
+        offset:
+          type: integer
+          description: Zero-based index of the first returned item within the full result
+            set. Always present; defaults to 0.
+        limit:
+          type: integer
+          description: Maximum number of items included in this response. Always present;
+            defaults to the number of items returned.
+    CountedListTeamAccessControlList:
+      type: object
+      description: A counted response envelope containing the collection of team
+        access control entries returned by this operation, along with the number
+        of items included.
+      required:
+        - items
+        - count
+      properties:
+        count:
+          type: integer
+          description: Total number of items available
+        items:
+          type: array
+          description: The list of items returned in this response.
+          items:
+            $ref: "#/components/schemas/TeamAccessControlList"
+        offset:
+          type: integer
+          description: Zero-based index of the first returned item within the full result
+            set. Always present; defaults to 0.
+        limit:
+          type: integer
+          description: Maximum number of items included in this response. Always present;
+            defaults to the number of items returned.
     ProductsCore:
       type: string
       enum:
@@ -72300,6 +72350,28 @@ components:
           description: The list of items returned in this response.
           items:
             $ref: "#/components/schemas/MasterWorkerEntry"
+        offset:
+          type: integer
+          description: Zero-based index of the first returned item within the full result
+            set. Always present; defaults to 0.
+        limit:
+          type: integer
+          description: Maximum number of items included in this response. Always present;
+            defaults to the number of items returned.
+    CountedListRestartResponse:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        count:
+          type: integer
+          description: Total number of items available
+        items:
+          type: array
+          description: The list of items returned in this response.
+          items:
+            $ref: "#/components/schemas/RestartResponse"
         offset:
           type: integer
           description: Zero-based index of the first returned item within the full result
@@ -189784,11 +189856,13 @@ components:
         assignments on the Group, not access granted individually to Team
         Members or through inheritance.
       value:
-        team: engineering-team
-        perms:
-          - type: groups
-            gid: group1
-            policy: GroupRead
+        count: 1
+        items:
+          - team: engineering-team
+            perms:
+              - type: groups
+                gid: group1
+                policy: GroupRead
     AclGetUsersResponseExamplesSuccess:
       summary: List user ACL for a Group
       description: Example response for listing the user access control list (ACL) for
@@ -189796,11 +189870,13 @@ components:
         assignments on the Group, not access granted through Team membership or
         inheritance.
       value:
-        user: user1@example.com
-        perms:
-          - type: groups
-            gid: group1
-            policy: GroupRead
+        count: 1
+        items:
+          - user: user1@example.com
+            perms:
+              - type: groups
+                gid: group1
+                policy: GroupRead
     LakeDatasetCreateExamplesJsonDataset:
       summary: Create a Lake Dataset in JSON format
       description: Example request body for creating a Lake Dataset in JSON format
@@ -189969,8 +190045,12 @@ components:
         all requested Nodes accept the restart. The response returns one entry
         per requested Node with its restart status.
       value:
-        id: guid-12345678-abcd-1234-abcd-123456789abc
-        status: Restarting
+        count: 2
+        items:
+          - id: guid-12345678-abcd-1234-abcd-123456789abc
+            status: Restarting
+          - id: guid-87654321-dcba-4321-dcba-cba987654321
+            status: Restarting
     RestartProductWorkersResponseExamplesRestartingWorkersWithError:
       summary: Restart Worker, Edge, or Outpost Nodes for a Cribl product with a
         partial failure
@@ -189979,8 +190059,13 @@ components:
         <code>status</code> <code>Error</code> and include a
         <code>message</code>.
       value:
-        id: guid-12345678-abcd-1234-abcd-123456789abc
-        status: Restarting
+        count: 2
+        items:
+          - id: guid-12345678-abcd-1234-abcd-123456789abc
+            status: Restarting
+          - id: guid-87654321-dcba-4321-dcba-cba987654321
+            status: Error
+            message: Node is not connected to the Leader.
     RestartWorkersExamplesRestartWorkers:
       summary: Restart Worker, Edge, or Outpost Nodes
       description: Example request body for restarting multiple Worker, Edge, or
@@ -199598,7 +199683,7 @@ paths:
       x-cribl-api-context:
         - leader
       summary: Update a Worker Group, Outpost Group, or Edge Fleet
-      description: "Update the specified Worker Group, Outpost Group, or Edge Fleet.<br/><br/>**Warning**: Do not change the values for the following parameters in the body of PATCH requests. The request body must include the values as they appear in the <code>GET /products/{product}/groups/{id}</code> response.<br/> - <code>configVersion</code><br/> - <code>deployingWorkerCount</code><br/> - <code>incompatibleWorkerCount</code><br/> - <code>workerCount</code><br/> - <code>lookupDeployments</code>.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+      description: "Update the specified Worker Group, Outpost Group, or Edge Fleet.<br/><br/>**Warning**: The following parameters are read-only and managed by Cribl. Do not change their values in a PATCH request.<br/> - <code>configVersion</code><br/> - <code>deployingWorkerCount</code><br/> - <code>incompatibleWorkerCount</code><br/> - <code>workerCount</code><br/> - <code>lookupDeployments</code>.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
       responses:
         "200":
           description: The updated ConfigGroup object.
@@ -199735,11 +199820,11 @@ paths:
         /products/{product}/groups/{id}/acl/teams</code>.
       responses:
         "200":
-          description: The requested UserAccessControlList object.
+          description: List of UserAccessControlList objects.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserAccessControlList"
+                $ref: "#/components/schemas/CountedListUserAccessControlList"
               examples:
                 AclGetUsersResponseExamplesSuccess:
                   $ref: "#/components/examples/AclGetUsersResponseExamplesSuccess"
@@ -199811,11 +199896,11 @@ paths:
         /products/{product}/groups/{id}/acl</code>.
       responses:
         "200":
-          description: The requested TeamAccessControlList object.
+          description: List of TeamAccessControlList objects.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TeamAccessControlList"
+                $ref: "#/components/schemas/CountedListTeamAccessControlList"
               examples:
                 AclGetTeamsResponseExamplesSuccess:
                   $ref: "#/components/examples/AclGetTeamsResponseExamplesSuccess"
@@ -199834,6 +199919,8 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: Worker Group, Outpost Group, or Edge Fleet not found.
         "500":
           description: Unexpected server error.
           content:
@@ -199887,6 +199974,9 @@ paths:
               examples:
                 GroupConfigVersionResponseExamplesConfigVersion:
                   $ref: "#/components/examples/GroupConfigVersionResponseExamplesConfigVersion"
+        "400":
+          description: Failed validation or malformed input — the <code>product</code>
+            path parameter is not a supported Cribl product.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -199902,6 +199992,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: The requested resource does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Unexpected server error.
           content:
@@ -199924,8 +200020,8 @@ paths:
           description: The <code>id</code> of the Worker Group, Outpost Group, or Edge
             Fleet to get the configuration version for.
   /products/{product}/groups/{id}/deploy:
-    patch:
-      operationId: updateProductsGroupsDeployByProductAndId
+    post:
+      operationId: createProductsGroupsDeployByProductAndId
       tags:
         - groups
       x-speakeasy-group: groups
@@ -199939,7 +200035,7 @@ paths:
         Edge Fleet.
       responses:
         "200":
-          description: The updated ConfigGroup object.
+          description: The created ConfigGroup object.
           content:
             application/json:
               schema:
@@ -199947,6 +200043,10 @@ paths:
               examples:
                 GroupDeployResponseExamplesWorkerGroup:
                   $ref: "#/components/examples/GroupDeployResponseExamplesWorkerGroup"
+        "400":
+          description: Failed validation or malformed input if <code>version</code> is
+            missing or not a string, or if <code>lookups</code> is not an array
+            of lookup deployments.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -199962,12 +200062,19 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Operation forbidden for the specified Cribl product.
+        "404":
+          description: Worker Group, Outpost Group, or Edge Fleet not found.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The global secret store required to deploy the configuration is
+            unavailable.
       requestBody:
         description: DeployRequest object.
         required: true
@@ -200303,8 +200410,8 @@ paths:
             type: string
           description: The <code>id</code> of the Node to get the metadata for.
   /products/{product}/workers/restart:
-    patch:
-      operationId: updateProductsWorkersRestartByProduct
+    post:
+      operationId: createProductsWorkersRestartByProduct
       tags:
         - workers
       x-speakeasy-group: nodes
@@ -200318,11 +200425,11 @@ paths:
         product.
       responses:
         "200":
-          description: The updated RestartResponse object.
+          description: The created RestartResponse object in a single-item list.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RestartResponse"
+                $ref: "#/components/schemas/CountedListRestartResponse"
               examples:
                 RestartProductWorkersResponseExamplesRestartingWorkers:
                   $ref: "#/components/examples/RestartProductWorkersResponseExamplesRestartingWorkers"
@@ -200330,7 +200437,8 @@ paths:
                   $ref: "#/components/examples/RestartProductWorkersResponseExamplesRestartingWorkersWithError"
         "400":
           description: Failed validation or malformed input if the product is not
-            "stream", "edge", or "outpost"
+            "stream", "edge", or "outpost", or if <code>guids</code> is missing
+            or not an array of strings.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -203856,7 +203964,7 @@ paths:
                 version: $response.body#/commit
               description: Deploy the committed configuration to the target Worker Group,
                 Outpost Group, or Edge Fleet.
-              operationId: updateProductsGroupsDeployByProductAndId
+              operationId: createProductsGroupsDeployByProductAndId
         "400":
           description: "When <code>effective: true</code> is provided without a group context."
           content:
