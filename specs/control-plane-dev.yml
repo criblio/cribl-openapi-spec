@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.21.0-alpha.1792796937283-ad0cfe6d
+  version: 4.21.0-alpha.1792883422031-2bf2b5e7
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -93578,7 +93578,7 @@ paths:
       x-cribl-api-context:
         - leader
       summary: Update a Worker Group, Outpost Group, or Edge Fleet
-      description: "Update the specified Worker Group, Outpost Group, or Edge Fleet.<br/><br/>Provide a complete representation of the Group or Fleet that you want to update in the request body. This endpoint does not support partial updates. Cribl removes any omitted fields when updating the Group or Fleet.<br/><br/>Confirm that the configuration in your request body is correct before sending the request. If the configuration is incorrect, the updated Group or Fleet might not function as expected.<br/><br/>**Warning**: Do not change the values for the following parameters in the body of PATCH requests. The request body must include the values as they appear in the <code>GET /products/{product}/groups/{id}</code> response.<br/> - <code>configVersion</code><br/> - <code>deployingWorkerCount</code><br/> - <code>incompatibleWorkerCount</code><br/> - <code>workerCount</code><br/> - <code>lookupDeployments</code>."
+      description: "Update the specified Worker Group, Outpost Group, or Edge Fleet.<br/><br/>Provide a complete representation of the Group or Fleet that you want to update in the request body. This endpoint does not support partial updates. Cribl removes any omitted fields when updating the Group or Fleet.<br/><br/>Confirm that the configuration in your request body is correct before sending the request. If the configuration is incorrect, the updated Group or Fleet might not function as expected.<br/><br/>**Warning**: The following parameters are read-only and managed by Cribl. Do not change their values in a PATCH request.<br/> - <code>configVersion</code><br/> - <code>deployingWorkerCount</code><br/> - <code>incompatibleWorkerCount</code><br/> - <code>workerCount</code><br/> - <code>lookupDeployments</code>."
       responses:
         "200":
           description: The updated ConfigGroup object in a single-item list.
@@ -93821,6 +93821,8 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: Worker Group, Outpost Group, or Edge Fleet not found.
         "500":
           description: Unexpected server error.
           content:
@@ -93874,6 +93876,9 @@ paths:
               examples:
                 GroupConfigVersionResponseExamplesConfigVersion:
                   $ref: "#/components/examples/GroupConfigVersionResponseExamplesConfigVersion"
+        "400":
+          description: Failed validation or malformed input — the <code>product</code>
+            path parameter is not a supported Cribl product.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -93911,8 +93916,8 @@ paths:
           description: The <code>id</code> of the Worker Group, Outpost Group, or Edge
             Fleet to get the configuration version for.
   /products/{product}/groups/{id}/deploy:
-    patch:
-      operationId: updateProductsGroupsDeployByProductAndId
+    post:
+      operationId: createProductsGroupsDeployByProductAndId
       tags:
         - groups
       x-speakeasy-group: groups
@@ -93926,7 +93931,7 @@ paths:
         Edge Fleet.
       responses:
         "200":
-          description: The updated ConfigGroup object in a single-item list.
+          description: The created ConfigGroup object in a single-item list.
           content:
             application/json:
               schema:
@@ -93934,6 +93939,10 @@ paths:
               examples:
                 GroupDeployResponseExamplesWorkerGroup:
                   $ref: "#/components/examples/GroupDeployResponseExamplesWorkerGroup"
+        "400":
+          description: Failed validation or malformed input if <code>version</code> is
+            missing or not a string, or if <code>lookups</code> is not an array
+            of lookup deployments.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -93949,12 +93958,19 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Operation forbidden for the specified Cribl product.
+        "404":
+          description: Worker Group, Outpost Group, or Edge Fleet not found.
         "500":
           description: Unexpected server error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          description: The global secret store required to deploy the configuration is
+            unavailable.
       requestBody:
         description: DeployRequest object.
         required: true
@@ -94309,8 +94325,8 @@ paths:
             type: string
           description: The <code>id</code> of the Node to get the metadata for.
   /products/{product}/workers/restart:
-    patch:
-      operationId: updateProductsWorkersRestartByProduct
+    post:
+      operationId: createProductsWorkersRestartByProduct
       tags:
         - workers
       x-speakeasy-group: nodes
@@ -94324,7 +94340,7 @@ paths:
         product.
       responses:
         "200":
-          description: The updated RestartResponse object in a single-item list.
+          description: The created RestartResponse object in a single-item list.
           content:
             application/json:
               schema:
@@ -94336,7 +94352,8 @@ paths:
                   $ref: "#/components/examples/RestartProductWorkersResponseExamplesRestartingWorkersWithError"
         "400":
           description: Failed validation or malformed input if the product is not
-            "stream", "edge", or "outpost"
+            "stream", "edge", or "outpost", or if <code>guids</code> is missing
+            or not an array of strings.
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -97848,7 +97865,7 @@ paths:
                 version: $response.body#/items/0/commit
               description: Deploy the committed configuration to the target Worker Group,
                 Outpost Group, or Edge Fleet.
-              operationId: updateProductsGroupsDeployByProductAndId
+              operationId: createProductsGroupsDeployByProductAndId
         "400":
           description: "When <code>effective: true</code> is provided without a group context."
           content:
