@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1792797224282-ad0cfe6d
+    version: 4.21.0-alpha.1792883544504-2bf2b5e7
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -63192,6 +63192,10 @@ components:
                         - viz-counter.wordCloud
                         - viz-diagram.donut
                         - viz-diagram.funnel
+                        - viz-geoMap.bubble
+                        - viz-geoMap.choropleth
+                        - viz-geoMap.heatmap
+                        - viz-graph.sankey
                         - viz-plot.bubble
                         - viz-plot.heatmap
                         - viz-plot.scatter
@@ -63323,6 +63327,10 @@ components:
                 - viz-counter.wordCloud
                 - viz-diagram.donut
                 - viz-diagram.funnel
+                - viz-geoMap.bubble
+                - viz-geoMap.choropleth
+                - viz-geoMap.heatmap
+                - viz-graph.sankey
                 - viz-plot.bubble
                 - viz-plot.heatmap
                 - viz-plot.scatter
@@ -64839,6 +64847,10 @@ components:
                 - viz-counter.wordCloud
                 - viz-diagram.donut
                 - viz-diagram.funnel
+                - viz-geoMap.bubble
+                - viz-geoMap.choropleth
+                - viz-geoMap.heatmap
+                - viz-graph.sankey
                 - viz-plot.bubble
                 - viz-plot.heatmap
                 - viz-plot.scatter
@@ -70160,6 +70172,18 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        ProvisioningTokenRestrictions:
+            type: object
+            properties:
+                allowedProducts:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/AllowedProductConfProvisioningTokenRestrictions"
+                    description: Node types permitted to register with the provisioning token. A Node whose type is not listed is rejected when it tries to register. Must contain at least one unique Node type.
+                    minItems: 1
+            required:
+                - allowedProducts
+            title: ProvisioningTokenRestrictions
         TokenStatus:
             type: string
             enum:
@@ -70194,6 +70218,9 @@ components:
                 id:
                     type: string
                     description: Unique identifier for the provisioning token.
+                restrictions:
+                    $ref: "#/components/schemas/ProvisioningTokenRestrictions"
+                    description: Restrictions applied when a Node registers with the provisioning token. If omitted, any Node type can register.
                 revokedAt:
                     type: integer
                     description: Timestamp (in Unix time) when the provisioning token was revoked. If omitted, the provisioning token is not revoked.
@@ -70248,6 +70275,9 @@ components:
                 id:
                     type: string
                     description: Unique identifier for the provisioning token. Must start with a letter or digit and is limited to a maximum of 64 characters.
+                restrictions:
+                    $ref: "#/components/schemas/ProvisioningTokenRestrictions"
+                    description: Restrictions applied when a Node registers with the provisioning token. Omit to let any Node type register.
                 useLimit:
                     type: integer
                     description: Maximum successful registrations. Omit for unlimited.
@@ -70273,6 +70303,9 @@ components:
                 id:
                     type: string
                     description: Unique identifier for the provisioning token.
+                restrictions:
+                    $ref: "#/components/schemas/ProvisioningTokenRestrictions"
+                    description: Restrictions applied when a Node registers with the provisioning token. If omitted, any Node type can register.
                 revokedAt:
                     type: integer
                     description: Timestamp (in Unix time) when the provisioning token was revoked. If omitted, the provisioning token is not revoked.
@@ -70323,6 +70356,16 @@ components:
                     type: string
                     description: Brief reason for revoking the provisioning token, recorded in the audit log.
             title: ProvisioningTokenRevokeRequest
+        ProvisioningTokenRestrictionsUpdate:
+            type: object
+            properties:
+                allowedProducts:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/AllowedProductConfProvisioningTokenRestrictions"
+                    description: "Node types permitted to register with the provisioning token. A Node whose type is not listed is rejected when it tries to register. Required whenever the updated provisioning token keeps a <code>restrictions</code> object: Cribl rejects a request that leaves <code>restrictions</code> with no Node types. Must contain at least one unique Node type."
+                    minItems: 1
+            title: ProvisioningTokenRestrictionsUpdate
         ProvisioningTokenUpdate:
             type: object
             properties:
@@ -70352,6 +70395,11 @@ components:
                         - integer
                     description: Timestamp (in Unix time) after which the provisioning token expires. Defaults to <code>null</code> (no expiry) if omitted.
                     minimum: 0
+                restrictions:
+                    oneOf:
+                        - type: "null"
+                        - $ref: "#/components/schemas/ProvisioningTokenRestrictionsUpdate"
+                    description: Restrictions applied when a Node registers with the provisioning token. Defaults to <code>null</code> (any Node type can register) if omitted. Send <code>null</code> to let any Node type register again.
                 useLimit:
                     type:
                         - "null"
@@ -84055,6 +84103,26 @@ components:
                     description: The list of items returned in this response.
                     items:
                         $ref: "#/components/schemas/MasterWorkerEntry"
+                offset:
+                    type: integer
+                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
+                limit:
+                    type: integer
+                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
+        CountedListRestartResponse:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Total number of items available
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/RestartResponse"
                 offset:
                     type: integer
                     description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
@@ -195257,6 +195325,11 @@ components:
                         - integer
                     description: Timestamp (in Unix time) after which the provisioning token expires.
                     minimum: 0
+                restrictions:
+                    oneOf:
+                        - type: "null"
+                        - $ref: "#/components/schemas/ProvisioningTokenRestrictionsUpdate"
+                    description: Restrictions applied when a Node registers with the provisioning token. Send <code>null</code> to let any Node type register again.
                 useLimit:
                     type:
                         - "null"
@@ -203312,6 +203385,14 @@ components:
                 - stream_ai
             description: Explicit type of the Worker Group, Outpost Group, or Edge Fleet.
             x-speakeasy-unknown-values: allow
+        AllowedProductConfProvisioningTokenRestrictions:
+            type: string
+            enum:
+                - outpost
+                - worker
+                - managed-edge
+                - master
+            x-speakeasy-unknown-values: allow
         DistModeOptionsProvisioningTokenWithSecret:
             type: string
             enum:
@@ -210608,6 +210689,17 @@ components:
             description: Example request body for canceling an in-progress lookup file upload by referencing the temporary upload filename. You must also add <code>?cancel=true</code> (the <code>cancel</code> query parameter) to the request URL when you send the request.
             value:
                 filename: temp_upload_12345.csv
+        LookupListResponseExamplesCsvLookups:
+            summary: List Lookups
+            description: Example response containing the Lookups returned for one context.
+            value:
+                items:
+                    - id: ip-reputation.csv
+                      description: IP reputation Lookup table
+                      size: 128
+                count: 1
+                offset: 0
+                limit: 20
         MoveLookupContextExamplesIntoPack:
             summary: Move a Lookup to a Pack
             description: Example request body for moving a Lookup from the global context to a Pack.
@@ -212899,20 +212991,24 @@ components:
             summary: List Team ACL for a Group
             description: Example response for listing the Team access control list (ACL) for a Group.<br/><br/>The response includes only Teams with explicit access assignments on the Group, not access granted individually to Team Members or through inheritance.
             value:
-                team: engineering-team
-                perms:
-                    - type: groups
-                      gid: group1
-                      policy: GroupRead
+                count: 1
+                items:
+                    - team: engineering-team
+                      perms:
+                        - type: groups
+                          gid: group1
+                          policy: GroupRead
         AclGetUsersResponseExamplesSuccess:
             summary: List user ACL for a Group
             description: Example response for listing the user access control list (ACL) for a Group.<br/><br/>The response includes only users with explicit access assignments on the Group, not access granted through Team membership or inheritance.
             value:
-                user: user1@example.com
-                perms:
-                    - type: groups
-                      gid: group1
-                      policy: GroupRead
+                count: 1
+                items:
+                    - user: user1@example.com
+                      perms:
+                        - type: groups
+                          gid: group1
+                          policy: GroupRead
         KeyCreateResponseExamplesKey:
             summary: Create an encryption key
             description: Example response for creating an encryption key, including the one-time plaintext key material.
@@ -213616,6 +213712,24 @@ components:
                 id: edge-retail-q1
                 description: Retail Edge Fleet Q1 2026 deployment
                 distMode: managed-edge
+                useLimit: 500
+                expiresAt: 1751241600000
+        CreateProvisioningTokenExamplesCreateUnrestrictedToken:
+            summary: Create a provisioning token that any Node type can use
+            description: Example request body for creating a provisioning token with no restrictions, so a Node of any type can register with it.
+            value:
+                id: fleet-bootstrap
+                description: Shared bootstrap token for mixed fleets
+        CreateProvisioningTokenExamplesCreateRestrictedToken:
+            summary: Create a provisioning token restricted to specific Node types
+            description: Example request body for creating a provisioning token that only Worker Nodes and managed Edge Nodes can register with. A Node of any other type is rejected.
+            value:
+                id: edge-retail-q1
+                description: Retail Edge Fleet Q1 2026 deployment
+                restrictions:
+                    allowedProducts:
+                        - worker
+                        - managed-edge
                 useLimit: 500
                 expiresAt: 1751241600000
         RevokeProvisioningTokenExamplesRevokeWithReason:
@@ -217286,14 +217400,23 @@ components:
             summary: Restart Worker, Edge, or Outpost Nodes for a Cribl product
             description: Example response for restarting Worker, Edge, or Outpost Nodes when all requested Nodes accept the restart. The response returns one entry per requested Node with its restart status.
             value:
-                id: guid-12345678-abcd-1234-abcd-123456789abc
-                status: Restarting
+                count: 2
+                items:
+                    - id: guid-12345678-abcd-1234-abcd-123456789abc
+                      status: Restarting
+                    - id: guid-87654321-dcba-4321-dcba-cba987654321
+                      status: Restarting
         RestartProductWorkersResponseExamplesRestartingWorkersWithError:
             summary: Restart Worker, Edge, or Outpost Nodes for a Cribl product with a partial failure
             description: Example response for restarting Worker, Edge, or Outpost Nodes when one of the requested Nodes fails to restart. Failed Nodes report <code>status</code> <code>Error</code> and include a <code>message</code>.
             value:
-                id: guid-12345678-abcd-1234-abcd-123456789abc
-                status: Restarting
+                count: 2
+                items:
+                    - id: guid-12345678-abcd-1234-abcd-123456789abc
+                      status: Restarting
+                    - id: guid-87654321-dcba-4321-dcba-cba987654321
+                      status: Error
+                      message: Node is not connected to the Leader.
         RestartWorkersExamplesRestartWorkers:
             summary: Restart Worker, Edge, or Outpost Nodes
             description: Example request body for restarting multiple Worker, Edge, or Outpost Nodes by providing an array of <code>id</code> values.
@@ -227755,12 +227878,29 @@ components:
                     -----END PRIVATE KEY-----
         UpdateProvisioningTokenExamplesUpdateTokenDescriptionPartialRequest:
             summary: Update a provisioning token
-            description: "Example request body for updating an existing provisioning token. Pass null for nullable fields (distMode, useLimit, expiresAt) to clear them.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Example request body for updating an existing provisioning token. Pass null for nullable fields (distMode, restrictions, useLimit, expiresAt) to clear them.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             value:
                 description: Retail Edge Fleet — extended for Q2 2026
                 distMode: managed-edge
+                restrictions:
+                    allowedProducts:
+                        - managed-edge
                 useLimit: 1000
                 expiresAt: 1759017600000
+        UpdateProvisioningTokenExamplesSetTokenRestrictionsPartialRequest:
+            summary: Restrict a provisioning token to specific Node types
+            description: "Example request body for restricting an existing provisioning token to Worker Nodes. Any previously stored allow-list is replaced by this one.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                description: Retail Edge Fleet — Workers only
+                restrictions:
+                    allowedProducts:
+                        - worker
+        UpdateProvisioningTokenExamplesClearTokenRestrictionsPartialRequest:
+            summary: Remove the Node type restrictions from a provisioning token
+            description: "Example request body for clearing the stored allow-list so a Node of any type can register with the provisioning token again.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                description: Retail Edge Fleet — open to all Node types
+                restrictions: null
         UpdateRoleExamplesUpdateRolePartialRequest:
             summary: Add Policies to an existing custom Role
             description: "Example request body for adding the <code>pipeline-read-policy</code> to an existing custom Role.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
@@ -244267,8 +244407,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedLookupFile"
                             examples:
-                                LookupGetResponseExamplesCsvLookup:
-                                    $ref: "#/components/examples/LookupGetResponseExamplesCsvLookup"
+                                LookupListResponseExamplesCsvLookups:
+                                    $ref: "#/components/examples/LookupListResponseExamplesCsvLookups"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -245008,8 +245148,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedLookupFile"
                             examples:
-                                LookupGetResponseExamplesCsvLookup:
-                                    $ref: "#/components/examples/LookupGetResponseExamplesCsvLookup"
+                                LookupListResponseExamplesCsvLookups:
+                                    $ref: "#/components/examples/LookupListResponseExamplesCsvLookups"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -258377,6 +258517,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/CollectorsHaEligibilityResult"
+                "400":
+                    description: Failed validation or malformed input — Collectors HA eligibility does not apply to the specified Worker Group.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -258390,6 +258532,10 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action — no access to the specified Worker Group.
+                "404":
+                    description: The requested resource does not exist — Worker Group not found.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -258426,6 +258572,8 @@ paths:
                             examples:
                                 GroupConfigVersionResponseExamplesConfigVersion:
                                     $ref: "#/components/examples/GroupConfigVersionResponseExamplesConfigVersion"
+                "400":
+                    description: Failed validation or malformed input — the <code>product</code> path parameter is not a supported Cribl product.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -258439,6 +258587,12 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -258752,7 +258906,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Update a Worker Group, Outpost Group, or Edge Fleet
-            description: "Update the specified Worker Group, Outpost Group, or Edge Fleet.<br/><br/>**Warning**: Do not change the values for the following parameters in the body of PATCH requests. The request body must include the values as they appear in the <code>GET /products/{product}/groups/{id}</code> response.<br/> - <code>configVersion</code><br/> - <code>deployingWorkerCount</code><br/> - <code>incompatibleWorkerCount</code><br/> - <code>workerCount</code><br/> - <code>lookupDeployments</code>.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Worker Group, Outpost Group, or Edge Fleet.<br/><br/>**Warning**: The following parameters are read-only and managed by Cribl. Do not change their values in a PATCH request.<br/> - <code>configVersion</code><br/> - <code>deployingWorkerCount</code><br/> - <code>incompatibleWorkerCount</code><br/> - <code>workerCount</code><br/> - <code>lookupDeployments</code>.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated ConfigGroup object.
@@ -258810,8 +258964,8 @@ paths:
                     type: string
                   description: The <code>id</code> of the Worker Group, Outpost Group, or Edge Fleet to update.
     /products/{product}/groups/{id}/deploy:
-        patch:
-            operationId: updateProductsGroupsDeployByProductAndId
+        post:
+            operationId: createProductsGroupsDeployByProductAndId
             tags:
                 - groups
             x-speakeasy-group: groups
@@ -258824,7 +258978,7 @@ paths:
             description: Deploy commits to the specified Worker Group, Outpost Group, or Edge Fleet.
             responses:
                 "200":
-                    description: The updated ConfigGroup object.
+                    description: The created ConfigGroup object.
                     content:
                         application/json:
                             schema:
@@ -258832,6 +258986,8 @@ paths:
                             examples:
                                 GroupDeployResponseExamplesWorkerGroup:
                                     $ref: "#/components/examples/GroupDeployResponseExamplesWorkerGroup"
+                "400":
+                    description: Failed validation or malformed input if <code>version</code> is missing or not a string, or if <code>lookups</code> is not an array of lookup deployments.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -258845,12 +259001,18 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Operation forbidden for the specified Cribl product.
+                "404":
+                    description: Worker Group, Outpost Group, or Edge Fleet not found.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: The global secret store required to deploy the configuration is unavailable.
             requestBody:
                 description: DeployRequest object.
                 required: true
@@ -258889,11 +259051,11 @@ paths:
             description: Get the Team access control list (ACL) for the specified Worker Group, Outpost Group, or Edge Fleet.<br/><br/>This endpoint lists Teams with explicit access assignments on the Group or Fleet. The response does not include access granted to individual Team Members through direct user assignments or inherited based on Team Permissions and Roles at the Organization/Global, Workspace, or product level.<br/><br/>To list the user ACL for a Group or Fleet, use <code>GET /products/{product}/groups/{id}/acl</code>.
             responses:
                 "200":
-                    description: The requested TeamAccessControlList object.
+                    description: List of TeamAccessControlList objects.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/TeamAccessControlList"
+                                $ref: "#/components/schemas/CountedListTeamAccessControlList"
                             examples:
                                 AclGetTeamsResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclGetTeamsResponseExamplesSuccess"
@@ -258910,6 +259072,8 @@ paths:
                                     value:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
+                "404":
+                    description: Worker Group, Outpost Group, or Edge Fleet not found.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -258950,11 +259114,11 @@ paths:
             description: Get the user access control list (ACL) for the specified Worker Group, Outpost Group, or Edge Fleet.<br/><br/>This endpoint lists users with explicit access assignments on the Group or Fleet. The response does not include access granted through Team membership or inherited based on a user's Permissions and Roles at the Organization/Global, Workspace, or product level.<br/><br/>To list the Team ACL for a product and Group or Fleet, use <code>GET /products/{product}/groups/{id}/acl/teams</code>.
             responses:
                 "200":
-                    description: The requested UserAccessControlList object.
+                    description: List of UserAccessControlList objects.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/UserAccessControlList"
+                                $ref: "#/components/schemas/CountedListUserAccessControlList"
                             examples:
                                 AclGetUsersResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclGetUsersResponseExamplesSuccess"
@@ -261815,6 +261979,10 @@ paths:
                         examples:
                             CreateProvisioningTokenExamplesCreateStandardToken:
                                 $ref: "#/components/examples/CreateProvisioningTokenExamplesCreateStandardToken"
+                            CreateProvisioningTokenExamplesCreateUnrestrictedToken:
+                                $ref: "#/components/examples/CreateProvisioningTokenExamplesCreateUnrestrictedToken"
+                            CreateProvisioningTokenExamplesCreateRestrictedToken:
+                                $ref: "#/components/examples/CreateProvisioningTokenExamplesCreateRestrictedToken"
         get:
             operationId: getSystemProvisioningTokens
             tags:
@@ -261997,7 +262165,7 @@ paths:
                 - leader
                 - single
             summary: Update a provisioning token
-            description: "Update the specified provisioning token. All fields are optional. <br/><br/>Revoked tokens cannot be updated.<br/><br/>The mutable parameters are:<br/> - <code>description</code> (optional)<br/> - <code>distMode</code> (optional)<br/> - <code>useLimit</code> (optional)<br/> - <code>expiresAt</code> (optional).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified provisioning token.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated ProvisioningToken object.
@@ -262042,6 +262210,10 @@ paths:
                         examples:
                             UpdateProvisioningTokenExamplesUpdateTokenDescription:
                                 $ref: "#/components/examples/UpdateProvisioningTokenExamplesUpdateTokenDescriptionPartialRequest"
+                            UpdateProvisioningTokenExamplesSetTokenRestrictions:
+                                $ref: "#/components/examples/UpdateProvisioningTokenExamplesSetTokenRestrictionsPartialRequest"
+                            UpdateProvisioningTokenExamplesClearTokenRestrictions:
+                                $ref: "#/components/examples/UpdateProvisioningTokenExamplesClearTokenRestrictionsPartialRequest"
             parameters:
                 - name: id
                   in: path
@@ -278330,8 +278502,8 @@ paths:
                 outputs:
                     results: $.items
     /products/{product}/workers/restart:
-        patch:
-            operationId: updateProductsWorkersRestartByProduct
+        post:
+            operationId: createProductsWorkersRestartByProduct
             tags:
                 - workers
             x-speakeasy-group: nodes
@@ -278344,18 +278516,18 @@ paths:
             description: Restart all Worker, Edge, or Outpost Nodes for the specified Cribl product.
             responses:
                 "200":
-                    description: The updated RestartResponse object.
+                    description: The created RestartResponse object in a single-item list.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/RestartResponse"
+                                $ref: "#/components/schemas/CountedListRestartResponse"
                             examples:
                                 RestartProductWorkersResponseExamplesRestartingWorkers:
                                     $ref: "#/components/examples/RestartProductWorkersResponseExamplesRestartingWorkers"
                                 RestartProductWorkersResponseExamplesRestartingWorkersWithError:
                                     $ref: "#/components/examples/RestartProductWorkersResponseExamplesRestartingWorkersWithError"
                 "400":
-                    description: Failed validation or malformed input if the product is not "stream", "edge", or "outpost"
+                    description: Failed validation or malformed input if the product is not "stream", "edge", or "outpost", or if <code>guids</code> is missing or not an array of strings.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -285698,7 +285870,7 @@ paths:
                             requestBody:
                                 version: $response.body#/commit
                             description: Deploy the committed configuration to the target Worker Group, Outpost Group, or Edge Fleet.
-                            operationId: updateProductsGroupsDeployByProductAndId
+                            operationId: createProductsGroupsDeployByProductAndId
                 "400":
                     description: "When <code>effective: true</code> is provided without a group context."
                     content:
