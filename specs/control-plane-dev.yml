@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.21.0-alpha.1792883422031-2bf2b5e7
+  version: 4.21.0-alpha.1793056086999-822e6c7e
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -29395,6 +29395,220 @@ components:
             - host
             - tcpPort
       title: InputCiscoAsaSyslog
+    InputCiscoMerakiSyslog:
+      type: object
+      required:
+        - type
+        - host
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique name for this input
+        type:
+          type: string
+          enum:
+            - cisco_meraki_syslog
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. For IPv4 (all addresses), use the default
+            '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP
+            address.
+        udpPort:
+          type: number
+          title: UDP port
+          maximum: 65535
+          description: Enter UDP port number to listen on. Not required if listening on TCP.
+        tcpPort:
+          type: number
+          title: TCP port
+          maximum: 65535
+          description: Enter TCP port number to listen on. Not required if listening on UDP.
+        maxBufferSize:
+          type: number
+          title: Buffer size limit (events)
+          description: Maximum number of events to buffer when downstream is blocking.
+            Only applies to UDP.
+          minimum: 0
+        ipWhitelistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Regex matching IP addresses that are allowed to send data
+        timestampTimezone:
+          type: string
+          title: Default timezone
+          description: Timezone to assign to timestamps without timezone info
+        singleMsgUdpPackets:
+          type: boolean
+          title: Single msg per UDP
+          description: Treat UDP packet data received as full syslog message
+        keepFieldsList:
+          type: array
+          title: Fields to keep
+          description: Wildcard list of fields to keep from source data; * = ALL (default)
+          minItems: 0
+          items:
+            type: string
+        octetCounting:
+          type: boolean
+          title: Octet count framing
+          description: Enable if incoming messages use octet counting per RFC 6587.
+        inferFraming:
+          type: boolean
+          title: Infer Syslog framing
+          description: Enable if we should infer the syslog framing of the incoming
+            messages.
+        strictlyInferOctetCounting:
+          type: boolean
+          title: Strictly infer octet count framing
+          description: Enable if we should infer octet counting only if the messages
+            comply with RFC 5424.
+        maxActiveCxn:
+          type: number
+          title: Active connection limit
+          description: Maximum number of active connections allowed per Worker Process for
+            TCP connections. Use 0 for unlimited.
+          minimum: 0
+        socketIdleTimeout:
+          type: number
+          title: TCP socket idle timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. After this time, the connection will be
+            closed. Leave at 0 for no inactive socket monitoring.
+          minimum: 0
+        socketEndingMaxWait:
+          type: number
+          title: TCP forced socket termination timeout (seconds)
+          description: How long the server will wait after initiating a closure for a
+            client to close its end of the connection. If the client doesn't
+            close the connection within this time, the server will forcefully
+            terminate the socket to prevent resource leaks and ensure efficient
+            connection cleanup and system stability. Leave at 0 for no inactive
+            socket monitoring.
+          minimum: 0
+        socketMaxLifespan:
+          type: number
+          title: TCP Socket max lifespan (seconds)
+          description: The maximum duration a socket can remain open, even if active. This
+            helps manage resources and mitigate issues caused by TCP pinning.
+            Set to 0 to disable.
+          minimum: 0
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        udpSocketRxBufSize:
+          type: number
+          title: UDP socket buffer size (bytes)
+          description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+          minimum: 256
+          maximum: 4294967295
+        enableLoadBalancing:
+          type: boolean
+          title: Enable TCP load balancing
+          description: Load balance traffic across all Worker Processes
+        autoParse:
+          type: boolean
+          title: Auto parse
+          description: Detect the datatype of each event and extract its top-level fields
+            before the data reaches any of the processing pipelines
+            (pre-processing, main processing, post-processing).
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_udpPort:
+          type: string
+          description: Binds 'udpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'udpPort' at runtime.
+        __template_tcpPort:
+          type: string
+          description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tcpPort' at runtime.
+        __template_timestampTimezone:
+          type: string
+          description: Binds 'timestampTimezone' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'timestampTimezone' at runtime.
+      anyOf:
+        - required:
+            - host
+            - udpPort
+        - required:
+            - host
+            - tcpPort
+      title: InputCiscoMerakiSyslog
     InputFile:
       type: object
       properties:
@@ -40047,6 +40261,220 @@ components:
             - host
             - tcpPort
       title: InputCiscoSecureFirewallSyslog
+    InputCiscoIosSyslog:
+      type: object
+      required:
+        - type
+        - host
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique name for this input
+        type:
+          type: string
+          enum:
+            - cisco_ios_syslog
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. For IPv4 (all addresses), use the default
+            '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP
+            address.
+        udpPort:
+          type: number
+          title: UDP port
+          maximum: 65535
+          description: Enter UDP port number to listen on. Not required if listening on TCP.
+        tcpPort:
+          type: number
+          title: TCP port
+          maximum: 65535
+          description: Enter TCP port number to listen on. Not required if listening on UDP.
+        maxBufferSize:
+          type: number
+          title: Buffer size limit (events)
+          description: Maximum number of events to buffer when downstream is blocking.
+            Only applies to UDP.
+          minimum: 0
+        ipWhitelistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Regex matching IP addresses that are allowed to send data
+        timestampTimezone:
+          type: string
+          title: Default timezone
+          description: Timezone to assign to timestamps without timezone info
+        singleMsgUdpPackets:
+          type: boolean
+          title: Single msg per UDP
+          description: Treat UDP packet data received as full syslog message
+        keepFieldsList:
+          type: array
+          title: Fields to keep
+          description: Wildcard list of fields to keep from source data; * = ALL (default)
+          minItems: 0
+          items:
+            type: string
+        octetCounting:
+          type: boolean
+          title: Octet count framing
+          description: Enable if incoming messages use octet counting per RFC 6587.
+        inferFraming:
+          type: boolean
+          title: Infer Syslog framing
+          description: Enable if we should infer the syslog framing of the incoming
+            messages.
+        strictlyInferOctetCounting:
+          type: boolean
+          title: Strictly infer octet count framing
+          description: Enable if we should infer octet counting only if the messages
+            comply with RFC 5424.
+        maxActiveCxn:
+          type: number
+          title: Active connection limit
+          description: Maximum number of active connections allowed per Worker Process for
+            TCP connections. Use 0 for unlimited.
+          minimum: 0
+        socketIdleTimeout:
+          type: number
+          title: TCP socket idle timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. After this time, the connection will be
+            closed. Leave at 0 for no inactive socket monitoring.
+          minimum: 0
+        socketEndingMaxWait:
+          type: number
+          title: TCP forced socket termination timeout (seconds)
+          description: How long the server will wait after initiating a closure for a
+            client to close its end of the connection. If the client doesn't
+            close the connection within this time, the server will forcefully
+            terminate the socket to prevent resource leaks and ensure efficient
+            connection cleanup and system stability. Leave at 0 for no inactive
+            socket monitoring.
+          minimum: 0
+        socketMaxLifespan:
+          type: number
+          title: TCP Socket max lifespan (seconds)
+          description: The maximum duration a socket can remain open, even if active. This
+            helps manage resources and mitigate issues caused by TCP pinning.
+            Set to 0 to disable.
+          minimum: 0
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        udpSocketRxBufSize:
+          type: number
+          title: UDP socket buffer size (bytes)
+          description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+          minimum: 256
+          maximum: 4294967295
+        enableLoadBalancing:
+          type: boolean
+          title: Enable TCP load balancing
+          description: Load balance traffic across all Worker Processes
+        autoParse:
+          type: boolean
+          title: Auto parse
+          description: Detect the datatype of each event and extract its top-level fields
+            before the data reaches any of the processing pipelines
+            (pre-processing, main processing, post-processing).
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_udpPort:
+          type: string
+          description: Binds 'udpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'udpPort' at runtime.
+        __template_tcpPort:
+          type: string
+          description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tcpPort' at runtime.
+        __template_timestampTimezone:
+          type: string
+          description: Binds 'timestampTimezone' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'timestampTimezone' at runtime.
+      anyOf:
+        - required:
+            - host
+            - udpPort
+        - required:
+            - host
+            - tcpPort
+      title: InputCiscoIosSyslog
     Input:
       oneOf:
         - $ref: "#/components/schemas/InputCollection"
@@ -40102,6 +40530,7 @@ components:
         - $ref: "#/components/schemas/InputSyslog"
         - $ref: "#/components/schemas/InputCheckPointSaseSyslog"
         - $ref: "#/components/schemas/InputCiscoAsaSyslog"
+        - $ref: "#/components/schemas/InputCiscoMerakiSyslog"
         - $ref: "#/components/schemas/InputFile"
         - $ref: "#/components/schemas/InputTcp"
         - $ref: "#/components/schemas/InputAppscope"
@@ -40146,6 +40575,7 @@ components:
         - $ref: "#/components/schemas/InputNetskope"
         - $ref: "#/components/schemas/InputLitellm"
         - $ref: "#/components/schemas/InputCiscoSecureFirewallSyslog"
+        - $ref: "#/components/schemas/InputCiscoIosSyslog"
       discriminator:
         propertyName: type
         mapping:
@@ -40202,6 +40632,7 @@ components:
           syslog: "#/components/schemas/InputSyslog"
           check_point_sase_syslog: "#/components/schemas/InputCheckPointSaseSyslog"
           cisco_asa_syslog: "#/components/schemas/InputCiscoAsaSyslog"
+          cisco_meraki_syslog: "#/components/schemas/InputCiscoMerakiSyslog"
           file: "#/components/schemas/InputFile"
           tcp: "#/components/schemas/InputTcp"
           appscope: "#/components/schemas/InputAppscope"
@@ -40246,6 +40677,7 @@ components:
           netskope: "#/components/schemas/InputNetskope"
           litellm: "#/components/schemas/InputLitellm"
           cisco_secure_firewall_syslog: "#/components/schemas/InputCiscoSecureFirewallSyslog"
+          cisco_ios_syslog: "#/components/schemas/InputCiscoIosSyslog"
       title: Input
     CountedInputSplunkHec:
       type: object
@@ -79131,9 +79563,8 @@ components:
           - myIndex6
         token: "12345678901"
     ClearPQResponseExamplesClearPQJob:
-      summary: Clear PQ job ID
-      description: Example response for clearing the persistent queue. Returns the job
-        ID of the background clear operation.
+      summary: Clear the persistent queue for a Source
+      description: Example response for clearing the persistent queue (PQ) for a Source.
       value:
         count: 1
         items:
@@ -80184,6 +80615,26 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Cisco ASA Source.
+    InputCreateExamplesCiscoIosSyslog:
+      summary: Cisco IOS
+      value:
+        id: cisco-ios-syslog-source
+        type: cisco_ios_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Cisco IOS Source.
+    InputCreateExamplesCiscoMerakiSyslog:
+      summary: Cisco Meraki
+      value:
+        id: cisco-meraki-syslog-source
+        type: cisco_meraki_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Cisco Meraki Source.
     InputCreateExamplesSyslogWithPQ:
       summary: Syslog with Persistent Queue
       value:
@@ -81549,6 +82000,31 @@ components:
       description: Example request body for updating a Cisco ASA Source.<br/><br/>The
         request body must include a complete representation of the Source that
         you want to update. This endpoint does not support partial updates.
+    UpdateInputExamplesCiscoIosSyslog:
+      summary: Cisco IOS
+      value:
+        id: cisco-ios-syslog-source
+        type: cisco_ios_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Cisco IOS Source.<br/><br/>The
+        request body must include a complete representation of the Source that
+        you want to update. This endpoint does not support partial updates.
+    UpdateInputExamplesCiscoMerakiSyslog:
+      summary: Cisco Meraki
+      value:
+        id: cisco-meraki-syslog-source
+        type: cisco_meraki_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Cisco Meraki
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
     UpdateInputExamplesSyslogWithPQ:
       summary: Syslog with Persistent Queue
       value:
@@ -81758,7 +82234,7 @@ components:
         of the Source that you want to update. This endpoint does not support
         partial updates.
     OutputClearPQResponseExamplesClearPQJobId:
-      summary: Clear persistent queue for a Destination
+      summary: Clear the persistent queue for a Destination
       description: Example response for clearing the persistent queue (PQ) for a
         Destination.
       value:
@@ -90243,6 +90719,10 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesCiscoAsaSyslog:
                 $ref: "#/components/examples/InputCreateExamplesCiscoAsaSyslog"
+              InputCreateExamplesCiscoIosSyslog:
+                $ref: "#/components/examples/InputCreateExamplesCiscoIosSyslog"
+              InputCreateExamplesCiscoMerakiSyslog:
+                $ref: "#/components/examples/InputCreateExamplesCiscoMerakiSyslog"
               InputCreateExamplesSyslogWithPQ:
                 $ref: "#/components/examples/InputCreateExamplesSyslogWithPQ"
               InputCreateExamplesSystemMetrics:
@@ -90589,6 +91069,10 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesSyslog"
               UpdateInputExamplesCiscoAsaSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesCiscoAsaSyslog"
+              UpdateInputExamplesCiscoIosSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesCiscoIosSyslog"
+              UpdateInputExamplesCiscoMerakiSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesCiscoMerakiSyslog"
               UpdateInputExamplesSyslogWithPQ:
                 $ref: "#/components/examples/UpdateInputExamplesSyslogWithPQ"
               UpdateInputExamplesSystemMetrics:
@@ -90933,9 +91417,10 @@ paths:
         specified Pack.
       responses:
         "201":
-          description: A list of job ids for the background job that clears the persistent
-            queue. Returned in a response envelope with <code>count</code> and
-            <code>items</code>.
+          description: The ID of the background job that clears the persistent queue,
+            wrapped in a single-item list. Because this operation creates a job
+            instead of deleting a resource, the HTTP status code is 201 rather
+            than 204.
           content:
             application/json:
               schema:
@@ -91815,9 +92300,10 @@ paths:
         within the specified Pack.
       responses:
         "201":
-          description: The job ID for the background job that clears the persistent queue.
-            Returned in a response envelope with <code>count</code> and
-            <code>items</code>.
+          description: The ID of the background job that clears the persistent queue,
+            wrapped in a single-item list. Because this operation creates a job
+            instead of deleting a resource, the HTTP status code is 201 rather
+            than 204.
           content:
             application/json:
               schema:
@@ -95484,6 +95970,10 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesCiscoAsaSyslog:
                 $ref: "#/components/examples/InputCreateExamplesCiscoAsaSyslog"
+              InputCreateExamplesCiscoIosSyslog:
+                $ref: "#/components/examples/InputCreateExamplesCiscoIosSyslog"
+              InputCreateExamplesCiscoMerakiSyslog:
+                $ref: "#/components/examples/InputCreateExamplesCiscoMerakiSyslog"
               InputCreateExamplesSyslogWithPQ:
                 $ref: "#/components/examples/InputCreateExamplesSyslogWithPQ"
               InputCreateExamplesSystemMetrics:
@@ -95816,6 +96306,10 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesSyslog"
               UpdateInputExamplesCiscoAsaSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesCiscoAsaSyslog"
+              UpdateInputExamplesCiscoIosSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesCiscoIosSyslog"
+              UpdateInputExamplesCiscoMerakiSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesCiscoMerakiSyslog"
               UpdateInputExamplesSyslogWithPQ:
                 $ref: "#/components/examples/UpdateInputExamplesSyslogWithPQ"
               UpdateInputExamplesSystemMetrics:
@@ -96190,9 +96684,10 @@ paths:
       description: Clear the persistent queue (PQ) for the specified Source.
       responses:
         "201":
-          description: A list of job ids for the background job that clears the persistent
-            queue. Returned in a response envelope with <code>count</code> and
-            <code>items</code>.
+          description: The ID of the background job that clears the persistent queue,
+            wrapped in a single-item list. Because this operation creates a job
+            instead of deleting a resource, the HTTP status code is 201 rather
+            than 204.
           content:
             application/json:
               schema:
@@ -96972,9 +97467,10 @@ paths:
       description: Clear the persistent queue (PQ) for the specified Destination.
       responses:
         "201":
-          description: The job ID for the background job that clears the persistent queue.
-            Returned in a response envelope with <code>count</code> and
-            <code>items</code>.
+          description: The ID of the background job that clears the persistent queue,
+            wrapped in a single-item list. Because this operation creates a job
+            instead of deleting a resource, the HTTP status code is 201 rather
+            than 204.
           content:
             application/json:
               schema:
