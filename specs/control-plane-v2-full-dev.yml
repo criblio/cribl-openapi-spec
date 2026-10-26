@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1792883544504-2bf2b5e7
+    version: 4.21.0-alpha.1793056365998-822e6c7e
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -26232,6 +26232,181 @@ components:
                     - host
                     - tcpPort
             title: InputCiscoAsaSyslog
+        InputCiscoMerakiSyslog:
+            type: object
+            required:
+                - type
+                - host
+            properties:
+                id:
+                    type: string
+                    title: Input ID
+                    description: Unique name for this input
+                type:
+                    type: string
+                    enum:
+                        - cisco_meraki_syslog
+                    description: Connector type identifier.
+                disabled:
+                    type: boolean
+                    title: Disabled
+                    description: If true, the Source is disabled and will not collect data.
+                pipeline:
+                    type: string
+                    title: Pipeline
+                    description: Pipeline to process data from this Source before sending it through the Routes
+                sendToRoutes:
+                    type: boolean
+                    description: Select whether to send data to Routes, or directly to Destinations.
+                environment:
+                    type: string
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                pqEnabled:
+                    type: boolean
+                    title: Enable persistent queue
+                    description: Use a disk queue to minimize data loss when connected services block. See [Cribl Docs](https://docs.cribl.io/stream/persistent-queues) for PQ defaults (Cribl-managed Cloud Workers) and configuration options (on-prem and hybrid Workers).
+                streamtags:
+                    type: array
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    items:
+                        type: string
+                criblSourceProvenance:
+                    $ref: "#/components/schemas/InputProvenanceTypeOptional"
+                    description: Read-only metadata that records how the Source was created. Preserved on update when omitted from the request body. Cannot be set on create.
+                connections:
+                    type: array
+                    title: Use QuickConnect
+                    description: Direct connections to Destinations, and optionally via a Pipeline or a Pack
+                    items:
+                        $ref: "#/components/schemas/ConnectionConfInputCollection"
+                pq:
+                    $ref: "#/components/schemas/PqType"
+                    description: Persistent queue settings for this Source.
+                host:
+                    type: string
+                    title: Address
+                    description: Address to bind on. For IPv4 (all addresses), use the default '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP address.
+                udpPort:
+                    type: number
+                    title: UDP port
+                    maximum: 65535
+                    description: Enter UDP port number to listen on. Not required if listening on TCP.
+                tcpPort:
+                    type: number
+                    title: TCP port
+                    maximum: 65535
+                    description: Enter TCP port number to listen on. Not required if listening on UDP.
+                maxBufferSize:
+                    type: number
+                    title: Buffer size limit (events)
+                    description: Maximum number of events to buffer when downstream is blocking. Only applies to UDP.
+                    minimum: 0
+                ipWhitelistRegex:
+                    type: string
+                    title: IP allowlist regex
+                    description: Regex matching IP addresses that are allowed to send data
+                timestampTimezone:
+                    type: string
+                    title: Default timezone
+                    description: Timezone to assign to timestamps without timezone info
+                singleMsgUdpPackets:
+                    type: boolean
+                    title: Single msg per UDP
+                    description: Treat UDP packet data received as full syslog message
+                keepFieldsList:
+                    type: array
+                    title: Fields to keep
+                    description: Wildcard list of fields to keep from source data; * = ALL (default)
+                    minItems: 0
+                    items:
+                        type: string
+                octetCounting:
+                    type: boolean
+                    title: Octet count framing
+                    description: Enable if incoming messages use octet counting per RFC 6587.
+                inferFraming:
+                    type: boolean
+                    title: Infer Syslog framing
+                    description: Enable if we should infer the syslog framing of the incoming messages.
+                strictlyInferOctetCounting:
+                    type: boolean
+                    title: Strictly infer octet count framing
+                    description: Enable if we should infer octet counting only if the messages comply with RFC 5424.
+                maxActiveCxn:
+                    type: number
+                    title: Active connection limit
+                    description: Maximum number of active connections allowed per Worker Process for TCP connections. Use 0 for unlimited.
+                    minimum: 0
+                socketIdleTimeout:
+                    type: number
+                    title: TCP socket idle timeout (seconds)
+                    description: How long @{product} should wait before assuming that an inactive socket has timed out. After this time, the connection will be closed. Leave at 0 for no inactive socket monitoring.
+                    minimum: 0
+                socketEndingMaxWait:
+                    type: number
+                    title: TCP forced socket termination timeout (seconds)
+                    description: How long the server will wait after initiating a closure for a client to close its end of the connection. If the client doesn't close the connection within this time, the server will forcefully terminate the socket to prevent resource leaks and ensure efficient connection cleanup and system stability. Leave at 0 for no inactive socket monitoring.
+                    minimum: 0
+                socketMaxLifespan:
+                    type: number
+                    title: TCP Socket max lifespan (seconds)
+                    description: The maximum duration a socket can remain open, even if active. This helps manage resources and mitigate issues caused by TCP pinning. Set to 0 to disable.
+                    minimum: 0
+                tls:
+                    $ref: "#/components/schemas/TlsSettingsServerSideType"
+                    description: TLS settings (server side)
+                metadata:
+                    type: array
+                    title: Fields
+                    description: Fields to add to events from this input
+                    items:
+                        $ref: "#/components/schemas/MetadataConfInputCollection"
+                udpSocketRxBufSize:
+                    type: number
+                    title: UDP socket buffer size (bytes)
+                    description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+                    minimum: 256
+                    maximum: 4294967295
+                enableLoadBalancing:
+                    type: boolean
+                    title: Enable TCP load balancing
+                    description: Load balance traffic across all Worker Processes
+                autoParse:
+                    type: boolean
+                    title: Auto parse
+                    description: Detect the datatype of each event and extract its top-level fields before the data reaches any of the processing pipelines (pre-processing, main processing, post-processing).
+                description:
+                    type: string
+                    title: Description
+                    description: Optional description for this configuration.
+                __template_environment:
+                    type: string
+                    description: Binds 'environment' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'environment' at runtime.
+                __template_streamtags:
+                    type: string
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                __template_host:
+                    type: string
+                    description: Binds 'host' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'host' at runtime.
+                __template_udpPort:
+                    type: string
+                    description: Binds 'udpPort' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'udpPort' at runtime.
+                __template_tcpPort:
+                    type: string
+                    description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'tcpPort' at runtime.
+                __template_timestampTimezone:
+                    type: string
+                    description: Binds 'timestampTimezone' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'timestampTimezone' at runtime.
+            anyOf:
+                - required:
+                    - host
+                    - udpPort
+                - required:
+                    - host
+                    - tcpPort
+            title: InputCiscoMerakiSyslog
         InputFile:
             type: object
             properties:
@@ -35053,6 +35228,181 @@ components:
                     - host
                     - tcpPort
             title: InputCiscoSecureFirewallSyslog
+        InputCiscoIosSyslog:
+            type: object
+            required:
+                - type
+                - host
+            properties:
+                id:
+                    type: string
+                    title: Input ID
+                    description: Unique name for this input
+                type:
+                    type: string
+                    enum:
+                        - cisco_ios_syslog
+                    description: Connector type identifier.
+                disabled:
+                    type: boolean
+                    title: Disabled
+                    description: If true, the Source is disabled and will not collect data.
+                pipeline:
+                    type: string
+                    title: Pipeline
+                    description: Pipeline to process data from this Source before sending it through the Routes
+                sendToRoutes:
+                    type: boolean
+                    description: Select whether to send data to Routes, or directly to Destinations.
+                environment:
+                    type: string
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                pqEnabled:
+                    type: boolean
+                    title: Enable persistent queue
+                    description: Use a disk queue to minimize data loss when connected services block. See [Cribl Docs](https://docs.cribl.io/stream/persistent-queues) for PQ defaults (Cribl-managed Cloud Workers) and configuration options (on-prem and hybrid Workers).
+                streamtags:
+                    type: array
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    items:
+                        type: string
+                criblSourceProvenance:
+                    $ref: "#/components/schemas/InputProvenanceTypeOptional"
+                    description: Read-only metadata that records how the Source was created. Preserved on update when omitted from the request body. Cannot be set on create.
+                connections:
+                    type: array
+                    title: Use QuickConnect
+                    description: Direct connections to Destinations, and optionally via a Pipeline or a Pack
+                    items:
+                        $ref: "#/components/schemas/ConnectionConfInputCollection"
+                pq:
+                    $ref: "#/components/schemas/PqType"
+                    description: Persistent queue settings for this Source.
+                host:
+                    type: string
+                    title: Address
+                    description: Address to bind on. For IPv4 (all addresses), use the default '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP address.
+                udpPort:
+                    type: number
+                    title: UDP port
+                    maximum: 65535
+                    description: Enter UDP port number to listen on. Not required if listening on TCP.
+                tcpPort:
+                    type: number
+                    title: TCP port
+                    maximum: 65535
+                    description: Enter TCP port number to listen on. Not required if listening on UDP.
+                maxBufferSize:
+                    type: number
+                    title: Buffer size limit (events)
+                    description: Maximum number of events to buffer when downstream is blocking. Only applies to UDP.
+                    minimum: 0
+                ipWhitelistRegex:
+                    type: string
+                    title: IP allowlist regex
+                    description: Regex matching IP addresses that are allowed to send data
+                timestampTimezone:
+                    type: string
+                    title: Default timezone
+                    description: Timezone to assign to timestamps without timezone info
+                singleMsgUdpPackets:
+                    type: boolean
+                    title: Single msg per UDP
+                    description: Treat UDP packet data received as full syslog message
+                keepFieldsList:
+                    type: array
+                    title: Fields to keep
+                    description: Wildcard list of fields to keep from source data; * = ALL (default)
+                    minItems: 0
+                    items:
+                        type: string
+                octetCounting:
+                    type: boolean
+                    title: Octet count framing
+                    description: Enable if incoming messages use octet counting per RFC 6587.
+                inferFraming:
+                    type: boolean
+                    title: Infer Syslog framing
+                    description: Enable if we should infer the syslog framing of the incoming messages.
+                strictlyInferOctetCounting:
+                    type: boolean
+                    title: Strictly infer octet count framing
+                    description: Enable if we should infer octet counting only if the messages comply with RFC 5424.
+                maxActiveCxn:
+                    type: number
+                    title: Active connection limit
+                    description: Maximum number of active connections allowed per Worker Process for TCP connections. Use 0 for unlimited.
+                    minimum: 0
+                socketIdleTimeout:
+                    type: number
+                    title: TCP socket idle timeout (seconds)
+                    description: How long @{product} should wait before assuming that an inactive socket has timed out. After this time, the connection will be closed. Leave at 0 for no inactive socket monitoring.
+                    minimum: 0
+                socketEndingMaxWait:
+                    type: number
+                    title: TCP forced socket termination timeout (seconds)
+                    description: How long the server will wait after initiating a closure for a client to close its end of the connection. If the client doesn't close the connection within this time, the server will forcefully terminate the socket to prevent resource leaks and ensure efficient connection cleanup and system stability. Leave at 0 for no inactive socket monitoring.
+                    minimum: 0
+                socketMaxLifespan:
+                    type: number
+                    title: TCP Socket max lifespan (seconds)
+                    description: The maximum duration a socket can remain open, even if active. This helps manage resources and mitigate issues caused by TCP pinning. Set to 0 to disable.
+                    minimum: 0
+                tls:
+                    $ref: "#/components/schemas/TlsSettingsServerSideType"
+                    description: TLS settings (server side)
+                metadata:
+                    type: array
+                    title: Fields
+                    description: Fields to add to events from this input
+                    items:
+                        $ref: "#/components/schemas/MetadataConfInputCollection"
+                udpSocketRxBufSize:
+                    type: number
+                    title: UDP socket buffer size (bytes)
+                    description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+                    minimum: 256
+                    maximum: 4294967295
+                enableLoadBalancing:
+                    type: boolean
+                    title: Enable TCP load balancing
+                    description: Load balance traffic across all Worker Processes
+                autoParse:
+                    type: boolean
+                    title: Auto parse
+                    description: Detect the datatype of each event and extract its top-level fields before the data reaches any of the processing pipelines (pre-processing, main processing, post-processing).
+                description:
+                    type: string
+                    title: Description
+                    description: Optional description for this configuration.
+                __template_environment:
+                    type: string
+                    description: Binds 'environment' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'environment' at runtime.
+                __template_streamtags:
+                    type: string
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                __template_host:
+                    type: string
+                    description: Binds 'host' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'host' at runtime.
+                __template_udpPort:
+                    type: string
+                    description: Binds 'udpPort' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'udpPort' at runtime.
+                __template_tcpPort:
+                    type: string
+                    description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'tcpPort' at runtime.
+                __template_timestampTimezone:
+                    type: string
+                    description: Binds 'timestampTimezone' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'timestampTimezone' at runtime.
+            anyOf:
+                - required:
+                    - host
+                    - udpPort
+                - required:
+                    - host
+                    - tcpPort
+            title: InputCiscoIosSyslog
         Input:
             oneOf:
                 - $ref: "#/components/schemas/InputCollection"
@@ -35108,6 +35458,7 @@ components:
                 - $ref: "#/components/schemas/InputSyslog"
                 - $ref: "#/components/schemas/InputCheckPointSaseSyslog"
                 - $ref: "#/components/schemas/InputCiscoAsaSyslog"
+                - $ref: "#/components/schemas/InputCiscoMerakiSyslog"
                 - $ref: "#/components/schemas/InputFile"
                 - $ref: "#/components/schemas/InputTcp"
                 - $ref: "#/components/schemas/InputAppscope"
@@ -35152,6 +35503,7 @@ components:
                 - $ref: "#/components/schemas/InputNetskope"
                 - $ref: "#/components/schemas/InputLitellm"
                 - $ref: "#/components/schemas/InputCiscoSecureFirewallSyslog"
+                - $ref: "#/components/schemas/InputCiscoIosSyslog"
             discriminator:
                 propertyName: type
                 mapping:
@@ -35208,6 +35560,7 @@ components:
                     syslog: "#/components/schemas/InputSyslog"
                     check_point_sase_syslog: "#/components/schemas/InputCheckPointSaseSyslog"
                     cisco_asa_syslog: "#/components/schemas/InputCiscoAsaSyslog"
+                    cisco_meraki_syslog: "#/components/schemas/InputCiscoMerakiSyslog"
                     file: "#/components/schemas/InputFile"
                     tcp: "#/components/schemas/InputTcp"
                     appscope: "#/components/schemas/InputAppscope"
@@ -35252,6 +35605,7 @@ components:
                     netskope: "#/components/schemas/InputNetskope"
                     litellm: "#/components/schemas/InputLitellm"
                     cisco_secure_firewall_syslog: "#/components/schemas/InputCiscoSecureFirewallSyslog"
+                    cisco_ios_syslog: "#/components/schemas/InputCiscoIosSyslog"
             title: Input
         PaginatedInput:
             type: object
@@ -79234,6 +79588,53 @@ components:
                 - sourceDatasources
                 - sourceFolders
             title: MappingCandidates
+        MappingCoverage:
+            type: object
+            properties:
+                datasets:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            catalogComplete:
+                                type: boolean
+                                description: Whether the Dataset's metric catalog could be enumerated completely. When false, a count lower than the referenced total is not evidence that the remaining metrics are missing.
+                            datasetId:
+                                type: string
+                                description: ID of the Dataset.
+                            present:
+                                type: object
+                                additionalProperties:
+                                    type: number
+                                description: Number of referenced metrics found in this Dataset's catalog, keyed by source data source reference, plus <code>*</code> for the union of every reference.
+                            probed:
+                                type: boolean
+                                description: Whether this Dataset was probed. Only the first 10 Datasets are probed per request; the rest are reported unprobed, with no counts.
+                        required:
+                            - catalogComplete
+                            - datasetId
+                            - present
+                            - probed
+                    description: Per-Dataset coverage of those referenced metrics, best candidates first.
+                sources:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            metricCount:
+                                type: integer
+                                description: Number of distinct metrics the reference's queries select.
+                            ref:
+                                type: string
+                                description: Source data source reference the metrics are referenced through, matching <code>sourceDatasources[].ref</code> from the mapping candidates. An empty string is the bucket for queries with no data source, which fall to the run's default Dataset; <code>var:&lt;name&gt;</code> is a data source template variable that resolves to more than one data source; <code>*</code> is the union of every reference, which is what the run's default Dataset has to cover.
+                        required:
+                            - metricCount
+                            - ref
+                    description: Referenced-metric totals per source data source reference.
+            required:
+                - datasets
+                - sources
+            title: MappingCoverage
         MigrationMapping:
             type: object
             properties:
@@ -79897,6 +80298,308 @@ components:
                 - identity
                 - name
             title: NormalizedResource
+        PromBuildInfo:
+            type: object
+            properties:
+                branch:
+                    type: string
+                    description: Fixed value, present for Prometheus compatibility.
+                buildDate:
+                    type: string
+                    description: Fixed value, present for Prometheus compatibility.
+                buildUser:
+                    type: string
+                    description: Fixed value, present for Prometheus compatibility.
+                goVersion:
+                    type: string
+                    description: Fixed value, present for Prometheus compatibility.
+                revision:
+                    type: string
+                    description: Fixed marker identifying this as the Cribl Prometheus-compatible endpoint.
+                version:
+                    type: string
+                    description: The Cribl build version. Prometheus clients read it as a Prometheus version for feature detection.
+            required:
+                - branch
+                - buildDate
+                - buildUser
+                - goVersion
+                - revision
+                - version
+            title: PromBuildInfo
+        PromBuildInfoResponse:
+            type: object
+            properties:
+                data:
+                    $ref: "#/components/schemas/PromBuildInfo"
+                status:
+                    type: string
+                    const: success
+                    description: Discriminator value.
+            required:
+                - data
+                - status
+            title: PromBuildInfoResponse
+        PromErrorResponse:
+            type: object
+            properties:
+                error:
+                    type: string
+                    description: Human-readable failure detail.
+                errorType:
+                    type: string
+                    enum:
+                        - bad_data
+                        - execution
+                        - unauthorized
+                    description: "Prometheus error class: <code>bad_data</code> for a rejected request, <code>execution</code> for a failure while serving it, <code>unauthorized</code> when the dataset's credentials did not match."
+                    x-speakeasy-unknown-values: allow
+                status:
+                    type: string
+                    const: error
+                    description: Discriminator value.
+            required:
+                - error
+                - errorType
+                - status
+            title: PromErrorResponse
+        PromLabelsResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        type: string
+                    description: The matching label names, or label values, in lexicographic order.
+                status:
+                    type: string
+                    const: success
+                    description: Discriminator value.
+                warnings:
+                    type: array
+                    items:
+                        type: string
+                    description: Present only when <code>limit</code> truncated the result, carrying <code>results truncated due to limit</code>. Prometheus clients surface or ignore it; no request fails because of it.
+            required:
+                - data
+                - status
+            title: PromLabelsResponse
+        PromMetadataResponse:
+            type: object
+            properties:
+                data:
+                    type: object
+                    additionalProperties:
+                        type: array
+                        items:
+                            type: object
+                            properties:
+                                help:
+                                    type: string
+                                    description: The metric's help text, empty when none was ingested.
+                                type:
+                                    type: string
+                                    description: The metric type, for example <code>counter</code> or <code>gauge</code>. Empty when the metric was ingested without a declared type.
+                                unit:
+                                    type: string
+                                    description: The metric's unit, empty when none was ingested.
+                            required:
+                                - help
+                                - type
+                                - unit
+                    description: Metadata entries keyed by metric name.
+                status:
+                    type: string
+                    const: success
+                    description: Discriminator value.
+            required:
+                - data
+                - status
+            title: PromMetadataResponse
+        PromSample:
+            type: array
+            items:
+                type:
+                    - number
+                    - string
+            description: A single sample as <code>[&lt;unix seconds&gt;, "&lt;value&gt;"]</code>. The timestamp is a number, possibly fractional; the value is a decimal string, as Prometheus encodes it to avoid float precision loss.
+            title: PromSample
+        PromInstantResult:
+            type: object
+            properties:
+                result:
+                    oneOf:
+                        - $ref: "#/components/schemas/PromSample"
+                        - type: array
+                          items:
+                            type: object
+                            properties:
+                                metric:
+                                    type: object
+                                    additionalProperties:
+                                        type: string
+                                    description: The series' label set, including <code>__name__</code> for the metric name.
+                                value:
+                                    $ref: "#/components/schemas/PromSample"
+                            required:
+                                - metric
+                                - value
+                    description: Instant-vector samples, or the single sample of a scalar expression.
+                resultType:
+                    type: string
+                    enum:
+                        - scalar
+                        - vector
+                    description: <code>vector</code> for an instant vector, <code>scalar</code> when the expression evaluates to a single scalar.
+                    x-speakeasy-unknown-values: allow
+            required:
+                - result
+                - resultType
+            title: PromInstantResult
+        PromInstantQueryResponse:
+            type: object
+            properties:
+                data:
+                    $ref: "#/components/schemas/PromInstantResult"
+                status:
+                    type: string
+                    const: success
+                    description: Discriminator value.
+            required:
+                - data
+                - status
+            title: PromInstantQueryResponse
+        PromMatrixSeries:
+            type: object
+            properties:
+                metric:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    description: The series' label set, including <code>__name__</code> for the metric name.
+                values:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/PromSample"
+                    description: The series' samples, ordered by ascending timestamp.
+            required:
+                - metric
+                - values
+            title: PromMatrixSeries
+        PromRangeResult:
+            type: object
+            properties:
+                result:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/PromMatrixSeries"
+                resultType:
+                    type: string
+                    const: matrix
+                    description: Discriminator value.
+            required:
+                - result
+                - resultType
+            title: PromRangeResult
+        PromRangeQueryResponse:
+            type: object
+            properties:
+                data:
+                    $ref: "#/components/schemas/PromRangeResult"
+                status:
+                    type: string
+                    const: success
+                    description: Discriminator value.
+            required:
+                - data
+                - status
+            title: PromRangeQueryResponse
+        PromLabelSet:
+            type: object
+            additionalProperties:
+                type: string
+            title: PromLabelSet
+        PromSeriesResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/PromLabelSet"
+                    description: One label set per matching series, including <code>__name__</code>.
+                status:
+                    type: string
+                    const: success
+                    description: Discriminator value.
+                warnings:
+                    type: array
+                    items:
+                        type: string
+                    description: Present only when <code>limit</code> truncated the result, carrying <code>results truncated due to limit</code>.
+            required:
+                - data
+                - status
+            title: PromSeriesResponse
+        PromSelectorFormBody:
+            type: object
+            properties:
+                end:
+                    type: string
+                    description: End of the lookup window, as Unix seconds or RFC 3339. Defaults to the dataset's full retention.
+                limit:
+                    type: string
+                    description: Maximum number of results. <code>0</code> disables the caller's limit; the server-side cap still applies, and a truncated result sets <code>warnings</code>.
+                match[]:
+                    type: array
+                    items:
+                        type: string
+                    description: Series selector expressions, for example <code>up{job="prod"}</code>. Repeat the field to send more than one.
+                query_id:
+                    type: string
+                    description: Caller-supplied query identifier for tracing. Generated when omitted and returned in the <code>X-Metrics-Query-Id</code> response header.
+                start:
+                    type: string
+                    description: Start of the lookup window, as Unix seconds or RFC 3339. Defaults to the dataset's full retention.
+            title: PromSelectorFormBody
+        PromRangeQueryFormBody:
+            type: object
+            properties:
+                end:
+                    type: string
+                    description: Range end, as Unix seconds or RFC 3339. Must not precede <code>start</code>.
+                query:
+                    type: string
+                    description: PromQL expression to evaluate.
+                query_id:
+                    type: string
+                    description: Caller-supplied query identifier for tracing. Generated when omitted and returned in the <code>X-Metrics-Query-Id</code> response header.
+                start:
+                    type: string
+                    description: Range start, as Unix seconds or RFC 3339.
+                step:
+                    type: string
+                    description: Resolution step, as a Prometheus duration (<code>30s</code>, <code>5m</code>) or a number of seconds.
+            required:
+                - end
+                - query
+                - start
+                - step
+            title: PromRangeQueryFormBody
+        PromQueryFormBody:
+            type: object
+            properties:
+                query:
+                    type: string
+                    description: PromQL expression to evaluate.
+                query_id:
+                    type: string
+                    description: Caller-supplied query identifier for tracing. Generated when omitted and returned in the <code>X-Metrics-Query-Id</code> response header.
+                time:
+                    type: string
+                    description: Evaluation timestamp, as Unix seconds or RFC 3339. Defaults to now.
+            required:
+                - query
+            title: PromQueryFormBody
         EdgeCollectorInfo:
             type: object
             properties:
@@ -86479,30 +87182,29 @@ components:
                 - source
                 - targetBinaryVersion
             title: OverlayListResponseItem
-        OverlayListResponse:
+        OverlayListResponseV2:
             type: object
             properties:
                 count:
                     type: integer
-                    description: Number of overlay artifacts returned in this response.
+                    description: Total number of overlay artifacts available across all pages, before <code>offset</code> and <code>limit</code> are applied.
                 items:
                     type: array
                     items:
                         $ref: "#/components/schemas/OverlayListResponseItem"
-                    description: Overlay artifacts returned for this page.
+                    description: Overlay artifacts in this page, at most <code>limit</code> of <code>count</code>.
                 limit:
                     type: integer
-                    description: Maximum number of overlay artifacts requested for this page.
+                    description: "Page size applied to this response: the requested <code>limit</code>; the server default when <code>limit</code> is omitted or <code>0</code>; or the server maximum when a larger <code>limit</code> is requested."
                 offset:
                     type: integer
-                    description: Starting point used for this page when pagination is requested.
-                totalCount:
-                    type: integer
-                    description: Total number of matching overlay artifacts before pagination.
+                    description: Starting point used for this page. <code>0</code> when the request omits <code>offset</code>.
             required:
                 - count
                 - items
-            title: OverlayListResponse
+                - limit
+                - offset
+            title: OverlayListResponseV2
         CountedListOverlayGroupStatusItem:
             type: object
             required:
@@ -97831,6 +98533,9 @@ components:
                 - $ref: "#/components/schemas/InputCiscoAsaSyslogPartialRequest"
                   required:
                     - type
+                - $ref: "#/components/schemas/InputCiscoMerakiSyslogPartialRequest"
+                  required:
+                    - type
                 - $ref: "#/components/schemas/InputFilePartialRequest"
                   required:
                     - type
@@ -97963,6 +98668,9 @@ components:
                 - $ref: "#/components/schemas/InputCiscoSecureFirewallSyslogPartialRequest"
                   required:
                     - type
+                - $ref: "#/components/schemas/InputCiscoIosSyslogPartialRequest"
+                  required:
+                    - type
             discriminator:
                 propertyName: type
                 mapping:
@@ -98019,6 +98727,7 @@ components:
                     syslog: "#/components/schemas/InputSyslogPartialRequest"
                     check_point_sase_syslog: "#/components/schemas/InputCheckPointSaseSyslogPartialRequest"
                     cisco_asa_syslog: "#/components/schemas/InputCiscoAsaSyslogPartialRequest"
+                    cisco_meraki_syslog: "#/components/schemas/InputCiscoMerakiSyslogPartialRequest"
                     file: "#/components/schemas/InputFilePartialRequest"
                     tcp: "#/components/schemas/InputTcpPartialRequest"
                     appscope: "#/components/schemas/InputAppscopePartialRequest"
@@ -98063,6 +98772,7 @@ components:
                     netskope: "#/components/schemas/InputNetskopePartialRequest"
                     litellm: "#/components/schemas/InputLitellmPartialRequest"
                     cisco_secure_firewall_syslog: "#/components/schemas/InputCiscoSecureFirewallSyslogPartialRequest"
+                    cisco_ios_syslog: "#/components/schemas/InputCiscoIosSyslogPartialRequest"
             title: InputPartialRequest
             properties:
                 type:
@@ -123026,6 +123736,452 @@ components:
                         - type: string
                         - type: "null"
             title: InputCiscoAsaSyslogPartialRequest
+        InputCiscoMerakiSyslogPartialRequest:
+            type: object
+            properties:
+                id:
+                    title: Input ID
+                    description: Unique name for this input
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                type:
+                    type: string
+                    enum:
+                        - cisco_meraki_syslog
+                    description: Connector type identifier.
+                disabled:
+                    title: Disabled
+                    description: If true, the Source is disabled and will not collect data.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                pipeline:
+                    title: Pipeline
+                    description: Pipeline to process data from this Source before sending it through the Routes
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                sendToRoutes:
+                    description: Select whether to send data to Routes, or directly to Destinations.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                environment:
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                pqEnabled:
+                    title: Enable persistent queue
+                    description: Use a disk queue to minimize data loss when connected services block. See [Cribl Docs](https://docs.cribl.io/stream/persistent-queues) for PQ defaults (Cribl-managed Cloud Workers) and configuration options (on-prem and hybrid Workers).
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                streamtags:
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                criblSourceProvenance:
+                    title: Input provenance
+                    description: Read-only metadata that records how the Source was created. Preserved on update when omitted from the request body. Cannot be set on create.
+                    readOnly: true
+                    anyOf:
+                        - type: object
+                          additionalProperties: false
+                          properties:
+                            origin:
+                                description: Feature that created the Source.
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - data_source_discovery
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            destinationArn:
+                                description: ARN of the S3 bucket or Firehose delivery stream configured as the Source.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            sourceArn:
+                                description: ARN of the AWS resource that produces the logs.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            sourceService:
+                                description: Resolved DSD source-service offering, when known.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            accountId:
+                                description: Cloud tenant or scope id the Source was configured for (for example an AWS account id, GCP project or folder id, or Azure subscription or resource group id).
+                                anyOf:
+                                    - type: string
+                                      minLength: 1
+                                    - type: "null"
+                            templateFamily:
+                                description: Infrastructure-as-code family that provisioned the AWS resources (absent means cloudformation).
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - cloudformation
+                                        - terraform
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                        - type: "null"
+                connections:
+                    title: Use QuickConnect
+                    description: Direct connections to Destinations, and optionally via a Pipeline or a Pack
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/ConnectionConfInputCollection"
+                        - type: "null"
+                pq:
+                    description: Persistent queue settings for this Source.
+                    anyOf:
+                        - type: object
+                          properties:
+                            mode:
+                                title: Mode
+                                description: With Smart mode (deprecated), PQ will write events to the filesystem only when it detects backpressure from the processing engine. Smart mode will have no new development starting July 2026, followed by End of Support and feature removal (auto-migrating to Always On) in January 2027. We recommend using Always On mode instead. With Always On mode, PQ will always write events directly to the queue before forwarding them to the processing engine.
+                                x-speakeasy-enum-descriptions:
+                                    - Smart (Deprecated)
+                                    - Always On
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - smart
+                                        - always
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            maxBufferSizeBytes:
+                                title: Buffer size limit (bytes)
+                                description: The maximum size to hold in memory before writing events to disk. Enter a numeral with units of KB, MB, etc. The minimum value is 64KB and the maximum value is 10MB.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            maxBufferSize:
+                                title: Buffer size limit (events - deprecated)
+                                description: Maximum number of events to hold in memory before writing the events to disk. Deprecated and only supported in workers < v4.17.0. Use maxBufferSizeBytes instead.
+                                anyOf:
+                                    - type: number
+                                      minimum: 42
+                                    - type: "null"
+                            commitFrequency:
+                                title: Commit frequency
+                                description: The number of events to send downstream before committing that Stream has read them. Lower values increase cursor-write IOPS and can add disk pressure, including on shared storage.
+                                anyOf:
+                                    - type: number
+                                      minimum: 42
+                                    - type: "null"
+                            maxFileSize:
+                                title: File size limit
+                                description: The maximum size to store in each queue file before closing and optionally compressing. Enter a numeral with units of KB, MB, etc.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            maxSize:
+                                title: Queue size limit
+                                description: The maximum disk space that the queue can consume (as an average per Worker Process) before queueing stops. Enter a numeral with units of KB, MB, etc.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            path:
+                                title: Queue file path
+                                description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/inputs/<input-id>"
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            compress:
+                                x-speakeasy-enum-descriptions:
+                                    - None
+                                    - Gzip
+                                title: Compression
+                                description: Codec to use to compress the persisted data
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - none
+                                        - gzip
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            onBackpressure:
+                                title: Queue-full behavior
+                                description: Whether to block or drop events when the queue is exerting backpressure (full capacity or low disk). 'Block' is the same behavior as non-PQ blocking. 'Drop new data' throws away incoming data, while leaving the contents of the PQ unchanged.
+                                x-speakeasy-enum-descriptions:
+                                    - Block
+                                    - Drop new data
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - block
+                                        - drop
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            pqControls:
+                                title: ""
+                                description: Management controls for the persistent queue.
+                                anyOf:
+                                    - type: object
+                                    - type: "null"
+                        - type: "null"
+                host:
+                    type: string
+                    title: Address
+                    description: Address to bind on. For IPv4 (all addresses), use the default '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP address.
+                udpPort:
+                    title: UDP port
+                    description: Enter UDP port number to listen on. Not required if listening on TCP.
+                    anyOf:
+                        - type: number
+                          maximum: 65535
+                        - type: "null"
+                tcpPort:
+                    title: TCP port
+                    description: Enter TCP port number to listen on. Not required if listening on UDP.
+                    anyOf:
+                        - type: number
+                          maximum: 65535
+                        - type: "null"
+                maxBufferSize:
+                    title: Buffer size limit (events)
+                    description: Maximum number of events to buffer when downstream is blocking. Only applies to UDP.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                ipWhitelistRegex:
+                    title: IP allowlist regex
+                    description: Regex matching IP addresses that are allowed to send data
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                timestampTimezone:
+                    title: Default timezone
+                    description: Timezone to assign to timestamps without timezone info
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                singleMsgUdpPackets:
+                    title: Single msg per UDP
+                    description: Treat UDP packet data received as full syslog message
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                keepFieldsList:
+                    title: Fields to keep
+                    description: Wildcard list of fields to keep from source data; * = ALL (default)
+                    anyOf:
+                        - type: array
+                          minItems: 0
+                          items:
+                            type: string
+                        - type: "null"
+                octetCounting:
+                    title: Octet count framing
+                    description: Enable if incoming messages use octet counting per RFC 6587.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                inferFraming:
+                    title: Infer Syslog framing
+                    description: Enable if we should infer the syslog framing of the incoming messages.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                strictlyInferOctetCounting:
+                    title: Strictly infer octet count framing
+                    description: Enable if we should infer octet counting only if the messages comply with RFC 5424.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                maxActiveCxn:
+                    title: Active connection limit
+                    description: Maximum number of active connections allowed per Worker Process for TCP connections. Use 0 for unlimited.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                socketIdleTimeout:
+                    title: TCP socket idle timeout (seconds)
+                    description: How long @{product} should wait before assuming that an inactive socket has timed out. After this time, the connection will be closed. Leave at 0 for no inactive socket monitoring.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                socketEndingMaxWait:
+                    title: TCP forced socket termination timeout (seconds)
+                    description: How long the server will wait after initiating a closure for a client to close its end of the connection. If the client doesn't close the connection within this time, the server will forcefully terminate the socket to prevent resource leaks and ensure efficient connection cleanup and system stability. Leave at 0 for no inactive socket monitoring.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                socketMaxLifespan:
+                    title: TCP Socket max lifespan (seconds)
+                    description: The maximum duration a socket can remain open, even if active. This helps manage resources and mitigate issues caused by TCP pinning. Set to 0 to disable.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                tls:
+                    title: TLS settings (server side)
+                    description: TLS settings (server side)
+                    anyOf:
+                        - type: object
+                          properties:
+                            disabled:
+                                title: Disabled
+                                description: If true, TLS is disabled on this connection.
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            requestCert:
+                                title: Authenticate client (mutual auth)
+                                description: Require clients to present their certificates. Used to perform client authentication using SSL certs.
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            caPath:
+                                title: CA certificate path
+                                description: Path on server containing CA certificates to use. PEM format. Can reference $ENV_VARS.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            rejectUnauthorized:
+                                title: Validate client certificates
+                                description: Reject certificates not authorized by a CA in the CA certificate path or by another trusted CA (such as the system's)
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            commonNameRegex:
+                                title: Common name
+                                description: Regex matching allowable common names in peer certificates' subject attribute
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            certificateName:
+                                title: Certificate
+                                description: The name of the predefined certificate
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            privKeyPath:
+                                title: Private key path
+                                description: Path on server containing the private key to use. PEM format. Can reference $ENV_VARS.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            passphrase:
+                                title: Passphrase
+                                description: Passphrase to use to decrypt private key
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            certPath:
+                                title: Certificate path
+                                description: Path on server containing certificates to use. PEM format. Can reference $ENV_VARS.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            minVersion:
+                                title: Minimum TLS version
+                                description: Minimum TLS version to accept from clients.
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - TLSv1
+                                        - TLSv1.1
+                                        - TLSv1.2
+                                        - TLSv1.3
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            maxVersion:
+                                title: Maximum TLS version
+                                description: Maximum TLS version to accept from clients.
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - TLSv1
+                                        - TLSv1.1
+                                        - TLSv1.2
+                                        - TLSv1.3
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                        - type: "null"
+                metadata:
+                    title: Fields
+                    description: Fields to add to events from this input
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/MetadataConfInputCollection"
+                        - type: "null"
+                udpSocketRxBufSize:
+                    title: UDP socket buffer size (bytes)
+                    description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+                    anyOf:
+                        - type: number
+                          minimum: 256
+                          maximum: 4294967295
+                        - type: "null"
+                enableLoadBalancing:
+                    title: Enable TCP load balancing
+                    description: Load balance traffic across all Worker Processes
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                autoParse:
+                    title: Auto parse
+                    description: Detect the datatype of each event and extract its top-level fields before the data reaches any of the processing pipelines (pre-processing, main processing, post-processing).
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                description:
+                    title: Description
+                    description: Optional description for this configuration.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_environment:
+                    description: Binds 'environment' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'environment' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_streamtags:
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_host:
+                    description: Binds 'host' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'host' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_udpPort:
+                    description: Binds 'udpPort' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'udpPort' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_tcpPort:
+                    description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'tcpPort' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_timestampTimezone:
+                    description: Binds 'timestampTimezone' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'timestampTimezone' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+            title: InputCiscoMerakiSyslogPartialRequest
         InputFilePartialRequest:
             type: object
             properties:
@@ -143092,6 +144248,452 @@ components:
                         - type: string
                         - type: "null"
             title: InputCiscoSecureFirewallSyslogPartialRequest
+        InputCiscoIosSyslogPartialRequest:
+            type: object
+            properties:
+                id:
+                    title: Input ID
+                    description: Unique name for this input
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                type:
+                    type: string
+                    enum:
+                        - cisco_ios_syslog
+                    description: Connector type identifier.
+                disabled:
+                    title: Disabled
+                    description: If true, the Source is disabled and will not collect data.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                pipeline:
+                    title: Pipeline
+                    description: Pipeline to process data from this Source before sending it through the Routes
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                sendToRoutes:
+                    description: Select whether to send data to Routes, or directly to Destinations.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                environment:
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                pqEnabled:
+                    title: Enable persistent queue
+                    description: Use a disk queue to minimize data loss when connected services block. See [Cribl Docs](https://docs.cribl.io/stream/persistent-queues) for PQ defaults (Cribl-managed Cloud Workers) and configuration options (on-prem and hybrid Workers).
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                streamtags:
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                criblSourceProvenance:
+                    title: Input provenance
+                    description: Read-only metadata that records how the Source was created. Preserved on update when omitted from the request body. Cannot be set on create.
+                    readOnly: true
+                    anyOf:
+                        - type: object
+                          additionalProperties: false
+                          properties:
+                            origin:
+                                description: Feature that created the Source.
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - data_source_discovery
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            destinationArn:
+                                description: ARN of the S3 bucket or Firehose delivery stream configured as the Source.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            sourceArn:
+                                description: ARN of the AWS resource that produces the logs.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            sourceService:
+                                description: Resolved DSD source-service offering, when known.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            accountId:
+                                description: Cloud tenant or scope id the Source was configured for (for example an AWS account id, GCP project or folder id, or Azure subscription or resource group id).
+                                anyOf:
+                                    - type: string
+                                      minLength: 1
+                                    - type: "null"
+                            templateFamily:
+                                description: Infrastructure-as-code family that provisioned the AWS resources (absent means cloudformation).
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - cloudformation
+                                        - terraform
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                        - type: "null"
+                connections:
+                    title: Use QuickConnect
+                    description: Direct connections to Destinations, and optionally via a Pipeline or a Pack
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/ConnectionConfInputCollection"
+                        - type: "null"
+                pq:
+                    description: Persistent queue settings for this Source.
+                    anyOf:
+                        - type: object
+                          properties:
+                            mode:
+                                title: Mode
+                                description: With Smart mode (deprecated), PQ will write events to the filesystem only when it detects backpressure from the processing engine. Smart mode will have no new development starting July 2026, followed by End of Support and feature removal (auto-migrating to Always On) in January 2027. We recommend using Always On mode instead. With Always On mode, PQ will always write events directly to the queue before forwarding them to the processing engine.
+                                x-speakeasy-enum-descriptions:
+                                    - Smart (Deprecated)
+                                    - Always On
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - smart
+                                        - always
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            maxBufferSizeBytes:
+                                title: Buffer size limit (bytes)
+                                description: The maximum size to hold in memory before writing events to disk. Enter a numeral with units of KB, MB, etc. The minimum value is 64KB and the maximum value is 10MB.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            maxBufferSize:
+                                title: Buffer size limit (events - deprecated)
+                                description: Maximum number of events to hold in memory before writing the events to disk. Deprecated and only supported in workers < v4.17.0. Use maxBufferSizeBytes instead.
+                                anyOf:
+                                    - type: number
+                                      minimum: 42
+                                    - type: "null"
+                            commitFrequency:
+                                title: Commit frequency
+                                description: The number of events to send downstream before committing that Stream has read them. Lower values increase cursor-write IOPS and can add disk pressure, including on shared storage.
+                                anyOf:
+                                    - type: number
+                                      minimum: 42
+                                    - type: "null"
+                            maxFileSize:
+                                title: File size limit
+                                description: The maximum size to store in each queue file before closing and optionally compressing. Enter a numeral with units of KB, MB, etc.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            maxSize:
+                                title: Queue size limit
+                                description: The maximum disk space that the queue can consume (as an average per Worker Process) before queueing stops. Enter a numeral with units of KB, MB, etc.
+                                anyOf:
+                                    - type: string
+                                      pattern: ^\d+\s*(?:\w{2})?$
+                                    - type: "null"
+                            path:
+                                title: Queue file path
+                                description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/inputs/<input-id>"
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            compress:
+                                x-speakeasy-enum-descriptions:
+                                    - None
+                                    - Gzip
+                                title: Compression
+                                description: Codec to use to compress the persisted data
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - none
+                                        - gzip
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            onBackpressure:
+                                title: Queue-full behavior
+                                description: Whether to block or drop events when the queue is exerting backpressure (full capacity or low disk). 'Block' is the same behavior as non-PQ blocking. 'Drop new data' throws away incoming data, while leaving the contents of the PQ unchanged.
+                                x-speakeasy-enum-descriptions:
+                                    - Block
+                                    - Drop new data
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - block
+                                        - drop
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            pqControls:
+                                title: ""
+                                description: Management controls for the persistent queue.
+                                anyOf:
+                                    - type: object
+                                    - type: "null"
+                        - type: "null"
+                host:
+                    type: string
+                    title: Address
+                    description: Address to bind on. For IPv4 (all addresses), use the default '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP address.
+                udpPort:
+                    title: UDP port
+                    description: Enter UDP port number to listen on. Not required if listening on TCP.
+                    anyOf:
+                        - type: number
+                          maximum: 65535
+                        - type: "null"
+                tcpPort:
+                    title: TCP port
+                    description: Enter TCP port number to listen on. Not required if listening on UDP.
+                    anyOf:
+                        - type: number
+                          maximum: 65535
+                        - type: "null"
+                maxBufferSize:
+                    title: Buffer size limit (events)
+                    description: Maximum number of events to buffer when downstream is blocking. Only applies to UDP.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                ipWhitelistRegex:
+                    title: IP allowlist regex
+                    description: Regex matching IP addresses that are allowed to send data
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                timestampTimezone:
+                    title: Default timezone
+                    description: Timezone to assign to timestamps without timezone info
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                singleMsgUdpPackets:
+                    title: Single msg per UDP
+                    description: Treat UDP packet data received as full syslog message
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                keepFieldsList:
+                    title: Fields to keep
+                    description: Wildcard list of fields to keep from source data; * = ALL (default)
+                    anyOf:
+                        - type: array
+                          minItems: 0
+                          items:
+                            type: string
+                        - type: "null"
+                octetCounting:
+                    title: Octet count framing
+                    description: Enable if incoming messages use octet counting per RFC 6587.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                inferFraming:
+                    title: Infer Syslog framing
+                    description: Enable if we should infer the syslog framing of the incoming messages.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                strictlyInferOctetCounting:
+                    title: Strictly infer octet count framing
+                    description: Enable if we should infer octet counting only if the messages comply with RFC 5424.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                maxActiveCxn:
+                    title: Active connection limit
+                    description: Maximum number of active connections allowed per Worker Process for TCP connections. Use 0 for unlimited.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                socketIdleTimeout:
+                    title: TCP socket idle timeout (seconds)
+                    description: How long @{product} should wait before assuming that an inactive socket has timed out. After this time, the connection will be closed. Leave at 0 for no inactive socket monitoring.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                socketEndingMaxWait:
+                    title: TCP forced socket termination timeout (seconds)
+                    description: How long the server will wait after initiating a closure for a client to close its end of the connection. If the client doesn't close the connection within this time, the server will forcefully terminate the socket to prevent resource leaks and ensure efficient connection cleanup and system stability. Leave at 0 for no inactive socket monitoring.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                socketMaxLifespan:
+                    title: TCP Socket max lifespan (seconds)
+                    description: The maximum duration a socket can remain open, even if active. This helps manage resources and mitigate issues caused by TCP pinning. Set to 0 to disable.
+                    anyOf:
+                        - type: number
+                          minimum: 0
+                        - type: "null"
+                tls:
+                    title: TLS settings (server side)
+                    description: TLS settings (server side)
+                    anyOf:
+                        - type: object
+                          properties:
+                            disabled:
+                                title: Disabled
+                                description: If true, TLS is disabled on this connection.
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            requestCert:
+                                title: Authenticate client (mutual auth)
+                                description: Require clients to present their certificates. Used to perform client authentication using SSL certs.
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            caPath:
+                                title: CA certificate path
+                                description: Path on server containing CA certificates to use. PEM format. Can reference $ENV_VARS.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            rejectUnauthorized:
+                                title: Validate client certificates
+                                description: Reject certificates not authorized by a CA in the CA certificate path or by another trusted CA (such as the system's)
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            commonNameRegex:
+                                title: Common name
+                                description: Regex matching allowable common names in peer certificates' subject attribute
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            certificateName:
+                                title: Certificate
+                                description: The name of the predefined certificate
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            privKeyPath:
+                                title: Private key path
+                                description: Path on server containing the private key to use. PEM format. Can reference $ENV_VARS.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            passphrase:
+                                title: Passphrase
+                                description: Passphrase to use to decrypt private key
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            certPath:
+                                title: Certificate path
+                                description: Path on server containing certificates to use. PEM format. Can reference $ENV_VARS.
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
+                            minVersion:
+                                title: Minimum TLS version
+                                description: Minimum TLS version to accept from clients.
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - TLSv1
+                                        - TLSv1.1
+                                        - TLSv1.2
+                                        - TLSv1.3
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                            maxVersion:
+                                title: Maximum TLS version
+                                description: Maximum TLS version to accept from clients.
+                                anyOf:
+                                    - type: string
+                                      enum:
+                                        - TLSv1
+                                        - TLSv1.1
+                                        - TLSv1.2
+                                        - TLSv1.3
+                                      x-speakeasy-unknown-values: allow
+                                    - type: "null"
+                        - type: "null"
+                metadata:
+                    title: Fields
+                    description: Fields to add to events from this input
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/MetadataConfInputCollection"
+                        - type: "null"
+                udpSocketRxBufSize:
+                    title: UDP socket buffer size (bytes)
+                    description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+                    anyOf:
+                        - type: number
+                          minimum: 256
+                          maximum: 4294967295
+                        - type: "null"
+                enableLoadBalancing:
+                    title: Enable TCP load balancing
+                    description: Load balance traffic across all Worker Processes
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                autoParse:
+                    title: Auto parse
+                    description: Detect the datatype of each event and extract its top-level fields before the data reaches any of the processing pipelines (pre-processing, main processing, post-processing).
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                description:
+                    title: Description
+                    description: Optional description for this configuration.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_environment:
+                    description: Binds 'environment' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'environment' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_streamtags:
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_host:
+                    description: Binds 'host' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'host' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_udpPort:
+                    description: Binds 'udpPort' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'udpPort' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_tcpPort:
+                    description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'tcpPort' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_timestampTimezone:
+                    description: Binds 'timestampTimezone' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'timestampTimezone' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+            title: InputCiscoIosSyslogPartialRequest
         IoMetricsEntryPartialRequest:
             type: object
             properties:
@@ -206488,9 +208090,9 @@ components:
                 allowedIndexesAtToken:
                     - myIndex6
                 token: "12345678901"
-        ClearPQResponseExamplesClearPQJob:
-            summary: Clear PQ job ID
-            description: Example response for clearing the persistent queue. Returns the job ID of the background clear operation.
+        ClearPQResponseExamplesV2ClearPQJob:
+            summary: Clear the persistent queue for a Source
+            description: Example response for clearing the persistent queue (PQ) for a Source.
             value: "1727123456.1234567890"
         PQStatusResponseExamplesCompletedJob:
             summary: Completed clear-PQ job
@@ -207524,6 +209126,26 @@ components:
                 sendToRoutes: true
                 pqEnabled: false
             description: Example request body for creating a Cisco ASA Source.
+        InputCreateExamplesCiscoIosSyslog:
+            summary: Cisco IOS
+            value:
+                id: cisco-ios-syslog-source
+                type: cisco_ios_syslog
+                host: 0.0.0.0
+                udpPort: 514
+                sendToRoutes: true
+                pqEnabled: false
+            description: Example request body for creating a Cisco IOS Source.
+        InputCreateExamplesCiscoMerakiSyslog:
+            summary: Cisco Meraki
+            value:
+                id: cisco-meraki-syslog-source
+                type: cisco_meraki_syslog
+                host: 0.0.0.0
+                udpPort: 514
+                sendToRoutes: true
+                pqEnabled: false
+            description: Example request body for creating a Cisco Meraki Source.
         InputCreateExamplesSyslogWithPQ:
             summary: Syslog with Persistent Queue
             value:
@@ -207693,8 +209315,8 @@ components:
                 sendToRoutes: true
                 pqEnabled: false
             description: Example request body for creating a Zscaler Cloud NSS Source.
-        OutputClearPQResponseExamplesClearPQJobId:
-            summary: Clear persistent queue for a Destination
+        OutputClearPQResponseExamplesV2ClearPQJobId:
+            summary: Clear the persistent queue for a Destination
             description: Example response for clearing the persistent queue (PQ) for a Destination.
             value: ceb17a42-f785-4f5e-b52a-7f0e1b2c3d4e
         OutputPQStatusResponseExamplesCompletedClearJob:
@@ -215816,6 +217438,40 @@ components:
                 sourceFolders:
                     - ref: folder-obs
                       name: Observability
+        MigrationMappingCoverageResponseExamplesCoverage:
+            summary: Metric coverage per candidate Dataset
+            description: The dashboards reference 11 metrics through <code>ds1</code>; <code>metrics_prod</code> holds 9 of them and is the better target than <code>cribl_metrics</code>. <code>archive_metrics</code> was not probed because it fell outside the 10-Dataset probe budget.
+            value:
+                sources:
+                    - ref: ds1
+                      metricCount: 11
+                    - ref: ds2
+                      metricCount: 2
+                    - ref: ""
+                      metricCount: 1
+                    - ref: "*"
+                      metricCount: 13
+                datasets:
+                    - datasetId: metrics_prod
+                      probed: true
+                      catalogComplete: true
+                      present:
+                        ds1: 9
+                        ds2: 0
+                        "": 1
+                        "*": 10
+                    - datasetId: cribl_metrics
+                      probed: true
+                      catalogComplete: true
+                      present:
+                        ds1: 1
+                        ds2: 2
+                        "": 0
+                        "*": 3
+                    - datasetId: archive_metrics
+                      probed: false
+                      catalogComplete: false
+                      present: {}
         MigrationMappingResponseExamplesMapping:
             summary: Current mapping
             description: Each source datasource maps to a Cribl dataset, and each source folder to a Collection. Re-run assessment after a change to produce a new plan revision.
@@ -215927,6 +217583,177 @@ components:
                       targets:
                         - refId: A
                           expr: histogram_quantile(0.99, sum(rate(http_req_bucket[5m])) by (le, route))
+        PrometheusBuildInfoResponseExamplesbuildInfo:
+            summary: Feature-detect the API version
+            description: Fixed, Prometheus-compatible build information; clients use it to pick an API version.
+            value:
+                status: success
+                data:
+                    version: 4.14.0
+                    revision: aetos-prometheus
+                    branch: main
+                    buildUser: aetos-prometheus
+                    buildDate: 19700101-00:00:00
+                    goVersion: go1.21
+        PrometheusUnauthorizedResponseExamplesunauthorized:
+            summary: Reject credentials the dataset does not accept
+            description: "Sent with <code>WWW-Authenticate: Basic</code> when the dataset requires HTTP Basic credentials that the request did not supply or did not match."
+            value:
+                status: error
+                errorType: unauthorized
+                error: Unauthorized
+        PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+            summary: Report an unknown engine or dataset
+            description: A failure while serving the request uses the Prometheus <code>execution</code> error class.
+            value:
+                status: error
+                errorType: execution
+                error: dataset "metrics-prod" was not found for engine "cap2605"
+        PrometheusServerErrorResponseExamplesqueryTimedOut:
+            summary: Report a query that failed while running
+            description: An unexpected failure while serving the request uses the Prometheus <code>execution</code> error class.
+            value:
+                status: error
+                errorType: execution
+                error: ClickHouse query timed out after 30000ms (metricsQuerySource=adhoc, workload=metrics_adhoc, queryId=7f3c2a91)
+        PrometheusLabelValuesResponseExampleslabelValues:
+            summary: List the values of one label
+            description: Values recorded for the requested label name, in lexicographic order.
+            value:
+                status: success
+                data:
+                    - api
+                    - checkout
+                    - search
+        PrometheusBadDataResponseExamplesmissingQuery:
+            summary: Reject a request missing a parameter
+            description: A malformed or incomplete request fails with the Prometheus <code>bad_data</code> error class.
+            value:
+                status: error
+                errorType: bad_data
+                error: "missing parameter: query"
+        PrometheusLabelsResponseExampleslabelNames:
+            summary: List the dataset label names
+            description: Label names present in the dataset, in lexicographic order.
+            value:
+                status: success
+                data:
+                    - __name__
+                    - instance
+                    - job
+                    - status
+        PrometheusLabelsResponseExamplestruncated:
+            summary: Read a result the limit truncated
+            description: A result cut short by <code>limit</code> still succeeds, and reports the cut in <code>warnings</code>.
+            value:
+                status: success
+                data:
+                    - __name__
+                    - instance
+                warnings:
+                    - results truncated due to limit
+        PrometheusMetadataResponseExamplesmetadata:
+            summary: Read metric metadata
+            description: Type, help text, and unit for each metric family, keyed by metric name.
+            value:
+                status: success
+                data:
+                    http_requests_total:
+                        - type: counter
+                          help: Total HTTP requests served.
+                          unit: ""
+                    process_resident_memory_bytes:
+                        - type: gauge
+                          help: Resident memory size.
+                          unit: bytes
+        PrometheusInstantQueryResponseExamplesinstantVector:
+            summary: Read an instant vector
+            description: One sample per matching series at the evaluation timestamp.
+            value:
+                status: success
+                data:
+                    resultType: vector
+                    result:
+                        - metric:
+                            __name__: http_requests_total
+                            job: api
+                            status: "200"
+                          value:
+                            - 1761148800
+                            - "41233"
+                        - metric:
+                            __name__: http_requests_total
+                            job: api
+                            status: "500"
+                          value:
+                            - 1761148800
+                            - "17"
+        PrometheusUnsupportedQueryResponseExamplesunsupportedQuery:
+            summary: Reject a query the Metrics Store cannot run
+            description: A PromQL expression that parses but uses a construct the Metrics Store does not support fails with the Prometheus <code>bad_data</code> error class.
+            value:
+                status: error
+                errorType: bad_data
+                error: 'Unsupported PromQL construct: query kind "matrixSelector" is not supported in query without full SQL pushdown'
+        PrometheusAdmissionDeniedResponseExamplesadmissionDenied:
+            summary: Turn away a query the engine has no capacity for
+            description: The engine query queue rejected the request, for example because its deadline passed while it waited. Retry later.
+            value:
+                status: error
+                errorType: execution
+                error: Metrics job admission denied for lane class 'interactive' (deadline)
+        PrometheusRangeQueryResponseExamplesmatrix:
+            summary: Read a range as a matrix
+            description: One series per matching label set, each with its samples over the requested range.
+            value:
+                status: success
+                data:
+                    resultType: matrix
+                    result:
+                        - metric:
+                            __name__: http_requests_total
+                            job: api
+                          values:
+                            - - 1761148740
+                              - "41180"
+                            - - 1761148770
+                              - "41206"
+                            - - 1761148800
+                              - "41233"
+        PrometheusSeriesResponseExamplesseries:
+            summary: Find series by selector
+            description: The full label set of every series the selectors match.
+            value:
+                status: success
+                data:
+                    - __name__: http_requests_total
+                      job: api
+                      status: "200"
+                    - __name__: http_requests_total
+                      job: api
+                      status: "500"
+        PrometheusSelectorFormBodyExamplesselector:
+            summary: Look up by selector from a form body
+            description: A selector-based lookup sent as a form body, which keeps long selectors off the URL.
+            value:
+                match[]:
+                    - http_requests_total{job="api"}
+                start: "1761145200"
+                end: "1761148800"
+        PrometheusRangeQueryFormBodyExamplesrangeQuery:
+            summary: Evaluate a range query from a form body
+            description: Grafana's default for a range query, sending the range and step in the form body.
+            value:
+                query: sum by (job) (rate(http_requests_total[5m]))
+                start: "1761145200"
+                end: "1761148800"
+                step: 30s
+        PrometheusQueryFormBodyExamplesinstantQuery:
+            summary: Evaluate an instant query from a form body
+            description: "Grafana's default for an instant query: the PromQL expression in an <code>application/x-www-form-urlencoded</code> body."
+            value:
+                query: sum by (status) (rate(http_requests_total[5m]))
+                time: "1761148800"
         EdgeEventsCollectorsResponseExamplesSystemStateCollectors:
             summary: List system_state Collectors
             description: Example response for listing Collectors configured for the <code>system_state</code> Source on an Edge node.
@@ -224779,6 +226606,26 @@ components:
                 sendToRoutes: true
                 pqEnabled: false
             description: "Example request body for updating a Cisco ASA Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+        UpdateInputExamplesCiscoIosSyslogPartialRequest:
+            summary: Cisco IOS
+            value:
+                id: cisco-ios-syslog-source
+                type: cisco_ios_syslog
+                host: 0.0.0.0
+                udpPort: 514
+                sendToRoutes: true
+                pqEnabled: false
+            description: "Example request body for updating a Cisco IOS Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+        UpdateInputExamplesCiscoMerakiSyslogPartialRequest:
+            summary: Cisco Meraki
+            value:
+                id: cisco-meraki-syslog-source
+                type: cisco_meraki_syslog
+                host: 0.0.0.0
+                udpPort: 514
+                sendToRoutes: true
+                pqEnabled: false
+            description: "Example request body for updating a Cisco Meraki Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
         UpdateInputExamplesSyslogWithPQPartialRequest:
             summary: Syslog with Persistent Queue
             value:
@@ -228368,7 +230215,6 @@ tags:
     - name: aetos
       description: Actions related to Aetos
       x-cribl-internal: true
-      x-cribl-availability: both
       x-cribl-api-context:
         - leader
     - name: ai
@@ -233394,6 +235240,10 @@ paths:
                                 $ref: "#/components/examples/InputCreateExamplesSyslog"
                             InputCreateExamplesCiscoAsaSyslog:
                                 $ref: "#/components/examples/InputCreateExamplesCiscoAsaSyslog"
+                            InputCreateExamplesCiscoIosSyslog:
+                                $ref: "#/components/examples/InputCreateExamplesCiscoIosSyslog"
+                            InputCreateExamplesCiscoMerakiSyslog:
+                                $ref: "#/components/examples/InputCreateExamplesCiscoMerakiSyslog"
                             InputCreateExamplesSyslogWithPQ:
                                 $ref: "#/components/examples/InputCreateExamplesSyslogWithPQ"
                             InputCreateExamplesSystemMetrics:
@@ -233721,6 +235571,10 @@ paths:
                                 $ref: "#/components/examples/UpdateInputExamplesSyslogPartialRequest"
                             UpdateInputExamplesCiscoAsaSyslog:
                                 $ref: "#/components/examples/UpdateInputExamplesCiscoAsaSyslogPartialRequest"
+                            UpdateInputExamplesCiscoIosSyslog:
+                                $ref: "#/components/examples/UpdateInputExamplesCiscoIosSyslogPartialRequest"
+                            UpdateInputExamplesCiscoMerakiSyslog:
+                                $ref: "#/components/examples/UpdateInputExamplesCiscoMerakiSyslogPartialRequest"
                             UpdateInputExamplesSyslogWithPQ:
                                 $ref: "#/components/examples/UpdateInputExamplesSyslogWithPQPartialRequest"
                             UpdateInputExamplesSystemMetrics:
@@ -233931,14 +235785,14 @@ paths:
             description: Clear the persistent queue (PQ) for the specified Source.
             responses:
                 "201":
-                    description: A list of job ids for the background job that clears the persistent queue
+                    description: The ID of the background job that clears the persistent queue, as a bare string. Because this operation creates a job instead of deleting a resource, the HTTP status code is 201 rather than 204.
                     content:
                         application/json:
                             schema:
                                 type: string
                             examples:
-                                ClearPQResponseExamplesClearPQJob:
-                                    $ref: "#/components/examples/ClearPQResponseExamplesClearPQJob"
+                                ClearPQResponseExamplesV2ClearPQJob:
+                                    $ref: "#/components/examples/ClearPQResponseExamplesV2ClearPQJob"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -234371,6 +236225,10 @@ paths:
                                 $ref: "#/components/examples/InputCreateExamplesSyslog"
                             InputCreateExamplesCiscoAsaSyslog:
                                 $ref: "#/components/examples/InputCreateExamplesCiscoAsaSyslog"
+                            InputCreateExamplesCiscoIosSyslog:
+                                $ref: "#/components/examples/InputCreateExamplesCiscoIosSyslog"
+                            InputCreateExamplesCiscoMerakiSyslog:
+                                $ref: "#/components/examples/InputCreateExamplesCiscoMerakiSyslog"
                             InputCreateExamplesSyslogWithPQ:
                                 $ref: "#/components/examples/InputCreateExamplesSyslogWithPQ"
                             InputCreateExamplesSystemMetrics:
@@ -234711,6 +236569,10 @@ paths:
                                 $ref: "#/components/examples/UpdateInputExamplesSyslogPartialRequest"
                             UpdateInputExamplesCiscoAsaSyslog:
                                 $ref: "#/components/examples/UpdateInputExamplesCiscoAsaSyslogPartialRequest"
+                            UpdateInputExamplesCiscoIosSyslog:
+                                $ref: "#/components/examples/UpdateInputExamplesCiscoIosSyslogPartialRequest"
+                            UpdateInputExamplesCiscoMerakiSyslog:
+                                $ref: "#/components/examples/UpdateInputExamplesCiscoMerakiSyslogPartialRequest"
                             UpdateInputExamplesSyslogWithPQ:
                                 $ref: "#/components/examples/UpdateInputExamplesSyslogWithPQPartialRequest"
                             UpdateInputExamplesSystemMetrics:
@@ -234939,14 +236801,14 @@ paths:
             description: Clear the persistent queue (PQ) for the specified Source within the specified Pack.
             responses:
                 "201":
-                    description: A list of job ids for the background job that clears the persistent queue
+                    description: The ID of the background job that clears the persistent queue, as a bare string. Because this operation creates a job instead of deleting a resource, the HTTP status code is 201 rather than 204.
                     content:
                         application/json:
                             schema:
                                 type: string
                             examples:
-                                ClearPQResponseExamplesClearPQJob:
-                                    $ref: "#/components/examples/ClearPQResponseExamplesClearPQJob"
+                                ClearPQResponseExamplesV2ClearPQJob:
+                                    $ref: "#/components/examples/ClearPQResponseExamplesV2ClearPQJob"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -236058,14 +237920,14 @@ paths:
             description: Clear the persistent queue (PQ) for the specified Destination.
             responses:
                 "201":
-                    description: The job ID for the background job that clears the persistent queue.
+                    description: The ID of the background job that clears the persistent queue, as a bare string. Because this operation creates a job instead of deleting a resource, the HTTP status code is 201 rather than 204.
                     content:
                         application/json:
                             schema:
                                 type: string
                             examples:
-                                OutputClearPQResponseExamplesClearPQJobId:
-                                    $ref: "#/components/examples/OutputClearPQResponseExamplesClearPQJobId"
+                                OutputClearPQResponseExamplesV2ClearPQJobId:
+                                    $ref: "#/components/examples/OutputClearPQResponseExamplesV2ClearPQJobId"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -237016,14 +238878,14 @@ paths:
             description: Clear the persistent queue (PQ) for the specified Destination within the specified Pack.
             responses:
                 "201":
-                    description: The job ID for the background job that clears the persistent queue.
+                    description: The ID of the background job that clears the persistent queue, as a bare string. Because this operation creates a job instead of deleting a resource, the HTTP status code is 201 rather than 204.
                     content:
                         application/json:
                             schema:
                                 type: string
                             examples:
-                                OutputClearPQResponseExamplesClearPQJobId:
-                                    $ref: "#/components/examples/OutputClearPQResponseExamplesClearPQJobId"
+                                OutputClearPQResponseExamplesV2ClearPQJobId:
+                                    $ref: "#/components/examples/OutputClearPQResponseExamplesV2ClearPQJobId"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -266359,7 +268221,7 @@ paths:
                 "204":
                     description: No Content
                 "400":
-                    description: Failed validation or malformed input — the Lake Dataset is a default Dataset, is used in Stream, or is already marked for deletion.
+                    description: Failed validation or malformed input — the Lake Dataset is a default Dataset or is used in Stream.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -272760,6 +274622,53 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the migration run.
+    /products/lakehouse_engine_metrics/migration/runs/{id}/mapping/coverage:
+        get:
+            operationId: getProductsLakehouseEngineMetricsMigrationRunsMappingCoverageById
+            tags:
+                - migration
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: Get metric coverage of the mapping step's candidate Datasets
+            description: Reports, for each candidate target Dataset, how many of the metrics this run's selected dashboards reference are present in that Dataset's catalog, broken out per discovered data source. Lets the mapping step name the Dataset that actually holds a data source's metrics, instead of leaving a wrong choice to surface later as missing-metric findings. Each Dataset costs one catalog enumeration, so only the first 10 candidates are probed — Datasets already in the run's mapping first — and the rest are returned unprobed with no counts. Only Datasets the caller can read are probed or returned. Returns 501 when metric queries are unavailable on this deployment.
+            responses:
+                "200":
+                    description: Referenced-metric totals per data source, plus how many of them each candidate Dataset holds.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/MappingCoverage"
+                            examples:
+                                MigrationMappingCoverageResponseExamplesCoverage:
+                                    $ref: "#/components/examples/MigrationMappingCoverageResponseExamplesCoverage"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the migration run.
     /products/lakehouse_engine_metrics/migration/runs/{id}/mapping:
         get:
             operationId: getProductsLakehouseEngineMetricsMigrationRunsMappingById
@@ -273213,29 +275122,45 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Get build information (Cribl.Cloud only)
-            description: Return build information about the Prometheus-compatible endpoint (Cribl.Cloud only).
+            description: Return build information about the Prometheus-compatible endpoint (Cribl.Cloud only). Prometheus clients read it to feature-detect an API version. The version is the Cribl build version; the other values are fixed and do not describe a real Prometheus build.
+            security: []
             responses:
                 "200":
                     description: Build info including version and revision
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromBuildInfoResponse"
                             examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
+                                PrometheusBuildInfoResponseExamplesbuildInfo:
+                                    $ref: "#/components/examples/PrometheusBuildInfoResponseExamplesbuildInfo"
+                "401":
+                    description: Authentication failed — the dataset requires HTTP Basic credentials the request did not supply or did not match.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnauthorizedResponseExamplesunauthorized:
+                                    $ref: "#/components/examples/PrometheusUnauthorizedResponseExamplesunauthorized"
+                "404":
+                    description: The requested resource does not exist — no such engine, or no such dataset in that engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+                                    $ref: "#/components/examples/PrometheusExecutionErrorResponseExamplesdatasetNotFound"
+                "500":
+                    description: The request failed while running, for example a ClickHouse error or timeout.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusServerErrorResponseExamplesqueryTimedOut:
+                                    $ref: "#/components/examples/PrometheusServerErrorResponseExamplesqueryTimedOut"
             parameters:
                 - name: engineId
                   in: path
@@ -273262,28 +275187,53 @@ paths:
                 - leader
             summary: List values for a label (Cribl.Cloud only)
             description: Return a list of known values for the specified label name (Cribl.Cloud only).
+            security: []
             responses:
                 "200":
                     description: A list of label values
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromLabelsResponse"
                             examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
+                                PrometheusLabelValuesResponseExampleslabelValues:
+                                    $ref: "#/components/examples/PrometheusLabelValuesResponseExampleslabelValues"
+                "400":
+                    description: Failed validation or malformed input — a selector did not parse, or <code>start</code>, <code>end</code>, or <code>limit</code> was unparseable.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusBadDataResponseExamplesmissingQuery:
+                                    $ref: "#/components/examples/PrometheusBadDataResponseExamplesmissingQuery"
+                "401":
+                    description: Authentication failed — the dataset requires HTTP Basic credentials the request did not supply or did not match.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnauthorizedResponseExamplesunauthorized:
+                                    $ref: "#/components/examples/PrometheusUnauthorizedResponseExamplesunauthorized"
+                "404":
+                    description: The requested resource does not exist — no such engine, or no such dataset in that engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+                                    $ref: "#/components/examples/PrometheusExecutionErrorResponseExamplesdatasetNotFound"
+                "500":
+                    description: The request failed while running, for example a ClickHouse error or timeout.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusServerErrorResponseExamplesqueryTimedOut:
+                                    $ref: "#/components/examples/PrometheusServerErrorResponseExamplesqueryTimedOut"
             parameters:
                 - name: name
                   in: path
@@ -273303,6 +275253,32 @@ paths:
                   schema:
                     type: string
                   description: The metrics dataset id within the engine.
+                - name: match[]
+                  in: query
+                  required: false
+                  schema:
+                    type: array
+                    items:
+                        type: string
+                  description: Series selector expressions limiting the lookup. Repeat the parameter to send more than one.
+                - name: start
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Start of the lookup window, as Unix seconds or RFC 3339. Defaults to the dataset's full retention.
+                - name: end
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: End of the lookup window, as Unix seconds or RFC 3339. Defaults to the dataset's full retention.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Maximum number of label values to return. <code>0</code> disables the caller's limit; the server-side cap still applies, and a truncated result sets <code>warnings</code>.
                 - name: query_id
                   in: query
                   required: false
@@ -273322,28 +275298,55 @@ paths:
                 - leader
             summary: List label names (Cribl.Cloud only)
             description: Return a list of all known label names (Cribl.Cloud only).
+            security: []
             responses:
                 "200":
                     description: A list of label names
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromLabelsResponse"
                             examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
+                                PrometheusLabelsResponseExampleslabelNames:
+                                    $ref: "#/components/examples/PrometheusLabelsResponseExampleslabelNames"
+                                PrometheusLabelsResponseExamplestruncated:
+                                    $ref: "#/components/examples/PrometheusLabelsResponseExamplestruncated"
+                "400":
+                    description: Failed validation or malformed input — a selector did not parse, or <code>start</code>, <code>end</code>, or <code>limit</code> was unparseable.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusBadDataResponseExamplesmissingQuery:
+                                    $ref: "#/components/examples/PrometheusBadDataResponseExamplesmissingQuery"
+                "401":
+                    description: Authentication failed — the dataset requires HTTP Basic credentials the request did not supply or did not match.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnauthorizedResponseExamplesunauthorized:
+                                    $ref: "#/components/examples/PrometheusUnauthorizedResponseExamplesunauthorized"
+                "404":
+                    description: The requested resource does not exist — no such engine, or no such dataset in that engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+                                    $ref: "#/components/examples/PrometheusExecutionErrorResponseExamplesdatasetNotFound"
+                "500":
+                    description: The request failed while running, for example a ClickHouse error or timeout.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusServerErrorResponseExamplesqueryTimedOut:
+                                    $ref: "#/components/examples/PrometheusServerErrorResponseExamplesqueryTimedOut"
             parameters:
                 - name: engineId
                   in: path
@@ -273357,12 +275360,122 @@ paths:
                   schema:
                     type: string
                   description: The metrics dataset id within the engine.
+                - name: match[]
+                  in: query
+                  required: false
+                  schema:
+                    type: array
+                    items:
+                        type: string
+                  description: Series selector expressions limiting the lookup. Repeat the parameter to send more than one; omit it to report every label name in the dataset.
+                - name: start
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Start of the lookup window, as Unix seconds or RFC 3339. Defaults to the dataset's full retention.
+                - name: end
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: End of the lookup window, as Unix seconds or RFC 3339. Defaults to the dataset's full retention.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Maximum number of label names to return. <code>0</code> disables the caller's limit; the server-side cap still applies, and a truncated result sets <code>warnings</code>.
                 - name: query_id
                   in: query
                   required: false
                   schema:
                     type: string
                   description: Caller-supplied query identifier for tracing.
+        post:
+            operationId: createProductsLakehouseEngineMetricsEnginesDatasetsPromApiV1LabelsByEngineIdAndDatasetId
+            tags:
+                - search.metrics
+            x-speakeasy-group: search.metrics.prometheus
+            x-speakeasy-name-override: listLabelsForm
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List label names from a form body (Cribl.Cloud only)
+            description: Return a list of all known label names, taking the selectors and lookup window as a form body instead of a query string (Cribl.Cloud only).
+            security: []
+            responses:
+                "200":
+                    description: A list of label names
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromLabelsResponse"
+                            examples:
+                                PrometheusLabelsResponseExampleslabelNames:
+                                    $ref: "#/components/examples/PrometheusLabelsResponseExampleslabelNames"
+                                PrometheusLabelsResponseExamplestruncated:
+                                    $ref: "#/components/examples/PrometheusLabelsResponseExamplestruncated"
+                "400":
+                    description: Failed validation or malformed input — a selector did not parse, or <code>start</code>, <code>end</code>, or <code>limit</code> was unparseable.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusBadDataResponseExamplesmissingQuery:
+                                    $ref: "#/components/examples/PrometheusBadDataResponseExamplesmissingQuery"
+                "401":
+                    description: Authentication failed — the dataset requires HTTP Basic credentials the request did not supply or did not match.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnauthorizedResponseExamplesunauthorized:
+                                    $ref: "#/components/examples/PrometheusUnauthorizedResponseExamplesunauthorized"
+                "404":
+                    description: The requested resource does not exist — no such engine, or no such dataset in that engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+                                    $ref: "#/components/examples/PrometheusExecutionErrorResponseExamplesdatasetNotFound"
+                "500":
+                    description: The request failed while running, for example a ClickHouse error or timeout.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusServerErrorResponseExamplesqueryTimedOut:
+                                    $ref: "#/components/examples/PrometheusServerErrorResponseExamplesqueryTimedOut"
+            requestBody:
+                description: PromSelectorFormBody object.
+                required: true
+                content:
+                    application/x-www-form-urlencoded:
+                        schema:
+                            $ref: "#/components/schemas/PromSelectorFormBody"
+                        examples:
+                            PrometheusSelectorFormBodyExamplesselector:
+                                $ref: "#/components/examples/PrometheusSelectorFormBodyExamplesselector"
+            parameters:
+                - name: engineId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The Local Search engine id.
+                - name: datasetId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The metrics dataset id within the engine.
     /products/lakehouse_engine_metrics/engines/{engineId}/datasets/{datasetId}/prom/api/v1/metadata:
         get:
             operationId: getProductsLakehouseEngineMetricsEnginesDatasetsPromApiV1MetadataByEngineIdAndDatasetId
@@ -273376,28 +275489,44 @@ paths:
                 - leader
             summary: List metric metadata (Cribl.Cloud only)
             description: Return metadata (type, help, unit) for all known metrics (Cribl.Cloud only).
+            security: []
             responses:
                 "200":
                     description: Metric metadata keyed by metric name
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromMetadataResponse"
                             examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
+                                PrometheusMetadataResponseExamplesmetadata:
+                                    $ref: "#/components/examples/PrometheusMetadataResponseExamplesmetadata"
+                "401":
+                    description: Authentication failed — the dataset requires HTTP Basic credentials the request did not supply or did not match.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnauthorizedResponseExamplesunauthorized:
+                                    $ref: "#/components/examples/PrometheusUnauthorizedResponseExamplesunauthorized"
+                "404":
+                    description: The requested resource does not exist — no such engine, or no such dataset in that engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+                                    $ref: "#/components/examples/PrometheusExecutionErrorResponseExamplesdatasetNotFound"
+                "500":
+                    description: The request failed while running, for example a ClickHouse error or timeout.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusServerErrorResponseExamplesqueryTimedOut:
+                                    $ref: "#/components/examples/PrometheusServerErrorResponseExamplesqueryTimedOut"
             parameters:
                 - name: engineId
                   in: path
@@ -273411,6 +275540,24 @@ paths:
                   schema:
                     type: string
                   description: The metrics dataset id within the engine.
+                - name: metric
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Exact metric name to report metadata for. Omit it to report every metric family.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Maximum number of metric families to return.
+                - name: limit_per_metric
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Maximum number of metadata entries to return per metric family.
                 - name: query_id
                   in: query
                   required: false
@@ -273430,28 +275577,71 @@ paths:
                 - leader
             summary: Evaluate an instant PromQL query (Cribl.Cloud only)
             description: Evaluate a PromQL expression at a single point in time (Cribl.Cloud only).
+            security: []
             responses:
                 "200":
                     description: A Prometheus instant query result
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromInstantQueryResponse"
                             examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
+                                PrometheusInstantQueryResponseExamplesinstantVector:
+                                    $ref: "#/components/examples/PrometheusInstantQueryResponseExamplesinstantVector"
+                "400":
+                    description: Failed validation or malformed input — a Prometheus parameter was missing, empty, or unparseable, or the PromQL expression did not parse.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusBadDataResponseExamplesmissingQuery:
+                                    $ref: "#/components/examples/PrometheusBadDataResponseExamplesmissingQuery"
+                "401":
+                    description: Authentication failed — the dataset requires HTTP Basic credentials the request did not supply or did not match.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnauthorizedResponseExamplesunauthorized:
+                                    $ref: "#/components/examples/PrometheusUnauthorizedResponseExamplesunauthorized"
+                "404":
+                    description: The requested resource does not exist — no such engine, or no such dataset in that engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+                                    $ref: "#/components/examples/PrometheusExecutionErrorResponseExamplesdatasetNotFound"
+                "422":
+                    description: The PromQL expression parsed, but uses a construct the Metrics Store does not support.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnsupportedQueryResponseExamplesunsupportedQuery:
+                                    $ref: "#/components/examples/PrometheusUnsupportedQueryResponseExamplesunsupportedQuery"
+                "429":
+                    description: The engine query queue turned the request away, for example because its deadline passed while it waited. Retry later.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusAdmissionDeniedResponseExamplesadmissionDenied:
+                                    $ref: "#/components/examples/PrometheusAdmissionDeniedResponseExamplesadmissionDenied"
+                "500":
+                    description: The request failed while running, for example a ClickHouse error or timeout.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusServerErrorResponseExamplesqueryTimedOut:
+                                    $ref: "#/components/examples/PrometheusServerErrorResponseExamplesqueryTimedOut"
             parameters:
                 - name: engineId
                   in: path
@@ -273483,6 +275673,106 @@ paths:
                   schema:
                     type: string
                   description: Caller-supplied query identifier for tracing.
+        post:
+            operationId: createProductsLakehouseEngineMetricsEnginesDatasetsPromApiV1QueryByEngineIdAndDatasetId
+            tags:
+                - search.metrics
+            x-speakeasy-group: search.metrics.prometheus
+            x-speakeasy-name-override: queryForm
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Evaluate an instant PromQL query from a form body (Cribl.Cloud only)
+            description: Evaluate a PromQL expression at a single point in time, taking the parameters as a form body instead of a query string (Cribl.Cloud only).
+            security: []
+            responses:
+                "200":
+                    description: A Prometheus instant query result
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromInstantQueryResponse"
+                            examples:
+                                PrometheusInstantQueryResponseExamplesinstantVector:
+                                    $ref: "#/components/examples/PrometheusInstantQueryResponseExamplesinstantVector"
+                "400":
+                    description: Failed validation or malformed input — a Prometheus parameter was missing, empty, or unparseable, or the PromQL expression did not parse.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusBadDataResponseExamplesmissingQuery:
+                                    $ref: "#/components/examples/PrometheusBadDataResponseExamplesmissingQuery"
+                "401":
+                    description: Authentication failed — the dataset requires HTTP Basic credentials the request did not supply or did not match.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnauthorizedResponseExamplesunauthorized:
+                                    $ref: "#/components/examples/PrometheusUnauthorizedResponseExamplesunauthorized"
+                "404":
+                    description: The requested resource does not exist — no such engine, or no such dataset in that engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+                                    $ref: "#/components/examples/PrometheusExecutionErrorResponseExamplesdatasetNotFound"
+                "422":
+                    description: The PromQL expression parsed, but uses a construct the Metrics Store does not support.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnsupportedQueryResponseExamplesunsupportedQuery:
+                                    $ref: "#/components/examples/PrometheusUnsupportedQueryResponseExamplesunsupportedQuery"
+                "429":
+                    description: The engine query queue turned the request away, for example because its deadline passed while it waited. Retry later.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusAdmissionDeniedResponseExamplesadmissionDenied:
+                                    $ref: "#/components/examples/PrometheusAdmissionDeniedResponseExamplesadmissionDenied"
+                "500":
+                    description: The request failed while running, for example a ClickHouse error or timeout.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusServerErrorResponseExamplesqueryTimedOut:
+                                    $ref: "#/components/examples/PrometheusServerErrorResponseExamplesqueryTimedOut"
+            requestBody:
+                description: PromQueryFormBody object.
+                required: true
+                content:
+                    application/x-www-form-urlencoded:
+                        schema:
+                            $ref: "#/components/schemas/PromQueryFormBody"
+                        examples:
+                            PrometheusQueryFormBodyExamplesinstantQuery:
+                                $ref: "#/components/examples/PrometheusQueryFormBodyExamplesinstantQuery"
+            parameters:
+                - name: engineId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The Local Search engine id.
+                - name: datasetId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The metrics dataset id within the engine.
     /products/lakehouse_engine_metrics/engines/{engineId}/datasets/{datasetId}/prom/api/v1/query_range:
         get:
             operationId: getProductsLakehouseEngineMetricsEnginesDatasetsPromApiV1QueryRangeByEngineIdAndDatasetId
@@ -273496,28 +275786,71 @@ paths:
                 - leader
             summary: Evaluate a range PromQL query (Cribl.Cloud only)
             description: Evaluate a PromQL expression over a time range, returning a matrix of time series (Cribl.Cloud only).
+            security: []
             responses:
                 "200":
-                    description: A Prometheus range query result
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    description: A Prometheus range query result, streamed series by series
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromRangeQueryResponse"
                             examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
+                                PrometheusRangeQueryResponseExamplesmatrix:
+                                    $ref: "#/components/examples/PrometheusRangeQueryResponseExamplesmatrix"
+                "400":
+                    description: Failed validation or malformed input — a Prometheus parameter was missing, empty, or unparseable, the PromQL expression did not parse, or <code>end</code> preceded <code>start</code>.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusBadDataResponseExamplesmissingQuery:
+                                    $ref: "#/components/examples/PrometheusBadDataResponseExamplesmissingQuery"
+                "401":
+                    description: Authentication failed — the dataset requires HTTP Basic credentials the request did not supply or did not match.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnauthorizedResponseExamplesunauthorized:
+                                    $ref: "#/components/examples/PrometheusUnauthorizedResponseExamplesunauthorized"
+                "404":
+                    description: The requested resource does not exist — no such engine, or no such dataset in that engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+                                    $ref: "#/components/examples/PrometheusExecutionErrorResponseExamplesdatasetNotFound"
+                "422":
+                    description: The PromQL expression parsed, but uses a construct the Metrics Store does not support.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnsupportedQueryResponseExamplesunsupportedQuery:
+                                    $ref: "#/components/examples/PrometheusUnsupportedQueryResponseExamplesunsupportedQuery"
+                "429":
+                    description: The engine query queue turned the request away, for example because its deadline passed while it waited. Retry later.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusAdmissionDeniedResponseExamplesadmissionDenied:
+                                    $ref: "#/components/examples/PrometheusAdmissionDeniedResponseExamplesadmissionDenied"
+                "500":
+                    description: The request failed while running, for example a ClickHouse error or timeout.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusServerErrorResponseExamplesqueryTimedOut:
+                                    $ref: "#/components/examples/PrometheusServerErrorResponseExamplesqueryTimedOut"
             parameters:
                 - name: engineId
                   in: path
@@ -273561,6 +275894,106 @@ paths:
                   schema:
                     type: string
                   description: Caller-supplied query identifier for tracing.
+        post:
+            operationId: createProductsLakehouseEngineMetricsEnginesDatasetsPromApiV1QueryRangeByEngineIdAndDatasetId
+            tags:
+                - search.metrics
+            x-speakeasy-group: search.metrics.prometheus
+            x-speakeasy-name-override: queryRangeForm
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Evaluate a range PromQL query from a form body (Cribl.Cloud only)
+            description: Evaluate a PromQL expression over a time range, taking the parameters as a form body instead of a query string (Cribl.Cloud only).
+            security: []
+            responses:
+                "200":
+                    description: A Prometheus range query result, streamed series by series
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromRangeQueryResponse"
+                            examples:
+                                PrometheusRangeQueryResponseExamplesmatrix:
+                                    $ref: "#/components/examples/PrometheusRangeQueryResponseExamplesmatrix"
+                "400":
+                    description: Failed validation or malformed input — a Prometheus parameter was missing, empty, or unparseable, the PromQL expression did not parse, or <code>end</code> preceded <code>start</code>.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusBadDataResponseExamplesmissingQuery:
+                                    $ref: "#/components/examples/PrometheusBadDataResponseExamplesmissingQuery"
+                "401":
+                    description: Authentication failed — the dataset requires HTTP Basic credentials the request did not supply or did not match.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnauthorizedResponseExamplesunauthorized:
+                                    $ref: "#/components/examples/PrometheusUnauthorizedResponseExamplesunauthorized"
+                "404":
+                    description: The requested resource does not exist — no such engine, or no such dataset in that engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+                                    $ref: "#/components/examples/PrometheusExecutionErrorResponseExamplesdatasetNotFound"
+                "422":
+                    description: The PromQL expression parsed, but uses a construct the Metrics Store does not support.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnsupportedQueryResponseExamplesunsupportedQuery:
+                                    $ref: "#/components/examples/PrometheusUnsupportedQueryResponseExamplesunsupportedQuery"
+                "429":
+                    description: The engine query queue turned the request away, for example because its deadline passed while it waited. Retry later.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusAdmissionDeniedResponseExamplesadmissionDenied:
+                                    $ref: "#/components/examples/PrometheusAdmissionDeniedResponseExamplesadmissionDenied"
+                "500":
+                    description: The request failed while running, for example a ClickHouse error or timeout.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusServerErrorResponseExamplesqueryTimedOut:
+                                    $ref: "#/components/examples/PrometheusServerErrorResponseExamplesqueryTimedOut"
+            requestBody:
+                description: PromRangeQueryFormBody object.
+                required: true
+                content:
+                    application/x-www-form-urlencoded:
+                        schema:
+                            $ref: "#/components/schemas/PromRangeQueryFormBody"
+                        examples:
+                            PrometheusRangeQueryFormBodyExamplesrangeQuery:
+                                $ref: "#/components/examples/PrometheusRangeQueryFormBodyExamplesrangeQuery"
+            parameters:
+                - name: engineId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The Local Search engine id.
+                - name: datasetId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The metrics dataset id within the engine.
     /products/lakehouse_engine_metrics/engines/{engineId}/datasets/{datasetId}/prom/api/v1/series:
         get:
             operationId: getProductsLakehouseEngineMetricsEnginesDatasetsPromApiV1SeriesByEngineIdAndDatasetId
@@ -273574,28 +276007,53 @@ paths:
                 - leader
             summary: Find matching series (Cribl.Cloud only)
             description: Return time series that match the specified label matchers (Cribl.Cloud only).
+            security: []
             responses:
                 "200":
                     description: A list of matching series label sets
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromSeriesResponse"
                             examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "500":
-                    description: Unexpected server error.
+                                PrometheusSeriesResponseExamplesseries:
+                                    $ref: "#/components/examples/PrometheusSeriesResponseExamplesseries"
+                "400":
+                    description: Failed validation or malformed input — a selector did not parse, or <code>start</code>, <code>end</code>, or <code>limit</code> was unparseable.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusBadDataResponseExamplesmissingQuery:
+                                    $ref: "#/components/examples/PrometheusBadDataResponseExamplesmissingQuery"
+                "401":
+                    description: Authentication failed — the dataset requires HTTP Basic credentials the request did not supply or did not match.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnauthorizedResponseExamplesunauthorized:
+                                    $ref: "#/components/examples/PrometheusUnauthorizedResponseExamplesunauthorized"
+                "404":
+                    description: The requested resource does not exist — no such engine, or no such dataset in that engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+                                    $ref: "#/components/examples/PrometheusExecutionErrorResponseExamplesdatasetNotFound"
+                "500":
+                    description: The request failed while running, for example a ClickHouse error or timeout.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusServerErrorResponseExamplesqueryTimedOut:
+                                    $ref: "#/components/examples/PrometheusServerErrorResponseExamplesqueryTimedOut"
             parameters:
                 - name: engineId
                   in: path
@@ -273611,16 +276069,118 @@ paths:
                   description: The metrics dataset id within the engine.
                 - name: match[]
                   in: query
-                  required: true
+                  required: false
+                  schema:
+                    type: array
+                    items:
+                        type: string
+                  description: Series selector expressions. Repeat the parameter to send more than one; omit it to return every series in the dataset.
+                - name: start
+                  in: query
+                  required: false
                   schema:
                     type: string
-                  description: Series selector expressions.
+                  description: Start of the lookup window, as Unix seconds or RFC 3339. Defaults to the dataset's full retention.
+                - name: end
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: End of the lookup window, as Unix seconds or RFC 3339. Defaults to the dataset's full retention.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Maximum number of series to return. <code>0</code> disables the caller's limit; the server-side cap still applies, and a truncated result sets <code>warnings</code>.
                 - name: query_id
                   in: query
                   required: false
                   schema:
                     type: string
                   description: Caller-supplied query identifier for tracing.
+        post:
+            operationId: createProductsLakehouseEngineMetricsEnginesDatasetsPromApiV1SeriesByEngineIdAndDatasetId
+            tags:
+                - search.metrics
+            x-speakeasy-group: search.metrics.prometheus
+            x-speakeasy-name-override: listSeriesForm
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Find matching series from a form body (Cribl.Cloud only)
+            description: Return time series that match the specified label matchers, taking the selectors and lookup window as a form body instead of a query string (Cribl.Cloud only).
+            security: []
+            responses:
+                "200":
+                    description: A list of matching series label sets
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromSeriesResponse"
+                            examples:
+                                PrometheusSeriesResponseExamplesseries:
+                                    $ref: "#/components/examples/PrometheusSeriesResponseExamplesseries"
+                "400":
+                    description: Failed validation or malformed input — a selector did not parse, or <code>start</code>, <code>end</code>, or <code>limit</code> was unparseable.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusBadDataResponseExamplesmissingQuery:
+                                    $ref: "#/components/examples/PrometheusBadDataResponseExamplesmissingQuery"
+                "401":
+                    description: Authentication failed — the dataset requires HTTP Basic credentials the request did not supply or did not match.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusUnauthorizedResponseExamplesunauthorized:
+                                    $ref: "#/components/examples/PrometheusUnauthorizedResponseExamplesunauthorized"
+                "404":
+                    description: The requested resource does not exist — no such engine, or no such dataset in that engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusExecutionErrorResponseExamplesdatasetNotFound:
+                                    $ref: "#/components/examples/PrometheusExecutionErrorResponseExamplesdatasetNotFound"
+                "500":
+                    description: The request failed while running, for example a ClickHouse error or timeout.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PromErrorResponse"
+                            examples:
+                                PrometheusServerErrorResponseExamplesqueryTimedOut:
+                                    $ref: "#/components/examples/PrometheusServerErrorResponseExamplesqueryTimedOut"
+            requestBody:
+                description: PromSelectorFormBody object.
+                required: true
+                content:
+                    application/x-www-form-urlencoded:
+                        schema:
+                            $ref: "#/components/schemas/PromSelectorFormBody"
+                        examples:
+                            PrometheusSelectorFormBodyExamplesselector:
+                                $ref: "#/components/examples/PrometheusSelectorFormBodyExamplesselector"
+            parameters:
+                - name: engineId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The Local Search engine id.
+                - name: datasetId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The metrics dataset id within the engine.
     /edge/events/collectors:
         get:
             operationId: getEdgeEventsCollectors
@@ -275624,8 +278184,6 @@ paths:
                     description: Not authorized to read the AI Gateway Model catalog.
                 "404":
                     description: The group is not the AI Gateway group.
-                "405":
-                    description: The Model catalog is not implemented yet.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -282758,11 +285316,11 @@ paths:
             description: List overlay artifacts currently available on this leader from sideload and S3 cache storage. Requires admin role.
             responses:
                 "200":
-                    description: Available overlay artifacts
+                    description: One page of available overlay artifacts, with <code>count</code> as the total number of artifacts across all pages and <code>offset</code>/<code>limit</code> as the values applied to this page.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/OverlayListResponse"
+                                $ref: "#/components/schemas/OverlayListResponseV2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -282881,11 +285439,17 @@ paths:
             description: List each connected worker's binary version and active overlay status, grouped by worker group. Requires admin role.
             responses:
                 "200":
-                    description: Overlay status by worker group
+                    description: One page of worker groups in a counted list envelope, where <code>count</code> is the total number of worker groups across all pages — not the number in <code>items</code> — and <code>offset</code>/<code>limit</code> are the values applied to this page. Each group's own <code>count</code> is its number of workers.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/CountedListOverlayGroupStatusItem"
+                "400":
+                    description: Invalid <code>offset</code> or <code>limit</code> query parameter.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -295033,6 +297597,8 @@ paths:
                                 format: binary
                                 contentMediaType: application/x-tgz
                     description: Gzip-compressed tar archive of job diagnostic data.
+                "400":
+                    description: Failed validation or malformed input, such as an invalid <code>groupId</code>.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -295145,6 +297711,8 @@ paths:
                                     $ref: "#/components/examples/SearchResultsStreamExamplesResultsHeader"
                                 SearchResultsStreamExamplesResultEvent:
                                     $ref: "#/components/examples/SearchResultsStreamExamplesResultEvent"
+                "400":
+                    description: Failed validation or malformed input, such as a non-integer <code>limit</code> or <code>offset</code>.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -295229,6 +297797,8 @@ paths:
                                     $ref: "#/components/examples/SearchResultsPollStreamExamplesQueuedHeader"
                                 SearchResultsPollStreamExamplesResultEvent:
                                     $ref: "#/components/examples/SearchResultsPollStreamExamplesResultEvent"
+                "400":
+                    description: Failed validation or malformed input, such as a non-integer <code>limit</code> or <code>offset</code>.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -295511,6 +298081,8 @@ paths:
                             examples:
                                 SearchNotificationForwardedResponseExamplesForwarded:
                                     $ref: "#/components/examples/SearchNotificationForwardedResponseExamplesForwarded"
+                "400":
+                    description: Failed validation or malformed input — the request body is not a valid Search Notification.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -298559,3 +301131,37 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+    /products/lakehouse_engine_metrics/engines/{engineId}/datasets/{datasetId}/prom/-/healthy:
+        get:
+            operationId: getProductsLakehouseEngineMetricsEnginesDatasetsPromHealthyByEngineIdAndDatasetId
+            tags:
+                - aetos
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Check if a metrics dataset's Prometheus API is healthy (Cribl.Cloud only)
+            description: Health check at the Prometheus <code>/-/healthy</code> path, for a Prometheus datasource pointed at one metrics dataset (Cribl.Cloud only). Returns 200 whenever the Aetos service process is alive; it does not probe the engine or the dataset.
+            security: []
+            responses:
+                "200":
+                    description: Aetos is healthy
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: engineId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The Local Search engine id.
+                - name: datasetId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The metrics dataset id within the engine.
