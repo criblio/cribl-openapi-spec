@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.21.0-alpha.1793488004213-d58d99ba
+  version: 4.21.0-alpha.1793661185238-862fe7c5
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -29766,6 +29766,220 @@ components:
             - host
             - tcpPort
       title: InputFortigateSyslog
+    InputVmwareEsxiVcenterSyslog:
+      type: object
+      required:
+        - type
+        - host
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique name for this input
+        type:
+          type: string
+          enum:
+            - vmware_esxi_vcenter_syslog
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. For IPv4 (all addresses), use the default
+            '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP
+            address.
+        udpPort:
+          type: number
+          title: UDP port
+          maximum: 65535
+          description: Enter UDP port number to listen on. Not required if listening on TCP.
+        tcpPort:
+          type: number
+          title: TCP port
+          maximum: 65535
+          description: Enter TCP port number to listen on. Not required if listening on UDP.
+        maxBufferSize:
+          type: number
+          title: Buffer size limit (events)
+          description: Maximum number of events to buffer when downstream is blocking.
+            Only applies to UDP.
+          minimum: 0
+        ipWhitelistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Regex matching IP addresses that are allowed to send data
+        timestampTimezone:
+          type: string
+          title: Default timezone
+          description: Timezone to assign to timestamps without timezone info
+        singleMsgUdpPackets:
+          type: boolean
+          title: Single msg per UDP
+          description: Treat UDP packet data received as full syslog message
+        keepFieldsList:
+          type: array
+          title: Fields to keep
+          description: Wildcard list of fields to keep from source data; * = ALL (default)
+          minItems: 0
+          items:
+            type: string
+        octetCounting:
+          type: boolean
+          title: Octet count framing
+          description: Enable if incoming messages use octet counting per RFC 6587.
+        inferFraming:
+          type: boolean
+          title: Infer Syslog framing
+          description: Enable if we should infer the syslog framing of the incoming
+            messages.
+        strictlyInferOctetCounting:
+          type: boolean
+          title: Strictly infer octet count framing
+          description: Enable if we should infer octet counting only if the messages
+            comply with RFC 5424.
+        maxActiveCxn:
+          type: number
+          title: Active connection limit
+          description: Maximum number of active connections allowed per Worker Process for
+            TCP connections. Use 0 for unlimited.
+          minimum: 0
+        socketIdleTimeout:
+          type: number
+          title: TCP socket idle timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. After this time, the connection will be
+            closed. Leave at 0 for no inactive socket monitoring.
+          minimum: 0
+        socketEndingMaxWait:
+          type: number
+          title: TCP forced socket termination timeout (seconds)
+          description: How long the server will wait after initiating a closure for a
+            client to close its end of the connection. If the client doesn't
+            close the connection within this time, the server will forcefully
+            terminate the socket to prevent resource leaks and ensure efficient
+            connection cleanup and system stability. Leave at 0 for no inactive
+            socket monitoring.
+          minimum: 0
+        socketMaxLifespan:
+          type: number
+          title: TCP Socket max lifespan (seconds)
+          description: The maximum duration a socket can remain open, even if active. This
+            helps manage resources and mitigate issues caused by TCP pinning.
+            Set to 0 to disable.
+          minimum: 0
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        udpSocketRxBufSize:
+          type: number
+          title: UDP socket buffer size (bytes)
+          description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+          minimum: 256
+          maximum: 4294967295
+        enableLoadBalancing:
+          type: boolean
+          title: Enable TCP load balancing
+          description: Load balance traffic across all Worker Processes
+        autoParse:
+          type: boolean
+          title: Auto parse
+          description: Detect the datatype of each event and extract its top-level fields
+            before the data reaches any of the processing pipelines
+            (pre-processing, main processing, post-processing).
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_udpPort:
+          type: string
+          description: Binds 'udpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'udpPort' at runtime.
+        __template_tcpPort:
+          type: string
+          description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tcpPort' at runtime.
+        __template_timestampTimezone:
+          type: string
+          description: Binds 'timestampTimezone' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'timestampTimezone' at runtime.
+      anyOf:
+        - required:
+            - host
+            - udpPort
+        - required:
+            - host
+            - tcpPort
+      title: InputVmwareEsxiVcenterSyslog
     InputNetgatePfsenseSyslog:
       type: object
       required:
@@ -30623,6 +30837,220 @@ components:
             - host
             - tcpPort
       title: InputUbiquitiUnifiSyslog
+    InputSonicwallSyslog:
+      type: object
+      required:
+        - type
+        - host
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique name for this input
+        type:
+          type: string
+          enum:
+            - sonicwall_syslog
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. For IPv4 (all addresses), use the default
+            '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP
+            address.
+        udpPort:
+          type: number
+          title: UDP port
+          maximum: 65535
+          description: Enter UDP port number to listen on. Not required if listening on TCP.
+        tcpPort:
+          type: number
+          title: TCP port
+          maximum: 65535
+          description: Enter TCP port number to listen on. Not required if listening on UDP.
+        maxBufferSize:
+          type: number
+          title: Buffer size limit (events)
+          description: Maximum number of events to buffer when downstream is blocking.
+            Only applies to UDP.
+          minimum: 0
+        ipWhitelistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Regex matching IP addresses that are allowed to send data
+        timestampTimezone:
+          type: string
+          title: Default timezone
+          description: Timezone to assign to timestamps without timezone info
+        singleMsgUdpPackets:
+          type: boolean
+          title: Single msg per UDP
+          description: Treat UDP packet data received as full syslog message
+        keepFieldsList:
+          type: array
+          title: Fields to keep
+          description: Wildcard list of fields to keep from source data; * = ALL (default)
+          minItems: 0
+          items:
+            type: string
+        octetCounting:
+          type: boolean
+          title: Octet count framing
+          description: Enable if incoming messages use octet counting per RFC 6587.
+        inferFraming:
+          type: boolean
+          title: Infer Syslog framing
+          description: Enable if we should infer the syslog framing of the incoming
+            messages.
+        strictlyInferOctetCounting:
+          type: boolean
+          title: Strictly infer octet count framing
+          description: Enable if we should infer octet counting only if the messages
+            comply with RFC 5424.
+        maxActiveCxn:
+          type: number
+          title: Active connection limit
+          description: Maximum number of active connections allowed per Worker Process for
+            TCP connections. Use 0 for unlimited.
+          minimum: 0
+        socketIdleTimeout:
+          type: number
+          title: TCP socket idle timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. After this time, the connection will be
+            closed. Leave at 0 for no inactive socket monitoring.
+          minimum: 0
+        socketEndingMaxWait:
+          type: number
+          title: TCP forced socket termination timeout (seconds)
+          description: How long the server will wait after initiating a closure for a
+            client to close its end of the connection. If the client doesn't
+            close the connection within this time, the server will forcefully
+            terminate the socket to prevent resource leaks and ensure efficient
+            connection cleanup and system stability. Leave at 0 for no inactive
+            socket monitoring.
+          minimum: 0
+        socketMaxLifespan:
+          type: number
+          title: TCP Socket max lifespan (seconds)
+          description: The maximum duration a socket can remain open, even if active. This
+            helps manage resources and mitigate issues caused by TCP pinning.
+            Set to 0 to disable.
+          minimum: 0
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        udpSocketRxBufSize:
+          type: number
+          title: UDP socket buffer size (bytes)
+          description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+          minimum: 256
+          maximum: 4294967295
+        enableLoadBalancing:
+          type: boolean
+          title: Enable TCP load balancing
+          description: Load balance traffic across all Worker Processes
+        autoParse:
+          type: boolean
+          title: Auto parse
+          description: Detect the datatype of each event and extract its top-level fields
+            before the data reaches any of the processing pipelines
+            (pre-processing, main processing, post-processing).
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_udpPort:
+          type: string
+          description: Binds 'udpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'udpPort' at runtime.
+        __template_tcpPort:
+          type: string
+          description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tcpPort' at runtime.
+        __template_timestampTimezone:
+          type: string
+          description: Binds 'timestampTimezone' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'timestampTimezone' at runtime.
+      anyOf:
+        - required:
+            - host
+            - udpPort
+        - required:
+            - host
+            - tcpPort
+      title: InputSonicwallSyslog
     InputFile:
       type: object
       properties:
@@ -41987,10 +42415,12 @@ components:
         - $ref: "#/components/schemas/InputCiscoAsaSyslog"
         - $ref: "#/components/schemas/InputCiscoMerakiSyslog"
         - $ref: "#/components/schemas/InputFortigateSyslog"
+        - $ref: "#/components/schemas/InputVmwareEsxiVcenterSyslog"
         - $ref: "#/components/schemas/InputNetgatePfsenseSyslog"
         - $ref: "#/components/schemas/InputWatchguardFireboxSyslog"
         - $ref: "#/components/schemas/InputInfobloxSyslog"
         - $ref: "#/components/schemas/InputUbiquitiUnifiSyslog"
+        - $ref: "#/components/schemas/InputSonicwallSyslog"
         - $ref: "#/components/schemas/InputFile"
         - $ref: "#/components/schemas/InputTcp"
         - $ref: "#/components/schemas/InputAppscope"
@@ -42096,10 +42526,12 @@ components:
           cisco_asa_syslog: "#/components/schemas/InputCiscoAsaSyslog"
           cisco_meraki_syslog: "#/components/schemas/InputCiscoMerakiSyslog"
           fortigate_syslog: "#/components/schemas/InputFortigateSyslog"
+          vmware_esxi_vcenter_syslog: "#/components/schemas/InputVmwareEsxiVcenterSyslog"
           netgate_pfsense_syslog: "#/components/schemas/InputNetgatePfsenseSyslog"
           watchguard_firebox_syslog: "#/components/schemas/InputWatchguardFireboxSyslog"
           infoblox_syslog: "#/components/schemas/InputInfobloxSyslog"
           ubiquiti_unifi_syslog: "#/components/schemas/InputUbiquitiUnifiSyslog"
+          sonicwall_syslog: "#/components/schemas/InputSonicwallSyslog"
           file: "#/components/schemas/InputFile"
           tcp: "#/components/schemas/InputTcp"
           appscope: "#/components/schemas/InputAppscope"
@@ -57052,9 +57484,14 @@ components:
         enableDynamicHeaders:
           type: boolean
           title: Enable dynamic headers
-          description: Add per-event HTTP headers from the __headers field to outgoing
-            requests. Events with different headers are batched and sent
-            separately.
+          description: Add per-event HTTP headers from the dynamic headers field to
+            outgoing requests. Events with different headers are batched and
+            sent separately.
+        dynamicHeadersField:
+          type: string
+          title: Dynamic headers field
+          description: When present, this field, which contains per-event HTTP headers,
+            will be added to outgoing requests and used to batch events.
         onBackpressure:
           $ref: "#/components/schemas/BackpressureBehaviorOptions"
           description: How to handle events when all receivers are exerting backpressure
@@ -62800,6 +63237,11 @@ components:
           title: Throttle request rate limit
           description: Maximum number of requests to limit to per second
           maximum: 2000
+        dynamicHeadersField:
+          type: string
+          title: Dynamic headers field
+          description: The metadata in this field will be included with the Destination
+            metadata and used to batch events
         onBackpressure:
           $ref: "#/components/schemas/BackpressureBehaviorOptions"
           description: How to handle events when all receivers are exerting backpressure
@@ -80118,6 +80560,9 @@ components:
         - $ref: "#/components/schemas/InputFortigateSyslogPartialRequest"
           required:
             - type
+        - $ref: "#/components/schemas/InputVmwareEsxiVcenterSyslogPartialRequest"
+          required:
+            - type
         - $ref: "#/components/schemas/InputNetgatePfsenseSyslogPartialRequest"
           required:
             - type
@@ -80128,6 +80573,9 @@ components:
           required:
             - type
         - $ref: "#/components/schemas/InputUbiquitiUnifiSyslogPartialRequest"
+          required:
+            - type
+        - $ref: "#/components/schemas/InputSonicwallSyslogPartialRequest"
           required:
             - type
         - $ref: "#/components/schemas/InputFilePartialRequest"
@@ -80329,10 +80777,12 @@ components:
           cisco_asa_syslog: "#/components/schemas/InputCiscoAsaSyslogPartialRequest"
           cisco_meraki_syslog: "#/components/schemas/InputCiscoMerakiSyslogPartialRequest"
           fortigate_syslog: "#/components/schemas/InputFortigateSyslogPartialRequest"
+          vmware_esxi_vcenter_syslog: "#/components/schemas/InputVmwareEsxiVcenterSyslogPartialRequest"
           netgate_pfsense_syslog: "#/components/schemas/InputNetgatePfsenseSyslogPartialRequest"
           watchguard_firebox_syslog: "#/components/schemas/InputWatchguardFireboxSyslogPartialRequest"
           infoblox_syslog: "#/components/schemas/InputInfobloxSyslogPartialRequest"
           ubiquiti_unifi_syslog: "#/components/schemas/InputUbiquitiUnifiSyslogPartialRequest"
+          sonicwall_syslog: "#/components/schemas/InputSonicwallSyslogPartialRequest"
           file: "#/components/schemas/InputFilePartialRequest"
           tcp: "#/components/schemas/InputTcpPartialRequest"
           appscope: "#/components/schemas/InputAppscopePartialRequest"
@@ -110106,6 +110556,522 @@ components:
             - type: string
             - type: "null"
       title: InputFortigateSyslogPartialRequest
+    InputVmwareEsxiVcenterSyslogPartialRequest:
+      type: object
+      properties:
+        id:
+          title: Input ID
+          description: Unique name for this input
+          anyOf:
+            - type: string
+            - type: "null"
+        type:
+          type: string
+          enum:
+            - vmware_esxi_vcenter_syslog
+          description: Connector type identifier.
+        disabled:
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        pipeline:
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+          anyOf:
+            - type: string
+            - type: "null"
+        sendToRoutes:
+          description: Select whether to send data to Routes, or directly to Destinations.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        environment:
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+          anyOf:
+            - type: string
+            - type: "null"
+        pqEnabled:
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+          anyOf:
+            - type: boolean
+            - type: "null"
+        streamtags:
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: "null"
+        criblSourceProvenance:
+          title: Input provenance
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+          readOnly: true
+          anyOf:
+            - type: object
+              additionalProperties: false
+              properties:
+                origin:
+                  description: Feature that created the Source.
+                  anyOf:
+                    - type: string
+                      enum:
+                        - data_source_discovery
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                destinationArn:
+                  description: ARN of the S3 bucket or Firehose delivery stream configured as the
+                    Source.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                sourceArn:
+                  description: ARN of the AWS resource that produces the logs.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                sourceService:
+                  description: Resolved DSD source-service offering, when known.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                accountId:
+                  description: Cloud tenant or scope id the Source was configured for (for example
+                    an AWS account id, GCP project or folder id, or Azure
+                    subscription or resource group id).
+                  anyOf:
+                    - type: string
+                      minLength: 1
+                    - type: "null"
+                templateFamily:
+                  description: Infrastructure-as-code family that provisioned the AWS resources
+                    (absent means cloudformation).
+                  anyOf:
+                    - type: string
+                      enum:
+                        - cloudformation
+                        - terraform
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+            - type: "null"
+        connections:
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/ConnectionConfInputCollection"
+            - type: "null"
+        pq:
+          description: Persistent queue settings for this Source.
+          anyOf:
+            - type: object
+              properties:
+                mode:
+                  title: Mode
+                  description: With Smart mode (deprecated), PQ will write events to the
+                    filesystem only when it detects backpressure from the
+                    processing engine. Smart mode will have no new development
+                    starting July 2026, followed by End of Support and feature
+                    removal (auto-migrating to Always On) in January 2027. We
+                    recommend using Always On mode instead. With Always On mode,
+                    PQ will always write events directly to the queue before
+                    forwarding them to the processing engine.
+                  x-speakeasy-enum-descriptions:
+                    - Smart (Deprecated)
+                    - Always On
+                  anyOf:
+                    - type: string
+                      enum:
+                        - smart
+                        - always
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                maxBufferSizeBytes:
+                  title: Buffer size limit (bytes)
+                  description: The maximum size to hold in memory before writing events to disk.
+                    Enter a numeral with units of KB, MB, etc. The minimum value
+                    is 64KB and the maximum value is 10MB.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                maxBufferSize:
+                  title: Buffer size limit (events - deprecated)
+                  description: Maximum number of events to hold in memory before writing the
+                    events to disk. Deprecated and only supported in workers <
+                    v4.17.0. Use maxBufferSizeBytes instead.
+                  anyOf:
+                    - type: number
+                      minimum: 42
+                    - type: "null"
+                commitFrequency:
+                  title: Commit frequency
+                  description: The number of events to send downstream before committing that
+                    Stream has read them. Lower values increase cursor-write
+                    IOPS and can add disk pressure, including on shared storage.
+                  anyOf:
+                    - type: number
+                      minimum: 42
+                    - type: "null"
+                maxFileSize:
+                  title: File size limit
+                  description: The maximum size to store in each queue file before closing and
+                    optionally compressing. Enter a numeral with units of KB,
+                    MB, etc.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                maxSize:
+                  title: Queue size limit
+                  description: The maximum disk space that the queue can consume (as an average
+                    per Worker Process) before queueing stops. Enter a numeral
+                    with units of KB, MB, etc.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                path:
+                  title: Queue file path
+                  description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/inputs/<input-id>"
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                compress:
+                  x-speakeasy-enum-descriptions:
+                    - None
+                    - Gzip
+                  title: Compression
+                  description: Codec to use to compress the persisted data
+                  anyOf:
+                    - type: string
+                      enum:
+                        - none
+                        - gzip
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                onBackpressure:
+                  title: Queue-full behavior
+                  description: Whether to block or drop events when the queue is exerting
+                    backpressure (full capacity or low disk). 'Block' is the
+                    same behavior as non-PQ blocking. 'Drop new data' throws
+                    away incoming data, while leaving the contents of the PQ
+                    unchanged.
+                  x-speakeasy-enum-descriptions:
+                    - Block
+                    - Drop new data
+                  anyOf:
+                    - type: string
+                      enum:
+                        - block
+                        - drop
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                pqControls:
+                  title: ""
+                  description: Management controls for the persistent queue.
+                  anyOf:
+                    - type: object
+                    - type: "null"
+            - type: "null"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. For IPv4 (all addresses), use the default
+            '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP
+            address.
+        udpPort:
+          title: UDP port
+          description: Enter UDP port number to listen on. Not required if listening on TCP.
+          anyOf:
+            - type: number
+              maximum: 65535
+            - type: "null"
+        tcpPort:
+          title: TCP port
+          description: Enter TCP port number to listen on. Not required if listening on UDP.
+          anyOf:
+            - type: number
+              maximum: 65535
+            - type: "null"
+        maxBufferSize:
+          title: Buffer size limit (events)
+          description: Maximum number of events to buffer when downstream is blocking.
+            Only applies to UDP.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        ipWhitelistRegex:
+          title: IP allowlist regex
+          description: Regex matching IP addresses that are allowed to send data
+          anyOf:
+            - type: string
+            - type: "null"
+        timestampTimezone:
+          title: Default timezone
+          description: Timezone to assign to timestamps without timezone info
+          anyOf:
+            - type: string
+            - type: "null"
+        singleMsgUdpPackets:
+          title: Single msg per UDP
+          description: Treat UDP packet data received as full syslog message
+          anyOf:
+            - type: boolean
+            - type: "null"
+        keepFieldsList:
+          title: Fields to keep
+          description: Wildcard list of fields to keep from source data; * = ALL (default)
+          anyOf:
+            - type: array
+              minItems: 0
+              items:
+                type: string
+            - type: "null"
+        octetCounting:
+          title: Octet count framing
+          description: Enable if incoming messages use octet counting per RFC 6587.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        inferFraming:
+          title: Infer Syslog framing
+          description: Enable if we should infer the syslog framing of the incoming
+            messages.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        strictlyInferOctetCounting:
+          title: Strictly infer octet count framing
+          description: Enable if we should infer octet counting only if the messages
+            comply with RFC 5424.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        maxActiveCxn:
+          title: Active connection limit
+          description: Maximum number of active connections allowed per Worker Process for
+            TCP connections. Use 0 for unlimited.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        socketIdleTimeout:
+          title: TCP socket idle timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. After this time, the connection will be
+            closed. Leave at 0 for no inactive socket monitoring.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        socketEndingMaxWait:
+          title: TCP forced socket termination timeout (seconds)
+          description: How long the server will wait after initiating a closure for a
+            client to close its end of the connection. If the client doesn't
+            close the connection within this time, the server will forcefully
+            terminate the socket to prevent resource leaks and ensure efficient
+            connection cleanup and system stability. Leave at 0 for no inactive
+            socket monitoring.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        socketMaxLifespan:
+          title: TCP Socket max lifespan (seconds)
+          description: The maximum duration a socket can remain open, even if active. This
+            helps manage resources and mitigate issues caused by TCP pinning.
+            Set to 0 to disable.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        tls:
+          title: TLS settings (server side)
+          description: TLS settings (server side)
+          anyOf:
+            - type: object
+              properties:
+                disabled:
+                  title: Disabled
+                  description: If true, TLS is disabled on this connection.
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                requestCert:
+                  title: Authenticate client (mutual auth)
+                  description: Require clients to present their certificates. Used to perform
+                    client authentication using SSL certs.
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                caPath:
+                  title: CA certificate path
+                  description: Path on server containing CA certificates to use. PEM format. Can
+                    reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                rejectUnauthorized:
+                  title: Validate client certificates
+                  description: Reject certificates not authorized by a CA in the CA certificate
+                    path or by another trusted CA (such as the system's)
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                commonNameRegex:
+                  title: Common name
+                  description: Regex matching allowable common names in peer certificates' subject
+                    attribute
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                certificateName:
+                  title: Certificate
+                  description: The name of the predefined certificate
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                privKeyPath:
+                  title: Private key path
+                  description: Path on server containing the private key to use. PEM format. Can
+                    reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                passphrase:
+                  title: Passphrase
+                  description: Passphrase to use to decrypt private key
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                certPath:
+                  title: Certificate path
+                  description: Path on server containing certificates to use. PEM format. Can
+                    reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                minVersion:
+                  title: Minimum TLS version
+                  description: Minimum TLS version to accept from clients.
+                  anyOf:
+                    - type: string
+                      enum:
+                        - TLSv1
+                        - TLSv1.1
+                        - TLSv1.2
+                        - TLSv1.3
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                maxVersion:
+                  title: Maximum TLS version
+                  description: Maximum TLS version to accept from clients.
+                  anyOf:
+                    - type: string
+                      enum:
+                        - TLSv1
+                        - TLSv1.1
+                        - TLSv1.2
+                        - TLSv1.3
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+            - type: "null"
+        metadata:
+          title: Fields
+          description: Fields to add to events from this input
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/MetadataConfInputCollection"
+            - type: "null"
+        udpSocketRxBufSize:
+          title: UDP socket buffer size (bytes)
+          description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+          anyOf:
+            - type: number
+              minimum: 256
+              maximum: 4294967295
+            - type: "null"
+        enableLoadBalancing:
+          title: Enable TCP load balancing
+          description: Load balance traffic across all Worker Processes
+          anyOf:
+            - type: boolean
+            - type: "null"
+        autoParse:
+          title: Auto parse
+          description: Detect the datatype of each event and extract its top-level fields
+            before the data reaches any of the processing pipelines
+            (pre-processing, main processing, post-processing).
+          anyOf:
+            - type: boolean
+            - type: "null"
+        description:
+          title: Description
+          description: Optional description for this configuration.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_environment:
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_streamtags:
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_host:
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_udpPort:
+          description: Binds 'udpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'udpPort' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_tcpPort:
+          description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tcpPort' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_timestampTimezone:
+          description: Binds 'timestampTimezone' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'timestampTimezone' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+      title: InputVmwareEsxiVcenterSyslogPartialRequest
     InputNetgatePfsenseSyslogPartialRequest:
       type: object
       properties:
@@ -112171,6 +113137,522 @@ components:
             - type: string
             - type: "null"
       title: InputUbiquitiUnifiSyslogPartialRequest
+    InputSonicwallSyslogPartialRequest:
+      type: object
+      properties:
+        id:
+          title: Input ID
+          description: Unique name for this input
+          anyOf:
+            - type: string
+            - type: "null"
+        type:
+          type: string
+          enum:
+            - sonicwall_syslog
+          description: Connector type identifier.
+        disabled:
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        pipeline:
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+          anyOf:
+            - type: string
+            - type: "null"
+        sendToRoutes:
+          description: Select whether to send data to Routes, or directly to Destinations.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        environment:
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+          anyOf:
+            - type: string
+            - type: "null"
+        pqEnabled:
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+          anyOf:
+            - type: boolean
+            - type: "null"
+        streamtags:
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: "null"
+        criblSourceProvenance:
+          title: Input provenance
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+          readOnly: true
+          anyOf:
+            - type: object
+              additionalProperties: false
+              properties:
+                origin:
+                  description: Feature that created the Source.
+                  anyOf:
+                    - type: string
+                      enum:
+                        - data_source_discovery
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                destinationArn:
+                  description: ARN of the S3 bucket or Firehose delivery stream configured as the
+                    Source.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                sourceArn:
+                  description: ARN of the AWS resource that produces the logs.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                sourceService:
+                  description: Resolved DSD source-service offering, when known.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                accountId:
+                  description: Cloud tenant or scope id the Source was configured for (for example
+                    an AWS account id, GCP project or folder id, or Azure
+                    subscription or resource group id).
+                  anyOf:
+                    - type: string
+                      minLength: 1
+                    - type: "null"
+                templateFamily:
+                  description: Infrastructure-as-code family that provisioned the AWS resources
+                    (absent means cloudformation).
+                  anyOf:
+                    - type: string
+                      enum:
+                        - cloudformation
+                        - terraform
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+            - type: "null"
+        connections:
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/ConnectionConfInputCollection"
+            - type: "null"
+        pq:
+          description: Persistent queue settings for this Source.
+          anyOf:
+            - type: object
+              properties:
+                mode:
+                  title: Mode
+                  description: With Smart mode (deprecated), PQ will write events to the
+                    filesystem only when it detects backpressure from the
+                    processing engine. Smart mode will have no new development
+                    starting July 2026, followed by End of Support and feature
+                    removal (auto-migrating to Always On) in January 2027. We
+                    recommend using Always On mode instead. With Always On mode,
+                    PQ will always write events directly to the queue before
+                    forwarding them to the processing engine.
+                  x-speakeasy-enum-descriptions:
+                    - Smart (Deprecated)
+                    - Always On
+                  anyOf:
+                    - type: string
+                      enum:
+                        - smart
+                        - always
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                maxBufferSizeBytes:
+                  title: Buffer size limit (bytes)
+                  description: The maximum size to hold in memory before writing events to disk.
+                    Enter a numeral with units of KB, MB, etc. The minimum value
+                    is 64KB and the maximum value is 10MB.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                maxBufferSize:
+                  title: Buffer size limit (events - deprecated)
+                  description: Maximum number of events to hold in memory before writing the
+                    events to disk. Deprecated and only supported in workers <
+                    v4.17.0. Use maxBufferSizeBytes instead.
+                  anyOf:
+                    - type: number
+                      minimum: 42
+                    - type: "null"
+                commitFrequency:
+                  title: Commit frequency
+                  description: The number of events to send downstream before committing that
+                    Stream has read them. Lower values increase cursor-write
+                    IOPS and can add disk pressure, including on shared storage.
+                  anyOf:
+                    - type: number
+                      minimum: 42
+                    - type: "null"
+                maxFileSize:
+                  title: File size limit
+                  description: The maximum size to store in each queue file before closing and
+                    optionally compressing. Enter a numeral with units of KB,
+                    MB, etc.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                maxSize:
+                  title: Queue size limit
+                  description: The maximum disk space that the queue can consume (as an average
+                    per Worker Process) before queueing stops. Enter a numeral
+                    with units of KB, MB, etc.
+                  anyOf:
+                    - type: string
+                      pattern: ^\d+\s*(?:\w{2})?$
+                    - type: "null"
+                path:
+                  title: Queue file path
+                  description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/inputs/<input-id>"
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                compress:
+                  x-speakeasy-enum-descriptions:
+                    - None
+                    - Gzip
+                  title: Compression
+                  description: Codec to use to compress the persisted data
+                  anyOf:
+                    - type: string
+                      enum:
+                        - none
+                        - gzip
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                onBackpressure:
+                  title: Queue-full behavior
+                  description: Whether to block or drop events when the queue is exerting
+                    backpressure (full capacity or low disk). 'Block' is the
+                    same behavior as non-PQ blocking. 'Drop new data' throws
+                    away incoming data, while leaving the contents of the PQ
+                    unchanged.
+                  x-speakeasy-enum-descriptions:
+                    - Block
+                    - Drop new data
+                  anyOf:
+                    - type: string
+                      enum:
+                        - block
+                        - drop
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                pqControls:
+                  title: ""
+                  description: Management controls for the persistent queue.
+                  anyOf:
+                    - type: object
+                    - type: "null"
+            - type: "null"
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. For IPv4 (all addresses), use the default
+            '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP
+            address.
+        udpPort:
+          title: UDP port
+          description: Enter UDP port number to listen on. Not required if listening on TCP.
+          anyOf:
+            - type: number
+              maximum: 65535
+            - type: "null"
+        tcpPort:
+          title: TCP port
+          description: Enter TCP port number to listen on. Not required if listening on UDP.
+          anyOf:
+            - type: number
+              maximum: 65535
+            - type: "null"
+        maxBufferSize:
+          title: Buffer size limit (events)
+          description: Maximum number of events to buffer when downstream is blocking.
+            Only applies to UDP.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        ipWhitelistRegex:
+          title: IP allowlist regex
+          description: Regex matching IP addresses that are allowed to send data
+          anyOf:
+            - type: string
+            - type: "null"
+        timestampTimezone:
+          title: Default timezone
+          description: Timezone to assign to timestamps without timezone info
+          anyOf:
+            - type: string
+            - type: "null"
+        singleMsgUdpPackets:
+          title: Single msg per UDP
+          description: Treat UDP packet data received as full syslog message
+          anyOf:
+            - type: boolean
+            - type: "null"
+        keepFieldsList:
+          title: Fields to keep
+          description: Wildcard list of fields to keep from source data; * = ALL (default)
+          anyOf:
+            - type: array
+              minItems: 0
+              items:
+                type: string
+            - type: "null"
+        octetCounting:
+          title: Octet count framing
+          description: Enable if incoming messages use octet counting per RFC 6587.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        inferFraming:
+          title: Infer Syslog framing
+          description: Enable if we should infer the syslog framing of the incoming
+            messages.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        strictlyInferOctetCounting:
+          title: Strictly infer octet count framing
+          description: Enable if we should infer octet counting only if the messages
+            comply with RFC 5424.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        maxActiveCxn:
+          title: Active connection limit
+          description: Maximum number of active connections allowed per Worker Process for
+            TCP connections. Use 0 for unlimited.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        socketIdleTimeout:
+          title: TCP socket idle timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. After this time, the connection will be
+            closed. Leave at 0 for no inactive socket monitoring.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        socketEndingMaxWait:
+          title: TCP forced socket termination timeout (seconds)
+          description: How long the server will wait after initiating a closure for a
+            client to close its end of the connection. If the client doesn't
+            close the connection within this time, the server will forcefully
+            terminate the socket to prevent resource leaks and ensure efficient
+            connection cleanup and system stability. Leave at 0 for no inactive
+            socket monitoring.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        socketMaxLifespan:
+          title: TCP Socket max lifespan (seconds)
+          description: The maximum duration a socket can remain open, even if active. This
+            helps manage resources and mitigate issues caused by TCP pinning.
+            Set to 0 to disable.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        tls:
+          title: TLS settings (server side)
+          description: TLS settings (server side)
+          anyOf:
+            - type: object
+              properties:
+                disabled:
+                  title: Disabled
+                  description: If true, TLS is disabled on this connection.
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                requestCert:
+                  title: Authenticate client (mutual auth)
+                  description: Require clients to present their certificates. Used to perform
+                    client authentication using SSL certs.
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                caPath:
+                  title: CA certificate path
+                  description: Path on server containing CA certificates to use. PEM format. Can
+                    reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                rejectUnauthorized:
+                  title: Validate client certificates
+                  description: Reject certificates not authorized by a CA in the CA certificate
+                    path or by another trusted CA (such as the system's)
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                commonNameRegex:
+                  title: Common name
+                  description: Regex matching allowable common names in peer certificates' subject
+                    attribute
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                certificateName:
+                  title: Certificate
+                  description: The name of the predefined certificate
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                privKeyPath:
+                  title: Private key path
+                  description: Path on server containing the private key to use. PEM format. Can
+                    reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                passphrase:
+                  title: Passphrase
+                  description: Passphrase to use to decrypt private key
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                certPath:
+                  title: Certificate path
+                  description: Path on server containing certificates to use. PEM format. Can
+                    reference $ENV_VARS.
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                minVersion:
+                  title: Minimum TLS version
+                  description: Minimum TLS version to accept from clients.
+                  anyOf:
+                    - type: string
+                      enum:
+                        - TLSv1
+                        - TLSv1.1
+                        - TLSv1.2
+                        - TLSv1.3
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+                maxVersion:
+                  title: Maximum TLS version
+                  description: Maximum TLS version to accept from clients.
+                  anyOf:
+                    - type: string
+                      enum:
+                        - TLSv1
+                        - TLSv1.1
+                        - TLSv1.2
+                        - TLSv1.3
+                      x-speakeasy-unknown-values: allow
+                    - type: "null"
+            - type: "null"
+        metadata:
+          title: Fields
+          description: Fields to add to events from this input
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/MetadataConfInputCollection"
+            - type: "null"
+        udpSocketRxBufSize:
+          title: UDP socket buffer size (bytes)
+          description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+          anyOf:
+            - type: number
+              minimum: 256
+              maximum: 4294967295
+            - type: "null"
+        enableLoadBalancing:
+          title: Enable TCP load balancing
+          description: Load balance traffic across all Worker Processes
+          anyOf:
+            - type: boolean
+            - type: "null"
+        autoParse:
+          title: Auto parse
+          description: Detect the datatype of each event and extract its top-level fields
+            before the data reaches any of the processing pipelines
+            (pre-processing, main processing, post-processing).
+          anyOf:
+            - type: boolean
+            - type: "null"
+        description:
+          title: Description
+          description: Optional description for this configuration.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_environment:
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_streamtags:
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_host:
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_udpPort:
+          description: Binds 'udpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'udpPort' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_tcpPort:
+          description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tcpPort' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_timestampTimezone:
+          description: Binds 'timestampTimezone' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'timestampTimezone' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+      title: InputSonicwallSyslogPartialRequest
     InputFilePartialRequest:
       type: object
       properties:
@@ -162728,11 +164210,18 @@ components:
             - type: "null"
         enableDynamicHeaders:
           title: Enable dynamic headers
-          description: Add per-event HTTP headers from the __headers field to outgoing
-            requests. Events with different headers are batched and sent
-            separately.
+          description: Add per-event HTTP headers from the dynamic headers field to
+            outgoing requests. Events with different headers are batched and
+            sent separately.
           anyOf:
             - type: boolean
+            - type: "null"
+        dynamicHeadersField:
+          title: Dynamic headers field
+          description: When present, this field, which contains per-event HTTP headers,
+            will be added to outgoing requests and used to batch events.
+          anyOf:
+            - type: string
             - type: "null"
         onBackpressure:
           title: Backpressure behavior
@@ -173011,6 +174500,13 @@ components:
           anyOf:
             - type: integer
               maximum: 2000
+            - type: "null"
+        dynamicHeadersField:
+          title: Dynamic headers field
+          description: The metadata in this field will be included with the Destination
+            metadata and used to batch events
+          anyOf:
+            - type: string
             - type: "null"
         onBackpressure:
           title: Backpressure behavior
@@ -206219,6 +207715,16 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Infoblox Source.
+    InputCreateExamplesSonicWallSyslog:
+      summary: SonicWall
+      value:
+        id: sonicwall-syslog-source
+        type: sonicwall_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a SonicWall Source.
     InputCreateExamplesSyslog:
       summary: Syslog
       value:
@@ -206259,6 +207765,16 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Cisco Meraki Source.
+    InputCreateExamplesVMwareEsxiVCenterSyslog:
+      summary: VMware ESXi/vCenter
+      value:
+        id: vmware-esxi-vcenter-syslog-source
+        type: vmware_esxi_vcenter_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a VMware ESXi/vCenter Source.
     InputCreateExamplesJuniperJunosSyslog:
       summary: Juniper JunOS
       value:
@@ -211151,6 +212667,16 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: "Example request body for updating a Infoblox Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+    UpdateInputExamplesSonicWallSyslogPartialRequest:
+      summary: SonicWall
+      value:
+        id: sonicwall-syslog-source
+        type: sonicwall_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: "Example request body for updating a SonicWall Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesSyslogPartialRequest:
       summary: Syslog
       value:
@@ -211191,6 +212717,16 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: "Example request body for updating a Cisco Meraki Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+    UpdateInputExamplesVMwareEsxiVCenterSyslogPartialRequest:
+      summary: VMware ESXi/vCenter
+      value:
+        id: vmware-esxi-vcenter-syslog-source
+        type: vmware_esxi_vcenter_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: "Example request body for updating a VMware ESXi/vCenter Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
     UpdateInputExamplesJuniperJunosSyslogPartialRequest:
       summary: Juniper JunOS
       value:
@@ -214011,7 +215547,7 @@ paths:
       description: Get the specified Function.
       responses:
         "200":
-          description: The requested Function object in a single-item list.
+          description: The requested Function object.
           content:
             application/json:
               schema:
@@ -216029,6 +217565,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesWatchGuardFireboxSyslog"
               InputCreateExamplesInfobloxSyslog:
                 $ref: "#/components/examples/InputCreateExamplesInfobloxSyslog"
+              InputCreateExamplesSonicWallSyslog:
+                $ref: "#/components/examples/InputCreateExamplesSonicWallSyslog"
               InputCreateExamplesSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesCiscoAsaSyslog:
@@ -216037,6 +217575,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesCiscoIosSyslog"
               InputCreateExamplesCiscoMerakiSyslog:
                 $ref: "#/components/examples/InputCreateExamplesCiscoMerakiSyslog"
+              InputCreateExamplesVMwareEsxiVCenterSyslog:
+                $ref: "#/components/examples/InputCreateExamplesVMwareEsxiVCenterSyslog"
               InputCreateExamplesJuniperJunosSyslog:
                 $ref: "#/components/examples/InputCreateExamplesJuniperJunosSyslog"
               InputCreateExamplesUbiquitiUnifiSyslog:
@@ -216393,6 +217933,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesWatchGuardFireboxSyslogPartialRequest"
               UpdateInputExamplesInfobloxSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesInfobloxSyslogPartialRequest"
+              UpdateInputExamplesSonicWallSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesSonicWallSyslogPartialRequest"
               UpdateInputExamplesSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSyslogPartialRequest"
               UpdateInputExamplesCiscoAsaSyslog:
@@ -216401,6 +217943,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesCiscoIosSyslogPartialRequest"
               UpdateInputExamplesCiscoMerakiSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesCiscoMerakiSyslogPartialRequest"
+              UpdateInputExamplesVMwareEsxiVCenterSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesVMwareEsxiVCenterSyslogPartialRequest"
               UpdateInputExamplesJuniperJunosSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesJuniperJunosSyslogPartialRequest"
               UpdateInputExamplesUbiquitiUnifiSyslog:
@@ -220461,8 +222005,9 @@ paths:
         <code>items</code> contains the successfully created Lake Datasets, and
         <code>errors</code> contains an entry (<code>{ id, reason }</code>) for
         each Lake Dataset that failed validation, so a per-item failure does not
-        fail the rest of the batch. In v2, an array request does not return a
-        <code>Location</code> header.
+        fail the rest of the batch. In v2, the <code>Location</code> response
+        header is returned only when a single Lake Dataset object is created; an
+        array request creates multiple resources and omits it.
       responses:
         "201":
           description: The created CriblLakeDatasetCreateResult object.
@@ -221400,6 +222945,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesWatchGuardFireboxSyslog"
               InputCreateExamplesInfobloxSyslog:
                 $ref: "#/components/examples/InputCreateExamplesInfobloxSyslog"
+              InputCreateExamplesSonicWallSyslog:
+                $ref: "#/components/examples/InputCreateExamplesSonicWallSyslog"
               InputCreateExamplesSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesCiscoAsaSyslog:
@@ -221408,6 +222955,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesCiscoIosSyslog"
               InputCreateExamplesCiscoMerakiSyslog:
                 $ref: "#/components/examples/InputCreateExamplesCiscoMerakiSyslog"
+              InputCreateExamplesVMwareEsxiVCenterSyslog:
+                $ref: "#/components/examples/InputCreateExamplesVMwareEsxiVCenterSyslog"
               InputCreateExamplesJuniperJunosSyslog:
                 $ref: "#/components/examples/InputCreateExamplesJuniperJunosSyslog"
               InputCreateExamplesUbiquitiUnifiSyslog:
@@ -221751,6 +223300,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesWatchGuardFireboxSyslogPartialRequest"
               UpdateInputExamplesInfobloxSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesInfobloxSyslogPartialRequest"
+              UpdateInputExamplesSonicWallSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesSonicWallSyslogPartialRequest"
               UpdateInputExamplesSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSyslogPartialRequest"
               UpdateInputExamplesCiscoAsaSyslog:
@@ -221759,6 +223310,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesCiscoIosSyslogPartialRequest"
               UpdateInputExamplesCiscoMerakiSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesCiscoMerakiSyslogPartialRequest"
+              UpdateInputExamplesVMwareEsxiVCenterSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesVMwareEsxiVCenterSyslogPartialRequest"
               UpdateInputExamplesJuniperJunosSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesJuniperJunosSyslogPartialRequest"
               UpdateInputExamplesUbiquitiUnifiSyslog:
