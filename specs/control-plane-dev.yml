@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.21.0-alpha.1793487948843-d58d99ba
+  version: 4.21.0-alpha.1793661060065-862fe7c5
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -29860,6 +29860,220 @@ components:
             - host
             - tcpPort
       title: InputFortigateSyslog
+    InputVmwareEsxiVcenterSyslog:
+      type: object
+      required:
+        - type
+        - host
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique name for this input
+        type:
+          type: string
+          enum:
+            - vmware_esxi_vcenter_syslog
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. For IPv4 (all addresses), use the default
+            '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP
+            address.
+        udpPort:
+          type: number
+          title: UDP port
+          maximum: 65535
+          description: Enter UDP port number to listen on. Not required if listening on TCP.
+        tcpPort:
+          type: number
+          title: TCP port
+          maximum: 65535
+          description: Enter TCP port number to listen on. Not required if listening on UDP.
+        maxBufferSize:
+          type: number
+          title: Buffer size limit (events)
+          description: Maximum number of events to buffer when downstream is blocking.
+            Only applies to UDP.
+          minimum: 0
+        ipWhitelistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Regex matching IP addresses that are allowed to send data
+        timestampTimezone:
+          type: string
+          title: Default timezone
+          description: Timezone to assign to timestamps without timezone info
+        singleMsgUdpPackets:
+          type: boolean
+          title: Single msg per UDP
+          description: Treat UDP packet data received as full syslog message
+        keepFieldsList:
+          type: array
+          title: Fields to keep
+          description: Wildcard list of fields to keep from source data; * = ALL (default)
+          minItems: 0
+          items:
+            type: string
+        octetCounting:
+          type: boolean
+          title: Octet count framing
+          description: Enable if incoming messages use octet counting per RFC 6587.
+        inferFraming:
+          type: boolean
+          title: Infer Syslog framing
+          description: Enable if we should infer the syslog framing of the incoming
+            messages.
+        strictlyInferOctetCounting:
+          type: boolean
+          title: Strictly infer octet count framing
+          description: Enable if we should infer octet counting only if the messages
+            comply with RFC 5424.
+        maxActiveCxn:
+          type: number
+          title: Active connection limit
+          description: Maximum number of active connections allowed per Worker Process for
+            TCP connections. Use 0 for unlimited.
+          minimum: 0
+        socketIdleTimeout:
+          type: number
+          title: TCP socket idle timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. After this time, the connection will be
+            closed. Leave at 0 for no inactive socket monitoring.
+          minimum: 0
+        socketEndingMaxWait:
+          type: number
+          title: TCP forced socket termination timeout (seconds)
+          description: How long the server will wait after initiating a closure for a
+            client to close its end of the connection. If the client doesn't
+            close the connection within this time, the server will forcefully
+            terminate the socket to prevent resource leaks and ensure efficient
+            connection cleanup and system stability. Leave at 0 for no inactive
+            socket monitoring.
+          minimum: 0
+        socketMaxLifespan:
+          type: number
+          title: TCP Socket max lifespan (seconds)
+          description: The maximum duration a socket can remain open, even if active. This
+            helps manage resources and mitigate issues caused by TCP pinning.
+            Set to 0 to disable.
+          minimum: 0
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        udpSocketRxBufSize:
+          type: number
+          title: UDP socket buffer size (bytes)
+          description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+          minimum: 256
+          maximum: 4294967295
+        enableLoadBalancing:
+          type: boolean
+          title: Enable TCP load balancing
+          description: Load balance traffic across all Worker Processes
+        autoParse:
+          type: boolean
+          title: Auto parse
+          description: Detect the datatype of each event and extract its top-level fields
+            before the data reaches any of the processing pipelines
+            (pre-processing, main processing, post-processing).
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_udpPort:
+          type: string
+          description: Binds 'udpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'udpPort' at runtime.
+        __template_tcpPort:
+          type: string
+          description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tcpPort' at runtime.
+        __template_timestampTimezone:
+          type: string
+          description: Binds 'timestampTimezone' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'timestampTimezone' at runtime.
+      anyOf:
+        - required:
+            - host
+            - udpPort
+        - required:
+            - host
+            - tcpPort
+      title: InputVmwareEsxiVcenterSyslog
     InputNetgatePfsenseSyslog:
       type: object
       required:
@@ -30717,6 +30931,220 @@ components:
             - host
             - tcpPort
       title: InputUbiquitiUnifiSyslog
+    InputSonicwallSyslog:
+      type: object
+      required:
+        - type
+        - host
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique name for this input
+        type:
+          type: string
+          enum:
+            - sonicwall_syslog
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. For IPv4 (all addresses), use the default
+            '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP
+            address.
+        udpPort:
+          type: number
+          title: UDP port
+          maximum: 65535
+          description: Enter UDP port number to listen on. Not required if listening on TCP.
+        tcpPort:
+          type: number
+          title: TCP port
+          maximum: 65535
+          description: Enter TCP port number to listen on. Not required if listening on UDP.
+        maxBufferSize:
+          type: number
+          title: Buffer size limit (events)
+          description: Maximum number of events to buffer when downstream is blocking.
+            Only applies to UDP.
+          minimum: 0
+        ipWhitelistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Regex matching IP addresses that are allowed to send data
+        timestampTimezone:
+          type: string
+          title: Default timezone
+          description: Timezone to assign to timestamps without timezone info
+        singleMsgUdpPackets:
+          type: boolean
+          title: Single msg per UDP
+          description: Treat UDP packet data received as full syslog message
+        keepFieldsList:
+          type: array
+          title: Fields to keep
+          description: Wildcard list of fields to keep from source data; * = ALL (default)
+          minItems: 0
+          items:
+            type: string
+        octetCounting:
+          type: boolean
+          title: Octet count framing
+          description: Enable if incoming messages use octet counting per RFC 6587.
+        inferFraming:
+          type: boolean
+          title: Infer Syslog framing
+          description: Enable if we should infer the syslog framing of the incoming
+            messages.
+        strictlyInferOctetCounting:
+          type: boolean
+          title: Strictly infer octet count framing
+          description: Enable if we should infer octet counting only if the messages
+            comply with RFC 5424.
+        maxActiveCxn:
+          type: number
+          title: Active connection limit
+          description: Maximum number of active connections allowed per Worker Process for
+            TCP connections. Use 0 for unlimited.
+          minimum: 0
+        socketIdleTimeout:
+          type: number
+          title: TCP socket idle timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. After this time, the connection will be
+            closed. Leave at 0 for no inactive socket monitoring.
+          minimum: 0
+        socketEndingMaxWait:
+          type: number
+          title: TCP forced socket termination timeout (seconds)
+          description: How long the server will wait after initiating a closure for a
+            client to close its end of the connection. If the client doesn't
+            close the connection within this time, the server will forcefully
+            terminate the socket to prevent resource leaks and ensure efficient
+            connection cleanup and system stability. Leave at 0 for no inactive
+            socket monitoring.
+          minimum: 0
+        socketMaxLifespan:
+          type: number
+          title: TCP Socket max lifespan (seconds)
+          description: The maximum duration a socket can remain open, even if active. This
+            helps manage resources and mitigate issues caused by TCP pinning.
+            Set to 0 to disable.
+          minimum: 0
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        udpSocketRxBufSize:
+          type: number
+          title: UDP socket buffer size (bytes)
+          description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+          minimum: 256
+          maximum: 4294967295
+        enableLoadBalancing:
+          type: boolean
+          title: Enable TCP load balancing
+          description: Load balance traffic across all Worker Processes
+        autoParse:
+          type: boolean
+          title: Auto parse
+          description: Detect the datatype of each event and extract its top-level fields
+            before the data reaches any of the processing pipelines
+            (pre-processing, main processing, post-processing).
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_udpPort:
+          type: string
+          description: Binds 'udpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'udpPort' at runtime.
+        __template_tcpPort:
+          type: string
+          description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tcpPort' at runtime.
+        __template_timestampTimezone:
+          type: string
+          description: Binds 'timestampTimezone' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'timestampTimezone' at runtime.
+      anyOf:
+        - required:
+            - host
+            - udpPort
+        - required:
+            - host
+            - tcpPort
+      title: InputSonicwallSyslog
     InputFile:
       type: object
       properties:
@@ -42081,10 +42509,12 @@ components:
         - $ref: "#/components/schemas/InputCiscoAsaSyslog"
         - $ref: "#/components/schemas/InputCiscoMerakiSyslog"
         - $ref: "#/components/schemas/InputFortigateSyslog"
+        - $ref: "#/components/schemas/InputVmwareEsxiVcenterSyslog"
         - $ref: "#/components/schemas/InputNetgatePfsenseSyslog"
         - $ref: "#/components/schemas/InputWatchguardFireboxSyslog"
         - $ref: "#/components/schemas/InputInfobloxSyslog"
         - $ref: "#/components/schemas/InputUbiquitiUnifiSyslog"
+        - $ref: "#/components/schemas/InputSonicwallSyslog"
         - $ref: "#/components/schemas/InputFile"
         - $ref: "#/components/schemas/InputTcp"
         - $ref: "#/components/schemas/InputAppscope"
@@ -42190,10 +42620,12 @@ components:
           cisco_asa_syslog: "#/components/schemas/InputCiscoAsaSyslog"
           cisco_meraki_syslog: "#/components/schemas/InputCiscoMerakiSyslog"
           fortigate_syslog: "#/components/schemas/InputFortigateSyslog"
+          vmware_esxi_vcenter_syslog: "#/components/schemas/InputVmwareEsxiVcenterSyslog"
           netgate_pfsense_syslog: "#/components/schemas/InputNetgatePfsenseSyslog"
           watchguard_firebox_syslog: "#/components/schemas/InputWatchguardFireboxSyslog"
           infoblox_syslog: "#/components/schemas/InputInfobloxSyslog"
           ubiquiti_unifi_syslog: "#/components/schemas/InputUbiquitiUnifiSyslog"
+          sonicwall_syslog: "#/components/schemas/InputSonicwallSyslog"
           file: "#/components/schemas/InputFile"
           tcp: "#/components/schemas/InputTcp"
           appscope: "#/components/schemas/InputAppscope"
@@ -57209,9 +57641,14 @@ components:
         enableDynamicHeaders:
           type: boolean
           title: Enable dynamic headers
-          description: Add per-event HTTP headers from the __headers field to outgoing
-            requests. Events with different headers are batched and sent
-            separately.
+          description: Add per-event HTTP headers from the dynamic headers field to
+            outgoing requests. Events with different headers are batched and
+            sent separately.
+        dynamicHeadersField:
+          type: string
+          title: Dynamic headers field
+          description: When present, this field, which contains per-event HTTP headers,
+            will be added to outgoing requests and used to batch events.
         onBackpressure:
           $ref: "#/components/schemas/BackpressureBehaviorOptions"
           description: How to handle events when all receivers are exerting backpressure
@@ -62957,6 +63394,11 @@ components:
           title: Throttle request rate limit
           description: Maximum number of requests to limit to per second
           maximum: 2000
+        dynamicHeadersField:
+          type: string
+          title: Dynamic headers field
+          description: The metadata in this field will be included with the Destination
+            metadata and used to batch events
         onBackpressure:
           $ref: "#/components/schemas/BackpressureBehaviorOptions"
           description: How to handle events when all receivers are exerting backpressure
@@ -85982,6 +86424,16 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Infoblox Source.
+    InputCreateExamplesSonicWallSyslog:
+      summary: SonicWall
+      value:
+        id: sonicwall-syslog-source
+        type: sonicwall_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a SonicWall Source.
     InputCreateExamplesSyslog:
       summary: Syslog
       value:
@@ -86022,6 +86474,16 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a Cisco Meraki Source.
+    InputCreateExamplesVMwareEsxiVCenterSyslog:
+      summary: VMware ESXi/vCenter
+      value:
+        id: vmware-esxi-vcenter-syslog-source
+        type: vmware_esxi_vcenter_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a VMware ESXi/vCenter Source.
     InputCreateExamplesJuniperJunosSyslog:
       summary: Juniper JunOS
       value:
@@ -87444,6 +87906,18 @@ components:
       description: Example request body for updating a Infoblox Source.<br/><br/>The
         request body must include a complete representation of the Source that
         you want to update. This endpoint does not support partial updates.
+    UpdateInputExamplesSonicWallSyslog:
+      summary: SonicWall
+      value:
+        id: sonicwall-syslog-source
+        type: sonicwall_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a SonicWall Source.<br/><br/>The
+        request body must include a complete representation of the Source that
+        you want to update. This endpoint does not support partial updates.
     UpdateInputExamplesSyslog:
       summary: Syslog
       value:
@@ -87490,6 +87964,19 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for updating a Cisco Meraki
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
+    UpdateInputExamplesVMwareEsxiVCenterSyslog:
+      summary: VMware ESXi/vCenter
+      value:
+        id: vmware-esxi-vcenter-syslog-source
+        type: vmware_esxi_vcenter_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a VMware ESXi/vCenter
         Source.<br/><br/>The request body must include a complete representation
         of the Source that you want to update. This endpoint does not support
         partial updates.
@@ -94518,7 +95005,8 @@ paths:
       description: Get the specified Function.
       responses:
         "200":
-          description: The requested Function object in a single-item list.
+          description: The requested Function object. Returned in a response envelope with
+            <code>count</code> and <code>items</code>.
           content:
             application/json:
               schema:
@@ -96511,6 +96999,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesWatchGuardFireboxSyslog"
               InputCreateExamplesInfobloxSyslog:
                 $ref: "#/components/examples/InputCreateExamplesInfobloxSyslog"
+              InputCreateExamplesSonicWallSyslog:
+                $ref: "#/components/examples/InputCreateExamplesSonicWallSyslog"
               InputCreateExamplesSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesCiscoAsaSyslog:
@@ -96519,6 +97009,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesCiscoIosSyslog"
               InputCreateExamplesCiscoMerakiSyslog:
                 $ref: "#/components/examples/InputCreateExamplesCiscoMerakiSyslog"
+              InputCreateExamplesVMwareEsxiVCenterSyslog:
+                $ref: "#/components/examples/InputCreateExamplesVMwareEsxiVCenterSyslog"
               InputCreateExamplesJuniperJunosSyslog:
                 $ref: "#/components/examples/InputCreateExamplesJuniperJunosSyslog"
               InputCreateExamplesUbiquitiUnifiSyslog:
@@ -96875,6 +97367,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesWatchGuardFireboxSyslog"
               UpdateInputExamplesInfobloxSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesInfobloxSyslog"
+              UpdateInputExamplesSonicWallSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesSonicWallSyslog"
               UpdateInputExamplesSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSyslog"
               UpdateInputExamplesCiscoAsaSyslog:
@@ -96883,6 +97377,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesCiscoIosSyslog"
               UpdateInputExamplesCiscoMerakiSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesCiscoMerakiSyslog"
+              UpdateInputExamplesVMwareEsxiVCenterSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesVMwareEsxiVCenterSyslog"
               UpdateInputExamplesJuniperJunosSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesJuniperJunosSyslog"
               UpdateInputExamplesUbiquitiUnifiSyslog:
@@ -100940,8 +101436,9 @@ paths:
         <code>items</code> contains the successfully created Lake Datasets, and
         <code>errors</code> contains an entry (<code>{ id, reason }</code>) for
         each Lake Dataset that failed validation, so a per-item failure does not
-        fail the rest of the batch. In v2, an array request does not return a
-        <code>Location</code> header.
+        fail the rest of the batch. In v2, the <code>Location</code> response
+        header is returned only when a single Lake Dataset object is created; an
+        array request creates multiple resources and omits it.
       responses:
         "201":
           description: The created CriblLakeDataset object in a single-item list.
@@ -101857,6 +102354,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesWatchGuardFireboxSyslog"
               InputCreateExamplesInfobloxSyslog:
                 $ref: "#/components/examples/InputCreateExamplesInfobloxSyslog"
+              InputCreateExamplesSonicWallSyslog:
+                $ref: "#/components/examples/InputCreateExamplesSonicWallSyslog"
               InputCreateExamplesSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesCiscoAsaSyslog:
@@ -101865,6 +102364,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesCiscoIosSyslog"
               InputCreateExamplesCiscoMerakiSyslog:
                 $ref: "#/components/examples/InputCreateExamplesCiscoMerakiSyslog"
+              InputCreateExamplesVMwareEsxiVCenterSyslog:
+                $ref: "#/components/examples/InputCreateExamplesVMwareEsxiVCenterSyslog"
               InputCreateExamplesJuniperJunosSyslog:
                 $ref: "#/components/examples/InputCreateExamplesJuniperJunosSyslog"
               InputCreateExamplesUbiquitiUnifiSyslog:
@@ -102207,6 +102708,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesWatchGuardFireboxSyslog"
               UpdateInputExamplesInfobloxSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesInfobloxSyslog"
+              UpdateInputExamplesSonicWallSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesSonicWallSyslog"
               UpdateInputExamplesSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSyslog"
               UpdateInputExamplesCiscoAsaSyslog:
@@ -102215,6 +102718,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesCiscoIosSyslog"
               UpdateInputExamplesCiscoMerakiSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesCiscoMerakiSyslog"
+              UpdateInputExamplesVMwareEsxiVCenterSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesVMwareEsxiVCenterSyslog"
               UpdateInputExamplesJuniperJunosSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesJuniperJunosSyslog"
               UpdateInputExamplesUbiquitiUnifiSyslog:
