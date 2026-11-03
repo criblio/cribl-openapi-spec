@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.21.0-alpha.1793661060065-862fe7c5
+  version: 4.21.0-alpha.1793747462673-019e238b
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -31145,6 +31145,220 @@ components:
             - host
             - tcpPort
       title: InputSonicwallSyslog
+    InputSophosXgXgsFirewallSyslog:
+      type: object
+      required:
+        - type
+        - host
+      properties:
+        id:
+          type: string
+          title: Input ID
+          description: Unique name for this input
+        type:
+          type: string
+          enum:
+            - sophos_xg_xgs_firewall_syslog
+          description: Connector type identifier.
+        disabled:
+          type: boolean
+          title: Disabled
+          description: If true, the Source is disabled and will not collect data.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data from this Source before sending it through
+            the Routes
+        sendToRoutes:
+          type: boolean
+          description: Select whether to send data to Routes, or directly to Destinations.
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        pqEnabled:
+          type: boolean
+          title: Enable persistent queue
+          description: Use a disk queue to minimize data loss when connected services
+            block. See [Cribl
+            Docs](https://docs.cribl.io/stream/persistent-queues) for PQ
+            defaults (Cribl-managed Cloud Workers) and configuration options
+            (on-prem and hybrid Workers).
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        criblSourceProvenance:
+          $ref: "#/components/schemas/InputProvenanceTypeOptional"
+          description: Read-only metadata that records how the Source was created.
+            Preserved on update when omitted from the request body. Cannot be
+            set on create.
+        connections:
+          type: array
+          title: Use QuickConnect
+          description: Direct connections to Destinations, and optionally via a Pipeline
+            or a Pack
+          items:
+            $ref: "#/components/schemas/ConnectionConfInputCollection"
+        pq:
+          $ref: "#/components/schemas/PqType"
+          description: Persistent queue settings for this Source.
+        host:
+          type: string
+          title: Address
+          description: Address to bind on. For IPv4 (all addresses), use the default
+            '0.0.0.0'. For IPv6, enter '::' (all addresses) or specify an IP
+            address.
+        udpPort:
+          type: number
+          title: UDP port
+          maximum: 65535
+          description: Enter UDP port number to listen on. Not required if listening on TCP.
+        tcpPort:
+          type: number
+          title: TCP port
+          maximum: 65535
+          description: Enter TCP port number to listen on. Not required if listening on UDP.
+        maxBufferSize:
+          type: number
+          title: Buffer size limit (events)
+          description: Maximum number of events to buffer when downstream is blocking.
+            Only applies to UDP.
+          minimum: 0
+        ipWhitelistRegex:
+          type: string
+          title: IP allowlist regex
+          description: Regex matching IP addresses that are allowed to send data
+        timestampTimezone:
+          type: string
+          title: Default timezone
+          description: Timezone to assign to timestamps without timezone info
+        singleMsgUdpPackets:
+          type: boolean
+          title: Single msg per UDP
+          description: Treat UDP packet data received as full syslog message
+        keepFieldsList:
+          type: array
+          title: Fields to keep
+          description: Wildcard list of fields to keep from source data; * = ALL (default)
+          minItems: 0
+          items:
+            type: string
+        octetCounting:
+          type: boolean
+          title: Octet count framing
+          description: Enable if incoming messages use octet counting per RFC 6587.
+        inferFraming:
+          type: boolean
+          title: Infer Syslog framing
+          description: Enable if we should infer the syslog framing of the incoming
+            messages.
+        strictlyInferOctetCounting:
+          type: boolean
+          title: Strictly infer octet count framing
+          description: Enable if we should infer octet counting only if the messages
+            comply with RFC 5424.
+        maxActiveCxn:
+          type: number
+          title: Active connection limit
+          description: Maximum number of active connections allowed per Worker Process for
+            TCP connections. Use 0 for unlimited.
+          minimum: 0
+        socketIdleTimeout:
+          type: number
+          title: TCP socket idle timeout (seconds)
+          description: How long @{product} should wait before assuming that an inactive
+            socket has timed out. After this time, the connection will be
+            closed. Leave at 0 for no inactive socket monitoring.
+          minimum: 0
+        socketEndingMaxWait:
+          type: number
+          title: TCP forced socket termination timeout (seconds)
+          description: How long the server will wait after initiating a closure for a
+            client to close its end of the connection. If the client doesn't
+            close the connection within this time, the server will forcefully
+            terminate the socket to prevent resource leaks and ensure efficient
+            connection cleanup and system stability. Leave at 0 for no inactive
+            socket monitoring.
+          minimum: 0
+        socketMaxLifespan:
+          type: number
+          title: TCP Socket max lifespan (seconds)
+          description: The maximum duration a socket can remain open, even if active. This
+            helps manage resources and mitigate issues caused by TCP pinning.
+            Set to 0 to disable.
+          minimum: 0
+        tls:
+          $ref: "#/components/schemas/TlsSettingsServerSideType"
+          description: TLS settings (server side)
+        metadata:
+          type: array
+          title: Fields
+          description: Fields to add to events from this input
+          items:
+            $ref: "#/components/schemas/MetadataConfInputCollection"
+        udpSocketRxBufSize:
+          type: number
+          title: UDP socket buffer size (bytes)
+          description: "Optionally, set the SO_RCVBUF socket option for the UDP socket. This value tells the operating system how many bytes can be buffered in the kernel before events are dropped. Leave blank to use the OS default. Caution: Increasing this value will affect OS memory utilization."
+          minimum: 256
+          maximum: 4294967295
+        enableLoadBalancing:
+          type: boolean
+          title: Enable TCP load balancing
+          description: Load balance traffic across all Worker Processes
+        autoParse:
+          type: boolean
+          title: Auto parse
+          description: Detect the datatype of each event and extract its top-level fields
+            before the data reaches any of the processing pipelines
+            (pre-processing, main processing, post-processing).
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_environment:
+          type: string
+          description: Binds 'environment' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'environment' at runtime.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_host:
+          type: string
+          description: Binds 'host' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'host' at runtime.
+        __template_udpPort:
+          type: string
+          description: Binds 'udpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'udpPort' at runtime.
+        __template_tcpPort:
+          type: string
+          description: Binds 'tcpPort' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'tcpPort' at runtime.
+        __template_timestampTimezone:
+          type: string
+          description: Binds 'timestampTimezone' to a variable for dynamic value
+            resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.'
+            prefixed ID (group-scoped). Variable value overrides
+            'timestampTimezone' at runtime.
+      anyOf:
+        - required:
+            - host
+            - udpPort
+        - required:
+            - host
+            - tcpPort
+      title: InputSophosXgXgsFirewallSyslog
     InputFile:
       type: object
       properties:
@@ -42515,6 +42729,7 @@ components:
         - $ref: "#/components/schemas/InputInfobloxSyslog"
         - $ref: "#/components/schemas/InputUbiquitiUnifiSyslog"
         - $ref: "#/components/schemas/InputSonicwallSyslog"
+        - $ref: "#/components/schemas/InputSophosXgXgsFirewallSyslog"
         - $ref: "#/components/schemas/InputFile"
         - $ref: "#/components/schemas/InputTcp"
         - $ref: "#/components/schemas/InputAppscope"
@@ -42626,6 +42841,7 @@ components:
           infoblox_syslog: "#/components/schemas/InputInfobloxSyslog"
           ubiquiti_unifi_syslog: "#/components/schemas/InputUbiquitiUnifiSyslog"
           sonicwall_syslog: "#/components/schemas/InputSonicwallSyslog"
+          sophos_xg_xgs_firewall_syslog: "#/components/schemas/InputSophosXgXgsFirewallSyslog"
           file: "#/components/schemas/InputFile"
           tcp: "#/components/schemas/InputTcp"
           appscope: "#/components/schemas/InputAppscope"
@@ -44279,6 +44495,10 @@ components:
             - URL
             - ID
           x-speakeasy-unknown-values: allow
+        dynamicHeadersField:
+          type: string
+          title: Dynamic headers field
+          description: Event field to use for dynamic headers and batching
         totalMemoryLimitKB:
           type: number
           title: Buffer memory limit (KB)
@@ -59664,13 +59884,8 @@ components:
           maximum: 65535
           description: The port to connect to on the provided host
         endpointSource:
-          enum:
-            - static
-            - endpointList
-          type: string
-          title: Endpoint source
+          $ref: "#/components/schemas/EndpointSourceOptions"
           description: Whether to use statically configured endpoints or an Endpoint List
-          x-speakeasy-unknown-values: allow
         hosts:
           type: array
           title: Destinations
@@ -59679,26 +59894,7 @@ components:
           items:
             $ref: "#/components/schemas/HostConfOutputSyslog"
         endpointList:
-          type: object
-          title: Endpoint List
-          required:
-            - id
-            - port
-          properties:
-            id:
-              type: string
-              title: Endpoint List
-              description: The Endpoint List that supplies this destination's endpoints
-            port:
-              type: number
-              title: Port
-              maximum: 65535
-              description: The port to connect to on each endpoint in the list
-            __template_port:
-              type: string
-              description: Binds 'port' to a variable for dynamic value resolution. Set to
-                variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
-                (group-scoped). Variable value overrides 'port' at runtime.
+          $ref: "#/components/schemas/EndpointListType"
           description: Endpoint List
         excludeSelf:
           type: boolean
@@ -60001,11 +60197,9 @@ components:
             addresses, @{product} will cycle through them in the order returned.
             For optimal performance, consider enabling this setting for non-load
             balanced destinations.
-        excludeSelf:
-          type: boolean
-          title: Exclude current host IPs
-          description: Exclude all IPs of the current host from the list of any resolved
-            hostnames
+        endpointSource:
+          $ref: "#/components/schemas/EndpointSourceOptions"
+          description: Whether to use statically configured endpoints or an Endpoint List
         urls:
           type: array
           title: Cribl Worker endpoints
@@ -60013,6 +60207,14 @@ components:
           minItems: 1
           items:
             $ref: "#/components/schemas/UrlConfOutputCriblHttp"
+        endpointList:
+          $ref: "#/components/schemas/EndpointListType"
+          description: Endpoint List
+        excludeSelf:
+          type: boolean
+          title: Exclude current host IPs
+          description: Exclude all IPs of the current host from the list of any resolved
+            hostnames
         dnsResolvePeriodSec:
           type: number
           minimum: 0
@@ -60322,11 +60524,9 @@ components:
           description: URL of a Cribl Worker to send events to, such as
             http://localhost:10200
           pattern: ^https?://.*
-        excludeSelf:
-          type: boolean
-          title: Exclude current host IPs
-          description: Exclude all IPs of the current host from the list of any resolved
-            hostnames
+        endpointSource:
+          $ref: "#/components/schemas/EndpointSourceOptions"
+          description: Whether to use statically configured endpoints or an Endpoint List
         urls:
           type: array
           title: Cribl Worker endpoints
@@ -60334,6 +60534,14 @@ components:
           minItems: 1
           items:
             $ref: "#/components/schemas/UrlConfOutputCriblHttp"
+        endpointList:
+          $ref: "#/components/schemas/EndpointListType"
+          description: Endpoint List
+        excludeSelf:
+          type: boolean
+          title: Exclude current host IPs
+          description: Exclude all IPs of the current host from the list of any resolved
+            hostnames
         dnsResolvePeriodSec:
           type: number
           minimum: 0
@@ -63856,6 +64064,10 @@ components:
             - Metrics
           description: Telemetry type
           x-speakeasy-unknown-values: allow
+        dynamicHeadersField:
+          type: string
+          title: Dynamic headers field
+          description: Event field to use for dynamic headers and batching
         totalMemoryLimitKB:
           type: number
           title: Buffer memory limit (KB)
@@ -75248,6 +75460,10 @@ components:
           title: HTTP Receiver endpoint
           description: URL of the Securonix HTTP Event Receiver endpoint
           pattern: ^https?://.*
+        dynamicHeadersField:
+          type: string
+          title: Dynamic headers field
+          description: Event field to use for dynamic headers and batching
         description:
           type: string
           title: Description
@@ -75538,6 +75754,10 @@ components:
           type: string
           title: Reporting Device Name
           description: Reporting device hostname.
+        dynamicHeadersField:
+          type: string
+          title: Dynamic headers field
+          description: Event field to use for dynamic headers and batching
         description:
           type: string
           title: Description
@@ -78149,6 +78369,14 @@ components:
         - http2
       title: ConnectionProtocol
       x-speakeasy-unknown-values: allow
+    ConnectionStatus:
+      type: string
+      enum:
+        - connected
+        - away
+        - disconnected
+      title: ConnectionStatus
+      x-speakeasy-unknown-values: allow
     ApiScheme:
       type: string
       enum:
@@ -78705,6 +78933,9 @@ components:
         connectionProtocol:
           $ref: "#/components/schemas/ConnectionProtocol"
           description: Connection protocol used for node-to-Leader communication.
+        connectionStatus:
+          $ref: "#/components/schemas/ConnectionStatus"
+          description: "Connection state of the node: <code>connected</code>, <code>away</code> (disconnected but still within its ephemeral reconnect window), or <code>disconnected</code>."
         deployable:
           type: boolean
           description: If <code>true</code>, the node can receive configuration
@@ -78746,6 +78977,10 @@ components:
           type: integer
           description: Maximum configured ephemeral offline duration, in milliseconds
             (base + jitter cap).
+        overdueAt:
+          type: integer
+          description: Timestamp (in Unix time) when the ephemeral reconnect window of a
+            disconnected node expires.
         provisioningTokenId:
           type: string
           description: The <code>id</code> of the provisioning token used to authenticate
@@ -78936,6 +79171,10 @@ components:
               type: integer
               description: Total number of Worker or Edge Nodes that are connected with
                 <code>healthy</code> status.
+            awayCount:
+              type: integer
+              description: Total number of Worker or Edge Nodes that are disconnected but
+                still within their ephemeral reconnect window.
             confVersions:
               type: integer
               description: Total number of unique configuration versions across all Worker or
@@ -78946,6 +79185,7 @@ components:
             disconnectedCount:
               type: integer
               description: Total number of Worker or Edge Nodes in a disconnected state.
+                Excludes Nodes counted in <code>awayCount</code>.
             groups:
               type: integer
               description: Total number of distinct Worker Groups or Edge Fleets that the
@@ -82768,6 +83008,36 @@ components:
       x-speakeasy-enum-descriptions:
         - 1.3.1
       x-speakeasy-unknown-values: allow
+    EndpointSourceOptions:
+      enum:
+        - static
+        - endpointList
+      type: string
+      title: Endpoint source
+      description: Whether to use statically configured endpoints or an Endpoint List
+      x-speakeasy-unknown-values: allow
+    EndpointListType:
+      type: object
+      title: Endpoint List
+      required:
+        - id
+        - port
+      properties:
+        id:
+          type: string
+          title: Endpoint List
+          description: The Endpoint List that supplies this destination's endpoints
+        port:
+          type: number
+          title: Port
+          maximum: 65535
+          description: The port to connect to on each endpoint in the list
+        __template_port:
+          type: string
+          description: Binds 'port' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'port' at runtime.
+      description: Endpoint List
     AuthTokenConfOutputCriblHttp:
       type: object
       required:
@@ -86434,6 +86704,16 @@ components:
         sendToRoutes: true
         pqEnabled: false
       description: Example request body for creating a SonicWall Source.
+    InputCreateExamplesSophosXgXgsFirewallSyslog:
+      summary: Sophos XG/XGS Firewall
+      value:
+        id: sophos-xg-xgs-firewall-syslog-source
+        type: sophos_xg_xgs_firewall_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for creating a Sophos XG/XGS Firewall Source.
     InputCreateExamplesSyslog:
       summary: Syslog
       value:
@@ -87918,6 +88198,19 @@ components:
       description: Example request body for updating a SonicWall Source.<br/><br/>The
         request body must include a complete representation of the Source that
         you want to update. This endpoint does not support partial updates.
+    UpdateInputExamplesSophosXgXgsFirewallSyslog:
+      summary: Sophos XG/XGS Firewall
+      value:
+        id: sophos-xg-xgs-firewall-syslog-source
+        type: sophos_xg_xgs_firewall_syslog
+        host: 0.0.0.0
+        udpPort: 514
+        sendToRoutes: true
+        pqEnabled: false
+      description: Example request body for updating a Sophos XG/XGS Firewall
+        Source.<br/><br/>The request body must include a complete representation
+        of the Source that you want to update. This endpoint does not support
+        partial updates.
     UpdateInputExamplesSyslog:
       summary: Syslog
       value:
@@ -97001,6 +97294,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesInfobloxSyslog"
               InputCreateExamplesSonicWallSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSonicWallSyslog"
+              InputCreateExamplesSophosXgXgsFirewallSyslog:
+                $ref: "#/components/examples/InputCreateExamplesSophosXgXgsFirewallSyslog"
               InputCreateExamplesSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesCiscoAsaSyslog:
@@ -97369,6 +97664,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesInfobloxSyslog"
               UpdateInputExamplesSonicWallSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSonicWallSyslog"
+              UpdateInputExamplesSophosXgXgsFirewallSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesSophosXgXgsFirewallSyslog"
               UpdateInputExamplesSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSyslog"
               UpdateInputExamplesCiscoAsaSyslog:
@@ -97725,14 +98022,13 @@ paths:
         - node
         - single
       summary: Clear the persistent queue for a Source within a Pack
-      description: Clear the persistent queue (PQ) for the specified Source within the
-        specified Pack.
+      description: Asynchronously clears the persistent queue (PQ) for the specified
+        Source. Returns a background job ID that can be used to track the
+        operation's progress within the specified Pack.
       responses:
         "201":
           description: The ID of the background job that clears the persistent queue,
-            wrapped in a single-item list. Because this operation creates a job
-            instead of deleting a resource, the HTTP status code is 201 rather
-            than 204.
+            wrapped in a single-item list.
           content:
             application/json:
               schema:
@@ -97740,6 +98036,12 @@ paths:
               examples:
                 ClearPQResponseExamplesClearPQJob:
                   $ref: "#/components/examples/ClearPQResponseExamplesClearPQJob"
+        "400":
+          description: Action not allowed on Worker Node.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -97755,6 +98057,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: The requested resource does not exist — Source not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "500":
           description: Unexpected server error.
           content:
@@ -98660,14 +98968,13 @@ paths:
         - node
         - single
       summary: Clear the persistent queue for a Destination within a Pack
-      description: Clear the persistent queue (PQ) for the specified Destination
-        within the specified Pack.
+      description: Asynchronously clears the persistent queue (PQ) for the specified
+        Destination. Returns a background job ID that can be used to track the
+        operation's progress within the specified Pack.
       responses:
         "201":
           description: The ID of the background job that clears the persistent queue,
-            wrapped in a single-item list. Because this operation creates a job
-            instead of deleting a resource, the HTTP status code is 201 rather
-            than 204.
+            wrapped in a single-item list.
           content:
             application/json:
               schema:
@@ -98675,6 +98982,12 @@ paths:
               examples:
                 OutputClearPQResponseExamplesClearPQJobId:
                   $ref: "#/components/examples/OutputClearPQResponseExamplesClearPQJobId"
+        "400":
+          description: Action not allowed on Worker Node.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -98690,6 +99003,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: The requested resource does not exist — Destination not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "500":
           description: Unexpected server error.
           content:
@@ -102356,6 +102675,8 @@ paths:
                 $ref: "#/components/examples/InputCreateExamplesInfobloxSyslog"
               InputCreateExamplesSonicWallSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSonicWallSyslog"
+              InputCreateExamplesSophosXgXgsFirewallSyslog:
+                $ref: "#/components/examples/InputCreateExamplesSophosXgXgsFirewallSyslog"
               InputCreateExamplesSyslog:
                 $ref: "#/components/examples/InputCreateExamplesSyslog"
               InputCreateExamplesCiscoAsaSyslog:
@@ -102710,6 +103031,8 @@ paths:
                 $ref: "#/components/examples/UpdateInputExamplesInfobloxSyslog"
               UpdateInputExamplesSonicWallSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSonicWallSyslog"
+              UpdateInputExamplesSophosXgXgsFirewallSyslog:
+                $ref: "#/components/examples/UpdateInputExamplesSophosXgXgsFirewallSyslog"
               UpdateInputExamplesSyslog:
                 $ref: "#/components/examples/UpdateInputExamplesSyslog"
               UpdateInputExamplesCiscoAsaSyslog:
@@ -103097,13 +103420,13 @@ paths:
         - node
         - single
       summary: Clear the persistent queue for a Source
-      description: Clear the persistent queue (PQ) for the specified Source.
+      description: Asynchronously clears the persistent queue (PQ) for the specified
+        Source. Returns a background job ID that can be used to track the
+        operation's progress.
       responses:
         "201":
           description: The ID of the background job that clears the persistent queue,
-            wrapped in a single-item list. Because this operation creates a job
-            instead of deleting a resource, the HTTP status code is 201 rather
-            than 204.
+            wrapped in a single-item list.
           content:
             application/json:
               schema:
@@ -103111,6 +103434,12 @@ paths:
               examples:
                 ClearPQResponseExamplesClearPQJob:
                   $ref: "#/components/examples/ClearPQResponseExamplesClearPQJob"
+        "400":
+          description: Action not allowed on Worker Node.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -103126,6 +103455,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: The requested resource does not exist — Source not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "500":
           description: Unexpected server error.
           content:
@@ -103932,13 +104267,13 @@ paths:
         - node
         - single
       summary: Clear the persistent queue for a Destination
-      description: Clear the persistent queue (PQ) for the specified Destination.
+      description: Asynchronously clears the persistent queue (PQ) for the specified
+        Destination. Returns a background job ID that can be used to track the
+        operation's progress.
       responses:
         "201":
           description: The ID of the background job that clears the persistent queue,
-            wrapped in a single-item list. Because this operation creates a job
-            instead of deleting a resource, the HTTP status code is 201 rather
-            than 204.
+            wrapped in a single-item list.
           content:
             application/json:
               schema:
@@ -103946,6 +104281,12 @@ paths:
               examples:
                 OutputClearPQResponseExamplesClearPQJobId:
                   $ref: "#/components/examples/OutputClearPQResponseExamplesClearPQJobId"
+        "400":
+          description: Action not allowed on Worker Node.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "401":
           description: Authentication failed (missing or invalid credentials or Bearer
             token).
@@ -103961,6 +104302,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: The requested resource does not exist — Destination not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "500":
           description: Unexpected server error.
           content:
