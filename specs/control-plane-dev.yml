@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.21.0-alpha.1793747462673-019e238b
+  version: 4.21.0-alpha.1793833941735-bb5ca88a
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -924,6 +924,32 @@ components:
             - none
           description: Authentication protocol for the SNMPv3 user.
           type: string
+    SnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeManual:
+      type: object
+      properties:
+        authKeyType:
+          $ref: "#/components/schemas/AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeManual"
+          description: Discriminator value.
+        authKey:
+          type: string
+          title: V3 authentication key
+          description: Authentication key for SNMPv3 user. Required when an authentication
+            protocol is selected.
+      required:
+        - authKey
+    SnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeSecret:
+      type: object
+      properties:
+        authKeyType:
+          $ref: "#/components/schemas/AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeSecret"
+          description: Discriminator value.
+        authKeySecret:
+          type: string
+          minLength: 1
+          title: V3 authentication key (text secret)
+          description: Select or create a stored text secret
+      required:
+        - authKeySecret
     SnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNone:
       type: object
       properties:
@@ -932,6 +958,32 @@ components:
             - none
           description: Privacy protocol used to encrypt SNMPv3 messages.
           type: string
+    SnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNonePrivKeyTypeManual:
+      type: object
+      properties:
+        privKeyType:
+          $ref: "#/components/schemas/AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeManual"
+          description: Discriminator value.
+        privKey:
+          type: string
+          title: V3 privacy key
+          description: Privacy key for SNMPv3 encryption. Required when a privacy protocol
+            is selected.
+      required:
+        - privKey
+    SnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNonePrivKeyTypeSecret:
+      type: object
+      properties:
+        privKeyType:
+          $ref: "#/components/schemas/AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeSecret"
+          description: Discriminator value.
+        privKeySecret:
+          type: string
+          minLength: 1
+          title: V3 privacy key (text secret)
+          description: Select or create a stored text secret
+      required:
+        - privKeySecret
     SnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNone:
       type: object
       properties:
@@ -944,13 +996,19 @@ components:
             - aes256b
             - aes256r
           x-speakeasy-unknown-values: allow
-        privKey:
-          type: string
-          title: V3 privacy key
-          description: Privacy key for SNMPv3 encryption. Required when a privacy protocol
-            is selected.
-      required:
-        - privKey
+        privKeyType:
+          $ref: "#/components/schemas/V3PrivacyKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNone"
+          description: Select Manual to enter the key directly, or Secret to use a stored
+            text secret
+      allOf:
+        - oneOf:
+            - $ref: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNonePrivKeyTypeManual"
+            - $ref: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNonePrivKeyTypeSecret"
+          discriminator:
+            propertyName: privKeyType
+            mapping:
+              manual: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNonePrivKeyTypeManual"
+              secret: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNonePrivKeyTypeSecret"
     SnmpTrapSerializeV3UserAuthProtocolNotNone:
       type: object
       properties:
@@ -965,11 +1023,10 @@ components:
             - sha384
             - sha512
           x-speakeasy-unknown-values: allow
-        authKey:
-          type: string
-          title: V3 authentication key
-          description: Authentication key for SNMPv3 user. Required when an authentication
-            protocol is selected.
+        authKeyType:
+          $ref: "#/components/schemas/V3AuthenticationKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNone"
+          description: Select Manual to enter the key directly, or Secret to use a stored
+            text secret
         privProtocol:
           type: string
           enum:
@@ -993,9 +1050,16 @@ components:
           minLength: 1
           description: Username for the SNMPv3 user.
       required:
-        - authKey
         - name
       allOf:
+        - oneOf:
+            - $ref: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeManual"
+            - $ref: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeSecret"
+          discriminator:
+            propertyName: authKeyType
+            mapping:
+              manual: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeManual"
+              secret: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeSecret"
         - oneOf:
             - $ref: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNone"
             - $ref: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNone"
@@ -8001,9 +8065,13 @@ components:
             authProtocol:
               $ref: "#/components/schemas/AuthenticationProtocolOptionsV3User"
               description: Authentication protocol for the SNMPv3 user.
+            authKeyType:
+              default: manual
             privProtocol:
               type: string
               description: Privacy protocol for SNMPv3 encryption.
+            privKeyType:
+              default: manual
           allOf:
             - oneOf:
                 - $ref: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNone"
@@ -12409,7 +12477,7 @@ components:
       type: object
       properties:
         authType:
-          $ref: "#/components/schemas/AuthTypeOptionsAzureBlobAuthTypeManual"
+          $ref: "#/components/schemas/AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeManual"
           description: Discriminator value.
         connectionString:
           type: string
@@ -12428,7 +12496,7 @@ components:
       type: object
       properties:
         authType:
-          $ref: "#/components/schemas/AuthTypeOptionsAzureBlobAuthTypeSecret"
+          $ref: "#/components/schemas/AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeSecret"
           description: Discriminator value.
         textSecret:
           type: string
@@ -12925,7 +12993,7 @@ components:
       type: object
       properties:
         authType:
-          $ref: "#/components/schemas/AuthTypeOptionsAzureBlobAuthTypeManual"
+          $ref: "#/components/schemas/AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeManual"
           description: Discriminator value.
         serviceAccountCredentials:
           type: string
@@ -12939,7 +13007,7 @@ components:
       type: object
       properties:
         authType:
-          $ref: "#/components/schemas/AuthTypeOptionsAzureBlobAuthTypeSecret"
+          $ref: "#/components/schemas/AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeSecret"
           description: Discriminator value.
         textSecret:
           type: string
@@ -15793,7 +15861,7 @@ components:
       type: object
       properties:
         awsAuthenticationMethod:
-          $ref: "#/components/schemas/AuthTypeOptionsAzureBlobAuthTypeManual"
+          $ref: "#/components/schemas/AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeManual"
           description: Discriminator value.
         awsApiKey:
           type: string
@@ -15813,7 +15881,7 @@ components:
       type: object
       properties:
         awsAuthenticationMethod:
-          $ref: "#/components/schemas/AuthTypeOptionsAzureBlobAuthTypeSecret"
+          $ref: "#/components/schemas/AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeSecret"
           description: Discriminator value.
         awsSecret:
           type: string
@@ -27831,17 +27899,9 @@ components:
                     $ref: "#/components/schemas/AuthenticationProtocolOptionsV3User"
                     description: Authentication protocol for the SNMPv3 user.
                   authKeyType:
-                    enum:
-                      - manual
-                      - secret
-                    type: string
-                    x-speakeasy-enum-descriptions:
-                      - Manual
-                      - Secret
-                    title: V3 authentication key type
+                    $ref: "#/components/schemas/V3AuthenticationKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNone"
                     description: Select Manual to enter the key directly, or Secret to use a stored
                       text secret
-                    x-speakeasy-unknown-values: allow
                   authKey:
                     type: string
                     title: V3 authentication key
@@ -27868,17 +27928,9 @@ components:
                     description: Privacy protocol
                     x-speakeasy-unknown-values: allow
                   privKeyType:
-                    enum:
-                      - manual
-                      - secret
-                    type: string
-                    x-speakeasy-enum-descriptions:
-                      - Manual
-                      - Secret
-                    title: V3 privacy key type
+                    $ref: "#/components/schemas/V3PrivacyKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNone"
                     description: Select Manual to enter the key directly, or Secret to use a stored
                       text secret
-                    x-speakeasy-unknown-values: allow
                   privKey:
                     type: string
                     title: V3 privacy key
@@ -29127,7 +29179,7 @@ components:
             disabled:
               type: boolean
               title: Disabled
-              description: If true, TLS is disabled on this connection.
+              description: Disabled
             requestCert:
               type: boolean
               title: Authenticate client (mutual auth)
@@ -43991,6 +44043,11 @@ components:
           description: Enable for optimal performance. Even if you have one hostname, it
             can expand to multiple IPs. If disabled, consider enabling
             round-robin DNS.
+        dynamicHeadersField:
+          type: string
+          title: Dynamic headers field
+          description: When presented, this field which contains metadata, will be
+            injected into the Destination metadata and used to batch events.
         description:
           type: string
           title: Description
@@ -63602,6 +63659,14 @@ components:
           title: Throttle request rate limit
           description: Maximum number of requests to limit to per second
           maximum: 2000
+        throttleBurstDisabled:
+          type: boolean
+          title: Disable bursts
+          description: When bursts are disabled, the throttle rate is a hard limit and
+            applies immediately. Otherwise, the throttle rate is an average over
+            1 hour and traffic may temporarily exceed the limit (bursts). Bursts
+            are allowed by default. Applies only when Throttle request rate
+            limit is set.
         dynamicHeadersField:
           type: string
           title: Dynamic headers field
@@ -75455,15 +75520,15 @@ components:
             blank, defaults to 5 times the max body size (if set). If 0, no
             limit is enforced.
           minimum: 0
+        dynamicHeadersField:
+          type: string
+          title: Dynamic headers field
+          description: Event field to use for dynamic headers and batching
         httpReceiverEndpoint:
           type: string
           title: HTTP Receiver endpoint
           description: URL of the Securonix HTTP Event Receiver endpoint
           pattern: ^https?://.*
-        dynamicHeadersField:
-          type: string
-          title: Dynamic headers field
-          description: Event field to use for dynamic headers and batching
         description:
           type: string
           title: Description
@@ -75731,6 +75796,10 @@ components:
             blank, defaults to 5 times the max body size (if set). If 0, no
             limit is enforced.
           minimum: 0
+        dynamicHeadersField:
+          type: string
+          title: Dynamic headers field
+          description: Event field to use for dynamic headers and batching
         fortisiemUrl:
           type: string
           title: FortiSIEM URL
@@ -75754,10 +75823,6 @@ components:
           type: string
           title: Reporting Device Name
           description: Reporting device hostname.
-        dynamicHeadersField:
-          type: string
-          title: Dynamic headers field
-          description: Event field to use for dynamic headers and batching
         description:
           type: string
           title: Description
@@ -81105,6 +81170,40 @@ components:
           type: string
           title: Pattern
           description: "Grok pattern to extract fields. Syntax supported: %{PATTERN_NAME:FIELD_NAME}"
+    AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeManual:
+      enum:
+        - manual
+      type: string
+      description: Discriminator value.
+    AuthKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNoneAuthKeyTypeSecret:
+      enum:
+        - secret
+      type: string
+      description: Discriminator value.
+    V3PrivacyKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNone:
+      type: string
+      enum:
+        - manual
+        - secret
+      x-speakeasy-enum-descriptions:
+        - Manual
+        - Secret
+      title: V3 privacy key type
+      description: Select Manual to enter the key directly, or Secret to use a stored
+        text secret
+      x-speakeasy-unknown-values: allow
+    V3AuthenticationKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNone:
+      type: string
+      enum:
+        - manual
+        - secret
+      x-speakeasy-enum-descriptions:
+        - Manual
+        - Secret
+      title: V3 authentication key type
+      description: Select Manual to enter the key directly, or Secret to use a stored
+        text secret
+      x-speakeasy-unknown-values: allow
     NameFieldType:
       type: object
       description: Reference to a field by its original text and parsed path segments.
@@ -81148,16 +81247,6 @@ components:
       title: Authentication protocol
       description: Authentication protocol for the SNMPv3 user.
       x-speakeasy-unknown-values: allow
-    AuthTypeOptionsAzureBlobAuthTypeManual:
-      enum:
-        - manual
-      type: string
-      description: Discriminator value.
-    AuthTypeOptionsAzureBlobAuthTypeSecret:
-      enum:
-        - secret
-      type: string
-      description: Discriminator value.
     CertificateTypeAzureBlobAuthTypeClientCert:
       type: object
       description: Certificate credentials for the service principal.
@@ -84072,7 +84161,7 @@ components:
         disabled:
           type: boolean
           title: Disabled
-          description: If true, TLS is disabled on this connection.
+          description: Disabled
         requestCert:
           type: boolean
           title: Authenticate client (mutual auth)
@@ -97933,8 +98022,7 @@ paths:
         - node
         - single
       summary: Update metadata for an HEC token for a Splunk HEC Source within a Pack
-      description: Update the metadata for the specified HEC token for the specified
-        Splunk HEC Source within the specified Pack.
+      description: "Update the metadata for the specified HEC token for the specified Splunk HEC Source.<br/><br/>The v2 API supports partial updates: omitted fields keep their stored values, and an array in the request body replaces the stored array. To clear a field, send an empty value. <code>null</code> is rejected with <code>400</code>.<br/><br/>The v1 API accepts partial request bodies but resets omitted fields to their default values. For example, omitting <code>enabled</code> from the request body sets it to <code>true</code> within the specified Pack."
       responses:
         "200":
           description: The updated Splunk HEC Source with the modified HEC token metadata.
@@ -99349,7 +99437,9 @@ paths:
         the specified Pack.
       responses:
         "200":
-          description: The requested Source status object in a single-item list.
+          description: The status objects for the requested Source, which can report
+            multiple derived status rows. Returned in a response envelope with
+            <code>count</code> and <code>items</code>.
           content:
             application/json:
               schema:
@@ -99374,6 +99464,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: The requested Source does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "500":
           description: Unexpected server error.
           content:
@@ -99526,7 +99622,9 @@ paths:
         within the specified Pack.
       responses:
         "200":
-          description: The requested Destination status object in a single-item list.
+          description: The status objects for the requested Destination, which can report
+            multiple derived status rows. Returned in a response envelope with
+            <code>count</code> and <code>items</code>.
           content:
             application/json:
               schema:
@@ -99551,6 +99649,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: The requested Destination does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "500":
           description: Unexpected server error.
           content:
@@ -103281,8 +103385,7 @@ paths:
         - node
         - single
       summary: Update metadata for an HEC token for a Splunk HEC Source
-      description: Update the metadata for the specified HEC token for the specified
-        Splunk HEC Source.
+      description: "Update the metadata for the specified HEC token for the specified Splunk HEC Source.<br/><br/>The v2 API supports partial updates: omitted fields keep their stored values, and an array in the request body replaces the stored array. To clear a field, send an empty value. <code>null</code> is rejected with <code>400</code>.<br/><br/>The v1 API accepts partial request bodies but resets omitted fields to their default values. For example, omitting <code>enabled</code> from the request body sets it to <code>true</code>."
       responses:
         "200":
           description: The updated Splunk HEC Source with the modified HEC token metadata.
@@ -104791,7 +104894,9 @@ paths:
       description: Get the status and optional metrics for the specified Source.
       responses:
         "200":
-          description: The requested Source status object in a single-item list.
+          description: The status objects for the requested Source, which can report
+            multiple derived status rows. Returned in a response envelope with
+            <code>count</code> and <code>items</code>.
           content:
             application/json:
               schema:
@@ -104816,6 +104921,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: The requested Source does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "500":
           description: Unexpected server error.
           content:
@@ -104954,7 +105065,9 @@ paths:
       description: Get the status and optional metrics for the specified Destination.
       responses:
         "200":
-          description: The requested Destination status object in a single-item list.
+          description: The status objects for the requested Destination, which can report
+            multiple derived status rows. Returned in a response envelope with
+            <code>count</code> and <code>items</code>.
           content:
             application/json:
               schema:
@@ -104979,6 +105092,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "404":
+          description: The requested Destination does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestApiJsonError"
         "500":
           description: Unexpected server error.
           content:
