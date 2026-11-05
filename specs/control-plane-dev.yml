@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.21.0-alpha.1793833941735-bb5ca88a
+  version: 4.21.0-alpha.1793916906748-e9e57673
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -31621,6 +31621,32 @@ components:
             alternates between work and yield periods within a 200ms cycle. For
             example, 25% processes entries for 50ms then yields for 150ms. Lower
             values reduce CPU usage at the cost of longer discovery times.
+        recursiveWatch:
+          type: boolean
+          title: Recursive watch
+          description: Watch the search path recursively, so new and updated files are
+            detected as the filesystem reports them. When disabled, file
+            discovery relies on repeated directory scans only. Intended for
+            large search paths, where it removes the cost of scanning the whole
+            tree on every interval.It offers little benefit for search paths
+            containing few files or a single file.
+        rescanInterval:
+          type: number
+          minimum: 1
+          title: Re-scan interval
+          description: "Time, in seconds, between restarting the recursive watch and rescanning the directory tree. The rescan recovers discovered changes when the operating system fails to send filesystem notifications. A shorter interval reduces the time window during which changes can go unnoticed, but at the expense of performing a full directory walk each time. An interval is always in force: clearing the field falls back to one hour rather than turning rescans off."
+        maxWatches:
+          type: number
+          minimum: 1
+          title: Watched directory limit
+          description: Maximum number of directories this Source watches at one time.
+            Applies on Linux, where the operating system needs one watch per
+            directory; macOS and Windows use a single recursive watch and ignore
+            this. Reaching the limit stops the watch from descending further and
+            reports the Source as unhealthy, rather than quietly missing files
+            below that point. Raise the limit for a tree with many directories,
+            or lower it to leave room for other Sources sharing the host's
+            fs.inotify.max_user_watches budget.
         includeUnidentifiableBinary:
           type: boolean
           title: Enable binary files
@@ -77568,6 +77594,9 @@ components:
           type: string
           description: Brief description of the Worker Group, Outpost Group, or Edge Fleet.
           maxLength: 512
+        ephemeralCount:
+          type: integer
+          description: "Number of Workers or Nodes in the Worker Group, Outpost Group, or Edge Fleet that are connected, plus those that are away: disconnected, but still within the reconnect window their ephemeral connection mode allows. Excludes Nodes disconnected beyond that window. Equals <code>workerCount</code> wherever no Node uses an ephemeral connection mode.<br/><br/> **Warning**: Do not change the value of <code>ephemeralCount</code> in the body of PATCH requests. The PATCH request body must include the value as it appears in the <code>GET /products/{product}/groups/{id}</code> response."
         estimatedIngestRate:
           $ref: "#/components/schemas/EstimatedIngestRateOptionsConfigGroup"
           description: Estimated ingest rate for a Cribl.Cloud Worker Group, in GB/sec.
@@ -95265,6 +95294,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "429":
           description: Rate limit exceeded (check Retry-After header).
           headers:
@@ -95331,6 +95366,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -95413,6 +95454,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -95460,6 +95507,12 @@ paths:
               examples:
                 HealthExamplesHealthyPrimary:
                   $ref: "#/components/examples/HealthExamplesHealthyPrimary"
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "420":
           description: Server is shutting down or in standby mode
           content:
@@ -95518,6 +95571,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -95609,6 +95668,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -95695,6 +95760,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist — Database Connection not
             found.
@@ -95775,6 +95846,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: Database Connection not found.
           content:
@@ -95872,6 +95949,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: Database Connection not found.
           content:
@@ -95942,6 +96025,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -96026,6 +96115,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -96103,6 +96198,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -96168,6 +96269,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -96251,6 +96358,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -96311,6 +96424,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -96395,6 +96514,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -96538,6 +96663,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -96608,6 +96739,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -96756,6 +96893,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -96817,6 +96960,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -96897,6 +97046,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: Routing table not found. The specified <code>id</code> does not
             match any stored Routing table.
@@ -96972,6 +97127,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: Routing table not found. The specified <code>id</code> does not
             match any stored Routing table.
@@ -97057,6 +97218,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: Routing table not found. The specified <code>id</code> does not
             match any stored Routing table.
@@ -97141,6 +97308,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -97462,6 +97635,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "409":
           description: Request conflicts with current resource state — source with the
             same ID already exists.
@@ -97529,6 +97708,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist — Source not found.
         "500":
@@ -97832,6 +98017,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -97901,6 +98092,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -97972,6 +98169,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -98053,6 +98256,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -98145,6 +98354,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist — Source not found.
           content:
@@ -98213,6 +98428,14 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "404":
+          description: No clear_pq jobs found for the specified Source.
         "500":
           description: Unexpected server error.
           content:
@@ -98277,6 +98500,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -98586,6 +98815,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "409":
           description: Request conflicts with current resource state — Destination with
             the specified ID already exists.
@@ -98653,6 +98888,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist.
         "500":
@@ -98941,6 +99182,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist — Destination not found.
         "423":
@@ -99012,6 +99259,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist — Destination not found.
         "409":
@@ -99091,6 +99344,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist — Destination not found.
           content:
@@ -99159,6 +99418,14 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "404":
+          description: No clear_pq jobs found for the specified Destination.
         "500":
           description: Unexpected server error.
           content:
@@ -99223,6 +99490,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -99288,6 +99561,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -99365,6 +99644,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -99464,6 +99749,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested Source does not exist.
           content:
@@ -99550,6 +99841,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -99649,6 +99946,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested Destination does not exist.
           content:
@@ -99737,6 +100040,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -99805,6 +100114,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -99890,6 +100205,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -99957,6 +100278,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "409":
           description: Request conflicts with current resource state — Pack
             <code>id</code> is ambiguous because multiple Packs differ only by
@@ -100021,6 +100348,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "409":
           description: Request conflicts with current resource state — Pack
             <code>id</code> is ambiguous because multiple Packs differ only by
@@ -100093,6 +100426,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "409":
           description: Request conflicts with current resource state — Pack
             <code>id</code> is ambiguous because multiple Packs differ only by
@@ -100158,6 +100497,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -100236,6 +100581,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -100372,6 +100723,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -100426,6 +100783,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -100489,6 +100852,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -100629,6 +100998,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -100720,6 +101095,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "409":
           description: Request conflicts with current resource state — duplicate group ID
             or duplicate group name.
@@ -100809,6 +101190,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: Worker Group, Outpost Group, or Edge Fleet not found.
         "500":
@@ -100851,7 +101238,7 @@ paths:
       x-cribl-api-context:
         - leader
       summary: Update a Worker Group, Outpost Group, or Edge Fleet
-      description: "Update the specified Worker Group, Outpost Group, or Edge Fleet.<br/><br/>Provide a complete representation of the Group or Fleet that you want to update in the request body. This endpoint does not support partial updates. Cribl removes any omitted fields when updating the Group or Fleet.<br/><br/>Confirm that the configuration in your request body is correct before sending the request. If the configuration is incorrect, the updated Group or Fleet might not function as expected.<br/><br/>**Warning**: The following parameters are read-only and managed by Cribl. Do not change their values in a PATCH request.<br/> - <code>configVersion</code><br/> - <code>deployingWorkerCount</code><br/> - <code>incompatibleWorkerCount</code><br/> - <code>workerCount</code><br/> - <code>lookupDeployments</code>."
+      description: "Update the specified Worker Group, Outpost Group, or Edge Fleet.<br/><br/>Provide a complete representation of the Group or Fleet that you want to update in the request body. This endpoint does not support partial updates. Cribl removes any omitted fields when updating the Group or Fleet.<br/><br/>Confirm that the configuration in your request body is correct before sending the request. If the configuration is incorrect, the updated Group or Fleet might not function as expected.<br/><br/>**Warning**: The following parameters are read-only and managed by Cribl. Do not change their values in a PATCH request.<br/> - <code>configVersion</code><br/> - <code>deployingWorkerCount</code><br/> - <code>ephemeralCount</code><br/> - <code>incompatibleWorkerCount</code><br/> - <code>workerCount</code><br/> - <code>lookupDeployments</code>."
       responses:
         "200":
           description: The updated ConfigGroup object in a single-item list.
@@ -100881,6 +101268,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -100951,6 +101344,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -101018,6 +101417,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: Worker Group, Outpost Group, or Edge Fleet not found.
         "500":
@@ -101094,6 +101499,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: Worker Group, Outpost Group, or Edge Fleet not found.
         "500":
@@ -101167,6 +101578,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -101706,6 +102123,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -101960,6 +102383,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -102109,6 +102538,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -102171,6 +102606,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -102245,6 +102686,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: Routing table not found. The specified <code>id</code> does not
             match any stored Routing table.
@@ -102313,6 +102760,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: Routing table not found. The specified <code>id</code> does not
             match any stored Routing table.
@@ -102391,6 +102844,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: Routing table not found. The specified <code>id</code> does not
             match any stored Routing table.
@@ -102543,6 +103002,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -102858,6 +103323,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "409":
           description: Request conflicts with current resource state — source with the
             same ID already exists.
@@ -102918,6 +103389,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist — Source not found.
         "500":
@@ -103214,6 +103691,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -103277,6 +103760,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -103341,6 +103830,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -103416,6 +103911,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: The group is locked while a secret promotion is in progress.
         "500":
@@ -103497,6 +103998,14 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "404":
+          description: No clear_pq jobs found for the specified Source.
         "500":
           description: Unexpected server error.
           content:
@@ -103558,6 +104067,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist — Source not found.
           content:
@@ -103622,6 +104137,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -103925,6 +104446,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "409":
           description: Request conflicts with current resource state — Destination with
             the specified ID already exists.
@@ -103985,6 +104512,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist.
         "500":
@@ -104267,6 +104800,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist — Destination not found.
         "423":
@@ -104332,6 +104871,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist — Destination not found.
         "409":
@@ -104405,6 +104950,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested resource does not exist — Destination not found.
           content:
@@ -104467,6 +105018,14 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "404":
+          description: No clear_pq jobs found for the specified Destination.
         "500":
           description: Unexpected server error.
           content:
@@ -104525,6 +105084,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -104584,6 +105149,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -104650,6 +105221,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -104829,6 +105406,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -104921,6 +105504,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested Source does not exist.
           content:
@@ -105000,6 +105589,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -105092,6 +105687,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: The requested Destination does not exist.
           content:
@@ -105167,6 +105768,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -105253,6 +105860,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -105320,6 +105933,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: A secret promotion is in progress.
         "500":
@@ -105383,6 +106002,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -105439,6 +106064,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -105487,6 +106118,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -105557,6 +106194,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -105612,6 +106255,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -105660,6 +106309,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -105711,6 +106366,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: A secret promotion is in progress.
         "500":
@@ -105774,6 +106435,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -105846,6 +106513,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "500":
           description: Unexpected server error.
           content:
@@ -105899,6 +106572,12 @@ paths:
                   value:
                     status: error
                     message: Authentication failed (missing or invalid credentials or Bearer token).
+        "403":
+          description: Not authorized or licensed to perform this action.
+          content:
+            text/plain:
+              schema:
+                type: string
         "423":
           description: A secret promotion is in progress.
         "500":
