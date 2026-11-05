@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1793917195373-e9e57673
+    version: 4.21.0-alpha.1793920509647-f81bf52f
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -97461,6 +97461,24 @@ components:
                 - count
                 - items
             title: MCPServersListResponse
+        AiModelTrainingState:
+            type: string
+            enum:
+                - locked_off
+                - locked_on
+                - off
+                - on
+            title: AiModelTrainingState
+            x-speakeasy-unknown-values: allow
+        AiModelTrainingResponse:
+            type: object
+            properties:
+                state:
+                    $ref: "#/components/schemas/AiModelTrainingState"
+                    description: Current preference. <code>locked_off</code> for FedRAMP and <code>locked_on</code> for Free cannot be changed. <code>off</code> and <code>on</code> are the choice of a paid Organization.
+            required:
+                - state
+            title: AiModelTrainingResponse
         CountedListLeaderMcpCatalogTool:
             type: object
             required:
@@ -97777,6 +97795,15 @@ components:
             required:
                 - value
             title: AiFeatureToggleRequest
+        AiModelTrainingUpdateRequest:
+            type: object
+            properties:
+                value:
+                    type: boolean
+                    description: If <code>true</code>, opt in to Cribl using Organization data to train and evaluate Cribl AI models. If <code>false</code>, opt out.
+            required:
+                - value
+            title: AiModelTrainingUpdateRequest
         PaginatedWorkflowRunMeta:
             type: object
             required:
@@ -213202,9 +213229,9 @@ components:
                             format:
                                 description: Numeric format for axis labels.
                                 anyOf:
-                                    - oneOf:
+                                    - anyOf:
                                         - type: string
-                                        - $ref: "#/components/schemas/ChartAxisFormat"
+                                        - $ref: "#/components/schemas/ChartAxisFormatPartialRequest"
                                     - type: "null"
                             inverse:
                                 description: If <code>true</code>, reverse the axis direction.
@@ -213261,9 +213288,9 @@ components:
                             format:
                                 description: Numeric format for axis labels.
                                 anyOf:
-                                    - oneOf:
+                                    - anyOf:
                                         - type: string
-                                        - $ref: "#/components/schemas/ChartAxisFormat"
+                                        - $ref: "#/components/schemas/ChartAxisFormatPartialRequest"
                                     - type: "null"
                             interval:
                                 description: Fixed interval between axis tick marks.
@@ -213280,7 +213307,7 @@ components:
                                 examples:
                                     - auto
                                 anyOf:
-                                    - oneOf:
+                                    - anyOf:
                                         - type: number
                                         - enum:
                                             - auto
@@ -213350,6 +213377,25 @@ components:
                         - type: string
                         - type: "null"
             title: OnClickActionPartialRequest
+        ChartAxisFormatPartialRequest:
+            type: object
+            properties:
+                format:
+                    type: string
+                    description: Numeric format token. Unknown tokens are rendered as-is.
+                    examples:
+                        - "{0a}"
+                prefix:
+                    description: String prepended to the formatted numeric value.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                suffix:
+                    description: String appended to the formatted numeric value.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+            title: ChartAxisFormatPartialRequest
         UpdateSearchJobSchemaPartialRequest:
             type: object
             properties:
@@ -243361,6 +243407,11 @@ components:
                       enabled: true
                       headers:
                         Authorization: "***"
+        GetAiModelTrainingResponseExamplesOptedOut:
+            summary: Get an opted-out model training preference
+            description: Example response when a paid Organization has not opted in.
+            value:
+                state: off
         ListLeaderMcpToolsResponseExamplesCatalog:
             summary: List Leader MCP tools for Settings
             description: Example response for listing Leader MCP tools with category, access type, and availability for the caller.
@@ -243615,6 +243666,16 @@ components:
         UpdateAiFeatureExamplesEnableFeature:
             summary: Enable an AI feature
             description: Example request body for enabling a single AI feature. Use the <code>feature</code> path parameter to specify the feature to enable. Requires explicit consent to use AI features for the deployment (see <code>POST /ai/consent</code>).
+            value:
+                value: true
+        UpdateAiModelTrainingResponseExamplesOptedIn:
+            summary: Confirm an opted-in model training preference
+            description: Example response after a paid Organization opts in.
+            value:
+                state: on
+        UpdateAiModelTrainingExamplesOptIn:
+            summary: Opt in to AI model training
+            description: Example request for a paid Organization opting in to Cribl using its data to train and evaluate Cribl AI models.
             value:
                 value: true
         ListWorkflowRunsResponseExamplesRunList:
@@ -253288,7 +253349,7 @@ paths:
                 - node
                 - single
             summary: Update a Database Connection within a Pack
-            description: "Update the specified Database Connection.<br/><br/>If the configuration is incorrect, the updated Database Connection might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Database Connection.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Database Connection in a response envelope with <code>count</code> and <code>items</code>.
@@ -254162,7 +254223,7 @@ paths:
                 - node
                 - single
             summary: Update an Event Breaker Ruleset within a Pack
-            description: "Update the specified Event Breaker Ruleset.<br/><br/>If the configuration is incorrect, the updated Event Breaker Ruleset might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Event Breaker Ruleset.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Event Breaker Ruleset object in a single-item list.
@@ -255834,7 +255895,7 @@ paths:
                 - node
                 - single
             summary: Update a Global Variable within a Pack
-            description: "Update the specified Global Variable.<br/><br/>If the configuration is incorrect, the updated Global Variable might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Global Variable.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Global Variable object.
@@ -256528,7 +256589,7 @@ paths:
                 - node
                 - single
             summary: Update an HMAC Function within a Pack
-            description: "Update the specified hash-based message authentication code (HMAC) Function.<br/><br/>If the configuration is incorrect, the updated HMAC Function might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified hash-based message authentication code (HMAC) Function.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated HmacFunction object.
@@ -260583,7 +260644,7 @@ paths:
             tags:
                 - destinations
             summary: Update a Destination within a Pack
-            description: "Update the specified Destination.<br/><br/>If the configuration is incorrect, the updated Destination might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Destination.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             requestBody:
                 description: Output object.
                 required: true
@@ -268045,7 +268106,7 @@ paths:
                 - node
                 - single
             summary: Update a Grok file within a Pack
-            description: "Update the specified Grok file.<br/><br/>If the configuration is incorrect, the updated Grok file might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Grok file.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Grok file object in a single-item list.
@@ -268813,7 +268874,7 @@ paths:
                 - node
                 - single
             summary: Update a Collector within a Pack
-            description: "Update the specified Collector.<br/><br/>If the configuration is incorrect, the updated Collector might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Collector.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Collector.
@@ -270391,7 +270452,7 @@ paths:
                 - node
                 - single
             summary: Update a Lookup within a Pack
-            description: "Update the specified Lookup.<br/><br/>If the configuration is incorrect, the updated Lookup might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Lookup.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated LookupFile object.
@@ -271402,7 +271463,7 @@ paths:
                 - node
                 - single
             summary: Update a Parser within a Pack
-            description: "Update the specified Parser.<br/><br/>If the configuration is incorrect, the updated Parser might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Parser.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Parser object in a single-item list.
@@ -272366,7 +272427,7 @@ paths:
                 - node
                 - single
             summary: Update a Regex Library entry within a Pack
-            description: "Update the specified Regex Library entry.<br/><br/>If the configuration is incorrect, the updated Regex Library entry might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Regex Library entry.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Regex Library entry object in a single-item list.
@@ -273025,7 +273086,7 @@ paths:
                 - node
                 - single
             summary: Update a sensitive data scanning (SDS) rule within a Pack
-            description: "Update the specified sensitive data scanning (SDS) rule.<br/><br/>If the configuration is incorrect, the updated SDS rule might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified sensitive data scanning (SDS) rule.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated SensitiveDataRule object.
@@ -273941,7 +274002,7 @@ paths:
                 - node
                 - single
             summary: Update a data sample within a Pack
-            description: "Update the specified data sample.<br/><br/>If the configuration is incorrect, the updated data sample might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified data sample.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated data sample object in a single-item list.
@@ -275049,7 +275110,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update a Dashboard within a Pack
-            description: "Update the specified Dashboard.<br/><br/>If the configuration is incorrect, the updated Dashboard might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Dashboard.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Dashboard
@@ -276270,7 +276331,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update a Datatype (Cribl.Cloud only) within a Pack
-            description: "Update the specified Datatype (Cribl.Cloud only).<br/><br/>If the configuration is incorrect, the updated Datatype might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Datatype (Cribl.Cloud only).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Datatype.
@@ -277275,7 +277336,7 @@ paths:
             tags:
                 - macros
             summary: Update a search Macro (Cribl.Cloud only) within a Pack
-            description: "Update the specified search Macro (Cribl.Cloud only).<br/><br/>If the configuration is incorrect, the updated search Macro might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified search Macro (Cribl.Cloud only).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             requestBody:
                 description: SearchMacro object.
                 required: true
@@ -278257,7 +278318,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update a Saved Search (Cribl.Cloud only)
-            description: "Update the specified Saved Search (Cribl.Cloud only).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Saved Search (Cribl.Cloud only).<br/><br/>The Saved Search that results from your request must be valid. When your request introduces a nested object, such as <code>schedule</code>, include that object's required fields.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: Updated Saved Search.
@@ -279052,7 +279113,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update a Saved Search (Cribl.Cloud only) within a Pack
-            description: "Update the specified Saved Search (Cribl.Cloud only).<br/><br/>If the configuration is incorrect, the updated Saved Search might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Saved Search (Cribl.Cloud only).<br/><br/>The Saved Search that results from your request must be valid. When your request introduces a nested object, such as <code>schedule</code>, include that object's required fields.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: Updated Saved Search.
@@ -288681,7 +288742,7 @@ paths:
                 - node
                 - single
             summary: Update a Notification within a Pack
-            description: "Update the specified Notification.<br/><br/>If the configuration is incorrect, the updated Notification might not function as expected within the specified Pack.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Notification.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Notification object.
@@ -319435,7 +319496,7 @@ paths:
                             schema:
                                 type: string
                 "500":
-                    description: Unexpected server error.
+                    description: Unexpected server error — failed to read AI settings
                     content:
                         application/json:
                             schema:
@@ -319776,6 +319837,111 @@ paths:
                         examples:
                             AddMCPServerExamplesPagerDutyServer:
                                 $ref: "#/components/examples/AddMCPServerExamplesPagerDutyServer"
+    /ai/settings/model-training:
+        get:
+            operationId: getAiSettingsModelTraining
+            tags:
+                - ai-settings
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Get the AI model training preference
+            description: Get whether this deployment allows Cribl to use Organization data to train and evaluate Cribl AI models.
+            responses:
+                "200":
+                    description: Current model training preference
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/AiModelTrainingResponse"
+                            examples:
+                                GetAiModelTrainingResponseExamplesOptedOut:
+                                    $ref: "#/components/examples/GetAiModelTrainingResponseExamplesOptedOut"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "500":
+                    description: Unexpected server error — failed to read the preference
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: Service unavailable — the license could not be determined
+        post:
+            operationId: createAiSettingsModelTraining
+            tags:
+                - ai-settings
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Update the AI model training preference
+            description: Opt a paid Organization in or out of Cribl using its data to train and evaluate Cribl AI models. Free and FedRAMP deployments cannot change this preference.
+            responses:
+                "200":
+                    description: Updated model training preference
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/AiModelTrainingResponse"
+                            examples:
+                                UpdateAiModelTrainingResponseExamplesOptedIn:
+                                    $ref: "#/components/examples/UpdateAiModelTrainingResponseExamplesOptedIn"
+                "400":
+                    description: Failed validation or malformed input — Request body must include a boolean <code>value</code>
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: The requested action is not permitted — Free and FedRAMP deployments cannot change this preference
+                "500":
+                    description: Unexpected server error — failed to save the preference
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: Service unavailable — the license could not be determined
+            requestBody:
+                description: AiModelTrainingUpdateRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/AiModelTrainingUpdateRequest"
+                        examples:
+                            UpdateAiModelTrainingExamplesOptIn:
+                                $ref: "#/components/examples/UpdateAiModelTrainingExamplesOptIn"
     /ai/settings/leader-mcp/tools:
         get:
             operationId: getAiSettingsLeaderMcpTools
