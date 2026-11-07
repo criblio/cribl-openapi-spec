@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.22.0-alpha.1794006623902-ebe4924c
+    version: 4.22.0-alpha.1794092863811-a649581a
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -69077,26 +69077,6 @@ components:
                 - id
                 - name
             title: SearchDashboardInput
-        CountedListSearchDashboard:
-            type: object
-            required:
-                - items
-                - count
-            properties:
-                count:
-                    type: integer
-                    description: Total number of items available
-                items:
-                    type: array
-                    description: The list of items returned in this response.
-                    items:
-                        $ref: "#/components/schemas/SearchDashboard"
-                offset:
-                    type: integer
-                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
-                limit:
-                    type: integer
-                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
         PaginatedSearchDashboardListItem:
             type: object
             required:
@@ -76056,7 +76036,7 @@ components:
                         - true
             required:
                 - success
-            description: Result of an admitted secret-folder reload request. Successful and failed reload attempts return this payload with HTTP 200; throttled requests return HTTP 429 with a Retry-After header instead.
+            description: Result of an admitted secret-folder reload request, returned with HTTP 200. In API v1, a reload that fails while the secret store is available also returns this payload, with <code>success</code> set to <code>false</code>; in API v2, every reload failure type returns an error status instead. Throttled requests return HTTP 429 with a Retry-After header.
             title: SecretFolderReloadResponse
         SecretFolderUpdate:
             type: object
@@ -78600,26 +78580,6 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
-        CountedListNotebook:
-            type: object
-            required:
-                - items
-                - count
-            properties:
-                count:
-                    type: integer
-                    description: Total number of items available
-                items:
-                    type: array
-                    description: The list of items returned in this response.
-                    items:
-                        $ref: "#/components/schemas/Notebook"
-                offset:
-                    type: integer
-                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
-                limit:
-                    type: integer
-                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
         PaginatedNotebookListItem:
             type: object
             required:
@@ -79319,9 +79279,9 @@ components:
                     description: Maximum event size, in bytes, before Cribl flushes the event to Pipelines.
                     minimum: 1
                     maximum: 134217728
-                maxValueLength:
+                maxStringLength:
                     type: integer
-                    description: Maximum number of characters allowed in an extracted value or key. Cribl truncates longer values and notes the number of characters removed. To preserve configured selector keys such as <code>jsonArrayField</code>, the effective limit can increase for all parsed strings, up to the parser ceiling of <code>8388608</code>. A parent field whose key is longer than the effective limit is not copied to the output events. Not every event-breaking strategy enforces this limit yet; today only <code>json_array</code> does. Defaults to <code>8388608</code>.
+                    description: Maximum number of characters allowed in an extracted key or value. Cribl truncates longer keys or values and notes the number of characters removed. To preserve configured selector keys such as <code>jsonArrayField</code>, the effective limit can increase for all parsed strings, up to the parser ceiling of <code>8388608</code>. A parent field whose key is longer than the effective limit is not copied to the output events. Not every event-breaking strategy enforces this limit yet; today only <code>json_array</code> does. Defaults to <code>8388608</code>.
                     minimum: 1024
                     maximum: 8388608
                 name:
@@ -82617,7 +82577,7 @@ components:
             enum:
                 - default
                 - metrics
-            description: Unique identifier for the Dataset ruleset. The supported values are <code>default</code> and <code>metrics</code>.
+            description: Identifier of a fixed Dataset ruleset slot. The supported values are <code>default</code> and <code>metrics</code>. A slot is absent until its ruleset is first created or provisioned, and you cannot rename or delete a slot.
             examples:
                 - default
             title: DatasetRulesetId
@@ -82684,12 +82644,12 @@ components:
                     description: If true, the child fleet has a local overlay on an inherited entity. Omitted when inherited and unmodified, or when local and not inherited. Display-only; never persisted.
                 id:
                     $ref: "#/components/schemas/DatasetRulesetId"
-                    description: Unique identifier for the ruleset.
+                    description: Identifier of the fixed slot this ruleset occupies.
                 rules:
                     type: array
                     items:
                         $ref: "#/components/schemas/DatasetRule"
-                    description: Ordered rules for routing events to Datasets. The first matching rule wins. Each rule can include an extend expression to transform matched events.
+                    description: "Ordered rules for routing events to Datasets. The first matching rule wins. Each rule can include an extend expression to transform matched events.<br/><br/>In the <code>metrics</code> ruleset, the <code>metrics_catchall</code> rule is system-managed: Cribl creates and repairs it. Keep it in the list whenever you replace these rules."
             required:
                 - id
                 - rules
@@ -82755,7 +82715,7 @@ components:
                 id:
                     type: string
                     const: default
-                    description: Ruleset identifier.
+                    description: Identifier of the fixed slot this ruleset occupies.
                 rules:
                     type: array
                     items:
@@ -82769,7 +82729,7 @@ components:
         DatatypeRulesetId:
             type: string
             const: default
-            description: Unique identifier for the Datatype ruleset. The only supported value is <code>default</code>.
+            description: Identifier of the fixed Datatype ruleset slot. The only supported value is <code>default</code>. The slot is absent until its ruleset is first created, and you cannot rename or delete it.
             examples:
                 - default
             title: DatatypeRulesetId
@@ -98379,6 +98339,36 @@ components:
                 - DIFFERENCE
             title: DsdAccountFilterType
             x-speakeasy-unknown-values: allow
+        CloudConnectionOrgMembershipState:
+            type: object
+            properties:
+                error:
+                    type: string
+                    enum:
+                        - assume_role_denied
+                        - internal
+                        - list_accounts_denied
+                        - not_management_account
+                        - throttled
+                    description: "Machine-readable reason the last attempt failed, when the inventory reported one: <code>assume_role_denied</code>, <code>not_management_account</code>, <code>list_accounts_denied</code>, <code>throttled</code>, or <code>internal</code>."
+                    x-speakeasy-unknown-values: allow
+                lastAttemptAt:
+                    type: integer
+                    description: Milliseconds since Unix epoch when the last account inventory attempt started.
+                lastResult:
+                    type: string
+                    enum:
+                        - error
+                        - ok
+                    description: "Outcome of the last account inventory attempt: <code>ok</code> when the member accounts were listed, <code>error</code> otherwise."
+                    x-speakeasy-unknown-values: allow
+                message:
+                    type: string
+                    description: Actionable summary of a failed attempt, safe to show to an operator. Carries no cloud provider error text.
+            required:
+                - lastAttemptAt
+                - lastResult
+            title: CloudConnectionOrgMembershipState
         DsdScanComputeMode:
             type: string
             enum:
@@ -98454,6 +98444,9 @@ components:
                 memberAccountCount:
                     type: integer
                     description: Member accounts discovered under the organization. Organization connections only.
+                membership:
+                    $ref: "#/components/schemas/CloudConnectionOrgMembershipState"
+                    description: Last member account inventory attempt of the organization, whether setup verification, a refresh request, or the automatic refresh started it. Organization connections only; absent until the first attempt finished.
                 organizationalUnitIds:
                     type: array
                     items:
@@ -98485,6 +98478,72 @@ components:
                 - scope
                 - setup
             title: CloudConnectionApiResource
+        CloudConnectionOrgMemberApiItem:
+            type: object
+            properties:
+                accountId:
+                    type: string
+                    description: AWS account id of the member account.
+                inScope:
+                    type: boolean
+                    description: "Whether the connection covers this account: it falls in the organizational units in scope and passes the account filter, or it is the management account."
+                name:
+                    type: string
+                    description: Account name as AWS Organizations reports it. Absent when the inventory did not list names.
+                ouPath:
+                    type: string
+                    description: Path from the organization root to the organizational unit that holds the account, for example <code>r-abcd/ou-abcd-12345678</code>.
+            required:
+                - accountId
+                - inScope
+                - ouPath
+            title: CloudConnectionOrgMemberApiItem
+        CloudConnectionOrganizationalUnit:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Root id (<code>r-...</code>) or OU id (<code>ou-...</code>).
+                name:
+                    type: string
+                    description: Name of the root or organizational unit as AWS Organizations reports it.
+                parentId:
+                    type:
+                        - "null"
+                        - string
+                    description: Id of the parent root or organizational unit. <code>null</code> for a root.
+            required:
+                - id
+                - name
+                - parentId
+            title: CloudConnectionOrganizationalUnit
+        CloudConnectionOrgMembersApiResponse:
+            type: object
+            properties:
+                count:
+                    type: integer
+                    description: Number of member accounts in <code>items</code>.
+                items:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudConnectionOrgMemberApiItem"
+                    description: Every member account of the organization as last listed, including accounts outside the connection's scope.
+                listedAt:
+                    type:
+                        - "null"
+                        - integer
+                    description: Milliseconds since Unix epoch when the member accounts were last listed. <code>null</code> when the full membership has not been listed yet; <code>items</code> then reports only the accounts in scope.
+                organizationalUnits:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudConnectionOrganizationalUnit"
+                    description: Every root and organizational unit of the organization, as last listed. Empty when the inventory did not list them.
+            required:
+                - count
+                - items
+                - listedAt
+                - organizationalUnits
+            title: CloudConnectionOrgMembersApiResponse
         CloudConnectionUsageGroup:
             type: object
             properties:
@@ -103517,6 +103576,26 @@ components:
                 - sourceType
             description: Structured documentation content for a lakehouse engine source type.
             title: LocalSearchSourceDocs
+        PaginatedLocalSearchSource:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/LocalSearchSource"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
         TLSConfig:
             type: object
             properties:
@@ -103650,26 +103729,6 @@ components:
                 - type
             description: "Ingest source for Local Search: listen address, optional auth tokens, TLS, and health metadata (<code>/search/local_search/sources</code>)."
             title: LocalSearchSource
-        PaginatedLocalSearchSource:
-            type: object
-            required:
-                - items
-                - count
-            properties:
-                items:
-                    type: array
-                    description: The pre-limited items in the list of results
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSource"
-                count:
-                    type: integer
-                    description: Total number of items available
-                offset:
-                    type: integer
-                    description: Pagination offset
-                limit:
-                    type: integer
-                    description: Pagination limit
         FindingInfoDef:
             type: object
             properties:
@@ -211830,6 +211889,83 @@ components:
                         - type: string
                         - type: "null"
             title: ChartAxisFormatPartialRequest
+        NotificationPartialRequest:
+            type: object
+            properties:
+                __srcGroup:
+                    description: Fleet or group id this entity was inherited from when served by a Config Helper for a child fleet. Present when inherited from parent, including when the child has a local overlay. Omitted when the entity is local and not inherited. Display-only; never persisted.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __srcOverridden:
+                    description: If true, the child fleet has a local overlay on an inherited entity. Omitted when inherited and unmodified, or when local and not inherited. Display-only; never persisted.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                condition:
+                    type: string
+                    description: The condition that triggers the Notification. Use <code>GET /conditions</code> for a list of supported <code>condition</code> values.
+                conf:
+                    type: object
+                    additionalProperties: true
+                    description: Configuration for the <code>condition</code> that triggers the Notification. Supported fields vary depending on the <code>condition</code>. Use <code>GET /conditions/{id}</code> to review the configuration for a specific <code>condition</code>.
+                disabled:
+                    description: If <code>true</code>, the Notification is disabled and the specified condition will not trigger it.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                group:
+                    description: The <code>id</code> of the Worker Group or Edge Fleet that the Notification applies to.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                id:
+                    type: string
+                    description: Unique identifier.
+                metadata:
+                    description: Metadata tags for the Notification.
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/MetadataItem"
+                        - type: "null"
+                mode:
+                    description: "Delivery mode for Notifications.<br/><br/> <code>direct</code>: Notification is sent directly to Notification targets that are defined in <code>templateTargetPairs</code>.<br/><br/> <code>policy</code>: Notification is routed through Notification Policies, which match alerts by labels and route them to Notification targets without relying on <code>templateTargetPairs</code>."
+                    anyOf:
+                        - $ref: "#/components/schemas/NotificationMode"
+                        - type: "null"
+                pack:
+                    description: The <code>id</code> of the Pack the Notification belongs to. Automatically populated and returned in responses.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                targetConfigs:
+                    description: Override settings to apply for each referenced Notification target.
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/NotificationTargetConfig"
+                        - type: "null"
+                targetDetails:
+                    description: Additional details about referenced Notification targets. Optionally populated on request.
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/NotificationTargetDetails"
+                        - type: "null"
+                targets:
+                    type: array
+                    items:
+                        type: string
+                    description: List of the <code>id</code> values for the Notification targets to send the Notification to.
+                templateTargetPairs:
+                    description: If <code>mode</code> is <code>direct</code>, the key-value pairs that define the Notification templates and targets to use for sending Notifications.
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/TemplateTargetPair"
+                        - type: "null"
+            title: NotificationPartialRequest
         UpdateSearchJobSchemaPartialRequest:
             type: object
             properties:
@@ -213466,83 +213602,6 @@ components:
                     type: string
                     description: The type of Notification target.
             title: NotificationTargetPartialRequest
-        NotificationPartialRequest:
-            type: object
-            properties:
-                __srcGroup:
-                    description: Fleet or group id this entity was inherited from when served by a Config Helper for a child fleet. Present when inherited from parent, including when the child has a local overlay. Omitted when the entity is local and not inherited. Display-only; never persisted.
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                __srcOverridden:
-                    description: If true, the child fleet has a local overlay on an inherited entity. Omitted when inherited and unmodified, or when local and not inherited. Display-only; never persisted.
-                    anyOf:
-                        - type: boolean
-                        - type: "null"
-                condition:
-                    type: string
-                    description: The condition that triggers the Notification. Use <code>GET /conditions</code> for a list of supported <code>condition</code> values.
-                conf:
-                    type: object
-                    additionalProperties: true
-                    description: Configuration for the <code>condition</code> that triggers the Notification. Supported fields vary depending on the <code>condition</code>. Use <code>GET /conditions/{id}</code> to review the configuration for a specific <code>condition</code>.
-                disabled:
-                    description: If <code>true</code>, the Notification is disabled and the specified condition will not trigger it.
-                    anyOf:
-                        - type: boolean
-                        - type: "null"
-                group:
-                    description: The <code>id</code> of the Worker Group or Edge Fleet that the Notification applies to.
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                id:
-                    type: string
-                    description: Unique identifier.
-                metadata:
-                    description: Metadata tags for the Notification.
-                    anyOf:
-                        - type: array
-                          items:
-                            $ref: "#/components/schemas/MetadataItem"
-                        - type: "null"
-                mode:
-                    description: "Delivery mode for Notifications.<br/><br/> <code>direct</code>: Notification is sent directly to Notification targets that are defined in <code>templateTargetPairs</code>.<br/><br/> <code>policy</code>: Notification is routed through Notification Policies, which match alerts by labels and route them to Notification targets without relying on <code>templateTargetPairs</code>."
-                    anyOf:
-                        - $ref: "#/components/schemas/NotificationMode"
-                        - type: "null"
-                pack:
-                    description: The <code>id</code> of the Pack the Notification belongs to. Automatically populated and returned in responses.
-                    anyOf:
-                        - type: string
-                        - type: "null"
-                targetConfigs:
-                    description: Override settings to apply for each referenced Notification target.
-                    anyOf:
-                        - type: array
-                          items:
-                            $ref: "#/components/schemas/NotificationTargetConfig"
-                        - type: "null"
-                targetDetails:
-                    description: Additional details about referenced Notification targets. Optionally populated on request.
-                    anyOf:
-                        - type: array
-                          items:
-                            $ref: "#/components/schemas/NotificationTargetDetails"
-                        - type: "null"
-                targets:
-                    type: array
-                    items:
-                        type: string
-                    description: List of the <code>id</code> values for the Notification targets to send the Notification to.
-                templateTargetPairs:
-                    description: If <code>mode</code> is <code>direct</code>, the key-value pairs that define the Notification templates and targets to use for sending Notifications.
-                    anyOf:
-                        - type: array
-                          items:
-                            $ref: "#/components/schemas/TemplateTargetPair"
-                        - type: "null"
-            title: NotificationPartialRequest
         PolicyRulePartialRequest:
             type: object
             properties:
@@ -214969,8 +215028,8 @@ components:
                     description: Maximum event size, in bytes, before Cribl flushes the event to Pipelines.
                     minimum: 1
                     maximum: 134217728
-                maxValueLength:
-                    description: Maximum number of characters allowed in an extracted value or key. Cribl truncates longer values and notes the number of characters removed. To preserve configured selector keys such as <code>jsonArrayField</code>, the effective limit can increase for all parsed strings, up to the parser ceiling of <code>8388608</code>. A parent field whose key is longer than the effective limit is not copied to the output events. Not every event-breaking strategy enforces this limit yet; today only <code>json_array</code> does. Defaults to <code>8388608</code>.
+                maxStringLength:
+                    description: Maximum number of characters allowed in an extracted key or value. Cribl truncates longer keys or values and notes the number of characters removed. To preserve configured selector keys such as <code>jsonArrayField</code>, the effective limit can increase for all parsed strings, up to the parser ceiling of <code>8388608</code>. A parent field whose key is longer than the effective limit is not copied to the output events. Not every event-breaking strategy enforces this limit yet; today only <code>json_array</code> does. Defaults to <code>8388608</code>.
                     anyOf:
                         - type: integer
                           minimum: 1024
@@ -218687,13 +218746,13 @@ components:
                         - type: boolean
                         - type: "null"
                 id:
-                    description: Unique identifier for the ruleset.
+                    description: Identifier of the fixed slot this ruleset occupies.
                     $ref: "#/components/schemas/DatasetRulesetId"
                 rules:
                     type: array
                     items:
                         $ref: "#/components/schemas/DatasetRule"
-                    description: Ordered rules for routing events to Datasets. The first matching rule wins. Each rule can include an extend expression to transform matched events.
+                    description: "Ordered rules for routing events to Datasets. The first matching rule wins. Each rule can include an extend expression to transform matched events.<br/><br/>In the <code>metrics</code> ruleset, the <code>metrics_catchall</code> rule is system-managed: Cribl creates and repairs it. Keep it in the list whenever you replace these rules."
             description: Ordered list of dataset rules for Local Search (<code>/search/local_search/dataset-rulesets</code>).
             title: DatasetRulesetPartialRequest
         DatatypeRulesetPartialRequest:
@@ -218712,7 +218771,7 @@ components:
                 id:
                     type: string
                     const: default
-                    description: Ruleset identifier.
+                    description: Identifier of the fixed slot this ruleset occupies.
                 rules:
                     type: array
                     items:
@@ -219516,6 +219575,178 @@ components:
                         - type: string
                         - type: "null"
             title: ExecutorPoolUpdatePartialRequest
+        LocalSearchSourcePartialRequest:
+            type: object
+            properties:
+                __srcGroup:
+                    description: Fleet or group id this entity was inherited from when served by a Config Helper for a child fleet. Present when inherited from parent, including when the child has a local overlay. Omitted when the entity is local and not inherited. Display-only; never persisted.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __srcOverridden:
+                    description: If true, the child fleet has a local overlay on an inherited entity. Omitted when inherited and unmodified, or when local and not inherited. Display-only; never persisted.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                authTokens:
+                    description: Optional bearer or shared tokens accepted by this source.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: object
+                            properties:
+                                description:
+                                    type: string
+                                    description: Optional label for this token.
+                                enabled:
+                                    type: boolean
+                                    description: When false, the token is rejected.
+                                token:
+                                    type: string
+                                    description: Secret token string clients must present.
+                            required:
+                                - token
+                        - type: "null"
+                description:
+                    description: Optional description shown in configuration UIs.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                disabled:
+                    description: When true, the source does not accept new connections.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                host:
+                    type: string
+                    description: Bind address for the listener.
+                id:
+                    type: string
+                    description: Source configuration id.
+                metadata:
+                    description: Fields to add to events from the Source. Can be a static value or a JavaScript expression. Useful for enriching events with additional context, such as environment or custom identifiers.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: Field name to stamp onto the emitted event.
+                                value:
+                                    type: string
+                                    description: Value for the field. Can be a static string or a JavaScript expression.
+                            required:
+                                - name
+                                - value
+                        - type: "null"
+                port:
+                    description: TCP port when the source type uses a single port field.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
+                status:
+                    description: Last known health snapshot from the worker, when available.
+                    anyOf:
+                        - type: object
+                          properties:
+                            health:
+                                type: string
+                                description: Summary health label for the source process.
+                            metrics:
+                                type: object
+                                properties:
+                                    numEventProcessors:
+                                        type: integer
+                                        description: Active event processor tasks.
+                                    numInProgress:
+                                        type: integer
+                                        description: Events currently being processed.
+                                description: Lightweight counters for in-flight work.
+                            timestamp:
+                                type: integer
+                                description: Epoch milliseconds when this snapshot was taken.
+                        - type: "null"
+                tls:
+                    description: TLS material and policy for this listener (shape varies by source type).
+                    anyOf:
+                        - $ref: "#/components/schemas/TLSConfigPartialRequest"
+                        - type: "null"
+                type:
+                    type: string
+                    enum:
+                        - cribl_http
+                        - datadog_agent
+                        - elastic
+                        - http_raw
+                        - open_telemetry
+                        - prometheus_rw
+                        - splunk
+                        - splunk_hec
+                        - syslog
+                        - tcp
+                        - tcpjson
+                        - wef
+                        - wiz_webhook
+                    description: Protocol discriminator selecting the ingest source protocol and listener shape.
+                    examples:
+                        - splunk_hec
+                    x-speakeasy-unknown-values: allow
+            description: "Ingest source for Local Search: listen address, optional auth tokens, TLS, and health metadata (<code>/search/local_search/sources</code>)."
+            title: LocalSearchSourcePartialRequest
+        TLSConfigPartialRequest:
+            type: object
+            properties:
+                certPath:
+                    description: Filesystem or cloud path to the certificate PEM.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                disabled:
+                    type: boolean
+                    description: When true, TLS is not terminated on this listener.
+                minVersion:
+                    description: Minimum TLS protocol version.
+                    examples:
+                        - TLSv1.2
+                    anyOf:
+                        - $ref: "#/components/schemas/SecureVersion"
+                        - type: "null"
+                privKeyPath:
+                    description: Filesystem or cloud path to the private key PEM.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+            description: TLS listener settings for Local Search sources (paths often use cloud substitution tokens).
+            title: TLSConfigPartialRequest
+        UpdateHecTokenRequestPartialRequest:
+            type: object
+            properties:
+                allowedIndexesAtToken:
+                    description: List of index names that the HEC token is allowed to write to.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                description:
+                    description: Brief description for the HEC token.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                enabled:
+                    description: If <code>true</code>, the HEC token is enabled. Otherwise, <code>false</code>.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                metadata:
+                    description: Array of key-value pairs to associate with the HEC token for tagging, categorization, or providing additional context. Each item in the array is an object with a <code>name</code> and a <code>value</code>.
+                    anyOf:
+                        - type: array
+                          items:
+                            $ref: "#/components/schemas/MetadataConfAddHecTokenRequest"
+                        - type: "null"
+            title: UpdateHecTokenRequestPartialRequest
         AdditionalPropertiesTypeEnrichedFieldsSavedState:
             type: object
             required:
@@ -231825,12 +232056,6 @@ components:
                                     type: number
                                     format: "{0,}"
                                     kind: number
-        InvalidateDashboardCacheResponseExampleCacheInvalidated:
-            summary: Cache invalidated
-            description: The Dashboard list cache was flushed. The response is an empty list.
-            value:
-                items: []
-                count: 0
         MoveDashboardExamplesMoveToPack:
             summary: Move a Dashboard to a Pack
             description: Example request body for moving a Dashboard to the specified Pack.
@@ -232457,23 +232682,6 @@ components:
                         body: Your saved search finished running.
                         emailRecipient:
                             to: alerts@example.com
-                conf:
-                    savedQueryId: saved_sample_logs
-        SavedQueryNotificationUpdateExamplesPartial:
-            summary: Update a Notification to change the Notification target
-            description: Example request body for updating the Notification for a Saved Search to change the Notification target.<br/><br/>The request body must include a complete representation of the Notification that you want to update. This endpoint does not support partial updates.
-            value:
-                id: notification_saved_search_email
-                condition: search
-                targets:
-                    - smtp_alerts_secondary
-                targetConfigs:
-                    - id: smtp_alerts_secondary
-                      conf:
-                        subject: Saved search results (backup route)
-                        body: Your saved search finished running.
-                        emailRecipient:
-                            to: oncall@example.com
                 conf:
                     savedQueryId: saved_sample_logs
         SearchJobCreateResponseExamplesSyntheticCompleted:
@@ -235321,7 +235529,7 @@ components:
                       lastReloadAt: 1717027200000
                 offset: 0
                 limit: 20
-        SecretFolderReloadResponseExamplesSecretFolderReloadSuccess:
+        SecretFolderReloadResponseExamplesV2SecretFolderReloadSuccess:
             summary: Reload a secret folder
             description: Example response for reloading a secret folder when all secrets were fetched successfully.
             value:
@@ -235330,12 +235538,7 @@ components:
                 secretsChanged: 1
                 changedSecrets:
                     - db-password
-        SecretFolderReloadResponseExamplesSecretFolderReloadFailure:
-            summary: Reload a secret folder (failure)
-            description: Example response when the reload fails because the backing secret store is unreachable or returns an error.
-            value:
-                success: false
-        SecretFolderReloadResponseExamplesSecretFolderReloadPartialFailure:
+        SecretFolderReloadResponseExamplesV2SecretFolderReloadPartialFailure:
             summary: Reload a secret folder (partial failure)
             description: Example response when some secrets failed to fetch from the backing store.
             value:
@@ -235997,12 +236200,6 @@ components:
                         query: error OR fail | chart count() by source
                         earliest: -24h
                         latest: now
-        InvalidateNotebookCacheResponseExampleCacheInvalidated:
-            summary: Cache invalidated
-            description: The Notebook list cache was flushed. The response is an empty list.
-            value:
-                items: []
-                count: 0
         LogNotebookActivityExamplesViewActivity:
             summary: Log a Notebook view event
             description: Example request body for logging that a user viewed a Notebook.
@@ -236701,8 +236898,8 @@ components:
                       sendDataTo: destinationDataset
                       dataset: main
         LocalSearchDatasetRulesetCreateExamplesDefaultShape:
-            summary: Create the default catch-all dataset ruleset
-            description: Example request body for a ruleset that routes all events to the main dataset using a wildcard Kusto filter.
+            summary: Initialize the default dataset ruleset slot
+            description: Example request body for initializing the default slot with a ruleset that routes all events to the main dataset using a wildcard Kusto filter.
             value:
                 id: default
                 rules:
@@ -236713,8 +236910,8 @@ components:
                       sendDataTo: destinationDataset
                       dataset: main
         LocalSearchDatasetRulesetCreateExamplesMinimal:
-            summary: Create a dataset ruleset with one minimal rule
-            description: Example request body for creating a dataset ruleset with required rule fields and a simple Kusto filter.
+            summary: Initialize the metrics dataset ruleset slot with one minimal rule
+            description: Example request body for initializing the metrics slot with required rule fields and a simple Kusto filter.
             value:
                 id: metrics
                 rules:
@@ -236723,8 +236920,8 @@ components:
                       kustoExpression: vendor == "cribl"
                       dataset: main
         LocalSearchDatasetRulesetCreateExamplesWithExtendExpression:
-            summary: Create a ruleset whose rule transforms fields with a KQL extend
-            description: Example request body for creating a dataset ruleset where a rule applies an extend expression to matched events.
+            summary: Initialize the metrics dataset ruleset slot with a KQL extend rule
+            description: Example request body for initializing the metrics slot with a rule that applies an extend expression to matched events.
             value:
                 id: metrics
                 rules:
@@ -236746,8 +236943,8 @@ components:
                       kustoExpression: __inputId="cribl_http:pan_traffic_syslog"
                       datatype: pan_traffic_syslog
         LocalSearchDatatypeRulesetCreateExamplesDefaultShape:
-            summary: Create the default catch-all datatype ruleset
-            description: Example request body for creating a datatype ruleset that assigns all events to a primary datatype using a wildcard Kusto filter.
+            summary: Initialize the default datatype ruleset slot
+            description: Example request body for initializing the default slot with a ruleset that assigns all events to a primary datatype using a wildcard Kusto filter.
             value:
                 id: default
                 rules:
@@ -236757,8 +236954,8 @@ components:
                       kustoExpression: "*"
                       datatype: generic_ndjson
         LocalSearchDatatypeRulesetCreateExamplesMinimal:
-            summary: Create a datatype ruleset with one minimal rule
-            description: Example request body for creating a datatype ruleset with required rule fields and a simple Kusto filter.
+            summary: Initialize the default datatype ruleset slot with one minimal rule
+            description: Example request body for initializing the default slot with required rule fields and a simple Kusto filter.
             value:
                 id: default
                 rules:
@@ -236767,8 +236964,8 @@ components:
                       kustoExpression: vendor == "cribl"
                       datatype: generic_ndjson
         LocalSearchDatatypeRulesetCreateExamplesEmptyRules:
-            summary: Create a ruleset with no rules yet
-            description: Example request body for creating an empty datatype ruleset reserved for later rule configuration.
+            summary: Initialize the default datatype ruleset slot with no rules yet
+            description: Example request body for initializing the default slot with an empty rule list, reserved for later rule configuration.
             value:
                 id: default
                 rules: []
@@ -243055,6 +243252,43 @@ components:
                     status: inProgress
                     basis: verification
                     checkedAtMs: 1767225660000
+        CloudConnectionOrgMembersExamplesListedOrganization:
+            summary: Get the member accounts of a listed organization
+            description: "An organization scoped to one organizational unit: the accounts in it and the management account are in scope, the account in the sandbox unit is not."
+            value:
+                listedAt: 1767225720000
+                organizationalUnits:
+                    - id: r-abcd12
+                      name: Root
+                      parentId: null
+                    - id: ou-abcd-12345678
+                      name: Production
+                      parentId: r-abcd12
+                    - id: ou-abcd-87654321
+                      name: Sandbox
+                      parentId: r-abcd12
+                items:
+                    - accountId: "123456789012"
+                      name: prod-payments
+                      ouPath: r-abcd12/ou-abcd-12345678
+                      inScope: true
+                    - accountId: "210987654321"
+                      name: acme-management
+                      ouPath: r-abcd12
+                      inScope: true
+                    - accountId: "345678901234"
+                      name: sandbox-dev
+                      ouPath: r-abcd12/ou-abcd-87654321
+                      inScope: false
+                count: 3
+        CloudConnectionOrgMembersExamplesNotListedYet:
+            summary: Get the member accounts before the first listing
+            description: An organization connection whose member accounts have not been listed yet.
+            value:
+                listedAt: null
+                organizationalUnits: []
+                items: []
+                count: 0
         CloudConnectionUsageExamplesDiscoverySources:
             summary: Data Source Discovery Sources read the account
             description: Data Source Discovery created two Sources for the account. They keep their own credentials, so they do not block disconnecting it.
@@ -245702,6 +245936,22 @@ components:
             value:
                 status: error
                 message: Failed to fetch source docs
+        LocalSearchSourcePaginatedResponseExamplesSourcePage:
+            summary: List one page of lakehouse engine sources
+            description: Example response for listing one page of lakehouse engine sources.
+            value:
+                count: 1
+                items:
+                    - id: in_cribl_http_1
+                      type: cribl_http
+                      host: 0.0.0.0
+                      port: 10200
+                      description: Primary Cribl HTTP ingest for the Worker Group
+                      tls:
+                        disabled: false
+                        minVersion: TLSv1.3
+                offset: 0
+                limit: 100
         LocalSearchSourceCountedResponseExamplesSingleSource:
             summary: Single lakehouse engine source
             description: Example response for listing a single lakehouse engine source.
@@ -245754,37 +246004,6 @@ components:
                 type: syslog
                 host: 0.0.0.0
                 tcpPort: 601
-        LocalSearchSourceUpdateExamplesCriblHttp:
-            summary: Update a Cribl HTTP lakehouse engine source
-            description: Example request body for updating an existing Cribl HTTP lakehouse engine source.<br/><br/>The request body must include a complete representation of the lakehouse engine source that you want to update. This endpoint does not support partial updates.
-            value:
-                id: in_cribl_http_1
-                type: cribl_http
-                host: 0.0.0.0
-                port: 10200
-                description: Ingest from connected Worker Group
-                tls:
-                    disabled: false
-                    minVersion: TLSv1.3
-        LocalSearchSourceUpdateExamplesSplunkHec:
-            summary: Update a Splunk HEC lakehouse engine source
-            description: Example request body for updating an existing Splunk HEC lakehouse engine source.<br/><br/>The request body must include a complete representation of the lakehouse engine source that you want to update. This endpoint does not support partial updates.
-            value:
-                id: in_splunk_hec_1
-                type: splunk_hec
-                host: 0.0.0.0
-                port: 8088
-                splunkHecAPI: /services/collector/event
-                splunkHecAcks: true
-        LocalSearchSourceUpdateExamplesSyslogTcp:
-            summary: Update a Syslog lakehouse engine source
-            description: Example request body for updating an existing Syslog lakehouse engine source.<br/><br/>The request body must include a complete representation of the lakehouse engine source that you want to update. This endpoint does not support partial updates.
-            value:
-                id: in_syslog_1
-                type: syslog
-                host: 0.0.0.0
-                tcpPort: 601
-                udpPort: 514
         PublishDetectionRulesResponseExamplesClean:
             summary: Every rule stored
             description: All rules in the document loaded, so rejected is empty.
@@ -249014,6 +249233,23 @@ components:
                 name: Sample logs query
                 query: dataset="sample_logs" | limit 100
                 isPrivate: false
+        SavedQueryNotificationUpdateExamplesPartialPartialRequest:
+            summary: Update a Notification to change the Notification target
+            description: "Example request body for updating the Notification for a Saved Search to change the Notification target.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                id: notification_saved_search_email
+                condition: search
+                targets:
+                    - smtp_alerts_secondary
+                targetConfigs:
+                    - id: smtp_alerts_secondary
+                      conf:
+                        subject: Saved search results (backup route)
+                        body: Your saved search finished running.
+                        emailRecipient:
+                            to: oncall@example.com
+                conf:
+                    savedQueryId: saved_sample_logs
         SearchJobUpdateExamplesCancelPartialRequest:
             summary: Cancel a search job
             description: "Example request body for canceling a search job.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
@@ -249894,6 +250130,54 @@ components:
             description: "Example request body that removes the description, leaving every other field unchanged.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             value:
                 description: null
+        LocalSearchSourceUpdateExamplesCriblHttpPartialRequest:
+            summary: Update a Cribl HTTP lakehouse engine source
+            description: "Example request body for updating an existing Cribl HTTP lakehouse engine source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                id: in_cribl_http_1
+                type: cribl_http
+                host: 0.0.0.0
+                port: 10200
+                description: Ingest from connected Worker Group
+                tls:
+                    disabled: false
+                    minVersion: TLSv1.3
+        LocalSearchSourceUpdateExamplesSplunkHecPartialRequest:
+            summary: Update a Splunk HEC lakehouse engine source
+            description: "Example request body for updating an existing Splunk HEC lakehouse engine source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                id: in_splunk_hec_1
+                type: splunk_hec
+                host: 0.0.0.0
+                port: 8088
+                splunkHecAPI: /services/collector/event
+                splunkHecAcks: true
+        LocalSearchSourceUpdateExamplesSyslogTcpPartialRequest:
+            summary: Update a Syslog lakehouse engine source
+            description: "Example request body for updating an existing Syslog lakehouse engine source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                id: in_syslog_1
+                type: syslog
+                host: 0.0.0.0
+                tcpPort: 601
+                udpPort: 514
+        HecTokenExamplesHecTokenPartialRequest:
+            summary: Basic HEC token
+            description: "Example request body for adding an HEC token with metadata to a Splunk HEC Source.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                enabled: true
+                metadata:
+                    - name: fieldX
+                      value: valueX
+                token: "12345678901"
+        HecTokenExamplesHecTokenWithIndexAccessPartialRequest:
+            summary: HEC token with allowed indexes
+            description: "Example request body for adding an HEC token with index-level access control.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            value:
+                enabled: true
+                allowedIndexesAtToken:
+                    - myIndex6
+                token: "12345678901"
 security:
     - bearerAuth: []
     - clientOauth: []
@@ -273139,15 +273423,8 @@ paths:
             summary: Invalidate the Dashboard list cache
             description: Force the next Dashboard list or get request to re-read from disk, bypassing the in-memory cache.
             responses:
-                "200":
-                    description: An empty list, confirming the cache was invalidated
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/CountedListSearchDashboard"
-                            examples:
-                                InvalidateDashboardCacheResponseExampleCacheInvalidated:
-                                    $ref: "#/components/examples/InvalidateDashboardCacheResponseExampleCacheInvalidated"
+                "204":
+                    description: No content, confirming the cache was invalidated
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -273911,15 +274188,8 @@ paths:
             summary: Invalidate the Dashboard list cache within a Pack
             description: Force the next Dashboard list or get request to re-read from disk, bypassing the in-memory cache within the specified Pack.
             responses:
-                "200":
-                    description: An empty list, confirming the cache was invalidated
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/CountedListSearchDashboard"
-                            examples:
-                                InvalidateDashboardCacheResponseExampleCacheInvalidated:
-                                    $ref: "#/components/examples/InvalidateDashboardCacheResponseExampleCacheInvalidated"
+                "204":
+                    description: No content, confirming the cache was invalidated
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -275145,21 +275415,21 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-            x-cribl-internal: true
+            x-cribl-internal: false
             x-cribl-availability: cloud
             x-cribl-api-context:
                 - searchGroup
-            description: Get the list of user access control entries for the specified search Macro (Cribl.Cloud only).
-            summary: Get user ACLs for a search Macro (Cribl.Cloud only)
-            tags:
-                - macros
             parameters:
                 - name: id
                   in: path
                   required: true
                   schema:
                     type: string
-                  description: The <code>id</code> of the search Macro to get.
+                  description: The unique identifier of the SearchMacro to manage access control for.
+            description: List accesses to SearchMacro granted to users (Cribl.Cloud only).
+            summary: Get SearchMacro ACL (Cribl.Cloud only)
+            tags:
+                - macros
     /search/macros/{id}/acl/apply:
         post:
             operationId: createSearchMacroAclApplyById
@@ -275176,7 +275446,7 @@ paths:
                             AclApplyMacroExamplesRevokeAccess:
                                 $ref: "#/components/examples/AclApplyMacroExamplesRevokeAccess"
             responses:
-                "201":
+                "200":
                     description: Successful ACL modification.
                     content:
                         application/json:
@@ -275223,21 +275493,21 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-            x-cribl-internal: true
+            x-cribl-internal: false
             x-cribl-availability: cloud
             x-cribl-api-context:
                 - searchGroup
-            description: Assign or remove user-level ACL policies for the specified search Macro (Cribl.Cloud only).
-            summary: Apply user ACLs for a search Macro (Cribl.Cloud only)
-            tags:
-                - macros
             parameters:
                 - name: id
                   in: path
                   required: true
                   schema:
                     type: string
-                  description: The <code>id</code> of the search Macro to get.
+                  description: The unique identifier of the SearchMacro to manage access control for.
+            description: Add/remove accesses to SearchMacro for users (Cribl.Cloud only).
+            summary: Modify SearchMacro ACL (Cribl.Cloud only)
+            tags:
+                - macros
     /search/macros/{id}/acl/teams:
         get:
             operationId: getSearchMacroAclTeamsById
@@ -275276,21 +275546,21 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-            x-cribl-internal: true
+            x-cribl-internal: false
             x-cribl-availability: cloud
             x-cribl-api-context:
                 - searchGroup
-            description: Get the list of team access control entries for the specified search Macro (Cribl.Cloud only).
-            summary: Get team ACLs for a search Macro (Cribl.Cloud only)
-            tags:
-                - macros
             parameters:
                 - name: id
                   in: path
                   required: true
                   schema:
                     type: string
-                  description: The <code>id</code> of the search Macro to get.
+                  description: The unique identifier of the SearchMacro to manage access control for.
+            description: List accesses to SearchMacro granted to Teams (Cribl.Cloud only).
+            summary: Get SearchMacro Teams (Cribl.Cloud only)
+            tags:
+                - macros
     /search/macros/{id}/acl/teams/apply:
         post:
             operationId: createSearchMacroAclTeamsApplyById
@@ -275307,7 +275577,7 @@ paths:
                             AclTeamsApplyMacroExamplesRevokeTeamAccess:
                                 $ref: "#/components/examples/AclTeamsApplyMacroExamplesRevokeTeamAccess"
             responses:
-                "201":
+                "200":
                     description: Successful ACL modification.
                     content:
                         application/json:
@@ -275354,21 +275624,21 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-            x-cribl-internal: true
+            x-cribl-internal: false
             x-cribl-availability: cloud
             x-cribl-api-context:
                 - searchGroup
-            description: Assign or remove team-level ACL policies for the specified search Macro (Cribl.Cloud only).
-            summary: Apply team ACLs for a search Macro (Cribl.Cloud only)
-            tags:
-                - macros
             parameters:
                 - name: id
                   in: path
                   required: true
                   schema:
                     type: string
-                  description: The <code>id</code> of the search Macro to get.
+                  description: The unique identifier of the SearchMacro to manage access control for.
+            description: Add/remove accesses to SearchMacro for Teams (Cribl.Cloud only).
+            summary: Modify SearchMacro Teams ACL (Cribl.Cloud only)
+            tags:
+                - macros
     /search/macros/{id}/move:
         put:
             operationId: updateSearchMacroMoveById
@@ -277108,7 +277378,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update a Notification (Cribl.Cloud only)
-            description: Update the specified Notification for a Saved Search (Cribl.Cloud only).<br/><br/>Provide a complete representation of the Notification that you want to update in the request body.<br/><br/>This endpoint does not support partial updates. Cribl removes any omitted fields when updating the Notification.<br/><br/>Confirm that the configuration in your request body is correct before sending the request.<br/><br/>If the configuration is incorrect, the updated Notification might not function as expected.
+            description: "Update the specified Notification for a Saved Search (Cribl.Cloud only).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: Updated notifications.
@@ -277171,10 +277441,10 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/Notification"
+                            $ref: "#/components/schemas/NotificationPartialRequest"
                         examples:
                             SavedQueryNotificationUpdateExamplesPartial:
-                                $ref: "#/components/examples/SavedQueryNotificationUpdateExamplesPartial"
+                                $ref: "#/components/examples/SavedQueryNotificationUpdateExamplesPartialPartialRequest"
             parameters:
                 - name: id
                   in: path
@@ -289810,18 +290080,16 @@ paths:
             description: Re-fetch all secrets in the specified secret folder from its backing secret store. Invalidates the resolved-value cache for the folder and updates <code>lastReloadAt</code>.
             responses:
                 "200":
-                    description: Returns <code>ISecretFolderReloadResponse</code> for admitted requests; when <code>success</code> is <code>false</code>, the reload did not complete.
+                    description: Returns <code>ISecretFolderReloadResponse</code> for a completed reload. Secrets that could not be fetched are listed in <code>failures</code>; a reload that does not complete returns an error status instead.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/SecretFolderReloadResponse"
                             examples:
-                                SecretFolderReloadResponseExamplesSecretFolderReloadSuccess:
-                                    $ref: "#/components/examples/SecretFolderReloadResponseExamplesSecretFolderReloadSuccess"
-                                SecretFolderReloadResponseExamplesSecretFolderReloadFailure:
-                                    $ref: "#/components/examples/SecretFolderReloadResponseExamplesSecretFolderReloadFailure"
-                                SecretFolderReloadResponseExamplesSecretFolderReloadPartialFailure:
-                                    $ref: "#/components/examples/SecretFolderReloadResponseExamplesSecretFolderReloadPartialFailure"
+                                SecretFolderReloadResponseExamplesV2SecretFolderReloadSuccess:
+                                    $ref: "#/components/examples/SecretFolderReloadResponseExamplesV2SecretFolderReloadSuccess"
+                                SecretFolderReloadResponseExamplesV2SecretFolderReloadPartialFailure:
+                                    $ref: "#/components/examples/SecretFolderReloadResponseExamplesV2SecretFolderReloadPartialFailure"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -289853,7 +290121,7 @@ paths:
                                 examples:
                                     - 60
                 "500":
-                    description: Unexpected server error.
+                    description: An internal error prevented the reload from completing.
                     content:
                         application/json:
                             schema:
@@ -294147,15 +294415,8 @@ paths:
             summary: Invalidate the Notebook list cache
             description: Force the next Notebook list or get request to re-read from disk, bypassing the in-memory cache.
             responses:
-                "200":
-                    description: An empty list, confirming the cache was invalidated
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/CountedListNotebook"
-                            examples:
-                                InvalidateNotebookCacheResponseExampleCacheInvalidated:
-                                    $ref: "#/components/examples/InvalidateNotebookCacheResponseExampleCacheInvalidated"
+                "204":
+                    description: No content, confirming the cache was invalidated
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297075,7 +297336,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Create a lakehouse engine Dataset ruleset (Cribl.Cloud only)
-            description: Create a new lakehouse engine Dataset ruleset (Cribl.Cloud only).
+            description: Create a new lakehouse engine Dataset ruleset (Cribl.Cloud only).<br/><br/>Dataset rulesets occupy a fixed set of slots, so this operation initializes a supported slot that does not exist yet. It does not create additional rulesets. To change a slot that already exists, update it instead.
             responses:
                 "201":
                     description: The created lakehouse engine Dataset ruleset
@@ -297091,6 +297352,8 @@ paths:
                             description: The canonical URL of the newly created resource.
                             schema:
                                 type: string
+                "400":
+                    description: The <code>id</code> in the request body is not a supported Dataset ruleset slot, or the ruleset failed validation.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297105,11 +297368,9 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The authenticated caller lacks permission to initialize a Dataset ruleset slot.
+                "409":
+                    description: A Dataset ruleset already occupies the requested slot.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297141,7 +297402,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: List all lakehouse engine Dataset rulesets (Cribl.Cloud only)
-            description: Get a list of all lakehouse engine Dataset rulesets (Cribl.Cloud only).
+            description: Get a list of all lakehouse engine Dataset rulesets (Cribl.Cloud only).<br/><br/>Dataset rulesets occupy a fixed set of slots, so the response lists only the slots that exist. It is empty until the first Dataset ruleset is created or provisioned.
             responses:
                 "200":
                     description: Paginated lakehouse engine Dataset ruleset configurations
@@ -297172,11 +297433,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The authenticated caller lacks permission to read Dataset rulesets.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297208,53 +297465,6 @@ paths:
                 outputs:
                     results: $.items
     /search/local_search/dataset-rulesets/{id}:
-        delete:
-            operationId: deleteDatasetRuleById
-            tags:
-                - search
-            x-speakeasy-group: searches.localSearches.datasetRulesets
-            x-speakeasy-name-override: delete
-            x-cribl-internal: false
-            x-cribl-availability: cloud
-            x-cribl-api-context:
-                - searchGroup
-            summary: Delete a lakehouse engine Dataset ruleset (Cribl.Cloud only)
-            description: Delete the specified lakehouse engine Dataset ruleset (Cribl.Cloud only).
-            responses:
-                "204":
-                    description: No Content
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    $ref: "#/components/schemas/DatasetRulesetId"
-                  description: The <code>id</code> of the Dataset ruleset to delete. The supported values are <code>default</code> and <code>metrics</code>.
         get:
             operationId: getDatasetRuleById
             tags:
@@ -297266,7 +297476,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Get a lakehouse engine Dataset ruleset (Cribl.Cloud only)
-            description: Get the specified lakehouse engine Dataset ruleset, including its ordered rule list (Cribl.Cloud only).
+            description: Get the specified lakehouse engine Dataset ruleset, including its ordered rule list (Cribl.Cloud only).<br/><br/>The <code>metrics</code> ruleset is a separate, system-provisioned slot that you can read and update to manage your own metric rules.
             responses:
                 "200":
                     description: The requested lakehouse engine Dataset ruleset
@@ -297291,17 +297501,9 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The authenticated caller lacks permission to read this Dataset ruleset slot.
                 "404":
-                    description: The requested resource does not exist.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
+                    description: No Dataset ruleset occupies the requested slot yet, or the <code>id</code> is not a supported slot.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297314,7 +297516,7 @@ paths:
                   required: true
                   schema:
                     $ref: "#/components/schemas/DatasetRulesetId"
-                  description: The <code>id</code> of the Dataset ruleset to get. The supported values are <code>default</code> and <code>metrics</code>.
+                  description: The <code>id</code> of the Dataset ruleset to get. The supported values are <code>default</code> and <code>metrics</code>. Each value identifies a fixed slot that you cannot rename or delete.
         patch:
             operationId: updateDatasetRuleById
             tags:
@@ -297326,7 +297528,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update a lakehouse engine Dataset ruleset (Cribl.Cloud only)
-            description: "Update the specified lakehouse engine Dataset ruleset (Cribl.Cloud only).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified lakehouse engine Dataset ruleset (Cribl.Cloud only).<br/><br/>Removing an individual rule is an update to the ruleset's ordered rule list. In the <code>metrics</code> ruleset, keep the system-managed <code>metrics_catchall</code> rule in the list that you send.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated lakehouse engine Dataset ruleset
@@ -297337,6 +297539,8 @@ paths:
                             examples:
                                 LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset:
                                     $ref: "#/components/examples/LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset"
+                "400":
+                    description: The <code>id</code> in the path or request body is not a supported Dataset ruleset slot, or the ruleset failed validation.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297351,11 +297555,9 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The authenticated caller lacks permission to update this Dataset ruleset slot.
+                "404":
+                    description: No Dataset ruleset occupies the requested slot yet. Create the slot before you update it.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297382,7 +297584,7 @@ paths:
                   required: true
                   schema:
                     $ref: "#/components/schemas/DatasetRulesetId"
-                  description: The <code>id</code> of the Dataset ruleset to update. The supported values are <code>default</code> and <code>metrics</code>.
+                  description: The <code>id</code> of the Dataset ruleset to update. The supported values are <code>default</code> and <code>metrics</code>. Each value identifies a fixed slot that you cannot rename or delete; an <code>id</code> in the request body must match this value.
     /search/local_search/datatype-rulesets:
         post:
             operationId: createDatatypeRule
@@ -297395,7 +297597,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Create a lakehouse engine Datatype ruleset (Cribl.Cloud only)
-            description: Create a new lakehouse engine Datatype ruleset (Cribl.Cloud only).
+            description: Create a new lakehouse engine Datatype ruleset (Cribl.Cloud only).<br/><br/>A Datatype ruleset occupies a single fixed slot, so this operation initializes that slot when it does not exist yet. It does not create additional rulesets. To change the slot once it exists, update it instead.
             responses:
                 "201":
                     description: The created lakehouse engine Datatype ruleset
@@ -297411,6 +297613,8 @@ paths:
                             description: The canonical URL of the newly created resource.
                             schema:
                                 type: string
+                "400":
+                    description: The <code>id</code> in the request body is not the supported Datatype ruleset slot, or the ruleset failed validation.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297425,11 +297629,9 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The authenticated caller lacks permission to initialize the Datatype ruleset slot.
+                "409":
+                    description: A Datatype ruleset already occupies the requested slot.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297461,7 +297663,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: List all lakehouse engine Datatype rulesets (Cribl.Cloud only)
-            description: Get a list of all lakehouse engine Datatype rulesets (Cribl.Cloud only).
+            description: Get a list of all lakehouse engine Datatype rulesets (Cribl.Cloud only).<br/><br/>A Datatype ruleset occupies a single fixed slot, so the response lists that slot only once it exists. It is empty until the Datatype ruleset is first created.
             responses:
                 "200":
                     description: Paginated lakehouse engine Datatype ruleset configurations
@@ -297492,11 +297694,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The authenticated caller lacks permission to read Datatype rulesets.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297528,53 +297726,6 @@ paths:
                 outputs:
                     results: $.items
     /search/local_search/datatype-rulesets/{id}:
-        delete:
-            operationId: deleteDatatypeRuleById
-            tags:
-                - search
-            x-speakeasy-group: searches.localSearches.datatypeRulesets
-            x-speakeasy-name-override: delete
-            x-cribl-internal: false
-            x-cribl-availability: cloud
-            x-cribl-api-context:
-                - searchGroup
-            summary: Delete a lakehouse engine Datatype ruleset (Cribl.Cloud only)
-            description: Delete the specified lakehouse engine Datatype ruleset from configuration (Cribl.Cloud only).
-            responses:
-                "204":
-                    description: No Content
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    $ref: "#/components/schemas/DatatypeRulesetId"
-                  description: The <code>id</code> of the Datatype ruleset to delete. The only supported value is <code>default</code>.
         get:
             operationId: getDatatypeRuleById
             tags:
@@ -297611,17 +297762,9 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The authenticated caller lacks permission to read the Datatype ruleset slot.
                 "404":
-                    description: The requested resource does not exist.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
+                    description: No Datatype ruleset occupies the requested slot yet, or the <code>id</code> is not the supported slot.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297634,7 +297777,7 @@ paths:
                   required: true
                   schema:
                     $ref: "#/components/schemas/DatatypeRulesetId"
-                  description: The <code>id</code> of the Datatype ruleset to get. The only supported value is <code>default</code>.
+                  description: The <code>id</code> of the Datatype ruleset to get. The only supported value is <code>default</code>, which identifies a fixed slot that you cannot rename or delete.
         patch:
             operationId: updateDatatypeRuleById
             tags:
@@ -297646,7 +297789,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update a lakehouse engine Datatype ruleset (Cribl.Cloud only)
-            description: "Update the specified lakehouse engine Datatype ruleset (Cribl.Cloud only).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified lakehouse engine Datatype ruleset (Cribl.Cloud only).<br/><br/>Removing an individual rule is an update to the ruleset's ordered rule list.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Datatype ruleset
@@ -297657,6 +297800,8 @@ paths:
                             examples:
                                 LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset:
                                     $ref: "#/components/examples/LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset"
+                "400":
+                    description: The <code>id</code> in the path or request body is not the supported Datatype ruleset slot, or the ruleset failed validation.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297671,11 +297816,9 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The authenticated caller lacks permission to update the Datatype ruleset slot.
+                "404":
+                    description: No Datatype ruleset occupies the requested slot yet. Create the slot before you update it.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297702,7 +297845,7 @@ paths:
                   required: true
                   schema:
                     $ref: "#/components/schemas/DatatypeRulesetId"
-                  description: The <code>id</code> of the Datatype ruleset to update. The only supported value is <code>default</code>.
+                  description: The <code>id</code> of the Datatype ruleset to update. The only supported value is <code>default</code>, which identifies a fixed slot that you cannot rename or delete; an <code>id</code> in the request body must match this value.
     /alert/monitors/{id}/clone:
         post:
             operationId: createMonitorConfCloneById
@@ -301699,7 +301842,7 @@ paths:
                   required: false
                   schema:
                     type: integer
-                  description: Maximum number of events to return in the response for this request. The absolute value is used when negative. Default is <code>50</code> when omitted. Maximum is <code>1000</code>.
+                  description: Maximum number of events to return in the response for this request. The absolute value is used when negative. Default is <code>50</code> when omitted or set to <code>0</code>. Maximum is <code>1000</code>.
     /edge/fileinspect:
         get:
             operationId: getEdgeFileinspect
@@ -321279,7 +321422,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Update a cloud connection (Cribl.Cloud only)
-            description: "Update the specified connected cloud account (Cribl.Cloud only). The request is a partial update: only the properties present are changed, and the rest keep their stored values. An empty <code>displayName</code> clears the label, and an empty <code>includeAccountIds</code> or <code>excludeAccountIds</code> clears that account filter.<br/><br/><code>cloud</code>, <code>scope</code> and <code>accountId</code> identify the account this connection was registered against and cannot be changed; connect a new account instead. Changing the role name, the External ID or the organizational scope resets the setup verification, because the recorded one no longer describes the live connection."
+            description: "Update the specified connected cloud account (Cribl.Cloud only). The request is a partial update: only the properties present are changed, and the rest keep their stored values. An empty <code>displayName</code> clears the label, and an empty <code>includeAccountIds</code> or <code>excludeAccountIds</code> clears that account filter.<br/><br/><code>cloud</code>, <code>scope</code> and <code>accountId</code> identify the account this connection was registered against and cannot be changed; connect a new account instead. Changing the role name, the External ID or the organizational scope resets the setup verification, because the recorded one no longer describes the live connection. Changing the organizational scope of a verified AWS Organization also drops its discovered member accounts and starts a new member account inventory."
             responses:
                 "200":
                     description: The updated cloud connection
@@ -321345,6 +321488,66 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the connection to update.
+    /system/cloud-connections/connections/{connectionId}/members:
+        get:
+            operationId: getSystemCloudConnectionsConnectionsMembersByConnectionId
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List the member accounts of an AWS Organizations connection (Cribl.Cloud only)
+            description: "Get every member account of the specified AWS Organizations connection as the account inventory last listed it, with the organization's roots and organizational units (Cribl.Cloud only). Accounts outside the organizational units in scope, or left out by the account filter, are included and marked as not in scope.<br/><br/>Only connections with <code>scope: awsOrganization</code> have member accounts. The list changes when an account inventory completes, after setup verification, a refresh request, or the automatic refresh."
+            responses:
+                "200":
+                    description: The organization's member accounts and organizational units as last listed
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudConnectionOrgMembersApiResponse"
+                            examples:
+                                CloudConnectionOrgMembersExamplesListedOrganization:
+                                    $ref: "#/components/examples/CloudConnectionOrgMembersExamplesListedOrganization"
+                                CloudConnectionOrgMembersExamplesNotListedYet:
+                                    $ref: "#/components/examples/CloudConnectionOrgMembersExamplesNotListedYet"
+                "400":
+                    description: Failed validation or malformed input, such as a connection that is not an AWS Organizations connection.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist — unknown connection id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: connectionId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the AWS Organizations connection whose member accounts to list.
     /system/cloud-connections/connections/{connectionId}/usage:
         get:
             operationId: getSystemCloudConnectionsConnectionsUsageByConnectionId
@@ -325514,7 +325717,11 @@ paths:
                             schema:
                                 type: string
                 "400":
-                    description: Failed validation or malformed input — Missing or invalid sourceType
+                    description: Failed validation or malformed input — Missing or invalid sourceType, or missing/invalid datasetIds for a Direct Access Source
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -326172,6 +326379,10 @@ paths:
                                 type: string
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -326186,17 +326397,36 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: The authenticated caller lacks permission to create an executor pool.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: The requested resource does not exist — Hybrid Search is not enabled.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "409":
                     description: Request conflicts with current resource state — an executor pool with this <code>id</code> or <code>name</code> already exists.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "429":
                     description: Too many concurrent executor pool updates — retry the request.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                    headers:
+                        retry-after:
+                            description: Number of seconds the client should wait before retrying the request
+                            schema:
+                                type: integer
+                                examples:
+                                    - 60
                 "500":
                     description: Unexpected server error.
                     content:
@@ -326205,6 +326435,10 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: Service unavailable — the Search service is not reachable.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
             requestBody:
                 description: ExecutorPool object.
                 required: true
@@ -326257,13 +326491,17 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: The authenticated caller lacks permission to list executor pools.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: The requested resource does not exist — Hybrid Search is not enabled.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -326272,6 +326510,10 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: Service unavailable — the Search service is not reachable.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
             parameters:
                 - name: offset
                   in: query
@@ -326328,17 +326570,36 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: The authenticated caller lacks permission to delete the executor pool.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: The requested resource does not exist — Hybrid Search is not enabled.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "409":
                     description: Request conflicts with current resource state — pool has assigned executors, active datasets, or allocations in flight.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "429":
                     description: Too many concurrent executor pool updates — retry the request.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                    headers:
+                        retry-after:
+                            description: Number of seconds the client should wait before retrying the request
+                            schema:
+                                type: integer
+                                examples:
+                                    - 60
                 "500":
                     description: Unexpected server error.
                     content:
@@ -326347,6 +326608,10 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: Service unavailable — the Search service is not reachable.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
             parameters:
                 - name: id
                   in: path
@@ -326390,13 +326655,17 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: The authenticated caller lacks permission to read this executor pool.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: The requested resource does not exist — Hybrid Search is not enabled, or the executor pool was not found.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -326405,6 +326674,10 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: Service unavailable — the Search service is not reachable.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
             parameters:
                 - name: id
                   in: path
@@ -326438,6 +326711,10 @@ paths:
                                     $ref: "#/components/examples/UpdateExecutorPoolResponseExamplesDescriptionCleared"
                 "400":
                     description: Failed validation or malformed input — the <code>id</code> field cannot be patched.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -326452,17 +326729,36 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: The authenticated caller lacks permission to update the executor pool.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: The requested resource does not exist — Hybrid Search is not enabled, or the executor pool was not found.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "409":
                     description: Request conflicts with current resource state — another executor pool already uses this <code>name</code>.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "429":
                     description: Too many concurrent executor pool updates — retry the request.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                    headers:
+                        retry-after:
+                            description: Number of seconds the client should wait before retrying the request
+                            schema:
+                                type: integer
+                                examples:
+                                    - 60
                 "500":
                     description: Unexpected server error.
                     content:
@@ -326471,6 +326767,10 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: Service unavailable — the Search service is not reachable.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
             requestBody:
                 description: ExecutorPoolUpdate object.
                 required: true
@@ -326529,13 +326829,17 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: The authenticated caller lacks permission to read this executor.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: The requested resource does not exist — Hybrid Search is not enabled, or the executor was not found.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -326544,6 +326848,10 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: Service unavailable — BYO executor backend is not initialized.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
             parameters:
                 - name: id
                   in: path
@@ -326575,7 +326883,11 @@ paths:
                                 ExecutorListExamplesExecutors:
                                     $ref: "#/components/examples/ExecutorListExamplesExecutors"
                 "400":
-                    description: Failed validation or malformed input — <code>poolId</code> and <code>unassigned</code> cannot be combined.
+                    description: Failed validation or malformed input — <code>poolId</code> and <code>unassigned</code> cannot be combined, or <code>limit</code>/<code>offset</code> are invalid.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -326590,13 +326902,17 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: The authenticated caller lacks permission to list executors.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: The requested resource does not exist — Hybrid Search is not enabled.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -326605,6 +326921,10 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: Service unavailable — the Search service is not reachable.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
             parameters:
                 - name: poolId
                   in: query
@@ -326668,6 +326988,10 @@ paths:
                                     $ref: "#/components/examples/UpdateExecutorAssignmentResponseExamplesUnassigned"
                 "400":
                     description: Failed validation or malformed input — <code>poolId</code> must be a non-empty pool ID or <code>null</code>.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -326682,15 +327006,30 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: The authenticated caller lacks permission to update the executor's pool assignment.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: The requested resource does not exist — Hybrid Search is not enabled, or the executor was not found.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "429":
                     description: Too many concurrent executor pool updates — retry the request.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                    headers:
+                        retry-after:
+                            description: Number of seconds the client should wait before retrying the request
+                            schema:
+                                type: integer
+                                examples:
+                                    - 60
                 "500":
                     description: Unexpected server error.
                     content:
@@ -326699,6 +327038,10 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: Service unavailable — BYO executor backend is not initialized.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
             requestBody:
                 description: ExecutorAssignmentUpdate object.
                 required: true
@@ -329908,7 +330251,7 @@ paths:
                 - search
             x-speakeasy-group: searches.localSearches
             x-speakeasy-name-override: sampleIngest
-            x-cribl-internal: true
+            x-cribl-internal: false
             x-cribl-availability: cloud
             x-cribl-api-context:
                 - leader
@@ -329986,7 +330329,7 @@ paths:
                 - search
             x-speakeasy-group: searches.localSearches.sourceDocs
             x-speakeasy-name-override: get
-            x-cribl-internal: true
+            x-cribl-internal: false
             x-cribl-availability: cloud
             x-cribl-api-context:
                 - searchGroup
@@ -330052,6 +330395,147 @@ paths:
                   schema:
                     $ref: "#/components/schemas/SupportedLocalSearchSourceType"
                   description: The <code>sourceType</code> of the lakehouse engine source documentation to get.
+    /search/local_search/sources:
+        get:
+            operationId: getSearchLocalSearchSources
+            tags:
+                - search
+            x-speakeasy-group: searches.localSearches.sources
+            x-speakeasy-name-override: list
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - searchGroup
+            summary: List all lakehouse engine sources (Cribl.Cloud only)
+            description: Get a list of all lakehouse engine sources (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: Paginated lakehouse engine source configurations
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedLocalSearchSource"
+                            examples:
+                                LocalSearchSourcePaginatedResponseExamplesSourcePage:
+                                    $ref: "#/components/examples/LocalSearchSourcePaginatedResponseExamplesSourcePage"
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of lakehouse engine sources to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
+        post:
+            operationId: createSearchLocalSearchSources
+            tags:
+                - search
+            x-speakeasy-group: searches.localSearches.sources
+            x-speakeasy-name-override: create
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - searchGroup
+            summary: Create a lakehouse engine source (Cribl.Cloud only)
+            description: Create a new lakehouse engine source (Cribl.Cloud only).
+            responses:
+                "201":
+                    description: The created lakehouse engine source configurations
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LocalSearchSource"
+                            examples:
+                                LocalSearchSourceCountedResponseExamplesSingleSource:
+                                    $ref: "#/components/examples/LocalSearchSourceCountedResponseExamplesSingleSource"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: LocalSearchSource object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LocalSearchSource"
+                        examples:
+                            LocalSearchSourceCreateExamplesCriblHttp:
+                                $ref: "#/components/examples/LocalSearchSourceCreateExamplesCriblHttp"
+                            LocalSearchSourceCreateExamplesCriblHttpWithDescription:
+                                $ref: "#/components/examples/LocalSearchSourceCreateExamplesCriblHttpWithDescription"
+                            LocalSearchSourceCreateExamplesSplunkHec:
+                                $ref: "#/components/examples/LocalSearchSourceCreateExamplesSplunkHec"
+                            LocalSearchSourceCreateExamplesSyslogTcp:
+                                $ref: "#/components/examples/LocalSearchSourceCreateExamplesSyslogTcp"
     /search/local_search/sources/{id}/hectoken:
         post:
             operationId: createSearchLocalSearchSourcesHecTokenById
@@ -330119,141 +330603,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Splunk HEC lakehouse engine source to add the HEC token to.
-    /search/local_search/sources:
-        post:
-            operationId: createSearchLocalSearchSources
-            tags:
-                - search
-            x-speakeasy-group: searches.localSearches.sources
-            x-speakeasy-name-override: create
-            x-cribl-internal: false
-            x-cribl-availability: cloud
-            x-cribl-api-context:
-                - searchGroup
-            summary: Create a lakehouse engine source (Cribl.Cloud only)
-            description: Create a new lakehouse engine source (Cribl.Cloud only).
-            responses:
-                "201":
-                    description: The created lakehouse engine source configurations
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/LocalSearchSource"
-                            examples:
-                                LocalSearchSourceCountedResponseExamplesSingleSource:
-                                    $ref: "#/components/examples/LocalSearchSourceCountedResponseExamplesSingleSource"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            requestBody:
-                description: LocalSearchSource object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/LocalSearchSource"
-                        examples:
-                            LocalSearchSourceCreateExamplesCriblHttp:
-                                $ref: "#/components/examples/LocalSearchSourceCreateExamplesCriblHttp"
-                            LocalSearchSourceCreateExamplesCriblHttpWithDescription:
-                                $ref: "#/components/examples/LocalSearchSourceCreateExamplesCriblHttpWithDescription"
-                            LocalSearchSourceCreateExamplesSplunkHec:
-                                $ref: "#/components/examples/LocalSearchSourceCreateExamplesSplunkHec"
-                            LocalSearchSourceCreateExamplesSyslogTcp:
-                                $ref: "#/components/examples/LocalSearchSourceCreateExamplesSyslogTcp"
-        get:
-            operationId: getSearchLocalSearchSources
-            tags:
-                - search
-            x-speakeasy-group: searches.localSearches.sources
-            x-speakeasy-name-override: list
-            x-cribl-internal: false
-            x-cribl-availability: cloud
-            x-cribl-api-context:
-                - searchGroup
-            summary: List all lakehouse engine sources (Cribl.Cloud only)
-            description: Get a list of all lakehouse engine sources (Cribl.Cloud only).
-            responses:
-                "200":
-                    description: Paginated lakehouse engine source configurations
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/PaginatedLocalSearchSource"
-                            examples:
-                                LocalSearchSourceCountedResponseExamplesSingleSource:
-                                    $ref: "#/components/examples/LocalSearchSourceCountedResponseExamplesSingleSource"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches.
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                  description: Maximum number of lakehouse engine sources to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches.
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
     /search/local_search/sources/{id}:
         delete:
             operationId: deleteSearchLocalSearchSourcesById
@@ -330374,7 +330723,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update a lakehouse engine source (Cribl.Cloud only)
-            description: Update the specified lakehouse engine source (Cribl.Cloud only).<br/><br/>Provide a complete representation of the lakehouse engine source that you want to update in the request body.<br/><br/>This endpoint does not support partial updates. Cribl removes any omitted fields when updating the lakehouse engine source.<br/><br/>Confirm that the configuration in your request body is correct before sending the request.<br/><br/>If the configuration is incorrect, the updated lakehouse engine source might not function as expected.
+            description: "Update the specified lakehouse engine source (Cribl.Cloud only).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated lakehouse engine source configurations
@@ -330416,14 +330765,14 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/LocalSearchSource"
+                            $ref: "#/components/schemas/LocalSearchSourcePartialRequest"
                         examples:
                             LocalSearchSourceUpdateExamplesCriblHttp:
-                                $ref: "#/components/examples/LocalSearchSourceUpdateExamplesCriblHttp"
+                                $ref: "#/components/examples/LocalSearchSourceUpdateExamplesCriblHttpPartialRequest"
                             LocalSearchSourceUpdateExamplesSplunkHec:
-                                $ref: "#/components/examples/LocalSearchSourceUpdateExamplesSplunkHec"
+                                $ref: "#/components/examples/LocalSearchSourceUpdateExamplesSplunkHecPartialRequest"
                             LocalSearchSourceUpdateExamplesSyslogTcp:
-                                $ref: "#/components/examples/LocalSearchSourceUpdateExamplesSyslogTcp"
+                                $ref: "#/components/examples/LocalSearchSourceUpdateExamplesSyslogTcpPartialRequest"
             parameters:
                 - name: id
                   in: path
@@ -330443,7 +330792,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update the HEC token for a Splunk HEC lakehouse engine source (Cribl.Cloud only)
-            description: Update the HEC token for the specified Splunk HEC lakehouse engine source (Cribl.Cloud only).
+            description: "Update the HEC token for the specified Splunk HEC lakehouse engine source (Cribl.Cloud only).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: Updated Splunk HEC source configurations
@@ -330485,12 +330834,12 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/UpdateHecTokenRequest"
+                            $ref: "#/components/schemas/UpdateHecTokenRequestPartialRequest"
                         examples:
                             HecTokenExamplesHecToken:
-                                $ref: "#/components/examples/HecTokenExamplesHecToken"
+                                $ref: "#/components/examples/HecTokenExamplesHecTokenPartialRequest"
                             HecTokenExamplesHecTokenWithIndexAccess:
-                                $ref: "#/components/examples/HecTokenExamplesHecTokenWithIndexAccess"
+                                $ref: "#/components/examples/HecTokenExamplesHecTokenWithIndexAccessPartialRequest"
             parameters:
                 - name: id
                   in: path
