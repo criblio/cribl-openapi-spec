@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1794092865375-0ff1a6b1
+    version: 4.21.0-alpha.1794266165159-857bf7b4
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -73250,61 +73250,51 @@ components:
                 - weeks
             title: MutingRuleDurationUnit
             x-speakeasy-unknown-values: allow
-        MonitorSilenceConf:
+        CriblMetricsMonitorSilenceConf:
             type: object
             properties:
-                alert_instance_id:
-                    type: string
-                    description: Optional fingerprint of a specific alert instance to mute. If omitted, all instances for the monitor are muted.
                 begins_at:
                     type: integer
-                    description: Unix timestamp in milliseconds when the alert silence begins.
+                    description: Unix timestamp in milliseconds when the Silence starts muting notifications.
                 created_at:
                     type: integer
-                    description: Unix timestamp in milliseconds when the alert silence was created.
+                    description: Unix timestamp in milliseconds when the Silence was created. Set by the server; a value sent in a request is ignored.
                 created_by:
                     type: string
-                    description: Username or identifier of who created this alert silence.
+                    description: Username of who created the Silence. Set by the server; a value sent in a request is ignored.
                 description:
                     type: string
-                    description: Optional user-friendly description of the alert silence.
+                    description: Optional description of the Silence.
                 duration_type:
                     $ref: "#/components/schemas/MutingRuleDurationType"
-                    description: UI state that records which duration picker mode was used. UI-only field for edit mode round-tripping. API consumers should ignore.
+                    description: Records which duration picker mode the Metrics UI used to set the window. Does not change what the Silence mutes; <code>begins_at</code> and <code>expires_at</code> decide that.
                 duration_unit:
                     $ref: "#/components/schemas/MutingRuleDurationUnit"
-                    description: UI state that records the unit for a relative duration. UI-only field for edit mode round-tripping. API consumers should ignore.
+                    description: Records the unit for a relative duration in the Metrics UI. Does not change what the Silence mutes.
                 duration_value:
                     type: integer
-                    description: UI state that records the numeric value for a relative duration, such as <code>2</code> for two hours.
+                    description: Records the number for a relative duration in the Metrics UI, such as <code>2</code> for two hours. Does not change what the Silence mutes.
                 expires_at:
                     type: integer
-                    description: Unix timestamp in milliseconds when the alert silence expires.
+                    description: Unix timestamp in milliseconds when the Silence stops muting notifications.
                 id:
                     type: string
-                    description: Unique identifier for the alert silence.
+                    description: Unique identifier for the Silence.
                 monitor_id:
                     type: string
-                    description: The <code>id</code> of the alert Monitor that this silence applies to.
+                    description: The <code>id</code> of the Monitor Configuration whose notifications this Silence mutes. All of the Monitor's notifications are muted, for every series.
                 name:
                     type: string
-                    description: Optional display name for the alert silence.
-                tags:
-                    type: object
-                    additionalProperties:
-                        type: array
-                        items:
-                            type: string
-                    description: "Optional tag matchers for selective instance muting. Keys are label names, values are arrays of allowed values. Logic: AND across keys, OR within each key's values. Only instances whose labels satisfy all keys are muted."
+                    description: Optional display name for the Silence.
             required:
                 - begins_at
                 - created_at
                 - expires_at
                 - id
                 - monitor_id
-            description: Alert silence configuration.
-            title: MonitorSilenceConf
-        PaginatedMonitorSilenceConf:
+            description: A Silence mutes every alert notification for one Monitor Configuration between <code>begins_at</code> and <code>expires_at</code>.
+            title: CriblMetricsMonitorSilenceConf
+        PaginatedCriblMetricsMonitorMutingRuleConf:
             type: object
             required:
                 - items
@@ -73314,7 +73304,7 @@ components:
                     type: array
                     description: The pre-limited items in the list of results
                     items:
-                        $ref: "#/components/schemas/MonitorSilenceConf"
+                        $ref: "#/components/schemas/CriblMetricsMonitorMutingRuleConf"
                 count:
                     type: integer
                     description: Total number of items available
@@ -73324,6 +73314,62 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
+        SilenceStatus:
+            type: string
+            enum:
+                - active
+                - expired
+                - future
+            title: SilenceStatus
+            x-speakeasy-unknown-values: allow
+        CriblMetricsMonitorMutingRuleConf:
+            type: object
+            properties:
+                begins_at:
+                    type: integer
+                    description: Unix timestamp in milliseconds when the Silence starts muting notifications.
+                created_at:
+                    type: integer
+                    description: Unix timestamp in milliseconds when the Silence was created. Set by the server; a value sent in a request is ignored.
+                created_by:
+                    type: string
+                    description: Username of who created the Silence. Set by the server; a value sent in a request is ignored.
+                description:
+                    type: string
+                    description: Optional description of the Silence.
+                duration_type:
+                    $ref: "#/components/schemas/MutingRuleDurationType"
+                    description: Records which duration picker mode the Metrics UI used to set the window. Does not change what the Silence mutes; <code>begins_at</code> and <code>expires_at</code> decide that.
+                duration_unit:
+                    $ref: "#/components/schemas/MutingRuleDurationUnit"
+                    description: Records the unit for a relative duration in the Metrics UI. Does not change what the Silence mutes.
+                duration_value:
+                    type: integer
+                    description: Records the number for a relative duration in the Metrics UI, such as <code>2</code> for two hours. Does not change what the Silence mutes.
+                expires_at:
+                    type: integer
+                    description: Unix timestamp in milliseconds when the Silence stops muting notifications.
+                id:
+                    type: string
+                    description: Unique identifier for the Silence.
+                monitor_id:
+                    type: string
+                    description: The <code>id</code> of the Monitor Configuration whose notifications this Silence mutes. All of the Monitor's notifications are muted, for every series.
+                name:
+                    type: string
+                    description: Optional display name for the Silence.
+                status:
+                    $ref: "#/components/schemas/SilenceStatus"
+                    description: "Computed at request time: <code>active</code> between <code>begins_at</code> and <code>expires_at</code>, <code>future</code> before, <code>expired</code> after. Ignored when sent in a request."
+            required:
+                - begins_at
+                - created_at
+                - expires_at
+                - id
+                - monitor_id
+                - status
+            description: A Silence as listed, with its status at the time of the request.
+            title: CriblMetricsMonitorMutingRuleConf
         MigrationProvider:
             type: string
             enum:
@@ -75416,7 +75462,7 @@ components:
                     type: array
                     items:
                         $ref: "#/components/schemas/AllowedProductConfProvisioningTokenRestrictions"
-                    description: Node types permitted to register with the provisioning token. A Node whose type is not listed is rejected when it tries to register. Must contain at least one unique Node type.
+                    description: Node types permitted to register with the provisioning token. A Node whose type is not listed is rejected when it tries to register. Must contain at least one unique Node type. On an on-premises Leader, a Leader Node is not a permitted value.
                     minItems: 1
             required:
                 - allowedProducts
@@ -75442,7 +75488,7 @@ components:
             properties:
                 createdAt:
                     type: integer
-                    description: Timestamp (in Unix time) when the provisioning token was created.
+                    description: Timestamp (in Unix time) when the provisioning token was created, in milliseconds.
                 description:
                     type: string
                     description: Brief description of the provisioning token.
@@ -75451,7 +75497,7 @@ components:
                     description: Node type that the provisioning token is restricted to. If omitted, the provisioning token is not restricted to a specific Node type.
                 expiresAt:
                     type: integer
-                    description: Timestamp (in Unix time) after which the provisioning token expires. If omitted, the provisioning token does not expire.
+                    description: Timestamp (in Unix time) after which the provisioning token expires, in milliseconds. If omitted, the provisioning token does not expire. Not yet enforced at registration.
                 id:
                     type: string
                     description: Unique identifier for the provisioning token.
@@ -75460,7 +75506,7 @@ components:
                     description: Restrictions applied when a Node registers with the provisioning token. If omitted, any Node type can register.
                 revokedAt:
                     type: integer
-                    description: Timestamp (in Unix time) when the provisioning token was revoked. If omitted, the provisioning token is not revoked.
+                    description: Timestamp (in Unix time) when the provisioning token was revoked, in milliseconds. If omitted, the provisioning token is not revoked.
                 status:
                     $ref: "#/components/schemas/TokenStatus"
                     description: "Computed status of the provisioning token: <code>active</code>, <code>revoked</code>, <code>expired</code>, or <code>exhausted</code>."
@@ -75475,7 +75521,7 @@ components:
                     description: Number of times the provisioning token has been used to register a Node.
                 useLimit:
                     type: integer
-                    description: Maximum successful registrations allowed for the provisioning token. If omitted, successful registrations are unlimited.
+                    description: Maximum successful registrations allowed for the provisioning token. If omitted, successful registrations are unlimited. Not yet enforced at registration.
             required:
                 - createdAt
                 - description
@@ -75497,12 +75543,13 @@ components:
                         - managed-edge
                         - master
                         - outpost
+                        - search-supervisor
                         - worker
                     description: The Node type that the provisioning token is restricted to. If omitted, the provisioning token is not restricted to a specific Node type.
                     x-speakeasy-unknown-values: allow
                 expiresAt:
                     type: integer
-                    description: Timestamp (in Unix time) after which the provisioning token expires. Omit for no expiry.
+                    description: Timestamp (in Unix time) after which the provisioning token expires, in milliseconds. Omit for no expiry. Not yet enforced at registration.
                     minimum: 0
                 id:
                     type: string
@@ -75512,7 +75559,7 @@ components:
                     description: Restrictions applied when a Node registers with the provisioning token. Omit to let any Node type register.
                 useLimit:
                     type: integer
-                    description: Maximum successful registrations. Omit for unlimited.
+                    description: Maximum successful registrations. Omit for unlimited. Not yet enforced at registration.
                     minimum: 1
             required:
                 - id
@@ -75522,7 +75569,7 @@ components:
             properties:
                 createdAt:
                     type: integer
-                    description: Timestamp (in Unix time) when the provisioning token was created.
+                    description: Timestamp (in Unix time) when the provisioning token was created, in milliseconds.
                 description:
                     type: string
                     description: Brief description of the provisioning token.
@@ -75531,7 +75578,7 @@ components:
                     description: Node type that the provisioning token is restricted to. If omitted, the provisioning token is not restricted to a specific Node type.
                 expiresAt:
                     type: integer
-                    description: Timestamp (in Unix time) after which the provisioning token expires. If omitted, the provisioning token does not expire.
+                    description: Timestamp (in Unix time) after which the provisioning token expires, in milliseconds. If omitted, the provisioning token does not expire. Not yet enforced at registration.
                 id:
                     type: string
                     description: Unique identifier for the provisioning token.
@@ -75540,7 +75587,7 @@ components:
                     description: Restrictions applied when a Node registers with the provisioning token. If omitted, any Node type can register.
                 revokedAt:
                     type: integer
-                    description: Timestamp (in Unix time) when the provisioning token was revoked. If omitted, the provisioning token is not revoked.
+                    description: Timestamp (in Unix time) when the provisioning token was revoked, in milliseconds. If omitted, the provisioning token is not revoked.
                 status:
                     $ref: "#/components/schemas/TokenStatus"
                     description: "Computed status of the provisioning token: <code>active</code>, <code>revoked</code>, <code>expired</code>, or <code>exhausted</code>."
@@ -75552,7 +75599,7 @@ components:
                     description: Number of times the provisioning token has been used to register a Node.
                 useLimit:
                     type: integer
-                    description: Maximum successful registrations allowed for the provisioning token. If omitted, successful registrations are unlimited.
+                    description: Maximum successful registrations allowed for the provisioning token. If omitted, successful registrations are unlimited. Not yet enforced at registration.
             required:
                 - createdAt
                 - description
@@ -75595,7 +75642,7 @@ components:
                     type: array
                     items:
                         $ref: "#/components/schemas/AllowedProductConfProvisioningTokenRestrictions"
-                    description: "Node types permitted to register with the provisioning token. A Node whose type is not listed is rejected when it tries to register. Required whenever the updated provisioning token keeps a <code>restrictions</code> object: Cribl rejects a request that leaves <code>restrictions</code> with no Node types. Must contain at least one unique Node type."
+                    description: "Node types permitted to register with the provisioning token. A Node whose type is not listed is rejected when it tries to register. Required whenever the updated provisioning token keeps a <code>restrictions</code> object: Cribl rejects a request that leaves <code>restrictions</code> with no Node types. Must contain at least one unique Node type. On an on-premises Leader, a Leader Node is not a permitted value."
                     minItems: 1
             title: ProvisioningTokenRestrictionsUpdate
         ProvisioningTokenUpdate:
@@ -75613,6 +75660,7 @@ components:
                         - master
                         - null
                         - outpost
+                        - search-supervisor
                         - worker
                     description: The Node type that the provisioning token is restricted to. Defaults to <code>null</code> (no restriction) if omitted.
                     x-speakeasy-unknown-values: allow
@@ -75620,7 +75668,7 @@ components:
                     type:
                         - "null"
                         - integer
-                    description: Timestamp (in Unix time) after which the provisioning token expires. Defaults to <code>null</code> (no expiry) if omitted.
+                    description: Timestamp (in Unix time) after which the provisioning token expires, in milliseconds. Defaults to <code>null</code> (no expiry) if omitted. Not yet enforced at registration.
                     minimum: 0
                 restrictions:
                     oneOf:
@@ -75631,7 +75679,7 @@ components:
                     type:
                         - "null"
                         - integer
-                    description: Maximum successful registrations. Defaults to <code>null</code> (unlimited) if omitted.
+                    description: Maximum successful registrations. Defaults to <code>null</code> (unlimited) if omitted. Not yet enforced at registration.
                     minimum: 1
             title: ProvisioningTokenUpdate
         RoleResponse:
@@ -83049,6 +83097,80 @@ components:
                     description: The pre-limited items in the list of results
                     items:
                         $ref: "#/components/schemas/MonitorConf"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
+        MonitorSilenceConf:
+            type: object
+            properties:
+                alert_instance_id:
+                    type: string
+                    description: Optional fingerprint of a specific alert instance to mute. If omitted, all instances for the monitor are muted.
+                begins_at:
+                    type: integer
+                    description: Unix timestamp in milliseconds when the alert silence begins.
+                created_at:
+                    type: integer
+                    description: Unix timestamp in milliseconds when the alert silence was created.
+                created_by:
+                    type: string
+                    description: Username or identifier of who created this alert silence.
+                description:
+                    type: string
+                    description: Optional user-friendly description of the alert silence.
+                duration_type:
+                    $ref: "#/components/schemas/MutingRuleDurationType"
+                    description: UI state that records which duration picker mode was used. UI-only field for edit mode round-tripping. API consumers should ignore.
+                duration_unit:
+                    $ref: "#/components/schemas/MutingRuleDurationUnit"
+                    description: UI state that records the unit for a relative duration. UI-only field for edit mode round-tripping. API consumers should ignore.
+                duration_value:
+                    type: integer
+                    description: UI state that records the numeric value for a relative duration, such as <code>2</code> for two hours.
+                expires_at:
+                    type: integer
+                    description: Unix timestamp in milliseconds when the alert silence expires.
+                id:
+                    type: string
+                    description: Unique identifier for the alert silence.
+                monitor_id:
+                    type: string
+                    description: The <code>id</code> of the alert Monitor that this silence applies to.
+                name:
+                    type: string
+                    description: Optional display name for the alert silence.
+                tags:
+                    type: object
+                    additionalProperties:
+                        type: array
+                        items:
+                            type: string
+                    description: "Optional tag matchers for selective instance muting. Keys are label names, values are arrays of allowed values. Logic: AND across keys, OR within each key's values. Only instances whose labels satisfy all keys are muted."
+            required:
+                - begins_at
+                - created_at
+                - expires_at
+                - id
+                - monitor_id
+            description: Alert silence configuration.
+            title: MonitorSilenceConf
+        PaginatedMonitorSilenceConf:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/MonitorSilenceConf"
                 count:
                     type: integer
                     description: Total number of items available
@@ -212753,72 +212875,56 @@ components:
                         - type: string
                         - type: "null"
             title: SharedConfigPartialRequest
-        MonitorSilenceConfPartialRequest:
+        CriblMetricsMonitorSilenceConfPartialRequest:
             type: object
             properties:
-                alert_instance_id:
-                    description: Optional fingerprint of a specific alert instance to mute. If omitted, all instances for the monitor are muted.
-                    anyOf:
-                        - type: string
-                        - type: "null"
                 begins_at:
                     type: integer
-                    description: Unix timestamp in milliseconds when the alert silence begins.
+                    description: Unix timestamp in milliseconds when the Silence starts muting notifications.
                 created_at:
                     type: integer
-                    description: Unix timestamp in milliseconds when the alert silence was created.
+                    description: Unix timestamp in milliseconds when the Silence was created. Set by the server; a value sent in a request is ignored.
                 created_by:
-                    description: Username or identifier of who created this alert silence.
+                    description: Username of who created the Silence. Set by the server; a value sent in a request is ignored.
                     anyOf:
                         - type: string
                         - type: "null"
                 description:
-                    description: Optional user-friendly description of the alert silence.
+                    description: Optional description of the Silence.
                     anyOf:
                         - type: string
                         - type: "null"
                 duration_type:
-                    description: UI state that records which duration picker mode was used. UI-only field for edit mode round-tripping. API consumers should ignore.
+                    description: Records which duration picker mode the Metrics UI used to set the window. Does not change what the Silence mutes; <code>begins_at</code> and <code>expires_at</code> decide that.
                     anyOf:
                         - $ref: "#/components/schemas/MutingRuleDurationType"
                         - type: "null"
                 duration_unit:
-                    description: UI state that records the unit for a relative duration. UI-only field for edit mode round-tripping. API consumers should ignore.
+                    description: Records the unit for a relative duration in the Metrics UI. Does not change what the Silence mutes.
                     anyOf:
                         - $ref: "#/components/schemas/MutingRuleDurationUnit"
                         - type: "null"
                 duration_value:
-                    description: UI state that records the numeric value for a relative duration, such as <code>2</code> for two hours.
+                    description: Records the number for a relative duration in the Metrics UI, such as <code>2</code> for two hours. Does not change what the Silence mutes.
                     anyOf:
                         - type: integer
                         - type: "null"
                 expires_at:
                     type: integer
-                    description: Unix timestamp in milliseconds when the alert silence expires.
+                    description: Unix timestamp in milliseconds when the Silence stops muting notifications.
                 id:
                     type: string
-                    description: Unique identifier for the alert silence.
+                    description: Unique identifier for the Silence.
                 monitor_id:
                     type: string
-                    description: The <code>id</code> of the alert Monitor that this silence applies to.
+                    description: The <code>id</code> of the Monitor Configuration whose notifications this Silence mutes. All of the Monitor's notifications are muted, for every series.
                 name:
-                    description: Optional display name for the alert silence.
+                    description: Optional display name for the Silence.
                     anyOf:
                         - type: string
                         - type: "null"
-                tags:
-                    description: "Optional tag matchers for selective instance muting. Keys are label names, values are arrays of allowed values. Logic: AND across keys, OR within each key's values. Only instances whose labels satisfy all keys are muted."
-                    anyOf:
-                        - type: object
-                          additionalProperties:
-                            anyOf:
-                                - type: array
-                                  items:
-                                    type: string
-                                - type: "null"
-                        - type: "null"
-            description: Alert silence configuration.
-            title: MonitorSilenceConfPartialRequest
+            description: A Silence mutes every alert notification for one Monitor Configuration between <code>begins_at</code> and <code>expires_at</code>.
+            title: CriblMetricsMonitorSilenceConfPartialRequest
         MigrationConnectionPartialRequest:
             type: object
             properties:
@@ -213654,6 +213760,7 @@ components:
                         - master
                         - null
                         - outpost
+                        - search-supervisor
                         - worker
                     description: The Node type that the provisioning token is restricted to.
                     x-speakeasy-unknown-values: allow
@@ -213661,7 +213768,7 @@ components:
                     type:
                         - "null"
                         - integer
-                    description: Timestamp (in Unix time) after which the provisioning token expires.
+                    description: Timestamp (in Unix time) after which the provisioning token expires, in milliseconds. Not yet enforced at registration.
                     minimum: 0
                 restrictions:
                     oneOf:
@@ -213672,7 +213779,7 @@ components:
                     type:
                         - "null"
                         - integer
-                    description: Maximum successful registrations.
+                    description: Maximum successful registrations. Not yet enforced at registration.
                     minimum: 1
             title: ProvisioningTokenUpdatePartialRequest
         RoleInputPartialRequest:
@@ -218889,6 +218996,72 @@ components:
                         type: string
                     description: Label names used by the grouping clause.
             title: ByWithoutClausePartialRequest
+        MonitorSilenceConfPartialRequest:
+            type: object
+            properties:
+                alert_instance_id:
+                    description: Optional fingerprint of a specific alert instance to mute. If omitted, all instances for the monitor are muted.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                begins_at:
+                    type: integer
+                    description: Unix timestamp in milliseconds when the alert silence begins.
+                created_at:
+                    type: integer
+                    description: Unix timestamp in milliseconds when the alert silence was created.
+                created_by:
+                    description: Username or identifier of who created this alert silence.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                description:
+                    description: Optional user-friendly description of the alert silence.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                duration_type:
+                    description: UI state that records which duration picker mode was used. UI-only field for edit mode round-tripping. API consumers should ignore.
+                    anyOf:
+                        - $ref: "#/components/schemas/MutingRuleDurationType"
+                        - type: "null"
+                duration_unit:
+                    description: UI state that records the unit for a relative duration. UI-only field for edit mode round-tripping. API consumers should ignore.
+                    anyOf:
+                        - $ref: "#/components/schemas/MutingRuleDurationUnit"
+                        - type: "null"
+                duration_value:
+                    description: UI state that records the numeric value for a relative duration, such as <code>2</code> for two hours.
+                    anyOf:
+                        - type: integer
+                        - type: "null"
+                expires_at:
+                    type: integer
+                    description: Unix timestamp in milliseconds when the alert silence expires.
+                id:
+                    type: string
+                    description: Unique identifier for the alert silence.
+                monitor_id:
+                    type: string
+                    description: The <code>id</code> of the alert Monitor that this silence applies to.
+                name:
+                    description: Optional display name for the alert silence.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                tags:
+                    description: "Optional tag matchers for selective instance muting. Keys are label names, values are arrays of allowed values. Logic: AND across keys, OR within each key's values. Only instances whose labels satisfy all keys are muted."
+                    anyOf:
+                        - type: object
+                          additionalProperties:
+                            anyOf:
+                                - type: array
+                                  items:
+                                    type: string
+                                - type: "null"
+                        - type: "null"
+            description: Alert silence configuration.
+            title: MonitorSilenceConfPartialRequest
         MigrationQueryOverridesPartialRequest:
             type: object
             properties:
@@ -222516,6 +222689,7 @@ components:
                 - worker
                 - managed-edge
                 - master
+                - search-supervisor
             x-speakeasy-unknown-values: allow
         DistModeOptionsProvisioningTokenWithSecret:
             type: string
@@ -222523,6 +222697,7 @@ components:
                 - managed-edge
                 - master
                 - outpost
+                - search-supervisor
                 - worker
             description: Node type that the provisioning token is restricted to. If omitted, the provisioning token is not restricted to a specific Node type.
             x-speakeasy-unknown-values: allow
@@ -233626,6 +233801,7 @@ components:
                       created_at: 1769644700000
                       begins_at: 1769644800000
                       expires_at: 1769659200000
+                      status: active
                     - id: sil_01HQ8V3X2L
                       name: Incident triage
                       monitor_id: mem-high
@@ -233633,6 +233809,7 @@ components:
                       created_at: 1769644700000
                       begins_at: 1769644800000
                       expires_at: 1769659200000
+                      status: active
                 offset: 0
                 limit: 20
         MigrationConnectionCreateResponseExamplesCreatedConnection:
@@ -279241,6 +279418,8 @@ paths:
                             examples:
                                 ConfigProfileAttachConfigResponseExamplesAttachedConfig:
                                     $ref: "#/components/examples/ConfigProfileAttachConfigResponseExamplesAttachedConfig"
+                "400":
+                    description: The request body has no <code>configId</code>, the specified SharedConfig does not exist, or the profile's stored <code>configIds</code> is not an array.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -279260,6 +279439,8 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "409":
+                    description: The SharedConfig is already assigned somewhere in this profile's tree.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -279316,6 +279497,8 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The specified config profile does not exist.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -279356,6 +279539,8 @@ paths:
                             examples:
                                 ConfigProfileResolvedResponseExamplesResolvedConfig:
                                     $ref: "#/components/examples/ConfigProfileResolvedResponseExamplesResolvedConfig"
+                "400":
+                    description: The <code>type</code> query parameter is not a valid monitor type.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -279375,6 +279560,8 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The specified config profile does not exist.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -279415,6 +279602,8 @@ paths:
                             examples:
                                 ConfigProfileLinkResponseExamplesLinkedProfile:
                                     $ref: "#/components/examples/ConfigProfileLinkResponseExamplesLinkedProfile"
+                "400":
+                    description: The request body has no <code>parentId</code>, the profile already has a parent, or linking would exceed the maximum depth or create a cycle.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -279434,6 +279623,8 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "409":
+                    description: The parent and child trees have a SharedConfig in common.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -279478,6 +279669,8 @@ paths:
                             examples:
                                 ConfigProfileUnlinkResponseExamplesUnlinkedProfile:
                                     $ref: "#/components/examples/ConfigProfileUnlinkResponseExamplesUnlinkedProfile"
+                "400":
+                    description: The profile has no parent, so it is already the root of its tree.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -280591,6 +280784,8 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "409":
+                    description: One or more config profiles still reference the SharedConfig. Detach it from every profile first.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -280876,7 +281071,7 @@ paths:
                     results: $.items
     /products/lakehouse_engine_metrics/silences:
         post:
-            operationId: createMonitorSilenceConf
+            operationId: createCriblMetricsMonitorSilenceConf
             tags:
                 - silences
             x-cribl-internal: false
@@ -280887,11 +281082,11 @@ paths:
             description: Create a new Silence muting alert notifications for a Monitor Configuration over a time window.
             responses:
                 "201":
-                    description: The created MonitorSilenceConf object.
+                    description: The created CriblMetricsMonitorSilenceConf object.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/MonitorSilenceConf"
+                                $ref: "#/components/schemas/CriblMetricsMonitorSilenceConf"
                             examples:
                                 SilenceCreateResponseExamplesCreatedSilence:
                                     $ref: "#/components/examples/SilenceCreateResponseExamplesCreatedSilence"
@@ -280926,12 +281121,12 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/Error"
             requestBody:
-                description: MonitorSilenceConf object.
+                description: CriblMetricsMonitorSilenceConf object.
                 required: true
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/MonitorSilenceConf"
+                            $ref: "#/components/schemas/CriblMetricsMonitorSilenceConf"
                         examples:
                             SilenceCreateExamplesMaintenanceWindow:
                                 $ref: "#/components/examples/SilenceCreateExamplesMaintenanceWindow"
@@ -280947,11 +281142,11 @@ paths:
             description: Get a list of all Silence objects, optionally filtered by monitor, status, or time window.
             responses:
                 "200":
-                    description: List of MonitorSilenceConf objects.
+                    description: List of CriblMetricsMonitorMutingRuleConf objects.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/PaginatedMonitorSilenceConf"
+                                $ref: "#/components/schemas/PaginatedCriblMetricsMonitorMutingRuleConf"
                             examples:
                                 SilenceListResponseExamplesSilences:
                                     $ref: "#/components/examples/SilenceListResponseExamplesSilences"
@@ -281038,7 +281233,7 @@ paths:
                     results: $.items
     /products/lakehouse_engine_metrics/silences/{id}:
         delete:
-            operationId: deleteMonitorSilenceConfById
+            operationId: deleteCriblMetricsMonitorSilenceConfById
             tags:
                 - silences
             x-cribl-internal: false
@@ -281083,7 +281278,7 @@ paths:
                     type: string
                   description: The <code>id</code> of the Silence to delete.
         get:
-            operationId: getMonitorSilenceConfById
+            operationId: getCriblMetricsMonitorSilenceConfById
             tags:
                 - silences
             x-cribl-internal: false
@@ -281094,11 +281289,11 @@ paths:
             description: Get the specified Silence.
             responses:
                 "200":
-                    description: The requested MonitorSilenceConf object.
+                    description: The requested CriblMetricsMonitorSilenceConf object.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/MonitorSilenceConf"
+                                $ref: "#/components/schemas/CriblMetricsMonitorSilenceConf"
                             examples:
                                 SilenceGetResponseExamplesSilence:
                                     $ref: "#/components/examples/SilenceGetResponseExamplesSilence"
@@ -281141,7 +281336,7 @@ paths:
                     type: string
                   description: The <code>id</code> of the Silence to get.
         patch:
-            operationId: updateMonitorSilenceConfById
+            operationId: updateCriblMetricsMonitorSilenceConfById
             tags:
                 - silences
             x-cribl-internal: false
@@ -281152,11 +281347,11 @@ paths:
             description: "Update the specified Silence.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
-                    description: The updated MonitorSilenceConf object.
+                    description: The updated CriblMetricsMonitorSilenceConf object.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/MonitorSilenceConf"
+                                $ref: "#/components/schemas/CriblMetricsMonitorSilenceConf"
                             examples:
                                 SilenceUpdateResponseExamplesExtendedSilence:
                                     $ref: "#/components/examples/SilenceUpdateResponseExamplesExtendedSilence"
@@ -281186,12 +281381,12 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/Error"
             requestBody:
-                description: MonitorSilenceConf object.
+                description: CriblMetricsMonitorSilenceConf object.
                 required: true
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/MonitorSilenceConfPartialRequest"
+                            $ref: "#/components/schemas/CriblMetricsMonitorSilenceConfPartialRequest"
                         examples:
                             SilenceUpdateExamplesExtendWindow:
                                 $ref: "#/components/examples/SilenceUpdateExamplesExtendWindowPartialRequest"
@@ -281204,7 +281399,7 @@ paths:
                   description: The <code>id</code> of the Silence to update.
     /products/lakehouse_engine_metrics/silences/{id}/history:
         get:
-            operationId: getMonitorSilenceConfHistoryById
+            operationId: getCriblMetricsMonitorSilenceConfHistoryById
             tags:
                 - silences
             x-cribl-internal: false
@@ -281278,7 +281473,7 @@ paths:
                     results: $.items
     /products/lakehouse_engine_metrics/silences/history:
         get:
-            operationId: getMonitorSilenceConf
+            operationId: getCriblMetricsMonitorSilenceConf
             tags:
                 - silences
             x-cribl-internal: false
@@ -281948,6 +282143,8 @@ paths:
                             description: The canonical URL of the newly created resource.
                             schema:
                                 type: string
+                "400":
+                    description: The run names a <code>connectionId</code> that does not exist.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -282110,6 +282307,8 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "409":
+                    description: The run's state or kind does not allow discovery — it is past discovery, or it is an upload run with no uploaded dashboard export.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -288161,7 +288360,7 @@ paths:
                             schema:
                                 type: string
                 "400":
-                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    description: Failed validation or malformed input, such as missing or invalid parameters, or a Leader Node restriction on an on-premises Leader.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -288390,7 +288589,7 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/ProvisioningToken"
                 "400":
-                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    description: Failed validation or malformed input, such as missing or invalid parameters, or a Leader Node restriction on an on-premises Leader.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -298168,7 +298367,7 @@ paths:
                   description: The <code>id</code> of the alert Monitor to update.
     /alert/silences:
         post:
-            operationId: createAlertSilences
+            operationId: createMonitorSilenceConf
             tags:
                 - insights
             x-cribl-internal: false
@@ -298240,7 +298439,7 @@ paths:
                             AlertSilenceCreateExamplesSilence:
                                 $ref: "#/components/examples/AlertSilenceCreateExamplesSilence"
         get:
-            operationId: getAlertSilences
+            operationId: getMonitorSilenceConf
             tags:
                 - insights
             x-cribl-internal: false
@@ -298318,7 +298517,7 @@ paths:
                     results: $.items
     /alert/silences/{id}:
         delete:
-            operationId: deleteAlertSilencesById
+            operationId: deleteMonitorSilenceConfById
             tags:
                 - insights
             x-cribl-internal: false
@@ -298363,7 +298562,7 @@ paths:
                     type: string
                   description: The <code>id</code> of the alert silence to delete.
         get:
-            operationId: getAlertSilencesById
+            operationId: getMonitorSilenceConfById
             tags:
                 - insights
             x-cribl-internal: false
@@ -298421,7 +298620,7 @@ paths:
                     type: string
                   description: The <code>id</code> of the alert silence.
         patch:
-            operationId: updateAlertSilencesById
+            operationId: updateMonitorSilenceConfById
             tags:
                 - insights
             x-cribl-internal: false
@@ -298517,6 +298716,8 @@ paths:
                             examples:
                                 AlertActivityResponseExamplesFirstPage:
                                     $ref: "#/components/examples/AlertActivityResponseExamplesFirstPage"
+                "400":
+                    description: A query parameter is malformed, such as a non-numeric <code>earliest</code> or an invalid <code>next_cursor</code>, or <code>datasetId</code> is not a metrics dataset name.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -298644,6 +298845,8 @@ paths:
                             examples:
                                 AlertActivityCurrentResponseExamplesCurrentStates:
                                     $ref: "#/components/examples/AlertActivityCurrentResponseExamplesCurrentStates"
+                "400":
+                    description: <code>datasetId</code> is not a metrics dataset name, or, on v2, <code>limit</code> or <code>offset</code> is not a non-negative integer.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -298734,6 +298937,8 @@ paths:
                             examples:
                                 MonitorStateHistoryResponseExamplesStateHistory:
                                     $ref: "#/components/examples/MonitorStateHistoryResponseExamplesStateHistory"
+                "400":
+                    description: A query parameter is malformed, such as a non-numeric <code>earliest</code>; on v2, <code>limit</code> or <code>offset</code> is not a non-negative integer; or <code>datasetId</code> is not a metrics dataset name.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -298838,6 +299043,8 @@ paths:
                             examples:
                                 AlertActivityStatsResponseExamplesBuckets:
                                     $ref: "#/components/examples/AlertActivityStatsResponseExamplesBuckets"
+                "400":
+                    description: A query parameter is malformed, such as a non-numeric <code>earliest</code> or <code>window_size_minutes</code>; on v2, <code>limit</code> or <code>offset</code> is not a non-negative integer; or <code>datasetId</code> is not a metrics dataset name.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -299453,6 +299660,8 @@ paths:
                                     $ref: "#/components/examples/MonitorPreviewResponseExamplesChangeComparison"
                                 MonitorPreviewResponseExamplesAutoSelectedNothing:
                                     $ref: "#/components/examples/MonitorPreviewResponseExamplesAutoSelectedNothing"
+                "400":
+                    description: The monitor draft is missing, invalid, or of a type or configuration that cannot be previewed; <code>earliest</code> or <code>latest</code> is missing or not a whole number of epoch seconds, <code>latest</code> is not after <code>earliest</code>, or <code>step</code> is not a positive integer; the step is finer than the model's sampling step; or the preview would return too many axis points or series.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -299467,11 +299676,9 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The caller cannot read a dataset that the draft monitor would query.
+                "404":
+                    description: A dataset that the draft monitor references is not bound to any engine.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -299669,7 +299876,7 @@ paths:
                   required: true
                   schema:
                     type: string
-                  description: The dataset whose catalog to search (as validated against).
+                  description: The metrics dataset whose catalog to search (the one the plan validated against). A dataset that is not a metrics dataset, or does not exist, fails with 400.
                 - name: metric
                   in: query
                   required: true
@@ -301434,7 +301641,7 @@ paths:
                                 PrometheusSeriesResponseExamplesseries:
                                     $ref: "#/components/examples/PrometheusSeriesResponseExamplesseries"
                 "400":
-                    description: Failed validation or malformed input — a selector did not parse, or <code>start</code>, <code>end</code>, or <code>limit</code> was unparseable.
+                    description: Failed validation or malformed input — no <code>match[]</code> was supplied, a selector did not parse, or <code>start</code>, <code>end</code>, or <code>limit</code> was unparseable.
                     content:
                         application/json:
                             schema:
@@ -301499,12 +301706,12 @@ paths:
                   description: The metrics dataset id within the engine.
                 - name: match[]
                   in: query
-                  required: false
+                  required: true
                   schema:
                     type: array
                     items:
                         type: string
-                  description: Series selector expressions. Repeat the parameter to send more than one; omit it to return every series in the dataset.
+                  description: Series selector expressions. Repeat the parameter to send more than one. At least one is required.
                 - name: start
                   in: query
                   required: false
@@ -301540,7 +301747,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Find matching series from a form body (Cribl.Cloud only)
-            description: Return time series that match the specified label matchers, taking the selectors and lookup window as a form body instead of a query string (Cribl.Cloud only).
+            description: Return time series that match the specified label matchers, taking the selectors and lookup window as a form body instead of a query string (Cribl.Cloud only). At least one <code>match[]</code> selector is required.
             security: []
             responses:
                 "200":
@@ -301553,7 +301760,7 @@ paths:
                                 PrometheusSeriesResponseExamplesseries:
                                     $ref: "#/components/examples/PrometheusSeriesResponseExamplesseries"
                 "400":
-                    description: Failed validation or malformed input — a selector did not parse, or <code>start</code>, <code>end</code>, or <code>limit</code> was unparseable.
+                    description: Failed validation or malformed input — no <code>match[]</code> was supplied, a selector did not parse, or <code>start</code>, <code>end</code>, or <code>limit</code> was unparseable.
                     content:
                         application/json:
                             schema:
@@ -307177,7 +307384,7 @@ paths:
             description: "Rotate the provisioning token on the specified Worker, Edge, or Outpost Nodes, replacing their current provisioning tokens.<br/><br/>Specify the target nodes either in the <code>guids</code> array or using <code>filter.group</code>.<br/><br/>Maximum 100 nodes per request. If the matched set exceeds 100, the response includes <code>truncated: true</code> and <code>totalMatched</code>."
             responses:
                 "200":
-                    description: Per-node rotation results. Includes <code>truncated</code> and <code>totalMatched</code> when the matched set exceeded the per-request limit.
+                    description: Per-node rotation results. A Node whose reported product is not allowed by the provisioning token's product restrictions is returned as a <code>failed</code> result with <code>failurePhase</code> set to <code>validation</code>, and the remaining Nodes are still rotated. Includes <code>truncated</code> and <code>totalMatched</code> when the matched set exceeded the per-request limit.
                     content:
                         application/json:
                             schema:
@@ -307616,7 +307823,7 @@ paths:
                 "404":
                     description: The requested resource does not exist — Worker GUID or provisioning token ID not found.
                 "409":
-                    description: Request conflicts with current resource state — provisioning token is revoked, expired, or exhausted.
+                    description: Request conflicts with current resource state — provisioning token is revoked, expired, or exhausted, or does not allow the target Node's product.
                 "500":
                     description: Unexpected server error.
                     content:
