@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1794266165159-857bf7b4
+    version: 4.21.0-alpha.1794352578281-4429aed3
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -49466,6 +49466,10 @@ components:
                     type: boolean
                     title: Use `_bucket` suffix for histogram buckets
                     description: Serialize histogram bucket series as `<metric>_bucket` to match Prometheus histogram naming convention
+                nanAsStalenessMarker:
+                    type: boolean
+                    title: Treat NaN as staleness marker
+                    description: Write every NaN value as a Prometheus staleness marker, so the remote store ends the series instead of storing NaN. Real NaN values are written as markers too.
                 concurrency:
                     type: number
                     title: Request concurrency
@@ -100470,6 +100474,65 @@ components:
                 - id
                 - sourceType
             title: CriblLakeSource
+        CountedListCriblLakeSourceSyncItem:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Total number of items available
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/CriblLakeSourceSyncItem"
+                offset:
+                    type: integer
+                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
+                limit:
+                    type: integer
+                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
+        LakeBucketAccessState:
+            type: string
+            enum:
+                - granted
+                - revoked
+            title: LakeBucketAccessState
+            x-speakeasy-unknown-values: allow
+        CriblLakeSourceSyncItem:
+            type: object
+            properties:
+                accessState:
+                    $ref: "#/components/schemas/LakeBucketAccessState"
+                    description: "Whether Splunk's access to the DDSS bucket is in place. Returned for <code>ddss</code> sources only.<br/><br/> <code>granted</code>: Splunk can write to the bucket<br/> <code>revoked</code>: the DDSS source is detached, and Splunk's access is removed while the bucket is retained."
+                externalId:
+                    type: string
+                    description: External ID that Netskope presents when it assumes the writer role. Returned for <code>netskope</code> sources only.
+                id:
+                    type: string
+                    description: Unique identifier for the Cribl Lake Source.
+                sourceType:
+                    type: string
+                    enum:
+                        - ddss
+                        - netskope
+                    description: "Type of the Cribl Lake Source.<br/><br/> <code>ddss</code>: DDSS bucket<br/> <code>netskope</code>: Netskope bucket."
+                    x-speakeasy-unknown-values: allow
+                status:
+                    $ref: "#/components/schemas/CriblLakeSourceStatus"
+                    description: Provisioning status of the Cribl Lake Source. A DDSS Lake Source whose storage is retained after it is removed is <code>detached</code>.
+                writerRoleName:
+                    type: string
+                    description: Name of the IAM role that Netskope assumes to write to the bucket. Returned for <code>netskope</code> sources only.
+                writerTrustedPrincipal:
+                    type: string
+                    description: AWS principal that Netskope uses to assume the writer role. Returned for <code>netskope</code> sources only.
+            required:
+                - id
+                - sourceType
+            title: CriblLakeSourceSyncItem
         CountedListCriblLakeSource:
             type: object
             required:
@@ -100668,6 +100731,14 @@ components:
                 - datatypeDescriptor
                 - input
             title: DatatypeV2PreviewRequestBody
+        SearchFavoriteTypeParam:
+            type: string
+            enum:
+                - dashboards
+                - notebooks
+                - notebook-templates
+            title: SearchFavoriteTypeParam
+            x-speakeasy-unknown-values: allow
         PaginatedSearchFavoriteItem:
             type: object
             required:
@@ -100688,14 +100759,6 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
-        SearchFavoriteTypeParam:
-            type: string
-            enum:
-                - dashboards
-                - notebooks
-                - notebook-templates
-            title: SearchFavoriteTypeParam
-            x-speakeasy-unknown-values: allow
         SearchFavoriteItem:
             type: object
             properties:
@@ -103010,7 +103073,7 @@ components:
                 - enabled
                 - engines
                 - estimatedIngestRate
-            description: One row of Local Search status in the paginated GET <code>/search/local_search</code> response.
+            description: Local Search status returned by GET <code>/search/local_search</code>.
             title: LocalSearchStatus
         LocalSearchInfraTierSize:
             type: string
@@ -176931,6 +176994,12 @@ components:
                     anyOf:
                         - type: boolean
                         - type: "null"
+                nanAsStalenessMarker:
+                    title: Treat NaN as staleness marker
+                    description: Write every NaN value as a Prometheus staleness marker, so the remote store ends the series instead of storing NaN. Real NaN values are written as markers too.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
                 concurrency:
                     title: Request concurrency
                     description: Maximum number of ongoing requests before blocking
@@ -236726,6 +236795,12 @@ components:
                 clientId: 00000000-0000-0000-0000-000000000000
                 clientSecret: "***************"
                 workspaceId: 550e8400-e29b-41d4-a716-446655440000
+        DatasetProviderDeleteError400ExamplesDatasetProviderMutationUnsupported:
+            summary: Return a validation error when Dataset Provider mutations are unsupported
+            description: Example response for returning a validation error when the deployment does not support Dataset Provider mutations.
+            value:
+                status: error
+                message: Dataset Provider mutations are not supported in Highside
         DatasetProviderDeleteError409ExamplesDatasetProviderInUse:
             summary: Return a conflict error for a Dataset Provider still in use
             description: Example response for returning a conflict error when Datasets still reference the Dataset Provider.
@@ -244458,6 +244533,22 @@ components:
                 authTokens:
                     - token: my_ingest_token_001
                       description: Primary ingest token for NDJSON data
+        LakeSourceSyncListResponseExamplesDetachedDdssAndNetskope:
+            summary: List DDSS and Netskope Lake Sources for Cribl.Cloud bucket sync
+            description: Example response for a Lake whose DDSS Lake Source is detached, so its retained bucket reports revoked access, and whose Netskope Lake Source is ready.
+            value:
+                items:
+                    - id: splunkcloud-acme-ddss
+                      sourceType: ddss
+                      status: detached
+                      accessState: revoked
+                    - id: netskope-123456789012-acme
+                      sourceType: netskope
+                      status: ready
+                      writerTrustedPrincipal: arn:aws:iam::123456789012:root
+                      writerRoleName: netskope-writer
+                      externalId: netskope-external-id
+                count: 2
         DatatypePreviewResponseExamplesWithEvents:
             summary: Preview an Event Breaker with matched events
             description: Example response for previewing an Event Breaker that produced matching events.
@@ -273208,6 +273299,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist — Dashboard not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -273931,6 +274028,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist — Dashboard not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -274763,6 +274866,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested Datatype does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -275154,6 +275263,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested Datatype does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -276485,6 +276600,10 @@ paths:
                                 type: string
                 "404":
                     description: The requested resource does not exist — Notebook template not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -277113,6 +277232,12 @@ paths:
                             examples:
                                 SavedQueryUpdateResponseExamplesUpdated:
                                     $ref: "#/components/examples/SavedQueryUpdateResponseExamplesUpdated"
+                "400":
+                    description: Failed validation or malformed input, such as an attempt to turn the Saved Search into a system Saved Search.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -277127,11 +277252,17 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: Not authorized to update this Saved Search. Only its owner or an administrator can update it.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested Saved Search does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -277342,7 +277473,7 @@ paths:
             description: Create a Notification for the specified Saved Search (Cribl.Cloud only).
             responses:
                 "201":
-                    description: Created notifications.
+                    description: The created Notification.
                     content:
                         application/json:
                             schema:
@@ -277350,6 +277481,11 @@ paths:
                             examples:
                                 SavedQueryNotificationResponseExamplesEmail:
                                     $ref: "#/components/examples/SavedQueryNotificationResponseExamplesEmail"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — Invalid notification configuration or validation failure.
                     content:
@@ -277427,15 +277563,8 @@ paths:
             summary: Delete a Notification (Cribl.Cloud only)
             description: Delete the specified Notification for a Saved Search (Cribl.Cloud only).
             responses:
-                "200":
-                    description: Remaining notifications after delete.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Notification"
-                            examples:
-                                SavedQueryNotificationResponseExamplesEmail:
-                                    $ref: "#/components/examples/SavedQueryNotificationResponseExamplesEmail"
+                "204":
+                    description: The Notification was deleted, or there was no Notification to delete.
                 "400":
                     description: Failed validation or malformed input — Invalid request or notification operation failed.
                     content:
@@ -277509,7 +277638,7 @@ paths:
             description: "Update the specified Notification for a Saved Search (Cribl.Cloud only).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
-                    description: Updated notifications.
+                    description: The updated Notification.
                     content:
                         application/json:
                             schema:
@@ -277908,6 +278037,12 @@ paths:
                             examples:
                                 SavedQueryUpdateResponseExamplesUpdated:
                                     $ref: "#/components/examples/SavedQueryUpdateResponseExamplesUpdated"
+                "400":
+                    description: Failed validation or malformed input, such as an attempt to turn the Saved Search into a system Saved Search.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -277922,11 +278057,17 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: Not authorized to update this Saved Search. Only its owner or an administrator can update it.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested Saved Search does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -293954,6 +294095,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist — Dashboard Collection not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -294222,6 +294369,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist — Notebook not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -295580,6 +295733,15 @@ paths:
             responses:
                 "204":
                     description: No Content
+                "400":
+                    description: Invalid request, such as deleting a Dataset Provider in a deployment that does not support Dataset Provider mutations.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                DatasetProviderDeleteError400ExamplesDatasetProviderMutationUnsupported:
+                                    $ref: "#/components/examples/DatasetProviderDeleteError400ExamplesDatasetProviderMutationUnsupported"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297295,6 +297457,12 @@ paths:
             responses:
                 "204":
                     description: No Content
+                "400":
+                    description: Invalid request — an invalid <code>metricsDestinationDataset</code>, or a deletion that would leave the main Dataset without a destination engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297421,6 +297589,12 @@ paths:
                             examples:
                                 LocalSearchEngineCountedResponseExamplesSingleEngine:
                                     $ref: "#/components/examples/LocalSearchEngineCountedResponseExamplesSingleEngine"
+                "400":
+                    description: Failed validation or malformed input, such as an unsupported tier size or a field that cannot be set through this endpoint.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297440,6 +297614,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested lakehouse engine does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297681,7 +297861,11 @@ paths:
                                 LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset:
                                     $ref: "#/components/examples/LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset"
                 "400":
-                    description: The <code>id</code> in the path or request body is not a supported Dataset ruleset slot, or the ruleset failed validation.
+                    description: Failed validation or malformed input, such as an <code>id</code> in the path or request body that is not a supported Dataset ruleset slot, duplicate rule <code>id</code> values, or a request that removes the required <code>rules</code> field.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297697,8 +297881,16 @@ paths:
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
                     description: The authenticated caller lacks permission to update this Dataset ruleset slot.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: No Dataset ruleset occupies the requested slot yet. Create the slot before you update it.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297942,7 +298134,11 @@ paths:
                                 LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset:
                                     $ref: "#/components/examples/LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset"
                 "400":
-                    description: The <code>id</code> in the path or request body is not the supported Datatype ruleset slot, or the ruleset failed validation.
+                    description: Failed validation or malformed input, such as an <code>id</code> in the path or request body that is not the supported Datatype ruleset slot, duplicate rule <code>id</code> values, or a request that removes the required <code>rules</code> field.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297958,8 +298154,16 @@ paths:
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
                     description: The authenticated caller lacks permission to update the Datatype ruleset slot.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: No Datatype ruleset occupies the requested slot yet. Create the slot before you update it.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -325886,6 +326090,57 @@ paths:
                       type: limit
                 outputs:
                     results: $.items
+    /ops/products/lake/lakes/{lakeId}/sources:
+        get:
+            operationId: getOpsProductsLakeLakesSourcesByLakeId
+            tags:
+                - lake
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List all DDSS and Netskope Lake Sources for Cribl.Cloud bucket sync (Cribl.Cloud only)
+            description: Get a list of all DDSS and Netskope Lake Sources in the specified Lake for Cribl.Cloud bucket sync, including detached DDSS storage (Cribl.Cloud only).<br/><br/>Each DDSS Lake Source includes its access state, and each Netskope Lake Source includes its writer identity.
+            responses:
+                "200":
+                    description: List of CriblLakeSourceSyncItem objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListCriblLakeSourceSyncItem"
+                            examples:
+                                LakeSourceSyncListResponseExamplesDetachedDdssAndNetskope:
+                                    $ref: "#/components/examples/LakeSourceSyncListResponseExamplesDetachedDdssAndNetskope"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Caller does not have the Cribl operator role.
+                "404":
+                    description: Lake not found
+                "500":
+                    description: Unexpected server error — failed to fetch sources
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: lakeId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake that contains the Lake Sources.
     /search/event-breaker-preview:
         post:
             operationId: createSearchEventBreakerPreview
@@ -326107,7 +326362,7 @@ paths:
                   in: path
                   required: true
                   schema:
-                    type: string
+                    $ref: "#/components/schemas/SearchFavoriteTypeParam"
                   description: "The type of the object to remove the favorite from: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>."
                 - name: id
                   in: path
@@ -326177,7 +326432,7 @@ paths:
                   in: path
                   required: true
                   schema:
-                    type: string
+                    $ref: "#/components/schemas/SearchFavoriteTypeParam"
                   description: "The type of the object to favorite: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>."
                 - name: id
                   in: path
@@ -326242,7 +326497,7 @@ paths:
                   in: query
                   required: false
                   schema:
-                    type: string
+                    $ref: "#/components/schemas/SearchFavoriteTypeParam"
                   description: "Limits the response to one object type: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>. Omit to list every type."
                 - name: offset
                   in: query
@@ -329844,6 +330099,11 @@ paths:
                             examples:
                                 LocalSearchGroupSizeOverrideCreateExamplesCreated:
                                     $ref: "#/components/examples/LocalSearchGroupSizeOverrideCreateExamplesCreated"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: The request body is missing or not on the discrete ingest-rate ladder.
                 "401":
@@ -329893,7 +330153,7 @@ paths:
             description: Clear the current worker group ingest sizing override (Cribl.Cloud only). Worker sizing then falls back to the value auto-computed from active engines.<br/><br/>Requires the <code>cribl_operator</code> role.
             responses:
                 "204":
-                    description: The override was cleared. No response body. Fetch <code>/search/local_search/config</code> to see the resulting worker sizing.
+                    description: The override was cleared, or none was set. No response body. Fetch <code>/search/local_search/config</code> to see the resulting worker sizing.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -329910,7 +330170,7 @@ paths:
                 "403":
                     description: Requires the <code>cribl_operator</code> role. No response body.
                 "404":
-                    description: No override is currently set.
+                    description: Lakehouse engine is not configured, so no search group exists.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -330046,7 +330306,7 @@ paths:
             description: Get the lakehouse service status, including whether it is enabled, the estimated ingest rate, and a list of active lakehouse engines (Cribl.Cloud only).
             responses:
                 "200":
-                    description: Paginated list items describing lakehouse service status
+                    description: Lakehouse service status
                     content:
                         application/json:
                             schema:
@@ -330090,30 +330350,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/LocalSearchApiErrorBody"
-            parameters:
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches.
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                  description: Maximum number of lakehouse service status items to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches.
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
     /search/local_search/config:
         get:
             operationId: getSearchLocalSearchConfig
@@ -330531,7 +330767,7 @@ paths:
             description: Create a new lakehouse engine source (Cribl.Cloud only).
             responses:
                 "201":
-                    description: The created lakehouse engine source configurations
+                    description: The created lakehouse engine source
                     content:
                         application/json:
                             schema:
@@ -330539,6 +330775,11 @@ paths:
                             examples:
                                 LocalSearchSourceCountedResponseExamplesSingleSource:
                                     $ref: "#/components/examples/LocalSearchSourceCountedResponseExamplesSingleSource"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -330595,7 +330836,7 @@ paths:
             description: Add an HEC token with optional metadata to the specified Splunk HEC lakehouse engine source (Cribl.Cloud only).
             responses:
                 "201":
-                    description: Updated Splunk HEC source configurations
+                    description: The updated Splunk HEC lakehouse engine source
                     content:
                         application/json:
                             schema:
@@ -330603,6 +330844,11 @@ paths:
                             examples:
                                 LocalSearchSourceCountedResponseExamplesSingleSource:
                                     $ref: "#/components/examples/LocalSearchSourceCountedResponseExamplesSingleSource"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -330661,15 +330907,14 @@ paths:
             summary: Delete a lakehouse engine source (Cribl.Cloud only)
             description: Delete the specified lakehouse engine source (Cribl.Cloud only).
             responses:
-                "200":
-                    description: The sources returned after deletion
+                "204":
+                    description: The lakehouse engine source was deleted, or no longer exists. No response body.
+                "400":
+                    description: The stored source is not a supported lakehouse source type.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/LocalSearchSource"
-                            examples:
-                                LocalSearchSourceCountedResponseExamplesSingleSource:
-                                    $ref: "#/components/examples/LocalSearchSourceCountedResponseExamplesSingleSource"
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -330716,7 +330961,7 @@ paths:
             description: Get the specified lakehouse engine source (Cribl.Cloud only).
             responses:
                 "200":
-                    description: The requested lakehouse engine source in a single-item list
+                    description: The requested LocalSearchSource object.
                     content:
                         application/json:
                             schema:
@@ -330743,6 +330988,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -330770,7 +331021,7 @@ paths:
             description: "Update the specified lakehouse engine source (Cribl.Cloud only).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
-                    description: The updated lakehouse engine source configurations
+                    description: The updated lakehouse engine source
                     content:
                         application/json:
                             schema:
@@ -330839,7 +331090,7 @@ paths:
             description: "Update the HEC token for the specified Splunk HEC lakehouse engine source (Cribl.Cloud only).<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
-                    description: Updated Splunk HEC source configurations
+                    description: The updated Splunk HEC lakehouse engine source
                     content:
                         application/json:
                             schema:
