@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.22.0-alpha.1794352576547-a3f92349
+    version: 4.22.0-alpha.1794438855925-4d214c5f
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -73591,15 +73591,15 @@ components:
                         skipped:
                             type: integer
                             description: Item was skipped and not written to the target.
-                        placeholder:
-                            type: integer
-                            description: Item was written as a placeholder pending further action.
                         updated:
                             type: integer
                             description: Item was updated at the target.
                         no-op:
                             type: integer
                             description: No changes were needed at the target.
+                        placeholder:
+                            type: integer
+                            description: Item was written as a placeholder pending further action.
                     description: Per-outcome counts from the latest apply pass.
                 applyDurationMs:
                     type: integer
@@ -73726,6 +73726,7 @@ components:
                                 - library-panel
                                 - mute-timing
                                 - notification-policy
+                                - plugin
                             description: Resource kind the phase currently running discovers.
                             x-speakeasy-unknown-values: allow
                         phaseCount:
@@ -77606,6 +77607,13 @@ components:
             type: object
             additionalProperties: true
             title: StoredMessage
+        AiSessionProduct:
+            type: string
+            enum:
+                - search
+                - stream
+            title: AiSessionProduct
+            x-speakeasy-unknown-values: allow
         SessionShareRole:
             type: string
             enum:
@@ -77651,6 +77659,11 @@ components:
                     items:
                         $ref: "#/components/schemas/StoredMessage"
                     description: Ordered list of messages in the session conversation thread.
+                products:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/AiSessionProduct"
+                    description: "Products this Universal AI session has run in. Server-owned: each turn adds the product of the agent that handled it. Absent for agents that are not Universal AI."
                 shares:
                     type: array
                     items:
@@ -77741,6 +77754,11 @@ components:
                 info:
                     $ref: "#/components/schemas/SessionInfo"
                     description: Metadata about session creation and last modification.
+                products:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/AiSessionProduct"
+                    description: "Products this Universal AI session has run in. Server-owned: each turn adds the product of the agent that handled it. Absent for agents that are not Universal AI."
                 shares:
                     type: array
                     items:
@@ -85083,6 +85101,11 @@ components:
                             - referenceTicket
                             - sourceDatasourceType
                     description: Map of element IDs to log-to-metrics conversion guidance for OpenSearch/Elasticsearch log panels.
+                panelPluginByPanel:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    description: Map of element IDs to the third-party panel plugin ID that rendered the source panel.
                 panelSourceKinds:
                     type: object
                     additionalProperties:
@@ -85092,6 +85115,11 @@ components:
                     type: object
                     additionalProperties: true
                     description: Payload to write to the target resource when the migration is applied. Absent when action is <code>skip</code> or <code>placeholder</code>.
+                routedMonitorSourceKeys:
+                    type: array
+                    items:
+                        type: string
+                    description: Source keys of the alert rules whose Monitors this notification-policy block routes.
                 routingDisclosures:
                     type: array
                     items:
@@ -85120,6 +85148,35 @@ components:
                     items:
                         type: string
                     description: IDs of elements whose source panel types do not have a corresponding Cribl chart type.
+                untranslatedTransformationsByPanel:
+                    type: object
+                    additionalProperties:
+                        type: array
+                        items:
+                            type: object
+                            properties:
+                                effect:
+                                    type: string
+                                    enum:
+                                        - display
+                                        - value
+                                    description: What the panel loses because the transformation was not migrated.<br/> <br><code>display</code> == Fields are reordered, renamed, hidden or sorted differently <br><code>value</code> == The values the panel renders change.
+                                    x-speakeasy-unknown-values: allow
+                                id:
+                                    type: string
+                                    description: Source transformation ID, verbatim, such as <code>organize</code>.
+                                order:
+                                    type: integer
+                                    description: Zero-based position of the transformation in the source panel's pipeline.
+                                reasonCode:
+                                    type: string
+                                    description: Stable reason code for the loss, matching the dashboard's compatibility reason code.
+                            required:
+                                - effect
+                                - id
+                                - order
+                                - reasonCode
+                    description: Map of element IDs to source panel transformations that were not migrated.
                 variableMeta:
                     type: array
                     items:
@@ -92102,24 +92159,66 @@ components:
                 limits:
                     type: object
                     properties:
+                        external_secret_stores:
+                            type: integer
+                            description: Maximum number of externally backed secret stores.
+                        kms:
+                            type: integer
+                            description: Maximum number of Key Management Service (KMS) providers.
+                        notifications:
+                            type: integer
+                            description: Maximum number of Notifications.
+                        rbac:
+                            type: integer
+                            description: Maximum number of role-based access control (RBAC) users.
+                        remote_auth:
+                            type: integer
+                            description: Maximum number of remote authentication connections.
+                        remote_git:
+                            type: integer
+                            description: Maximum number of remote Git connections.
+                        system_email:
+                            type: integer
+                            description: System email limit.
                         app_platform:
                             type: integer
                             description: App Platform limit.
+                        collector_jobs_ha:
+                            type: integer
+                            description: Collector Jobs high-availability limit. Enterprise only.
                         edge_groups:
                             type: integer
                             description: Maximum number of Edge Fleets.
                         edge_procs:
                             type: integer
                             description: Maximum number of Edge Processes.
-                        external_secret_stores:
-                            type: integer
-                            description: Maximum number of externally backed secret stores.
                         heavy_duty:
                             type: integer
                             description: When disabled, resource optimizations, like not spawning certain services or limiting RAM, are applied.
-                        kms:
+                        leader_resiliency:
                             type: integer
-                            description: Maximum number of Key Management Service (KMS) providers.
+                            description: Leader resiliency limit.
+                        outpost:
+                            type: integer
+                            description: Cribl Outpost limit.
+                        outpost_groups:
+                            type: integer
+                            description: Maximum number of Cribl Outpost Groups.
+                        persistent_queue:
+                            type: integer
+                            description: Persistent queue limit.
+                        s3_bundle:
+                            type: integer
+                            description: S3 bundle limit.
+                        worker_groups:
+                            type: integer
+                            description: Maximum number of Worker Groups.
+                        worker_group_boot_throttle:
+                            type: integer
+                            description: Whether the Leader may throttle Worker Group and Fleet APIs that boot a group process when resources are insufficient.
+                        worker_procs:
+                            type: integer
+                            description: Maximum number of Worker Processes.
                         lakehouse:
                             type: integer
                             description: Lakehouse limit.
@@ -92135,42 +92234,15 @@ components:
                         lake_storage_locations:
                             type: integer
                             description: Maximum number of Cribl Lake Storage Locations.
-                        leader_resiliency:
-                            type: integer
-                            description: Leader resiliency limit.
                         max_executors_per_search:
                             type: integer
                             description: Maximum number of executors per search.
-                        notifications:
-                            type: integer
-                            description: Maximum number of Notifications.
-                        outpost:
-                            type: integer
-                            description: Cribl Outpost limit.
-                        outpost_groups:
-                            type: integer
-                            description: Maximum number of Cribl Outpost Groups.
-                        persistent_queue:
-                            type: integer
-                            description: Persistent queue limit.
                         projects:
                             type: integer
                             description: Maximum number of Data Projects (Data Subscriptions).
-                        rbac:
-                            type: integer
-                            description: Maximum number of role-based access control (RBAC) users.
                         record_erasure:
                             type: integer
                             description: Record erasure limit.
-                        remote_auth:
-                            type: integer
-                            description: Maximum number of remote authentication connections.
-                        remote_git:
-                            type: integer
-                            description: Maximum number of remote Git connections.
-                        s3_bundle:
-                            type: integer
-                            description: S3 bundle limit.
                         sds:
                             type: integer
                             description: Sensitive data scanning (SDS) limit.
@@ -92180,18 +92252,6 @@ components:
                         search_groups:
                             type: integer
                             description: Maximum number of Cribl Search Groups.
-                        system_email:
-                            type: integer
-                            description: System email limit.
-                        worker_groups:
-                            type: integer
-                            description: Maximum number of Worker Groups.
-                        worker_group_boot_throttle:
-                            type: integer
-                            description: Whether the Leader may throttle Worker Group and Fleet APIs that boot a group process when resources are insufficient.
-                        worker_procs:
-                            type: integer
-                            description: Maximum number of Worker Processes.
                     description: License limits.
                 quota:
                     type: integer
@@ -94641,24 +94701,66 @@ components:
                 limits:
                     type: object
                     properties:
+                        external_secret_stores:
+                            type: integer
+                            description: Maximum number of externally backed secret stores.
+                        kms:
+                            type: integer
+                            description: Maximum number of Key Management Service (KMS) providers.
+                        notifications:
+                            type: integer
+                            description: Maximum number of Notifications.
+                        rbac:
+                            type: integer
+                            description: Maximum number of role-based access control (RBAC) users.
+                        remote_auth:
+                            type: integer
+                            description: Maximum number of remote authentication connections.
+                        remote_git:
+                            type: integer
+                            description: Maximum number of remote Git connections.
+                        system_email:
+                            type: integer
+                            description: System email limit.
                         app_platform:
                             type: integer
                             description: App Platform limit.
+                        collector_jobs_ha:
+                            type: integer
+                            description: Collector Jobs high-availability limit. Enterprise only.
                         edge_groups:
                             type: integer
                             description: Maximum number of Edge Fleets.
                         edge_procs:
                             type: integer
                             description: Maximum number of Edge Processes.
-                        external_secret_stores:
-                            type: integer
-                            description: Maximum number of externally backed secret stores.
                         heavy_duty:
                             type: integer
                             description: When disabled, resource optimizations, like not spawning certain services or limiting RAM, are applied.
-                        kms:
+                        leader_resiliency:
                             type: integer
-                            description: Maximum number of Key Management Service (KMS) providers.
+                            description: Leader resiliency limit.
+                        outpost:
+                            type: integer
+                            description: Cribl Outpost limit.
+                        outpost_groups:
+                            type: integer
+                            description: Maximum number of Cribl Outpost Groups.
+                        persistent_queue:
+                            type: integer
+                            description: Persistent queue limit.
+                        s3_bundle:
+                            type: integer
+                            description: S3 bundle limit.
+                        worker_groups:
+                            type: integer
+                            description: Maximum number of Worker Groups.
+                        worker_group_boot_throttle:
+                            type: integer
+                            description: Whether the Leader may throttle Worker Group and Fleet APIs that boot a group process when resources are insufficient.
+                        worker_procs:
+                            type: integer
+                            description: Maximum number of Worker Processes.
                         lakehouse:
                             type: integer
                             description: Lakehouse limit.
@@ -94674,42 +94776,15 @@ components:
                         lake_storage_locations:
                             type: integer
                             description: Maximum number of Cribl Lake Storage Locations.
-                        leader_resiliency:
-                            type: integer
-                            description: Leader resiliency limit.
                         max_executors_per_search:
                             type: integer
                             description: Maximum number of executors per search.
-                        notifications:
-                            type: integer
-                            description: Maximum number of Notifications.
-                        outpost:
-                            type: integer
-                            description: Cribl Outpost limit.
-                        outpost_groups:
-                            type: integer
-                            description: Maximum number of Cribl Outpost Groups.
-                        persistent_queue:
-                            type: integer
-                            description: Persistent queue limit.
                         projects:
                             type: integer
                             description: Maximum number of Data Projects (Data Subscriptions).
-                        rbac:
-                            type: integer
-                            description: Maximum number of role-based access control (RBAC) users.
                         record_erasure:
                             type: integer
                             description: Record erasure limit.
-                        remote_auth:
-                            type: integer
-                            description: Maximum number of remote authentication connections.
-                        remote_git:
-                            type: integer
-                            description: Maximum number of remote Git connections.
-                        s3_bundle:
-                            type: integer
-                            description: S3 bundle limit.
                         sds:
                             type: integer
                             description: Sensitive data scanning (SDS) limit.
@@ -94719,18 +94794,6 @@ components:
                         search_groups:
                             type: integer
                             description: Maximum number of Cribl Search Groups.
-                        system_email:
-                            type: integer
-                            description: System email limit.
-                        worker_groups:
-                            type: integer
-                            description: Maximum number of Worker Groups.
-                        worker_group_boot_throttle:
-                            type: integer
-                            description: Whether the Leader may throttle Worker Group and Fleet APIs that boot a group process when resources are insufficient.
-                        worker_procs:
-                            type: integer
-                            description: Maximum number of Worker Processes.
                     description: License-based feature and resource limits.
                 registeredEmail:
                     type: string
@@ -100542,6 +100605,65 @@ components:
                 - id
                 - sourceType
             title: CriblLakeSource
+        CountedListCriblLakeSourceSyncItem:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Total number of items available
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/CriblLakeSourceSyncItem"
+                offset:
+                    type: integer
+                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
+                limit:
+                    type: integer
+                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
+        LakeBucketAccessState:
+            type: string
+            enum:
+                - granted
+                - revoked
+            title: LakeBucketAccessState
+            x-speakeasy-unknown-values: allow
+        CriblLakeSourceSyncItem:
+            type: object
+            properties:
+                accessState:
+                    $ref: "#/components/schemas/LakeBucketAccessState"
+                    description: "Whether Splunk's access to the DDSS bucket is in place. Returned for <code>ddss</code> sources only.<br/><br/> <code>granted</code>: Splunk can write to the bucket<br/> <code>revoked</code>: the DDSS source is detached, and Splunk's access is removed while the bucket is retained."
+                externalId:
+                    type: string
+                    description: External ID that Netskope presents when it assumes the writer role. Returned for <code>netskope</code> sources only.
+                id:
+                    type: string
+                    description: Unique identifier for the Cribl Lake Source.
+                sourceType:
+                    type: string
+                    enum:
+                        - ddss
+                        - netskope
+                    description: "Type of the Cribl Lake Source.<br/><br/> <code>ddss</code>: DDSS bucket<br/> <code>netskope</code>: Netskope bucket."
+                    x-speakeasy-unknown-values: allow
+                status:
+                    $ref: "#/components/schemas/CriblLakeSourceStatus"
+                    description: Provisioning status of the Cribl Lake Source. A DDSS Lake Source whose storage is retained after it is removed is <code>detached</code>.
+                writerRoleName:
+                    type: string
+                    description: Name of the IAM role that Netskope assumes to write to the bucket. Returned for <code>netskope</code> sources only.
+                writerTrustedPrincipal:
+                    type: string
+                    description: AWS principal that Netskope uses to assume the writer role. Returned for <code>netskope</code> sources only.
+            required:
+                - id
+                - sourceType
+            title: CriblLakeSourceSyncItem
         CountedListCriblLakeSource:
             type: object
             required:
@@ -100740,6 +100862,14 @@ components:
                 - datatypeDescriptor
                 - input
             title: DatatypeV2PreviewRequestBody
+        SearchFavoriteTypeParam:
+            type: string
+            enum:
+                - dashboards
+                - notebooks
+                - notebook-templates
+            title: SearchFavoriteTypeParam
+            x-speakeasy-unknown-values: allow
         PaginatedSearchFavoriteItem:
             type: object
             required:
@@ -100760,14 +100890,6 @@ components:
                 limit:
                     type: integer
                     description: Pagination limit
-        SearchFavoriteTypeParam:
-            type: string
-            enum:
-                - dashboards
-                - notebooks
-                - notebook-templates
-            title: SearchFavoriteTypeParam
-            x-speakeasy-unknown-values: allow
         SearchFavoriteItem:
             type: object
             properties:
@@ -179448,6 +179570,12 @@ components:
                                 title: Port
                                 maximum: 65535
                                 description: The port to connect to on each endpoint in the list
+                            tls:
+                                title: TLS
+                                description: Whether to connect to endpoints using TLS
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
                             __template_port:
                                 description: Binds 'port' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'port' at runtime.
                                 anyOf:
@@ -180000,6 +180128,12 @@ components:
                                 title: Port
                                 maximum: 65535
                                 description: The port to connect to on each endpoint in the list
+                            tls:
+                                title: TLS
+                                description: Whether to connect to endpoints using TLS
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
                             __template_port:
                                 description: Binds 'port' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'port' at runtime.
                                 anyOf:
@@ -180560,6 +180694,12 @@ components:
                                 title: Port
                                 maximum: 65535
                                 description: The port to connect to on each endpoint in the list
+                            tls:
+                                title: TLS
+                                description: Whether to connect to endpoints using TLS
+                                anyOf:
+                                    - type: string
+                                    - type: "null"
                             __template_port:
                                 description: Binds 'port' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'port' at runtime.
                                 anyOf:
@@ -222011,6 +222151,10 @@ components:
                     title: Port
                     maximum: 65535
                     description: The port to connect to on each endpoint in the list
+                tls:
+                    type: string
+                    title: TLS
+                    description: Whether to connect to endpoints using TLS
                 __template_port:
                     type: string
                     description: Binds 'port' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'port' at runtime.
@@ -232866,6 +233010,12 @@ components:
                     cronSchedule: 0 7 * * *
                     tz: America/Los_Angeles
                     keepLastN: 7
+        SavedQueryUpdateError404ExamplesNotFound:
+            summary: Return a not-found error for a missing Saved Search
+            description: Example response for returning a not-found error when the Saved Search to update does not exist.
+            value:
+                status: error
+                message: Cannot find saved query Daily health check
         SavedQueryNotificationResponseExamplesEmail:
             summary: Get an email Notification for a Saved Search
             description: Example response for getting an email Notification for a Saved Search.
@@ -244585,6 +244735,22 @@ components:
                 authTokens:
                     - token: my_ingest_token_001
                       description: Primary ingest token for NDJSON data
+        LakeSourceSyncListResponseExamplesDetachedDdssAndNetskope:
+            summary: List DDSS and Netskope Lake Sources for Cribl.Cloud bucket sync
+            description: Example response for a Lake whose DDSS Lake Source is detached, so its retained bucket reports revoked access, and whose Netskope Lake Source is ready.
+            value:
+                items:
+                    - id: splunkcloud-acme-ddss
+                      sourceType: ddss
+                      status: detached
+                      accessState: revoked
+                    - id: netskope-123456789012-acme
+                      sourceType: netskope
+                      status: ready
+                      writerTrustedPrincipal: arn:aws:iam::123456789012:root
+                      writerRoleName: netskope-writer
+                      externalId: netskope-external-id
+                count: 2
         DatatypePreviewResponseExamplesWithEvents:
             summary: Preview an Event Breaker with matched events
             description: Example response for previewing an Event Breaker that produced matching events.
@@ -246259,6 +246425,18 @@ components:
                 type: syslog
                 host: 0.0.0.0
                 tcpPort: 601
+        LocalSearchSourceUnsupportedTypeExamplesUnsupportedSourceType:
+            summary: Reject a stored source whose type is not on the allowlist
+            description: Example response for rejecting a lakehouse engine source request when the stored source type is not on the allowlist.
+            value:
+                status: error
+                message: 'Source type "kafka" is not allowed. Allowed types: cribl_http, elastic, open_telemetry, splunk, splunk_hec, syslog, wef, prometheus_rw, datadog_agent, http_raw, tcpjson, tcp, wiz_webhook'
+        LocalSearchSourceNotFoundExamplesSourceNotFound:
+            summary: Return a not-found error for a missing lakehouse engine source
+            description: Example response for returning a not-found error when the specified lakehouse engine source does not exist.
+            value:
+                status: error
+                message: Source "in_missing" not found
         PublishDetectionRulesResponseExamplesClean:
             summary: Every rule stored
             description: All rules in the document loaded, so rejected is empty.
@@ -273309,6 +273487,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist — Dashboard not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -274032,6 +274216,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist — Dashboard not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -274864,6 +275054,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested Datatype does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -275255,6 +275451,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested Datatype does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -276586,6 +276788,10 @@ paths:
                                 type: string
                 "404":
                     description: The requested resource does not exist — Notebook template not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -277214,6 +277420,12 @@ paths:
                             examples:
                                 SavedQueryUpdateResponseExamplesUpdated:
                                     $ref: "#/components/examples/SavedQueryUpdateResponseExamplesUpdated"
+                "400":
+                    description: Failed validation or malformed input, such as an attempt to turn the Saved Search into a system Saved Search.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -277228,11 +277440,20 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: Not authorized to update this Saved Search. Only its owner or an administrator can update it.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested Saved Search does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                SavedQueryUpdateError404ExamplesNotFound:
+                                    $ref: "#/components/examples/SavedQueryUpdateError404ExamplesNotFound"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -277451,6 +277672,11 @@ paths:
                             examples:
                                 SavedQueryNotificationResponseExamplesEmail:
                                     $ref: "#/components/examples/SavedQueryNotificationResponseExamplesEmail"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: Failed validation or malformed input — Invalid notification configuration or validation failure.
                     content:
@@ -278002,6 +278228,12 @@ paths:
                             examples:
                                 SavedQueryUpdateResponseExamplesUpdated:
                                     $ref: "#/components/examples/SavedQueryUpdateResponseExamplesUpdated"
+                "400":
+                    description: Failed validation or malformed input, such as an attempt to turn the Saved Search into a system Saved Search.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -278016,11 +278248,20 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
+                    description: Not authorized to update this Saved Search. Only its owner or an administrator can update it.
                     content:
-                        text/plain:
+                        application/json:
                             schema:
-                                type: string
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested Saved Search does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                            examples:
+                                SavedQueryUpdateError404ExamplesNotFound:
+                                    $ref: "#/components/examples/SavedQueryUpdateError404ExamplesNotFound"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -294048,6 +294289,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist — Dashboard Collection not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -294316,6 +294563,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist — Notebook not found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297398,6 +297651,12 @@ paths:
             responses:
                 "204":
                     description: No Content
+                "400":
+                    description: Invalid request — an invalid <code>metricsDestinationDataset</code>, or a deletion that would leave the main Dataset without a destination engine.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297524,6 +297783,12 @@ paths:
                             examples:
                                 LocalSearchEngineCountedResponseExamplesSingleEngine:
                                     $ref: "#/components/examples/LocalSearchEngineCountedResponseExamplesSingleEngine"
+                "400":
+                    description: Failed validation or malformed input, such as an unsupported tier size or a field that cannot be set through this endpoint.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297543,6 +297808,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested lakehouse engine does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297784,7 +298055,11 @@ paths:
                                 LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset:
                                     $ref: "#/components/examples/LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset"
                 "400":
-                    description: The <code>id</code> in the path or request body is not a supported Dataset ruleset slot, or the ruleset failed validation.
+                    description: Failed validation or malformed input, such as an <code>id</code> in the path or request body that is not a supported Dataset ruleset slot, duplicate rule <code>id</code> values, or a request that removes the required <code>rules</code> field.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -297800,8 +298075,16 @@ paths:
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
                     description: The authenticated caller lacks permission to update this Dataset ruleset slot.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: No Dataset ruleset occupies the requested slot yet. Create the slot before you update it.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -298045,7 +298328,11 @@ paths:
                                 LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset:
                                     $ref: "#/components/examples/LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset"
                 "400":
-                    description: The <code>id</code> in the path or request body is not the supported Datatype ruleset slot, or the ruleset failed validation.
+                    description: Failed validation or malformed input, such as an <code>id</code> in the path or request body that is not the supported Datatype ruleset slot, duplicate rule <code>id</code> values, or a request that removes the required <code>rules</code> field.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -298061,8 +298348,16 @@ paths:
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
                     description: The authenticated caller lacks permission to update the Datatype ruleset slot.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: No Datatype ruleset occupies the requested slot yet. Create the slot before you update it.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -326203,6 +326498,57 @@ paths:
                       type: limit
                 outputs:
                     results: $.items
+    /ops/products/lake/lakes/{lakeId}/sources:
+        get:
+            operationId: getOpsProductsLakeLakesSourcesByLakeId
+            tags:
+                - lake
+            x-cribl-internal: true
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List all DDSS and Netskope Lake Sources for Cribl.Cloud bucket sync (Cribl.Cloud only)
+            description: Get a list of all DDSS and Netskope Lake Sources in the specified Lake for Cribl.Cloud bucket sync, including detached DDSS storage (Cribl.Cloud only).<br/><br/>Each DDSS Lake Source includes its access state, and each Netskope Lake Source includes its writer identity.
+            responses:
+                "200":
+                    description: List of CriblLakeSourceSyncItem objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListCriblLakeSourceSyncItem"
+                            examples:
+                                LakeSourceSyncListResponseExamplesDetachedDdssAndNetskope:
+                                    $ref: "#/components/examples/LakeSourceSyncListResponseExamplesDetachedDdssAndNetskope"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Caller does not have the Cribl operator role.
+                "404":
+                    description: Lake not found
+                "500":
+                    description: Unexpected server error — failed to fetch sources
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: lakeId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake that contains the Lake Sources.
     /search/event-breaker-preview:
         post:
             operationId: createSearchEventBreakerPreview
@@ -326424,7 +326770,7 @@ paths:
                   in: path
                   required: true
                   schema:
-                    type: string
+                    $ref: "#/components/schemas/SearchFavoriteTypeParam"
                   description: "The type of the object to remove the favorite from: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>."
                 - name: id
                   in: path
@@ -326494,7 +326840,7 @@ paths:
                   in: path
                   required: true
                   schema:
-                    type: string
+                    $ref: "#/components/schemas/SearchFavoriteTypeParam"
                   description: "The type of the object to favorite: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>."
                 - name: id
                   in: path
@@ -326559,7 +326905,7 @@ paths:
                   in: query
                   required: false
                   schema:
-                    type: string
+                    $ref: "#/components/schemas/SearchFavoriteTypeParam"
                   description: "Limits the response to one object type: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>. Omit to list every type."
                 - name: offset
                   in: query
@@ -330161,6 +330507,11 @@ paths:
                             examples:
                                 LocalSearchGroupSizeOverrideCreateExamplesCreated:
                                     $ref: "#/components/examples/LocalSearchGroupSizeOverrideCreateExamplesCreated"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "400":
                     description: The request body is missing or not on the discrete ingest-rate ladder.
                 "401":
@@ -330210,7 +330561,7 @@ paths:
             description: Clear the current worker group ingest sizing override (Cribl.Cloud only). Worker sizing then falls back to the value auto-computed from active engines.<br/><br/>Requires the <code>cribl_operator</code> role.
             responses:
                 "204":
-                    description: The override was cleared. No response body. Fetch <code>/search/local_search/config</code> to see the resulting worker sizing.
+                    description: The override was cleared, or none was set. No response body. Fetch <code>/search/local_search/config</code> to see the resulting worker sizing.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -330227,7 +330578,7 @@ paths:
                 "403":
                     description: Requires the <code>cribl_operator</code> role. No response body.
                 "404":
-                    description: No override is currently set.
+                    description: Lakehouse engine is not configured, so no search group exists.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -330832,6 +331183,11 @@ paths:
                             examples:
                                 LocalSearchSourceCountedResponseExamplesSingleSource:
                                     $ref: "#/components/examples/LocalSearchSourceCountedResponseExamplesSingleSource"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -330896,6 +331252,11 @@ paths:
                             examples:
                                 LocalSearchSourceCountedResponseExamplesSingleSource:
                                     $ref: "#/components/examples/LocalSearchSourceCountedResponseExamplesSingleSource"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -330954,15 +331315,14 @@ paths:
             summary: Delete a lakehouse engine source (Cribl.Cloud only)
             description: Delete the specified lakehouse engine source (Cribl.Cloud only).
             responses:
-                "200":
-                    description: The deleted lakehouse engine source
+                "204":
+                    description: The lakehouse engine source was deleted, or no longer exists. No response body.
+                "400":
+                    description: The stored source is not a supported lakehouse source type.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/LocalSearchSource"
-                            examples:
-                                LocalSearchSourceCountedResponseExamplesSingleSource:
-                                    $ref: "#/components/examples/LocalSearchSourceCountedResponseExamplesSingleSource"
+                                $ref: "#/components/schemas/RestApiJsonError"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -331017,6 +331377,15 @@ paths:
                             examples:
                                 LocalSearchSourceCountedResponseExamplesSingleSource:
                                     $ref: "#/components/examples/LocalSearchSourceCountedResponseExamplesSingleSource"
+                "400":
+                    description: The source type of the specified lakehouse engine source is not on the allowlist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/LocalSearchApiErrorBody"
+                            examples:
+                                LocalSearchSourceUnsupportedTypeExamplesUnsupportedSourceType:
+                                    $ref: "#/components/examples/LocalSearchSourceUnsupportedTypeExamplesUnsupportedSourceType"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -331037,11 +331406,14 @@ paths:
                             schema:
                                 type: string
                 "404":
-                    description: The requested resource does not exist.
+                    description: The specified lakehouse engine source does not exist.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                $ref: "#/components/schemas/LocalSearchApiErrorBody"
+                            examples:
+                                LocalSearchSourceNotFoundExamplesSourceNotFound:
+                                    $ref: "#/components/examples/LocalSearchSourceNotFoundExamplesSourceNotFound"
                 "500":
                     description: Unexpected server error.
                     content:
