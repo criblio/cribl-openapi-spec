@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.22.0-alpha.1794438855925-4d214c5f
+    version: 4.22.0-alpha.1794523847915-97659806
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -59372,8 +59372,22 @@ components:
                     $ref: "#/components/schemas/OrphanFileRecoveryType"
                     description: Orphan file recovery
                 objectACL:
-                    $ref: "#/components/schemas/ObjectAclOptions"
+                    type: string
+                    title: Object ACL
                     description: Object ACL to assign to uploaded objects
+                    enum:
+                        - private
+                        - public-read
+                        - public-read-write
+                        - authenticated-read
+                        - bucket-owner-full-control
+                    x-speakeasy-enum-descriptions:
+                        - Private
+                        - Public Read Only
+                        - Public Read/Write
+                        - Authenticated Read Only
+                        - Bucket Owner Full Control
+                    x-speakeasy-unknown-values: allow
                 endpoint:
                     type: string
                     title: OSS endpoint
@@ -74670,19 +74684,7 @@ components:
                     $ref: "#/components/schemas/EstimatedIngestRateOptionsConfigGroup"
                     description: Estimated ingest rate for a Cribl.Cloud Worker Group, in GB/sec.
                 git:
-                    type: object
-                    properties:
-                        commit:
-                            type: string
-                            description: Commit hash of the currently committed configuration version.
-                        localChanges:
-                            type: integer
-                            description: Number of local configuration changes not yet committed.
-                        log:
-                            type: array
-                            items:
-                                $ref: "#/components/schemas/Commit"
-                            description: List of recent configuration commits.
+                    $ref: "#/components/schemas/GitTypeConfigGroup"
                     description: Git status of the Worker Group, Outpost Group, or Edge Fleet configuration. Automatically populated and returned in responses.
                 id:
                     type: string
@@ -74816,38 +74818,11 @@ components:
                 - id
             description: Request body for creating a new Worker Group, Outpost Group, or Edge Fleet. Do not include automatically populated fields.
             title: GroupCreateRequest
-        DeployRequestLookups:
-            type: object
-            properties:
-                context:
-                    type: string
-                    description: Lookup context to deploy. Use <code>cribl</code> for the default context or a Pack <code>id</code> for Pack lookups.
-                lookups:
-                    type: array
-                    items:
-                        type: object
-                        properties:
-                            file:
-                                type: string
-                                description: Unique identifier (file name) of the lookup to deploy.
-                            version:
-                                type: string
-                                description: Version of the lookup file to deploy.
-                        required:
-                            - file
-                            - version
-                    description: List of lookup files to deploy in this context.
-            required:
-                - context
-                - lookups
-            title: DeployRequestLookups
         DeployRequest:
             type: object
             properties:
                 lookups:
                     type: array
-                    items:
-                        $ref: "#/components/schemas/DeployRequestLookups"
                     description: Optional list of lookup file deployments to include with the commit deployment.
                 version:
                     type: string
@@ -82600,6 +82575,7 @@ components:
                     enum:
                         - 10xlarge
                         - 2xlarge
+                        - 2xlarge-plus
                         - 2xsmall
                         - 3xlarge
                         - 3xsmall
@@ -82614,7 +82590,7 @@ components:
                         - small
                         - xlarge
                         - xsmall
-                    description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code> through <code>10xlarge</code> requires the <code>cribl_operator</code> role.
+                    description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code> through <code>10xlarge</code> requires the <code>cribl_operator</code> role. <code>2xlarge-plus</code> additionally requires the <code>feature-search-2xlarge-plus</code> feature flag, and is limited to a single engine node.
                     x-speakeasy-unknown-values: allow
             required:
                 - engineType
@@ -85271,6 +85247,10 @@ components:
                     items:
                         $ref: "#/components/schemas/CompatibilityResult"
                 compatibility:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CompatibilityResult"
+                notificationPolicyCompatibility:
                     type: array
                     items:
                         $ref: "#/components/schemas/CompatibilityResult"
@@ -94619,7 +94599,125 @@ components:
                 - nonMigratable
                 - unverifiedReferences
             title: PromotionScanResult
-        CountedListConfigGroup:
+        StreamAIGroupStatus:
+            type: string
+            enum:
+                - provisioning
+                - ready
+                - degraded
+            title: StreamAIGroupStatus
+            x-speakeasy-unknown-values: allow
+        StreamAIGroup:
+            type: object
+            properties:
+                __srcGroup:
+                    type: string
+                    description: Fleet or group id this entity was inherited from when served by a Config Helper for a child fleet. Present when inherited from parent, including when the child has a local overlay. Omitted when the entity is local and not inherited. Display-only; never persisted.
+                __srcOverridden:
+                    type: boolean
+                    description: If true, the child fleet has a local overlay on an inherited entity. Omitted when inherited and unmodified, or when local and not inherited. Display-only; never persisted.
+                cloud:
+                    $ref: "#/components/schemas/ConfigGroupCloud"
+                    description: Cloud provider and region details for a Cribl.Cloud Worker Group.
+                collectorsHaEnabled:
+                    type: boolean
+                    description: Keeps Collector jobs running if the Leader Node fails. Applies only to Stream Worker Groups. Always <code>true</code> for Cribl.Cloud groups; defaults to <code>false</code> for on-prem groups. to Stream Worker Groups. Always <code>true</code> for Cribl.Cloud groups; defaults to <code>false</code> for on-prem groups.
+                configVersion:
+                    type: string
+                    description: "Commit hash of the deployed configuration version for the Worker Group, Outpost Group, or Edge Fleet. Automatically populated and returned in responses.<br/><br/> **Warning**: Do not change the value of <code>configVersion</code> in the body of PATCH requests. The PATCH request body must include the value as it appears in the <code>GET /products/{product}/groups/{id}</code> response."
+                deployingWorkerCount:
+                    type: integer
+                    description: "Number of Workers or Nodes that are currently deploying the latest configuration version.<br/><br/> **Warning**: Do not change the value of <code>deployingWorkerCount</code> in the body of PATCH requests. The PATCH request body must include the value as it appears in the <code>GET /products/{product}/groups/{id}</code> response."
+                description:
+                    type: string
+                    description: Brief description of the Worker Group, Outpost Group, or Edge Fleet.
+                    maxLength: 512
+                ephemeralCount:
+                    type: integer
+                    description: "Number of Workers or Nodes in the Worker Group, Outpost Group, or Edge Fleet that are connected, plus those that are away: disconnected, but still within the reconnect window their ephemeral connection mode allows. Excludes Nodes disconnected beyond that window. Equals <code>workerCount</code> wherever no Node uses an ephemeral connection mode.<br/><br/> **Warning**: Do not change the value of <code>ephemeralCount</code> in the body of PATCH requests. The PATCH request body must include the value as it appears in the <code>GET /products/{product}/groups/{id}</code> response."
+                estimatedIngestRate:
+                    type: number
+                    description: Fixed ingest rate that Cribl.Cloud maps onto the StreamAI instance size, in GB/day.
+                git:
+                    $ref: "#/components/schemas/GitTypeConfigGroup"
+                    description: Git status of the Worker Group, Outpost Group, or Edge Fleet configuration. Automatically populated and returned in responses.
+                healthyWorkerCount:
+                    type: number
+                    description: Number of connected Workers that are healthy.
+                id:
+                    type: string
+                    description: Unique identifier.
+                incompatibleWorkerCount:
+                    type: integer
+                    description: "Number of Workers or Nodes running a Cribl version that is incompatible with the current upgrade target.<br/><br/> **Warning**: Do not change the value of <code>incompatibleWorkerCount</code> in the body of PATCH requests. The PATCH request body must include the value as it appears in the <code>GET /products/{product}/groups/{id}</code> response."
+                inherits:
+                    type: string
+                    description: The <code>id</code> of the parent Edge Fleet. If provided, this Fleet inherits configuration from the specified parent Fleet. Applies only to Edge Fleets.
+                isFleet:
+                    type: boolean
+                    description: Indicates whether this is an Edge Fleet. Deprecated. Use to identify Edge Fleets.
+                    deprecated: true
+                isSearch:
+                    type: boolean
+                    description: Indicates whether this is an internal Search Group. Deprecated. Use to identify Search Groups.
+                    deprecated: true
+                lookupDeployments:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ConfigGroupLookups"
+                    description: "Lookup deployment status per Worker or Node context.<br/><br/> **Warning**: Do not change the value of <code>lookupDeployments</code> in the body of PATCH requests. The PATCH request body must include the value as it appears in the <code>GET /products/{product}/groups/{id}</code> response."
+                maxWorkerAge:
+                    type: string
+                    description: Maximum duration a Worker or Node can remain disconnected before the Leader removes it. The value is a numeral with units, such as <code>8h</code>, <code>5d</code>, <code>1w</code>.
+                name:
+                    type: string
+                    description: Name of the Worker Group, Outpost Group, or Edge Fleet.
+                onPrem:
+                    type: boolean
+                    description: If <code>true</code>, the Worker Group, Outpost Group, or Edge Fleet uses customer-hosted (on-prem) workers. If <code>false</code>, the Worker Group, Outpost Group, or Edge Fleet is managed in Cribl.Cloud.
+                provisioned:
+                    type: boolean
+                    description: If <code>true</code>, the Cribl.Cloud Worker Group has active Workers provisioned. Applies only to Cribl.Cloud Worker Groups.
+                status:
+                    $ref: "#/components/schemas/StreamAIGroupStatus"
+                    description: <code>ready</code> when a Worker is healthy, <code>degraded</code> when Workers are connected but none is healthy, otherwise <code>provisioning</code>.
+                streamtags:
+                    type: array
+                    items:
+                        type: string
+                    description: Metadata tags attached to the Worker Group, Outpost Group, or Edge Fleet for categorization, filtering, and tag-based routing and policy application. Useful for organizing Groups and Fleets and enabling tag-driven workflows in Cribl.
+                tags:
+                    type: string
+                    description: Legacy system-level tags associated with the Worker Group, Outpost Group, or Edge Fleet. Use <code>streamtags</code> instead.
+                    deprecated: true
+                type:
+                    $ref: "#/components/schemas/TypeOptionsConfigGroup"
+                    description: Explicit type of the Worker Group, Outpost Group, or Edge Fleet.
+                upgradeVersion:
+                    type: string
+                    description: Target software upgrade version. Applies only to Outpost Groups and Edge Fleets.
+                workerCount:
+                    type: number
+                    description: Number of Workers connected to the StreamAI group.
+                workerRemoteAccess:
+                    type: boolean
+                    description: If <code>true</code>, the Leader allows remote access (teleporting) into the Workers or Nodes of the Worker Group, Outpost Group, or Edge Fleet.
+            required:
+                - estimatedIngestRate
+                - healthyWorkerCount
+                - id
+                - status
+                - workerCount
+            title: StreamAIGroup
+        StreamAIGroupCreateRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                    const: stream-ai
+                    description: The <code>id</code> of the group to create. Defaults to <code>stream-ai</code>, the only accepted value.
+            title: StreamAIGroupCreateRequest
+        CountedListStreamAiGroup:
             type: object
             required:
                 - items
@@ -94627,18 +94725,18 @@ components:
             properties:
                 count:
                     type: integer
-                    description: Total number of items available
+                    description: Total number of items available across all pages, not the number of items in this response.
                 items:
                     type: array
                     description: The list of items returned in this response.
                     items:
-                        $ref: "#/components/schemas/ConfigGroup"
+                        $ref: "#/components/schemas/StreamAIGroup"
                 offset:
                     type: integer
                     description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
                 limit:
                     type: integer
-                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
+                    description: "Page size applied to this response: the configured default page size when omitted or zero, clamped to the configured maximum. Always present."
         PaginatedSystemInfo:
             type: object
             required:
@@ -100868,6 +100966,7 @@ components:
                 - dashboards
                 - notebooks
                 - notebook-templates
+                - datasets
             title: SearchFavoriteTypeParam
             x-speakeasy-unknown-values: allow
         PaginatedSearchFavoriteItem:
@@ -100895,7 +100994,7 @@ components:
             properties:
                 context:
                     type: string
-                    description: The Pack that contains the Dashboard. Omitted for the default Pack, Notebooks, and Notebook templates.
+                    description: The Pack that contains the Dashboard. Omitted for the default Pack, Notebooks, Notebook templates, and Datasets.
                 description:
                     type: string
                     description: The description of the object. Omitted when the object has none.
@@ -103214,6 +103313,7 @@ components:
                 - large
                 - xlarge
                 - 2xlarge
+                - 2xlarge-plus
                 - 3xlarge
                 - 4xlarge
                 - 5xlarge
@@ -103235,6 +103335,7 @@ components:
                     enum:
                         - 10xlarge
                         - 2xlarge
+                        - 2xlarge-plus
                         - 2xsmall
                         - 3xlarge
                         - 3xsmall
@@ -195921,8 +196022,6 @@ components:
                         - Public Read Only
                         - Public Read/Write
                         - Authenticated Read Only
-                        - AWS EC2 AMI Read Only
-                        - Bucket Owner Read Only
                         - Bucket Owner Full Control
                     anyOf:
                         - type: string
@@ -195931,8 +196030,6 @@ components:
                             - public-read
                             - public-read-write
                             - authenticated-read
-                            - aws-exec-read
-                            - bucket-owner-read
                             - bucket-owner-full-control
                           x-speakeasy-unknown-values: allow
                         - type: "null"
@@ -219011,6 +219108,7 @@ components:
                     enum:
                         - 10xlarge
                         - 2xlarge
+                        - 2xlarge-plus
                         - 2xsmall
                         - 3xlarge
                         - 3xsmall
@@ -219025,7 +219123,7 @@ components:
                         - small
                         - xlarge
                         - xsmall
-                    description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code> through <code>10xlarge</code> requires the <code>cribl_operator</code> role.
+                    description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code> through <code>10xlarge</code> requires the <code>cribl_operator</code> role. <code>2xlarge-plus</code> additionally requires the <code>feature-search-2xlarge-plus</code> feature flag, and is limited to a single engine node.
                     x-speakeasy-unknown-values: allow
             description: "Lakehouse engine: provisioned storage and compute for ingest and search."
             title: LocalSearchEngineApiPartialRequest
@@ -222903,6 +223001,21 @@ components:
                 - Rate156MBPerSec
                 - Rate180MBPerSec
             x-speakeasy-unknown-values: allow
+        GitTypeConfigGroup:
+            type: object
+            properties:
+                commit:
+                    type: string
+                    description: Commit hash of the currently committed configuration version.
+                localChanges:
+                    type: integer
+                    description: Number of local configuration changes not yet committed.
+                log:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/Commit"
+                    description: List of recent configuration commits.
+            description: Git status of the Worker Group, Outpost Group, or Edge Fleet configuration. Automatically populated and returned in responses.
         TypeOptionsConfigGroup:
             type: string
             enum:
@@ -241609,6 +241722,77 @@ components:
                 manualMigration: []
                 diagnostics: []
                 complete: true
+        CreateStreamAIGroupResponseExamplesProvisioning:
+            summary: Create the StreamAI Worker Group
+            description: Example response right after creation, before any Worker connects.
+            value:
+                id: stream-ai
+                name: stream-ai
+                description: StreamAI
+                type: stream_ai
+                onPrem: false
+                provisioned: true
+                configVersion: "1789012345678"
+                estimatedIngestRate: 512
+                cloud:
+                    provider: aws
+                    region: us-west-2
+                status: provisioning
+                workerCount: 0
+                healthyWorkerCount: 0
+        CreateStreamAIGroupExamplesDefaultId:
+            summary: Create the StreamAI Worker Group
+            description: Every setting is fixed, so an empty body creates the group.
+            value: {}
+        CreateStreamAIGroupExamplesExplicitId:
+            summary: Create the StreamAI Worker Group by id
+            description: Names the only StreamAI group id.
+            value:
+                id: stream-ai
+        GetStreamAIGroupResponseExamplesReady:
+            summary: Get the StreamAI Worker Group
+            description: Example response when a StreamAI Worker is healthy.
+            value:
+                id: stream-ai
+                name: stream-ai
+                description: StreamAI
+                type: stream_ai
+                onPrem: false
+                provisioned: true
+                configVersion: "1789012345678"
+                estimatedIngestRate: 512
+                cloud:
+                    provider: aws
+                    region: us-west-2
+                status: ready
+                workerCount: 2
+                healthyWorkerCount: 2
+        ListStreamAIGroupsResponseExamplesProvisioned:
+            summary: List the provisioned StreamAI Worker Group
+            description: Example response when the StreamAI Worker Group exists and a Worker is healthy.
+            value:
+                count: 1
+                items:
+                    - id: stream-ai
+                      name: stream-ai
+                      description: StreamAI
+                      type: stream_ai
+                      onPrem: false
+                      provisioned: true
+                      configVersion: "1789012345678"
+                      estimatedIngestRate: 512
+                      cloud:
+                        provider: aws
+                        region: us-west-2
+                      status: ready
+                      workerCount: 2
+                      healthyWorkerCount: 2
+        ListStreamAIGroupsResponseExamplesNotProvisioned:
+            summary: List StreamAI Worker Groups before provisioning
+            description: Example response when the StreamAI Worker Group does not exist.
+            value:
+                count: 0
+                items: []
         SystemInfoResponseExamplesBasicSystemInfo:
             summary: Get system information
             description: Example response for getting basic system information for a Cribl Leader.
@@ -244882,7 +245066,7 @@ components:
                     dataset: my_s3_dataset
         SearchFavoritesListResponseExamplesMixedFavorites:
             summary: List the requesting user favorites
-            description: Example response for listing the requesting user favorites across Dashboards, Notebooks, Notebook templates, and Packs.
+            description: Example response for listing the requesting user favorites across Dashboards, Notebooks, Notebook templates, and Datasets.
             value:
                 items:
                     - type: dashboards
@@ -244908,7 +245092,12 @@ components:
                       favoriteCount: 4
                       name: Incident Response
                       modified: 1738944000000
-                count: 4
+                    - type: datasets
+                      id: vpc_flow_logs
+                      favoriteCount: 2
+                      name: vpc_flow_logs
+                      description: VPC Flow Logs delivered to S3.
+                count: 5
                 offset: 0
                 limit: 20
         SearchFavoritesCountResponseExamplesFavoriteCount:
@@ -265805,7 +265994,7 @@ paths:
             description: Get the configuration for the specified Model-Driven Telemetry (MDT) device.
             responses:
                 "200":
-                    description: The requested MDT device configuration object in a single-item list.
+                    description: The requested MDT device configuration object.
                     content:
                         application/json:
                             schema:
@@ -300043,10 +300232,10 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Preview the model a monitor draft would evaluate against
-            description: "Body is a monitor draft — the shape the monitors collection accepts. Runs its detection model over the requested axis and returns one row per instant per series. What each row carries depends on the monitor type. Nothing is persisted and no notification is dispatched. <ul> <li><b>anomaly</b> (<code>robust</code> algorithm, any seasonality other than <code>none</code>): the per-severity band boundaries. The model is fitted once at <code>latest</code> and projected across the axis — a current-model projection, not a per-instant historical replay; only the <code>latest</code> point matches what evaluation would compute there. Under <code>auto</code>, <code>seasonality</code> is the period selected or <code>none</code>, with an empty <code>eligible_seasonalities</code> and <code>reason: not-eligible</code> when no period could be tried at all.</li> <li><b>change</b>: the point-in-time comparison — the current value, the value one <code>compareAgainst</code> offset earlier, and the delta between them — computed per instant, so every point matches what evaluation would compute there.</li> </ul>."
+            description: "Body is a monitor draft — the shape the monitors collection accepts. Runs its detection model over the requested axis and returns one row per instant per series. What each row carries depends on the monitor type. Nothing is persisted and no notification is dispatched. A body of <code>{\"instance\": {monitorId, fingerprint, timestamp, datasetId, type}}</code> instead reads one stored evaluation (<code>timestamp</code> in epoch milliseconds; <code>type</code> the monitor type to read it as), ignoring the axis: the thresholds recorded with it and the verdict they graded to, why it failed where it did, the series' stored evaluations around it with the fire or clear hold it started, sits in or ended, and what its type recorded. <ul> <li><b>anomaly</b> (<code>robust</code> algorithm, any seasonality other than <code>none</code>): the per-severity band boundaries. The model is fitted once at <code>latest</code> and projected across the axis — a current-model projection, not a per-instant historical replay; only the <code>latest</code> point matches what evaluation would compute there. Under <code>auto</code>, <code>seasonality</code> is the period selected or <code>none</code>, with an empty <code>eligible_seasonalities</code> and <code>reason: not-eligible</code> when no period could be tried at all.</li> <li><b>change</b>: the point-in-time comparison — the current value, the value one <code>compareAgainst</code> offset earlier, and the delta between them — computed per instant, so every point matches what evaluation would compute there.</li> </ul>."
             responses:
                 "200":
-                    description: The monitor type plus the preview rows, ascending by timestamp.
+                    description: For a monitor draft, the monitor type plus the preview rows, ascending by timestamp. For a stored instance, the evaluation read for display, shaped by its monitor type.
                     content:
                         application/json:
                             schema:
@@ -300059,7 +300248,7 @@ paths:
                                 MonitorPreviewResponseExamplesAutoSelectedNothing:
                                     $ref: "#/components/examples/MonitorPreviewResponseExamplesAutoSelectedNothing"
                 "400":
-                    description: The monitor draft is missing, invalid, or of a type or configuration that cannot be previewed; <code>earliest</code> or <code>latest</code> is missing or not a whole number of epoch seconds, <code>latest</code> is not after <code>earliest</code>, or <code>step</code> is not a positive integer; the step is finer than the model's sampling step; or the preview would return too many axis points or series.
+                    description: "The monitor draft is missing, invalid, or of a type or configuration that cannot be previewed; <code>earliest</code> or <code>latest</code> is missing or not a whole number of epoch seconds, <code>latest</code> is not after <code>earliest</code>, or <code>step</code> is not a positive integer; the step is finer than the model's sampling step; or the preview would return too many axis points or series. For an instance: a malformed key, an unknown type, or a stored evaluation of a monitor type these views do not read or that cannot be shown."
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -300074,9 +300263,9 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: The caller cannot read a dataset that the draft monitor would query.
+                    description: The caller cannot read a dataset that the draft monitor, or the instance, would query.
                 "404":
-                    description: A dataset that the draft monitor references is not bound to any engine.
+                    description: A dataset that the draft monitor or the instance references is not bound to any engine, or no stored instance matches the key.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -300086,16 +300275,16 @@ paths:
             parameters:
                 - name: earliest
                   in: query
-                  required: true
+                  required: false
                   schema:
                     type: integer
-                  description: Axis start, epoch seconds.
+                  description: Axis start, epoch seconds. Required for a monitor draft.
                 - name: latest
                   in: query
-                  required: true
+                  required: false
                   schema:
                     type: integer
-                  description: Axis end, epoch seconds.
+                  description: Axis end, epoch seconds. Required for a monitor draft.
                 - name: step
                   in: query
                   required: false
@@ -315357,9 +315546,145 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: The ConfigHelper or promotion dependencies are unavailable.
-    /products/stream-ai:
+    /products/stream-ai/groups:
+        post:
+            operationId: createProductsStreamAiGroups
+            tags:
+                - ai
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: Create the StreamAI worker group
+            description: Creates the StreamAI worker group, or returns it unchanged if it already exists, and emits a StreamAI sync event. Every group setting is fixed, so the body can only name the <code>stream-ai</code> id.
+            responses:
+                "201":
+                    description: The created StreamAIGroup object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/StreamAIGroup"
+                            examples:
+                                CreateStreamAIGroupResponseExamplesProvisioning:
+                                    $ref: "#/components/examples/CreateStreamAIGroupResponseExamplesProvisioning"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
+                "400":
+                    description: The body names an <code>id</code> other than <code>stream-ai</code>.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: The caller is not an Organization Admin, Workspace Admin, or Workspace Owner.
+                "404":
+                    description: AI Gateway is not enabled for this workspace.
+                "409":
+                    description: A worker group that is not the StreamAI group already uses the <code>stream-ai</code> id.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: StreamAIGroupCreateRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/StreamAIGroupCreateRequest"
+                        examples:
+                            CreateStreamAIGroupExamplesDefaultId:
+                                $ref: "#/components/examples/CreateStreamAIGroupExamplesDefaultId"
+                            CreateStreamAIGroupExamplesExplicitId:
+                                $ref: "#/components/examples/CreateStreamAIGroupExamplesExplicitId"
+        get:
+            operationId: getProductsStreamAiGroups
+            tags:
+                - ai
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: List the StreamAI worker groups
+            description: Lists the StreamAI product's worker groups. The product has at most one group, <code>stream-ai</code>. An empty <code>items</code> array means it is not provisioned.
+            responses:
+                "200":
+                    description: List of StreamAIGroup objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListStreamAiGroup"
+                            examples:
+                                ListStreamAIGroupsResponseExamplesProvisioned:
+                                    $ref: "#/components/examples/ListStreamAIGroupsResponseExamplesProvisioned"
+                                ListStreamAIGroupsResponseExamplesNotProvisioned:
+                                    $ref: "#/components/examples/ListStreamAIGroupsResponseExamplesNotProvisioned"
+                "400":
+                    description: Invalid <code>limit</code> or <code>offset</code>.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: The caller is not an Organization Admin, Workspace Admin, or Workspace Owner.
+                "409":
+                    description: A worker group that is not the StreamAI group already uses the <code>stream-ai</code> id.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of groups to return in the response for this request. Use with <code>offset</code> to paginate the response. In v2, an omitted or zero value uses the configured default page size, and a value above the configured maximum is clamped to it; in v1, all groups are returned when both <code>limit</code> and <code>offset</code> are omitted.
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response. In v1, pagination applies only when <code>offset</code> is provided; in v2, an omitted value defaults to <code>0</code>.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
+    /products/stream-ai/groups/{id}:
         delete:
-            operationId: deleteProductsStreamAi
+            operationId: deleteProductsStreamAiGroupsById
             tags:
                 - ai
             x-cribl-internal: true
@@ -315367,7 +315692,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Delete the StreamAI worker group
-            description: Removes the StreamAI worker group and emits a StreamAI sync event. Available when the feature flag is off.
+            description: Removes the StreamAI worker group and emits a StreamAI sync event. Available when the feature flag is off. Deleting a group that does not exist succeeds.
             responses:
                 "204":
                     description: No Content
@@ -315385,76 +315710,42 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The caller is not an Organization Admin, Workspace Admin, or Workspace Owner.
+                "409":
+                    description: A worker group that is not the StreamAI group already uses the <code>stream-ai</code> id.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-        post:
-            operationId: createProductsStreamAi
-            tags:
-                - ai
-            x-cribl-internal: true
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Create the StreamAI worker group
-            description: Creates the fixed StreamAI worker group, or returns it if it already matches. Emits a StreamAI sync event.
-            responses:
-                "200":
-                    description: The created ConfigGroup object in a single-item list.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/CountedListConfigGroup"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the StreamAI worker group. The only StreamAI group is <code>stream-ai</code>.
         get:
-            operationId: getProductsStreamAi
+            operationId: getProductsStreamAiGroupsById
             tags:
                 - ai
             x-cribl-internal: true
             x-cribl-availability: both
             x-cribl-api-context:
                 - leader
-            summary: Get the StreamAI worker group
-            description: Returns the dedicated StreamAI worker group. An empty <code>items</code> array means it does not exist.
+            summary: Get a StreamAI worker group
+            description: Gets the StreamAI worker group with its provisioning status.
             responses:
                 "200":
-                    description: List of ConfigGroup objects.
+                    description: The requested StreamAIGroup object.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/CountedListConfigGroup"
+                                $ref: "#/components/schemas/StreamAIGroup"
+                            examples:
+                                GetStreamAIGroupResponseExamplesReady:
+                                    $ref: "#/components/examples/GetStreamAIGroupResponseExamplesReady"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -315469,17 +315760,24 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The caller is not an Organization Admin, Workspace Admin, or Workspace Owner.
+                "404":
+                    description: The StreamAI group is not provisioned, or <code>id</code> is not <code>stream-ai</code>.
+                "409":
+                    description: A worker group that is not the StreamAI group already uses the <code>stream-ai</code> id.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the StreamAI worker group. The only StreamAI group is <code>stream-ai</code>.
     /system/info:
         get:
             operationId: getSystemInfo
@@ -326730,7 +327028,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Remove a favorite (Cribl.Cloud only)
-            description: Remove the requesting user's favorite for the specified Dashboard, Notebook, or Notebook template (Cribl.Cloud only). Removing a favorite that does not exist changes nothing. A favorite can be removed after its object is deleted or the user loses access to it.
+            description: Remove the requesting user's favorite for the specified Dashboard, Notebook, Notebook template, or Dataset (Cribl.Cloud only). Removing a favorite that does not exist changes nothing. A favorite can be removed after its object is deleted or the user loses access to it.
             responses:
                 "204":
                     description: The favorite was removed successfully.
@@ -326771,7 +327069,7 @@ paths:
                   required: true
                   schema:
                     $ref: "#/components/schemas/SearchFavoriteTypeParam"
-                  description: "The type of the object to remove the favorite from: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>."
+                  description: "The type of the object to remove the favorite from: <code>dashboards</code>, <code>notebooks</code>, <code>notebook-templates</code>, or <code>datasets</code>."
                 - name: id
                   in: path
                   required: true
@@ -326787,7 +327085,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Add a favorite (Cribl.Cloud only)
-            description: Add a favorite for the specified Dashboard, Notebook, or Notebook template on behalf of the requesting user (Cribl.Cloud only). The request takes no payload, and repeating it changes nothing.
+            description: Add a favorite for the specified Dashboard, Notebook, Notebook template, or Dataset on behalf of the requesting user (Cribl.Cloud only). The request takes no payload, and repeating it changes nothing.
             responses:
                 "200":
                     description: The favorite count for the object after the favorite is added.
@@ -326841,7 +327139,7 @@ paths:
                   required: true
                   schema:
                     $ref: "#/components/schemas/SearchFavoriteTypeParam"
-                  description: "The type of the object to favorite: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>."
+                  description: "The type of the object to favorite: <code>dashboards</code>, <code>notebooks</code>, <code>notebook-templates</code>, or <code>datasets</code>."
                 - name: id
                   in: path
                   required: true
@@ -326858,7 +327156,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: List favorites (Cribl.Cloud only)
-            description: Get the Dashboards, Notebooks, and Notebook templates that the requesting user has favorited, across every Pack (Cribl.Cloud only). Objects that no longer exist or that the user cannot read are omitted.
+            description: Get the Dashboards, Notebooks, Notebook templates, and Datasets that the requesting user has favorited, across every Pack (Cribl.Cloud only). Objects that no longer exist or that the user cannot read are omitted.
             responses:
                 "200":
                     description: The requesting user's favorites.
@@ -326906,7 +327204,7 @@ paths:
                   required: false
                   schema:
                     $ref: "#/components/schemas/SearchFavoriteTypeParam"
-                  description: "Limits the response to one object type: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>. Omit to list every type."
+                  description: "Limits the response to one object type: <code>dashboards</code>, <code>notebooks</code>, <code>notebook-templates</code>, or <code>datasets</code>. Omit to list every type."
                 - name: offset
                   in: query
                   required: false
