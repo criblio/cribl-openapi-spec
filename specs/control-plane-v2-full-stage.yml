@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1794438847236-5a49c14f
+    version: 4.21.0-alpha.1794523854832-f93b51db
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -15058,24 +15058,6 @@ components:
                 - description
                 - id
             title: DatabaseConnectionConfig
-        DatabaseConnectionResponseEnvelope:
-            type: object
-            properties:
-                count:
-                    type: integer
-                    description: Number of Database Connections returned in the response envelope.
-                    examples:
-                        - 1
-                    minimum: 0
-                items:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/DatabaseConnectionConfig"
-                    description: Database Connections returned in the response envelope.
-            required:
-                - count
-                - items
-            title: DatabaseConnectionResponseEnvelope
         RestApiJsonError:
             type: object
             properties:
@@ -15095,6 +15077,24 @@ components:
                 - status
             description: JSON body returned for many REST failures that use RESTEndpoint.sendError (and similar handlers).
             title: RestApiJsonError
+        DatabaseConnectionResponseEnvelope:
+            type: object
+            properties:
+                count:
+                    type: integer
+                    description: Number of Database Connections returned in the response envelope.
+                    examples:
+                        - 1
+                    minimum: 0
+                items:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/DatabaseConnectionConfig"
+                    description: Database Connections returned in the response envelope.
+            required:
+                - count
+                - items
+            title: DatabaseConnectionResponseEnvelope
         DatabaseConnectionTestResult:
             type: object
             properties:
@@ -66621,6 +66621,26 @@ components:
                 - id
                 - name
             title: ProtobufEncodingConfig
+        PaginatedProtobufEncodingConfig:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/ProtobufEncodingConfig"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
         ProtobufBytesConversion:
             type: string
             enum:
@@ -66717,26 +66737,6 @@ components:
                     description: The pre-limited items in the list of results
                     items:
                         $ref: "#/components/schemas/ProtobufLibraryConfig"
-                count:
-                    type: integer
-                    description: Total number of items available
-                offset:
-                    type: integer
-                    description: Pagination offset
-                limit:
-                    type: integer
-                    description: Pagination limit
-        PaginatedProtobufEncodingConfig:
-            type: object
-            required:
-                - items
-                - count
-            properties:
-                items:
-                    type: array
-                    description: The pre-limited items in the list of results
-                    items:
-                        $ref: "#/components/schemas/ProtobufEncodingConfig"
                 count:
                     type: integer
                     description: Total number of items available
@@ -70092,6 +70092,19 @@ components:
                 - sections
                 - tokens
             title: NotebookTemplateListItem
+        SearchAppOwner:
+            type: object
+            properties:
+                appId:
+                    type: string
+                    description: Identifier of the app that owns the Search resource.
+                installationId:
+                    type: string
+                    description: Identifier of the app installation that established ownership.
+            required:
+                - appId
+                - installationId
+            title: SearchAppOwner
         ChartConfig:
             type: object
             properties:
@@ -70249,6 +70262,8 @@ components:
                 appId:
                     type: string
                     description: App identifier used to attribute search/platform usage to a driving app.
+                appOwner:
+                    $ref: "#/components/schemas/SearchAppOwner"
                 chartConfig:
                     $ref: "#/components/schemas/ChartConfig"
                     description: Chart configuration for scheduled or Dashboard-backed runs.
@@ -70318,7 +70333,7 @@ components:
                     description: IANA timezone for scheduled execution.
                 user:
                     type: string
-                    description: Identifier for the user who created the saved search. Scheduled runs execute as the specified user.
+                    description: Creator identifier. Member-owned scheduled runs execute as this user; app-owned runs use .
             required:
                 - id
                 - name
@@ -71164,6 +71179,8 @@ components:
                 appId:
                     type: string
                     description: App identifier used to attribute search/platform usage to a driving app.
+                appOwner:
+                    $ref: "#/components/schemas/SearchAppOwner"
                 chartConfig:
                     type: object
                     properties:
@@ -71487,7 +71504,7 @@ components:
                     description: Audit-oriented usage counters persisted when the job finishes.
                 user:
                     type: string
-                    description: Authenticated principal identifier used for RBAC and auditing.
+                    description: Creator identifier used for auditing and member-owned job authorization.
                 userDetails:
                     $ref: "#/components/schemas/JobUserDetails"
                     description: Snapshot of token claims at creation (username, roles, API credential metadata).
@@ -74684,19 +74701,7 @@ components:
                     $ref: "#/components/schemas/EstimatedIngestRateOptionsConfigGroup"
                     description: Estimated ingest rate for a Cribl.Cloud Worker Group, in GB/sec.
                 git:
-                    type: object
-                    properties:
-                        commit:
-                            type: string
-                            description: Commit hash of the currently committed configuration version.
-                        localChanges:
-                            type: integer
-                            description: Number of local configuration changes not yet committed.
-                        log:
-                            type: array
-                            items:
-                                $ref: "#/components/schemas/Commit"
-                            description: List of recent configuration commits.
+                    $ref: "#/components/schemas/GitTypeConfigGroup"
                     description: Git status of the Worker Group, Outpost Group, or Edge Fleet configuration. Automatically populated and returned in responses.
                 id:
                     type: string
@@ -77625,6 +77630,8 @@ components:
             enum:
                 - search
                 - stream
+                - edge
+                - lake
             title: AiSessionProduct
             x-speakeasy-unknown-values: allow
         SessionShareRole:
@@ -77676,7 +77683,7 @@ components:
                     type: array
                     items:
                         $ref: "#/components/schemas/AiSessionProduct"
-                    description: "Products this Universal AI session has run in. Server-owned: each turn adds the product of the agent that handled it. Absent for agents that are not Universal AI."
+                    description: "Products this Universal AI session has run in. Server-owned: each turn adds the product surface the turn ran in, which is not always the product of the agent that handled it. Absent for agents that are not Universal AI."
                 shares:
                     type: array
                     items:
@@ -77771,7 +77778,7 @@ components:
                     type: array
                     items:
                         $ref: "#/components/schemas/AiSessionProduct"
-                    description: "Products this Universal AI session has run in. Server-owned: each turn adds the product of the agent that handled it. Absent for agents that are not Universal AI."
+                    description: "Products this Universal AI session has run in. Server-owned: each turn adds the product surface the turn ran in, which is not always the product of the agent that handled it. Absent for agents that are not Universal AI."
                 shares:
                     type: array
                     items:
@@ -85288,6 +85295,10 @@ components:
                     type: array
                     items:
                         $ref: "#/components/schemas/CompatibilityResult"
+                notificationPolicyCompatibility:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CompatibilityResult"
                 revision:
                     $ref: "#/components/schemas/PlanRevision"
             required:
@@ -86456,7 +86467,7 @@ components:
                         - 10000
                 limit:
                     type: integer
-                    description: Maximum number of events to return in the response. If omitted, the default is 100. The maximum allowed value is 1000.
+                    description: Maximum number of events to return in the response. If omitted, the default is 100. On <code>/api/v2</code>, the value must be a non-negative integer, <code>0</code> is treated as the default, and a value above 1000 is capped at 1000. On <code>/api/v1</code>, no maximum is enforced.
                     examples:
                         - 100
                 namespace:
@@ -86479,7 +86490,7 @@ components:
                     description: Event Breaker rulesets used to break raw log lines into events. If omitted, the default Cribl ruleset is used.
                 tail:
                     type: integer
-                    description: Number of trailing log lines to read from the Kubernetes API. If omitted, the default is 100. The minimum allowed value is 0 and the maximum allowed value is 1000.
+                    description: Number of trailing log lines to read from the Kubernetes API. If omitted, the default is 100. On <code>/api/v2</code>, the value must be a non-negative integer and a value above 1000 is capped at 1000. On <code>/api/v1</code>, no minimum or maximum is enforced.
                     examples:
                         - 100
                 timestamps:
@@ -94626,7 +94637,125 @@ components:
                 - nonMigratable
                 - unverifiedReferences
             title: PromotionScanResult
-        CountedListConfigGroup:
+        StreamAIGroupStatus:
+            type: string
+            enum:
+                - provisioning
+                - ready
+                - degraded
+            title: StreamAIGroupStatus
+            x-speakeasy-unknown-values: allow
+        StreamAIGroup:
+            type: object
+            properties:
+                __srcGroup:
+                    type: string
+                    description: Fleet or group id this entity was inherited from when served by a Config Helper for a child fleet. Present when inherited from parent, including when the child has a local overlay. Omitted when the entity is local and not inherited. Display-only; never persisted.
+                __srcOverridden:
+                    type: boolean
+                    description: If true, the child fleet has a local overlay on an inherited entity. Omitted when inherited and unmodified, or when local and not inherited. Display-only; never persisted.
+                cloud:
+                    $ref: "#/components/schemas/ConfigGroupCloud"
+                    description: Cloud provider and region details for a Cribl.Cloud Worker Group.
+                collectorsHaEnabled:
+                    type: boolean
+                    description: Keeps Collector jobs running if the Leader Node fails. Applies only to Stream Worker Groups. Always <code>true</code> for Cribl.Cloud groups; defaults to <code>false</code> for on-prem groups. to Stream Worker Groups. Always <code>true</code> for Cribl.Cloud groups; defaults to <code>false</code> for on-prem groups.
+                configVersion:
+                    type: string
+                    description: "Commit hash of the deployed configuration version for the Worker Group, Outpost Group, or Edge Fleet. Automatically populated and returned in responses.<br/><br/> **Warning**: Do not change the value of <code>configVersion</code> in the body of PATCH requests. The PATCH request body must include the value as it appears in the <code>GET /products/{product}/groups/{id}</code> response."
+                deployingWorkerCount:
+                    type: integer
+                    description: "Number of Workers or Nodes that are currently deploying the latest configuration version.<br/><br/> **Warning**: Do not change the value of <code>deployingWorkerCount</code> in the body of PATCH requests. The PATCH request body must include the value as it appears in the <code>GET /products/{product}/groups/{id}</code> response."
+                description:
+                    type: string
+                    description: Brief description of the Worker Group, Outpost Group, or Edge Fleet.
+                    maxLength: 512
+                ephemeralCount:
+                    type: integer
+                    description: "Number of Workers or Nodes in the Worker Group, Outpost Group, or Edge Fleet that are connected, plus those that are away: disconnected, but still within the reconnect window their ephemeral connection mode allows. Excludes Nodes disconnected beyond that window. Equals <code>workerCount</code> wherever no Node uses an ephemeral connection mode.<br/><br/> **Warning**: Do not change the value of <code>ephemeralCount</code> in the body of PATCH requests. The PATCH request body must include the value as it appears in the <code>GET /products/{product}/groups/{id}</code> response."
+                estimatedIngestRate:
+                    type: number
+                    description: Fixed ingest rate that Cribl.Cloud maps onto the StreamAI instance size, in GB/day.
+                git:
+                    $ref: "#/components/schemas/GitTypeConfigGroup"
+                    description: Git status of the Worker Group, Outpost Group, or Edge Fleet configuration. Automatically populated and returned in responses.
+                healthyWorkerCount:
+                    type: number
+                    description: Number of connected Workers that are healthy.
+                id:
+                    type: string
+                    description: Unique identifier.
+                incompatibleWorkerCount:
+                    type: integer
+                    description: "Number of Workers or Nodes running a Cribl version that is incompatible with the current upgrade target.<br/><br/> **Warning**: Do not change the value of <code>incompatibleWorkerCount</code> in the body of PATCH requests. The PATCH request body must include the value as it appears in the <code>GET /products/{product}/groups/{id}</code> response."
+                inherits:
+                    type: string
+                    description: The <code>id</code> of the parent Edge Fleet. If provided, this Fleet inherits configuration from the specified parent Fleet. Applies only to Edge Fleets.
+                isFleet:
+                    type: boolean
+                    description: Indicates whether this is an Edge Fleet. Deprecated. Use to identify Edge Fleets.
+                    deprecated: true
+                isSearch:
+                    type: boolean
+                    description: Indicates whether this is an internal Search Group. Deprecated. Use to identify Search Groups.
+                    deprecated: true
+                lookupDeployments:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ConfigGroupLookups"
+                    description: "Lookup deployment status per Worker or Node context.<br/><br/> **Warning**: Do not change the value of <code>lookupDeployments</code> in the body of PATCH requests. The PATCH request body must include the value as it appears in the <code>GET /products/{product}/groups/{id}</code> response."
+                maxWorkerAge:
+                    type: string
+                    description: Maximum duration a Worker or Node can remain disconnected before the Leader removes it. The value is a numeral with units, such as <code>8h</code>, <code>5d</code>, <code>1w</code>.
+                name:
+                    type: string
+                    description: Name of the Worker Group, Outpost Group, or Edge Fleet.
+                onPrem:
+                    type: boolean
+                    description: If <code>true</code>, the Worker Group, Outpost Group, or Edge Fleet uses customer-hosted (on-prem) workers. If <code>false</code>, the Worker Group, Outpost Group, or Edge Fleet is managed in Cribl.Cloud.
+                provisioned:
+                    type: boolean
+                    description: If <code>true</code>, the Cribl.Cloud Worker Group has active Workers provisioned. Applies only to Cribl.Cloud Worker Groups.
+                status:
+                    $ref: "#/components/schemas/StreamAIGroupStatus"
+                    description: <code>ready</code> when a Worker is healthy, <code>degraded</code> when Workers are connected but none is healthy, otherwise <code>provisioning</code>.
+                streamtags:
+                    type: array
+                    items:
+                        type: string
+                    description: Metadata tags attached to the Worker Group, Outpost Group, or Edge Fleet for categorization, filtering, and tag-based routing and policy application. Useful for organizing Groups and Fleets and enabling tag-driven workflows in Cribl.
+                tags:
+                    type: string
+                    description: Legacy system-level tags associated with the Worker Group, Outpost Group, or Edge Fleet. Use <code>streamtags</code> instead.
+                    deprecated: true
+                type:
+                    $ref: "#/components/schemas/TypeOptionsConfigGroup"
+                    description: Explicit type of the Worker Group, Outpost Group, or Edge Fleet.
+                upgradeVersion:
+                    type: string
+                    description: Target software upgrade version. Applies only to Outpost Groups and Edge Fleets.
+                workerCount:
+                    type: number
+                    description: Number of Workers connected to the StreamAI group.
+                workerRemoteAccess:
+                    type: boolean
+                    description: If <code>true</code>, the Leader allows remote access (teleporting) into the Workers or Nodes of the Worker Group, Outpost Group, or Edge Fleet.
+            required:
+                - estimatedIngestRate
+                - healthyWorkerCount
+                - id
+                - status
+                - workerCount
+            title: StreamAIGroup
+        StreamAIGroupCreateRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                    const: stream-ai
+                    description: The <code>id</code> of the group to create. Defaults to <code>stream-ai</code>, the only accepted value.
+            title: StreamAIGroupCreateRequest
+        CountedListStreamAiGroup:
             type: object
             required:
                 - items
@@ -94634,18 +94763,18 @@ components:
             properties:
                 count:
                     type: integer
-                    description: Total number of items available
+                    description: Total number of items available across all pages, not the number of items in this response.
                 items:
                     type: array
                     description: The list of items returned in this response.
                     items:
-                        $ref: "#/components/schemas/ConfigGroup"
+                        $ref: "#/components/schemas/StreamAIGroup"
                 offset:
                     type: integer
                     description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
                 limit:
                     type: integer
-                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
+                    description: "Page size applied to this response: the configured default page size when omitted or zero, clamped to the configured maximum. Always present."
         PaginatedSystemInfo:
             type: object
             required:
@@ -97079,6 +97208,9 @@ components:
                 leader_mcp:
                     type: boolean
                     description: If <code>true</code>, allow external MCP clients to call the embedded Leader MCP HTTP endpoint (<code>POST /api/v1/mcp</code>) when the <code>mcp-internal</code> feature flag is on. If <code>false</code>, the endpoint rejects all requests regardless of authentication.
+                training_data_collection:
+                    type: boolean
+                    description: If <code>true</code>, allow Cribl to use Organization data to train and evaluate Cribl AI models. Paid Organizations opt in; the value is forced <code>true</code> on Free and <code>false</code> on FedRAMP deployments, where it cannot be changed.
             description: Map of AI feature keys to their enabled (<code>true</code>) or disabled (<code>false</code>) state for the deployment. Each property is an independently toggleable AI capability.
             title: AiSettings
         MCPServersListResponse:
@@ -97251,7 +97383,7 @@ components:
                     description: Per-feature or validation error messages.
                 results:
                     $ref: "#/components/schemas/BooleanRecord"
-                    description: Feature successfully updated before the failure.
+                    description: Always empty — a rejected batch applies no updates.
             required:
                 - error
                 - errors
@@ -103452,386 +103584,6 @@ components:
                 - events
             description: Request payload for sending sample events through the Local Search ingest pipeline via the default Local Search source.
             title: LocalSearchSampleIngestRequest
-        SupportedLocalSearchSourceType:
-            type: string
-            enum:
-                - cribl_http
-                - elastic
-                - open_telemetry
-                - splunk
-                - splunk_hec
-                - syslog
-                - wef
-                - prometheus_rw
-                - datadog_agent
-                - http_raw
-                - tcpjson
-                - tcp
-                - wiz_webhook
-            title: SupportedLocalSearchSourceType
-            x-speakeasy-unknown-values: allow
-        LocalSearchSourceDocsBlockBlockquote:
-            type: object
-            properties:
-                blocks:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsBlock"
-                    description: Nested content blocks rendered inside the blockquote.
-                type:
-                    type: string
-                    const: blockquote
-                    description: Resource type identifier.
-            required:
-                - blocks
-                - type
-            description: Blockquote block extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsBlockBlockquote
-        LocalSearchSourceDocsBlockCode:
-            type: object
-            properties:
-                language:
-                    type: string
-                    description: Optional language hint for syntax highlighting.
-                text:
-                    type: string
-                    description: Code block text content.
-                type:
-                    type: string
-                    const: code
-                    description: Resource type identifier.
-            required:
-                - text
-                - type
-            description: Fenced code block extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsBlockCode
-        LocalSearchSourceDocsBlockHeading:
-            type: object
-            properties:
-                id:
-                    type: string
-                    description: Unique identifier for the rendered heading.
-                level:
-                    type: integer
-                    description: HTML heading level from the source documentation page.
-                text:
-                    type: string
-                    description: Display text for the heading.
-                type:
-                    type: string
-                    const: heading
-                    description: Resource type identifier.
-            required:
-                - id
-                - level
-                - text
-                - type
-            description: Heading block extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsBlockHeading
-        LocalSearchSourceDocsBlockHorizontalRule:
-            type: object
-            properties:
-                type:
-                    type: string
-                    const: horizontalRule
-                    description: Resource type identifier.
-            required:
-                - type
-            description: Horizontal rule block extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsBlockHorizontalRule
-        LocalSearchSourceDocsInlineText:
-            type: object
-            properties:
-                text:
-                    type: string
-                    description: Plain text content.
-                type:
-                    type: string
-                    const: text
-                    description: Resource type identifier.
-            required:
-                - text
-                - type
-            description: Plain text inline node extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsInlineText
-        LocalSearchSourceDocsInlineBreak:
-            type: object
-            properties:
-                type:
-                    type: string
-                    const: break
-                    description: Resource type identifier.
-            required:
-                - type
-            description: Line-break inline node extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsInlineBreak
-        LocalSearchSourceDocsInlineCode:
-            type: object
-            properties:
-                text:
-                    type: string
-                    description: Code text content.
-                type:
-                    type: string
-                    const: code
-                    description: Resource type identifier.
-            required:
-                - text
-                - type
-            description: Inline code node extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsInlineCode
-        LocalSearchSourceDocsInlineEmphasis:
-            type: object
-            properties:
-                children:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsInline"
-                    description: Nested inline content rendered with emphasis.
-                type:
-                    type: string
-                    const: emphasis
-                    description: Resource type identifier.
-            required:
-                - children
-                - type
-            description: Emphasized inline node extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsInlineEmphasis
-        LocalSearchSourceDocsInlineLink:
-            type: object
-            properties:
-                children:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsInline"
-                    description: Nested inline content rendered as the link label.
-                href:
-                    type: string
-                    description: Destination URL or same-page fragment for the link.
-                type:
-                    type: string
-                    const: link
-                    description: Resource type identifier.
-            required:
-                - children
-                - href
-                - type
-            description: Hyperlink inline node extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsInlineLink
-        LocalSearchSourceDocsInlineStrong:
-            type: object
-            properties:
-                children:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsInline"
-                    description: Nested inline content rendered with strong emphasis.
-                type:
-                    type: string
-                    const: strong
-                    description: Resource type identifier.
-            required:
-                - children
-                - type
-            description: Strong (bold) inline node extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsInlineStrong
-        LocalSearchSourceDocsInline:
-            oneOf:
-                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineText"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineBreak"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineCode"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineEmphasis"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineLink"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsInlineStrong"
-            description: Inline content extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsInline
-        LocalSearchSourceDocsListItem:
-            type: array
-            items:
-                $ref: "#/components/schemas/LocalSearchSourceDocsInline"
-            description: One list item rendered as a sequence of inline nodes.
-            title: LocalSearchSourceDocsListItem
-        LocalSearchSourceDocsBlockList:
-            type: object
-            properties:
-                items:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsListItem"
-                    description: List items, each rendered as a sequence of inline nodes.
-                ordered:
-                    type: boolean
-                    description: If <code>true</code>, render an ordered list. Otherwise, <code>false</code>.
-                type:
-                    type: string
-                    const: list
-                    description: Resource type identifier.
-            required:
-                - items
-                - ordered
-                - type
-            description: Ordered or unordered list block extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsBlockList
-        LocalSearchSourceDocsBlockParagraph:
-            type: object
-            properties:
-                children:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsInline"
-                    description: Inline content rendered inside the paragraph.
-                type:
-                    type: string
-                    const: paragraph
-                    description: Resource type identifier.
-            required:
-                - children
-                - type
-            description: Paragraph block extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsBlockParagraph
-        LocalSearchSourceDocsTableCell:
-            type: object
-            properties:
-                children:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsInline"
-                    description: Inline content rendered inside the table cell.
-                header:
-                    type: boolean
-                    description: If <code>true</code>, render the cell as a table header. Otherwise, <code>false</code>.
-            required:
-                - children
-                - header
-            description: Table cell extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsTableCell
-        LocalSearchSourceDocsTableRow:
-            type: array
-            items:
-                $ref: "#/components/schemas/LocalSearchSourceDocsTableCell"
-            description: One table row rendered as a sequence of cells.
-            title: LocalSearchSourceDocsTableRow
-        LocalSearchSourceDocsBlockTable:
-            type: object
-            properties:
-                rows:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsTableRow"
-                    description: Table rows, each rendered as a sequence of cells.
-                type:
-                    type: string
-                    const: table
-                    description: Resource type identifier.
-            required:
-                - rows
-                - type
-            description: Table block extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsBlockTable
-        LocalSearchSourceDocsTab:
-            type: object
-            properties:
-                blocks:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsBlock"
-                    description: Content blocks rendered inside the tab panel.
-                label:
-                    type: string
-                    description: Display label shown on the tab.
-            required:
-                - blocks
-                - label
-            description: A single tab within a tabbed content block extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsTab
-        LocalSearchSourceDocsBlockTabs:
-            type: object
-            properties:
-                tabs:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsTab"
-                    description: Tabs rendered in the tabbed content block.
-                type:
-                    type: string
-                    const: tabs
-                    description: Resource type identifier.
-            required:
-                - tabs
-                - type
-            description: Tabbed content block extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsBlockTabs
-        LocalSearchSourceDocsBlock:
-            oneOf:
-                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockBlockquote"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockCode"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockHeading"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockHorizontalRule"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockList"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockParagraph"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockTable"
-                - $ref: "#/components/schemas/LocalSearchSourceDocsBlockTabs"
-            description: Block content extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsBlock
-        LocalSearchSourceDocsHeading:
-            type: object
-            properties:
-                id:
-                    type: string
-                    description: Unique identifier for the rendered heading.
-                level:
-                    type: integer
-                    description: HTML heading level from the source documentation page.
-                text:
-                    type: string
-                    description: Display text for the heading.
-            required:
-                - id
-                - level
-                - text
-            description: Heading extracted from a lakehouse engine source documentation page.
-            title: LocalSearchSourceDocsHeading
-        LocalSearchSourceDocs:
-            type: object
-            properties:
-                blocks:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsBlock"
-                    description: Structured content blocks rendered in the Documentation tab.
-                canonicalUrl:
-                    type: string
-                    description: Public Cribl Docs URL used as the canonical source for the documentation content.
-                headings:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LocalSearchSourceDocsHeading"
-                    description: Headings used to build the Documentation tab table of contents.
-                sourceType:
-                    type: string
-                    enum:
-                        - cribl_http
-                        - datadog_agent
-                        - elastic
-                        - http_raw
-                        - open_telemetry
-                        - prometheus_rw
-                        - splunk
-                        - splunk_hec
-                        - syslog
-                        - tcp
-                        - tcpjson
-                        - wef
-                        - wiz_webhook
-                    description: Lakehouse engine source type that the documentation content describes.
-                    x-speakeasy-unknown-values: allow
-            required:
-                - blocks
-                - canonicalUrl
-                - headings
-                - sourceType
-            description: Structured documentation content for a lakehouse engine source type.
-            title: LocalSearchSourceDocs
         PaginatedLocalSearchSource:
             type: object
             required:
@@ -211504,6 +211256,10 @@ components:
                     anyOf:
                         - type: string
                         - type: "null"
+                appOwner:
+                    anyOf:
+                        - $ref: "#/components/schemas/SearchAppOwnerPartialRequest"
+                        - type: "null"
                 chartConfig:
                     description: Chart configuration for scheduled or Dashboard-backed runs.
                     anyOf:
@@ -211600,11 +211356,21 @@ components:
                         - type: string
                         - type: "null"
                 user:
-                    description: Identifier for the user who created the saved search. Scheduled runs execute as the specified user.
+                    description: Creator identifier. Member-owned scheduled runs execute as this user; app-owned runs use .
                     anyOf:
                         - type: string
                         - type: "null"
             title: SavedQueryPartialRequest
+        SearchAppOwnerPartialRequest:
+            type: object
+            properties:
+                appId:
+                    type: string
+                    description: Identifier of the app that owns the Search resource.
+                installationId:
+                    type: string
+                    description: Identifier of the app installation that established ownership.
+            title: SearchAppOwnerPartialRequest
         ChartConfigPartialRequest:
             type: object
             properties:
@@ -222857,6 +222623,21 @@ components:
                 - Rate156MBPerSec
                 - Rate180MBPerSec
             x-speakeasy-unknown-values: allow
+        GitTypeConfigGroup:
+            type: object
+            properties:
+                commit:
+                    type: string
+                    description: Commit hash of the currently committed configuration version.
+                localChanges:
+                    type: integer
+                    description: Number of local configuration changes not yet committed.
+                log:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/Commit"
+                    description: List of recent configuration commits.
+            description: Git status of the Worker Group, Outpost Group, or Edge Fleet configuration. Automatically populated and returned in responses.
         TypeOptionsConfigGroup:
             type: string
             enum:
@@ -225277,15 +225058,13 @@ components:
             summary: Get a Database Connection
             description: Example response for getting a Database Connection with a censored connection string.
             value:
-                count: 1
-                items:
-                    - id: mysql-prod-db
-                      description: Production MySQL database for customer data
-                      databaseType: mysql
-                      authType: connectionString
-                      connectionString: "*****"
-                      connectionTimeout: 10000
-                      tags: production,mysql,customer-data
+                id: mysql-prod-db
+                description: Production MySQL database for customer data
+                databaseType: mysql
+                authType: connectionString
+                connectionString: "*****"
+                connectionTimeout: 10000
+                tags: production,mysql,customer-data
         DatabaseConnectionBadRequestResponseExamplesInvalidDatabaseConnectionRequest:
             summary: Return a validation error for a Database Connection request
             description: Example response for returning a validation error for a Database Connection create or update request.
@@ -231911,14 +231690,32 @@ components:
                     - source
                     - message
                     - host
-        ProtobufEncodingResponseExamplesProtobufEncoding:
+        ProtobufEncodingResponseExamplesV2ProtobufEncoding:
             summary: Get a Protobuf encoding
             description: Example response for getting a Protobuf encoding for a library.
             value:
                 id: log-entry
                 name: LogEntry
                 eventModel: google.logging.v2.LogEntry
-        ProtobufLibraryResponseExamplesProtobufLibrary:
+        ProtobufEncodingListResponseExamplesV2ProtobufEncodingList:
+            summary: List Protobuf encodings
+            description: Example response for the first page of Protobuf encodings for a library when <code>limit</code> and <code>offset</code> are omitted.
+            value:
+                count: 2
+                items:
+                    - id: log-entry
+                      name: LogEntry
+                      eventModel: google.logging.v2.LogEntry
+                    - id: monitored-resource
+                      name: MonitoredResource
+                      eventModel: google.api.MonitoredResource
+                      wrapping:
+                        wrapperModel: google.logging.v2.LogEntry
+                        wrapperField: resource
+                        wrapperFieldType: single
+                offset: 0
+                limit: 100
+        ProtobufLibraryResponseExamplesV2ProtobufLibrary:
             summary: Get a Protobuf library
             description: Example response for getting a Protobuf library with its available encodings.
             value:
@@ -231955,24 +231752,6 @@ components:
                           name: LogsData
                           eventModel: opentelemetry.proto.logs.v1.LogsData
                       tags: otel,opentelemetry
-                offset: 0
-                limit: 20
-        ProtobufEncodingListResponseExamplesProtobufEncodingList:
-            summary: List Protobuf encodings
-            description: Example response for listing Protobuf encodings for a library in the <code>items</code> array.
-            value:
-                count: 2
-                items:
-                    - id: log-entry
-                      name: LogEntry
-                      eventModel: google.logging.v2.LogEntry
-                    - id: monitored-resource
-                      name: MonitoredResource
-                      eventModel: google.api.MonitoredResource
-                      wrapping:
-                        wrapperModel: google.logging.v2.LogEntry
-                        wrapperField: resource
-                        wrapperFieldType: single
                 offset: 0
                 limit: 20
         RegexGetResponseExamplesIpAddress:
@@ -241563,6 +241342,77 @@ components:
                 manualMigration: []
                 diagnostics: []
                 complete: true
+        CreateStreamAIGroupResponseExamplesProvisioning:
+            summary: Create the StreamAI Worker Group
+            description: Example response right after creation, before any Worker connects.
+            value:
+                id: stream-ai
+                name: stream-ai
+                description: StreamAI
+                type: stream_ai
+                onPrem: false
+                provisioned: true
+                configVersion: "1789012345678"
+                estimatedIngestRate: 512
+                cloud:
+                    provider: aws
+                    region: us-west-2
+                status: provisioning
+                workerCount: 0
+                healthyWorkerCount: 0
+        CreateStreamAIGroupExamplesDefaultId:
+            summary: Create the StreamAI Worker Group
+            description: Every setting is fixed, so an empty body creates the group.
+            value: {}
+        CreateStreamAIGroupExamplesExplicitId:
+            summary: Create the StreamAI Worker Group by id
+            description: Names the only StreamAI group id.
+            value:
+                id: stream-ai
+        GetStreamAIGroupResponseExamplesReady:
+            summary: Get the StreamAI Worker Group
+            description: Example response when a StreamAI Worker is healthy.
+            value:
+                id: stream-ai
+                name: stream-ai
+                description: StreamAI
+                type: stream_ai
+                onPrem: false
+                provisioned: true
+                configVersion: "1789012345678"
+                estimatedIngestRate: 512
+                cloud:
+                    provider: aws
+                    region: us-west-2
+                status: ready
+                workerCount: 2
+                healthyWorkerCount: 2
+        ListStreamAIGroupsResponseExamplesProvisioned:
+            summary: List the provisioned StreamAI Worker Group
+            description: Example response when the StreamAI Worker Group exists and a Worker is healthy.
+            value:
+                count: 1
+                items:
+                    - id: stream-ai
+                      name: stream-ai
+                      description: StreamAI
+                      type: stream_ai
+                      onPrem: false
+                      provisioned: true
+                      configVersion: "1789012345678"
+                      estimatedIngestRate: 512
+                      cloud:
+                        provider: aws
+                        region: us-west-2
+                      status: ready
+                      workerCount: 2
+                      healthyWorkerCount: 2
+        ListStreamAIGroupsResponseExamplesNotProvisioned:
+            summary: List StreamAI Worker Groups before provisioning
+            description: Example response when the StreamAI Worker Group does not exist.
+            value:
+                count: 0
+                items: []
         SystemInfoResponseExamplesBasicSystemInfo:
             summary: Get system information
             description: Example response for getting basic system information for a Cribl Leader.
@@ -242332,6 +242182,7 @@ components:
                 agentic_search: true
                 web_search: true
                 leader_mcp: false
+                training_data_collection: false
         GetMCPServerResponseExamplesSingleServer:
             summary: Get one MCP external context server
             description: Example response for getting a single configured MCP server.
@@ -242420,13 +242271,12 @@ components:
                 agentic_search: false
                 web_search: true
                 leader_mcp: false
-        UpdateAiFeaturesBulkBadRequestResponseExamplesPartialFailure:
-            summary: Partial failure updating AI features
-            description: Example response for a bulk feature update that fails due to unknown features or invalid values.
+        UpdateAiFeaturesBulkBadRequestResponseExamplesRejectedBatch:
+            summary: Reject a bulk AI feature update
+            description: Example response for a bulk feature update rejected for unknown features or invalid values. The batch is validated before it is applied, so no changes were made.
             value:
-                error: Some updates failed
-                results:
-                    copilot_chatbot: true
+                error: No updates applied
+                results: {}
                 errors:
                     - Feature "unknown_feature" not found
                     - Value for "schematizer" must be a boolean
@@ -246260,42 +246110,6 @@ components:
                       source: applog
                     - _raw: 2026-05-19T12:00:01Z WARN  High memory usage detected
                       source: applog
-        LocalSearchSourceDocsResponseExamplesCriblHttpDocs:
-            summary: Return Cribl HTTP source documentation
-            description: Example response for getting structured lakehouse engine source documentation for a Cribl HTTP source.
-            value:
-                sourceType: cribl_http
-                canonicalUrl: https://docs.cribl.io/search/source-cribl-http/
-                blocks:
-                    - type: heading
-                      id: use-cases
-                      level: 1
-                      text: Use Cases
-                    - type: paragraph
-                      children:
-                        - type: text
-                          text: "Embedded source docs. "
-                        - type: link
-                          href: https://docs.cribl.io/search/source-cribl-http/#configuration
-                          children:
-                            - type: text
-                              text: Read more
-                headings:
-                    - id: use-cases
-                      level: 1
-                      text: Use Cases
-        LocalSearchSourceDocsUnsupportedTypeExamplesUnsupportedSourceType:
-            summary: Reject an unsupported source type
-            description: Example response for rejecting a lakehouse engine source documentation request when the source type is not supported.
-            value:
-                status: error
-                message: Source type "unsupported_source" is not supported
-        LocalSearchSourceDocsFetchFailedExamplesDocsUnavailable:
-            summary: Reject when public docs are unavailable
-            description: Example response for rejecting a lakehouse engine source documentation request when the public Cribl Docs page could not be fetched or parsed.
-            value:
-                status: error
-                message: Failed to fetch source docs
         LocalSearchSourcePaginatedResponseExamplesSourcePage:
             summary: List one page of lakehouse engine sources
             description: Example response for listing one page of lakehouse engine sources.
@@ -246450,11 +246264,11 @@ components:
                 rules:
                     - id: linux-ssh-auth-failure
                       name: Linux SSH Authentication Failure
-                      condition: raw_data contains "Failed password"
+                      condition: _raw contains "Failed password"
                       condition_language: kql
                       extract:
-                        user: raw_data =~ /for (?:invalid user )?(\w+)/
-                        src: raw_data =~ /from ([\d.]+)/
+                        user: _raw =~ /for (?:invalid user )?(\w+)/
+                        src: _raw =~ /from ([\d.]+)/
                       emit:
                         severityId: 3
                         isAlert: true
@@ -251561,11 +251375,11 @@ paths:
             description: Create a new Database Connection.
             responses:
                 "201":
-                    description: The created Database Connection in a response envelope with <code>count</code> and <code>items</code>.
+                    description: The created Database Connection.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/DatabaseConnectionResponseEnvelope"
+                                $ref: "#/components/schemas/DatabaseConnectionConfig"
                             examples:
                                 DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
                                     $ref: "#/components/examples/DatabaseConnectionResponseExamplesMySQLDatabaseConnection"
@@ -251812,11 +251626,11 @@ paths:
             description: Get the specified Database Connection.
             responses:
                 "200":
-                    description: The requested Database Connection in a response envelope with <code>count</code> and <code>items</code>.
+                    description: The requested Database Connection.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/DatabaseConnectionResponseEnvelope"
+                                $ref: "#/components/schemas/DatabaseConnectionConfig"
                             examples:
                                 DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
                                     $ref: "#/components/examples/DatabaseConnectionResponseExamplesMySQLDatabaseConnection"
@@ -251877,11 +251691,11 @@ paths:
             description: "Update the specified Database Connection.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
-                    description: The updated Database Connection in a response envelope with <code>count</code> and <code>items</code>.
+                    description: The updated Database Connection.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/DatabaseConnectionResponseEnvelope"
+                                $ref: "#/components/schemas/DatabaseConnectionConfig"
                             examples:
                                 DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
                                     $ref: "#/components/examples/DatabaseConnectionResponseExamplesMySQLDatabaseConnection"
@@ -252069,11 +251883,11 @@ paths:
             description: Create a new Database Connection within the specified Pack.
             responses:
                 "201":
-                    description: The created Database Connection in a response envelope with <code>count</code> and <code>items</code>.
+                    description: The created Database Connection.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/DatabaseConnectionResponseEnvelope"
+                                $ref: "#/components/schemas/DatabaseConnectionConfig"
                             examples:
                                 DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
                                     $ref: "#/components/examples/DatabaseConnectionResponseExamplesMySQLDatabaseConnection"
@@ -252339,11 +252153,11 @@ paths:
             description: Get the specified Database Connection within the specified Pack.
             responses:
                 "200":
-                    description: The requested Database Connection in a response envelope with <code>count</code> and <code>items</code>.
+                    description: The requested Database Connection.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/DatabaseConnectionResponseEnvelope"
+                                $ref: "#/components/schemas/DatabaseConnectionConfig"
                             examples:
                                 DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
                                     $ref: "#/components/examples/DatabaseConnectionResponseExamplesMySQLDatabaseConnection"
@@ -252410,11 +252224,11 @@ paths:
             description: "Update the specified Database Connection.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
-                    description: The updated Database Connection in a response envelope with <code>count</code> and <code>items</code>.
+                    description: The updated Database Connection.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/DatabaseConnectionResponseEnvelope"
+                                $ref: "#/components/schemas/DatabaseConnectionConfig"
                             examples:
                                 DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
                                     $ref: "#/components/examples/DatabaseConnectionResponseExamplesMySQLDatabaseConnection"
@@ -270592,8 +270406,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/ProtobufEncodingConfig"
                             examples:
-                                ProtobufEncodingResponseExamplesProtobufEncoding:
-                                    $ref: "#/components/examples/ProtobufEncodingResponseExamplesProtobufEncoding"
+                                ProtobufEncodingResponseExamplesV2ProtobufEncoding:
+                                    $ref: "#/components/examples/ProtobufEncodingResponseExamplesV2ProtobufEncoding"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -270613,6 +270427,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -270632,6 +270452,98 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Protobuf encoding to get.
+    /lib/protobuf-libraries/{id}/encodings:
+        get:
+            operationId: getProtobufLibraryConfigEncodingsById
+            tags:
+                - protobuflibraries
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - node
+                - single
+            summary: List encodings for a Protobuf library
+            description: Get a list of all encodings for the specified Protobuf library.
+            responses:
+                "200":
+                    description: List of ProtobufEncodingConfig objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedProtobufEncodingConfig"
+                            examples:
+                                ProtobufEncodingListResponseExamplesV2ProtobufEncodingList:
+                                    $ref: "#/components/examples/ProtobufEncodingListResponseExamplesV2ProtobufEncodingList"
+                "400":
+                    description: Failed validation or malformed input — in the v2 API, indicates a malformed or negative <code>limit</code> or <code>offset</code> query parameter (such as <code>limit=-1</code>).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "404":
+                    description: The requested resource does not exist — Protobuf library not found.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Protobuf library whose encodings to list.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Maximum number of encodings to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches. If omitted or set to <code>0</code>, defaults to <code>100</code>. Values greater than <code>1000</code> are treated as <code>1000</code>. Negative values such as <code>-1</code> return a <code>400</code> error.
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    minimum: 0
+                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches. If omitted, defaults to <code>0</code>. A negative value returns a 400 error.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /lib/protobuf-libraries/{id}:
         get:
             operationId: getProtobufLibraryConfigById
@@ -270653,8 +270565,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/ProtobufLibraryConfig"
                             examples:
-                                ProtobufLibraryResponseExamplesProtobufLibrary:
-                                    $ref: "#/components/examples/ProtobufLibraryResponseExamplesProtobufLibrary"
+                                ProtobufLibraryResponseExamplesV2ProtobufLibrary:
+                                    $ref: "#/components/examples/ProtobufLibraryResponseExamplesV2ProtobufLibrary"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -270674,6 +270586,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -270748,86 +270666,6 @@ paths:
                   schema:
                     type: string
                   description: Set to <code>true</code> to return only Protobuf libraries that have at least one encoding. Otherwise, <code>false</code> (default).
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Pagination offset
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    minimum: 0
-                  description: Maximum number of items to return
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
-    /lib/protobuf-libraries/{id}/encodings:
-        get:
-            operationId: getProtobufLibraryConfigEncodingsById
-            tags:
-                - protobuflibraries
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-                - node
-                - single
-            summary: List encodings for a Protobuf library
-            description: Get a list of all encodings for the specified Protobuf library.
-            responses:
-                "200":
-                    description: List of ProtobufEncodingConfig objects.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/PaginatedProtobufEncodingConfig"
-                            examples:
-                                ProtobufEncodingListResponseExamplesProtobufEncodingList:
-                                    $ref: "#/components/examples/ProtobufEncodingListResponseExamplesProtobufEncodingList"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: The <code>id</code> of the Protobuf library whose encodings to list.
                 - name: offset
                   in: query
                   required: false
@@ -305466,6 +305304,8 @@ paths:
                             examples:
                                 AppListExamplesInstalledApps:
                                     $ref: "#/components/examples/AppListExamplesInstalledApps"
+                "400":
+                    description: Invalid <code>limit</code> or <code>offset</code>.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -306124,6 +305964,8 @@ paths:
                             examples:
                                 AppListProxiesExamplesProxyDeclarations:
                                     $ref: "#/components/examples/AppListProxiesExamplesProxyDeclarations"
+                "400":
+                    description: Invalid <code>limit</code> or <code>offset</code>.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -315346,9 +315188,145 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: The ConfigHelper or promotion dependencies are unavailable.
-    /products/stream-ai:
+    /products/stream-ai/groups:
+        post:
+            operationId: createProductsStreamAiGroups
+            tags:
+                - ai
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: Create the StreamAI worker group
+            description: Creates the StreamAI worker group, or returns it unchanged if it already exists, and emits a StreamAI sync event. Every group setting is fixed, so the body can only name the <code>stream-ai</code> id.
+            responses:
+                "201":
+                    description: The created StreamAIGroup object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/StreamAIGroup"
+                            examples:
+                                CreateStreamAIGroupResponseExamplesProvisioning:
+                                    $ref: "#/components/examples/CreateStreamAIGroupResponseExamplesProvisioning"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
+                "400":
+                    description: The body names an <code>id</code> other than <code>stream-ai</code>.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: The caller is not an Organization Admin, Workspace Admin, or Workspace Owner.
+                "404":
+                    description: AI Gateway is not enabled for this workspace.
+                "409":
+                    description: A worker group that is not the StreamAI group already uses the <code>stream-ai</code> id.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: StreamAIGroupCreateRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/StreamAIGroupCreateRequest"
+                        examples:
+                            CreateStreamAIGroupExamplesDefaultId:
+                                $ref: "#/components/examples/CreateStreamAIGroupExamplesDefaultId"
+                            CreateStreamAIGroupExamplesExplicitId:
+                                $ref: "#/components/examples/CreateStreamAIGroupExamplesExplicitId"
+        get:
+            operationId: getProductsStreamAiGroups
+            tags:
+                - ai
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: List the StreamAI worker groups
+            description: Lists the StreamAI product's worker groups. The product has at most one group, <code>stream-ai</code>. An empty <code>items</code> array means it is not provisioned.
+            responses:
+                "200":
+                    description: List of StreamAIGroup objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListStreamAiGroup"
+                            examples:
+                                ListStreamAIGroupsResponseExamplesProvisioned:
+                                    $ref: "#/components/examples/ListStreamAIGroupsResponseExamplesProvisioned"
+                                ListStreamAIGroupsResponseExamplesNotProvisioned:
+                                    $ref: "#/components/examples/ListStreamAIGroupsResponseExamplesNotProvisioned"
+                "400":
+                    description: Invalid <code>limit</code> or <code>offset</code>.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: The caller is not an Organization Admin, Workspace Admin, or Workspace Owner.
+                "409":
+                    description: A worker group that is not the StreamAI group already uses the <code>stream-ai</code> id.
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of groups to return in the response for this request. Use with <code>offset</code> to paginate the response. In v2, an omitted or zero value uses the configured default page size, and a value above the configured maximum is clamped to it; in v1, all groups are returned when both <code>limit</code> and <code>offset</code> are omitted.
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response. In v1, pagination applies only when <code>offset</code> is provided; in v2, an omitted value defaults to <code>0</code>.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
+    /products/stream-ai/groups/{id}:
         delete:
-            operationId: deleteProductsStreamAi
+            operationId: deleteProductsStreamAiGroupsById
             tags:
                 - ai
             x-cribl-internal: true
@@ -315356,7 +315334,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Delete the StreamAI worker group
-            description: Removes the StreamAI worker group and emits a StreamAI sync event. Available when the feature flag is off.
+            description: Removes the StreamAI worker group and emits a StreamAI sync event. Available when the feature flag is off. Deleting a group that does not exist succeeds.
             responses:
                 "204":
                     description: No Content
@@ -315374,76 +315352,42 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The caller is not an Organization Admin, Workspace Admin, or Workspace Owner.
+                "409":
+                    description: A worker group that is not the StreamAI group already uses the <code>stream-ai</code> id.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
-        post:
-            operationId: createProductsStreamAi
-            tags:
-                - ai
-            x-cribl-internal: true
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-            summary: Create the StreamAI worker group
-            description: Creates the fixed StreamAI worker group, or returns it if it already matches. Emits a StreamAI sync event.
-            responses:
-                "200":
-                    description: The created ConfigGroup object in a single-item list.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/CountedListConfigGroup"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the StreamAI worker group. The only StreamAI group is <code>stream-ai</code>.
         get:
-            operationId: getProductsStreamAi
+            operationId: getProductsStreamAiGroupsById
             tags:
                 - ai
             x-cribl-internal: true
             x-cribl-availability: both
             x-cribl-api-context:
                 - leader
-            summary: Get the StreamAI worker group
-            description: Returns the dedicated StreamAI worker group. An empty <code>items</code> array means it does not exist.
+            summary: Get a StreamAI worker group
+            description: Gets the StreamAI worker group with its provisioning status.
             responses:
                 "200":
-                    description: List of ConfigGroup objects.
+                    description: The requested StreamAIGroup object.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/CountedListConfigGroup"
+                                $ref: "#/components/schemas/StreamAIGroup"
+                            examples:
+                                GetStreamAIGroupResponseExamplesReady:
+                                    $ref: "#/components/examples/GetStreamAIGroupResponseExamplesReady"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -315458,17 +315402,24 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: The caller is not an Organization Admin, Workspace Admin, or Workspace Owner.
+                "404":
+                    description: The StreamAI group is not provisioned, or <code>id</code> is not <code>stream-ai</code>.
+                "409":
+                    description: A worker group that is not the StreamAI group already uses the <code>stream-ai</code> id.
                 "500":
                     description: Unexpected server error.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the StreamAI worker group. The only StreamAI group is <code>stream-ai</code>.
     /system/info:
         get:
             operationId: getSystemInfo
@@ -318679,7 +318630,7 @@ paths:
                             schema:
                                 type: string
                 "500":
-                    description: Unexpected server error.
+                    description: Unexpected server error — failed to read AI settings
                     content:
                         application/json:
                             schema:
@@ -318860,7 +318811,7 @@ paths:
                 - leader
                 - single
             summary: Update multiple AI feature flags
-            description: Update the enabled and disabled settings for multiple AI settings in one request.<br/><br/>Use <code>POST /ai/consent</code> to explicitly consent to use AI features for the deployment before using this endpoint to enable a specific AI feature.
+            description: Update the enabled and disabled settings for multiple AI settings in one request. The batch is validated first and applied as a single write — when any entry is rejected, no changes are applied. On deployments where <code>training_data_collection</code> is fixed, echoing its current value back is ignored as a no-op; attempting to change it rejects the batch.<br/><br/>Use <code>POST /ai/consent</code> to explicitly consent to use AI features for the deployment before using this endpoint to enable a specific AI feature.
             responses:
                 "200":
                     description: Map of each updated feature key to its new state
@@ -318872,14 +318823,14 @@ paths:
                                 UpdateAiFeaturesBulkResponseExamplesBulkUpdated:
                                     $ref: "#/components/examples/UpdateAiFeaturesBulkResponseExamplesBulkUpdated"
                 "400":
-                    description: Failed validation or malformed input — Invalid body, unknown features, non-boolean values, or partial update failures
+                    description: Failed validation or malformed input — Invalid body, unknown features, non-boolean values, or rejected entries; no changes are applied
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/AiFeaturesBulkPartialFailureResponse"
                             examples:
-                                UpdateAiFeaturesBulkBadRequestResponseExamplesPartialFailure:
-                                    $ref: "#/components/examples/UpdateAiFeaturesBulkBadRequestResponseExamplesPartialFailure"
+                                UpdateAiFeaturesBulkBadRequestResponseExamplesRejectedBatch:
+                                    $ref: "#/components/examples/UpdateAiFeaturesBulkBadRequestResponseExamplesRejectedBatch"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -318900,7 +318851,7 @@ paths:
                             schema:
                                 type: string
                 "500":
-                    description: Unexpected server error — failed to persist one or more features (included in error payload when applicable)
+                    description: Unexpected server error — failed to read or persist AI settings; no changes are applied
                     content:
                         application/json:
                             schema:
@@ -330894,79 +330845,6 @@ paths:
                                 $ref: "#/components/examples/LocalSearchSampleIngestExamplesSingleEvent"
                             LocalSearchSampleIngestExamplesMultipleEvents:
                                 $ref: "#/components/examples/LocalSearchSampleIngestExamplesMultipleEvents"
-    /search/local_search/source-docs/{sourceType}:
-        get:
-            operationId: getSearchLocalSearchSourceDocsBySourceType
-            tags:
-                - search
-            x-speakeasy-group: searches.localSearches.sourceDocs
-            x-speakeasy-name-override: get
-            x-cribl-internal: false
-            x-cribl-availability: cloud
-            x-cribl-api-context:
-                - searchGroup
-            summary: Get lakehouse engine source documentation (Cribl.Cloud only)
-            description: Get the specified lakehouse engine source documentation (Cribl.Cloud only).
-            responses:
-                "200":
-                    description: Structured lakehouse engine source documentation content.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/LocalSearchSourceDocs"
-                            examples:
-                                LocalSearchSourceDocsResponseExamplesCriblHttpDocs:
-                                    $ref: "#/components/examples/LocalSearchSourceDocsResponseExamplesCriblHttpDocs"
-                "400":
-                    description: Failed validation or malformed input — The lakehouse engine source type is not supported.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/LocalSearchApiErrorBody"
-                            examples:
-                                LocalSearchSourceDocsUnsupportedTypeExamplesUnsupportedSourceType:
-                                    $ref: "#/components/examples/LocalSearchSourceDocsUnsupportedTypeExamplesUnsupportedSourceType"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                "502":
-                    description: The public Cribl Docs page could not be fetched or parsed.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/LocalSearchApiErrorBody"
-                            examples:
-                                LocalSearchSourceDocsFetchFailedExamplesDocsUnavailable:
-                                    $ref: "#/components/examples/LocalSearchSourceDocsFetchFailedExamplesDocsUnavailable"
-            parameters:
-                - name: sourceType
-                  in: path
-                  required: true
-                  schema:
-                    $ref: "#/components/schemas/SupportedLocalSearchSourceType"
-                  description: The <code>sourceType</code> of the lakehouse engine source documentation to get.
     /search/local_search/sources:
         get:
             operationId: getSearchLocalSearchSources
