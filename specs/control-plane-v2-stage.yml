@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.21.0-alpha.1794438686534-5a49c14f
+  version: 4.21.0-alpha.1794523700296-f93b51db
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -16700,24 +16700,6 @@ components:
         - description
         - id
       title: DatabaseConnectionConfig
-    DatabaseConnectionResponseEnvelope:
-      type: object
-      properties:
-        count:
-          type: integer
-          description: Number of Database Connections returned in the response envelope.
-          examples:
-            - 1
-          minimum: 0
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/DatabaseConnectionConfig"
-          description: Database Connections returned in the response envelope.
-      required:
-        - count
-        - items
-      title: DatabaseConnectionResponseEnvelope
     RestApiJsonError:
       type: object
       properties:
@@ -16740,6 +16722,24 @@ components:
       description: JSON body returned for many REST failures that use
         RESTEndpoint.sendError (and similar handlers).
       title: RestApiJsonError
+    DatabaseConnectionResponseEnvelope:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of Database Connections returned in the response envelope.
+          examples:
+            - 1
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DatabaseConnectionConfig"
+          description: Database Connections returned in the response envelope.
+      required:
+        - count
+        - items
+      title: DatabaseConnectionResponseEnvelope
     PaginatedFunctionResponse:
       type: object
       required:
@@ -76807,19 +76807,7 @@ components:
           $ref: "#/components/schemas/EstimatedIngestRateOptionsConfigGroup"
           description: Estimated ingest rate for a Cribl.Cloud Worker Group, in GB/sec.
         git:
-          type: object
-          properties:
-            commit:
-              type: string
-              description: Commit hash of the currently committed configuration version.
-            localChanges:
-              type: integer
-              description: Number of local configuration changes not yet committed.
-            log:
-              type: array
-              items:
-                $ref: "#/components/schemas/Commit"
-              description: List of recent configuration commits.
+          $ref: "#/components/schemas/GitTypeConfigGroup"
           description: Git status of the Worker Group, Outpost Group, or Edge Fleet
             configuration. Automatically populated and returned in responses.
         id:
@@ -203272,6 +203260,22 @@ components:
         - Rate156MBPerSec
         - Rate180MBPerSec
       x-speakeasy-unknown-values: allow
+    GitTypeConfigGroup:
+      type: object
+      properties:
+        commit:
+          type: string
+          description: Commit hash of the currently committed configuration version.
+        localChanges:
+          type: integer
+          description: Number of local configuration changes not yet committed.
+        log:
+          type: array
+          items:
+            $ref: "#/components/schemas/Commit"
+          description: List of recent configuration commits.
+      description: Git status of the Worker Group, Outpost Group, or Edge Fleet
+        configuration. Automatically populated and returned in responses.
     TypeOptionsConfigGroup:
       type: string
       enum:
@@ -205101,15 +205105,13 @@ components:
       description: Example response for getting a Database Connection with a censored
         connection string.
       value:
-        count: 1
-        items:
-          - id: mysql-prod-db
-            description: Production MySQL database for customer data
-            databaseType: mysql
-            authType: connectionString
-            connectionString: "*****"
-            connectionTimeout: 10000
-            tags: production,mysql,customer-data
+        id: mysql-prod-db
+        description: Production MySQL database for customer data
+        databaseType: mysql
+        authType: connectionString
+        connectionString: "*****"
+        connectionTimeout: 10000
+        tags: production,mysql,customer-data
     DatabaseConnectionBadRequestResponseExamplesInvalidDatabaseConnectionRequest:
       summary: Return a validation error for a Database Connection request
       description: Example response for returning a validation error for a Database
@@ -214525,12 +214527,11 @@ paths:
       description: Create a new Database Connection.
       responses:
         "201":
-          description: The created Database Connection in a response envelope with
-            <code>count</code> and <code>items</code>.
+          description: The created Database Connection.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DatabaseConnectionResponseEnvelope"
+                $ref: "#/components/schemas/DatabaseConnectionConfig"
               examples:
                 DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
                   $ref: "#/components/examples/DatabaseConnectionResponseExamplesMySQLDatabaseConnection"
@@ -214632,12 +214633,11 @@ paths:
       description: Get the specified Database Connection.
       responses:
         "200":
-          description: The requested Database Connection in a response envelope with
-            <code>count</code> and <code>items</code>.
+          description: The requested Database Connection.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DatabaseConnectionResponseEnvelope"
+                $ref: "#/components/schemas/DatabaseConnectionConfig"
               examples:
                 DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
                   $ref: "#/components/examples/DatabaseConnectionResponseExamplesMySQLDatabaseConnection"
@@ -214701,12 +214701,11 @@ paths:
       description: "Update the specified Database Connection.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
       responses:
         "200":
-          description: The updated Database Connection in a response envelope with
-            <code>count</code> and <code>items</code>.
+          description: The updated Database Connection.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DatabaseConnectionResponseEnvelope"
+                $ref: "#/components/schemas/DatabaseConnectionConfig"
               examples:
                 DatabaseConnectionResponseExamplesMySQLDatabaseConnection:
                   $ref: "#/components/examples/DatabaseConnectionResponseExamplesMySQLDatabaseConnection"
