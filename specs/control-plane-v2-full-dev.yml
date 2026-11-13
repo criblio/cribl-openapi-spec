@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.22.0-alpha.1794523847915-97659806
+    version: 4.22.0-alpha.1794611655459-5150cc46
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -68005,6 +68005,7 @@ components:
                 - layout
                 - search
                 - type
+                - variant
             title: DashboardChartVisualization
         MetricsElementConfig:
             type: object
@@ -68166,6 +68167,10 @@ components:
                     $ref: "#/components/schemas/YAxisTypeChartElementConfig"
                     description: Y-axis configuration.
             title: MetricsElementConfig
+        ElementConfigType:
+            type: object
+            additionalProperties: true
+            title: ElementConfigType
         MetricsVisualizationElementType:
             type: string
             enum:
@@ -68195,14 +68200,18 @@ components:
                 - viz-plot.bubble
                 - viz-plot.heatmap
                 - viz-plot.scatter
+                - custom.throughputMetrics
+                - custom.flowMatrix
             title: MetricsVisualizationElementType
             x-speakeasy-unknown-values: allow
         DashboardMetricsVisualization:
             type: object
             properties:
                 config:
-                    $ref: "#/components/schemas/MetricsElementConfig"
-                    description: Metrics-specific configuration (axes, series, colors, thresholds, etc.).
+                    oneOf:
+                        - $ref: "#/components/schemas/MetricsElementConfig"
+                        - $ref: "#/components/schemas/ElementConfigType"
+                    description: Metrics-specific configuration (axes, series, colors, thresholds, etc.), or the widget's own options when the panel is a <code>custom.*</code> type.
                 description:
                     type: string
                     description: Brief description of the element, shown as a tooltip or subtitle.
@@ -68244,18 +68253,17 @@ components:
                     description: Display type used to render the metric panel.
                     examples:
                         - chart.line
+                        - custom.throughputMetrics
                 variant:
                     type: string
-                    enum:
-                        - metrics
-                        - visualization
-                    description: Element variant, either 'metrics' or 'visualization'.
-                    x-speakeasy-unknown-values: allow
+                    const: metrics
+                    description: Element variant. Always <code>metrics</code> for metric panels.
             required:
                 - id
                 - layout
                 - search
                 - type
+                - variant
             title: DashboardMetricsVisualization
         ColumnInfo:
             type: object
@@ -68432,78 +68440,13 @@ components:
                 - layout
                 - search
                 - type
+                - variant
             title: DashboardEventsVisualization
-        ElementConfigType:
-            type: object
-            additionalProperties: true
-            title: ElementConfigType
-        CustomVisualizationElementType:
-            type: string
-            enum:
-                - custom.throughputMetrics
-                - custom.flowMatrix
-            title: CustomVisualizationElementType
-            x-speakeasy-unknown-values: allow
-        DashboardCustomVisualization:
-            type: object
-            properties:
-                config:
-                    $ref: "#/components/schemas/ElementConfigType"
-                    description: Visualization or Input configuration object.
-                description:
-                    type: string
-                    description: Brief description of the element, shown as a tooltip or subtitle.
-                empty:
-                    type: boolean
-                    description: If <code>true</code>, the element has no associated query or data.
-                group:
-                    type: string
-                    description: Key from the Dashboard <code>groups</code> object that associates the element with a group.
-                hidePanel:
-                    type: boolean
-                    description: If <code>true</code>, hide the element's panel.
-                horizontalChart:
-                    type: boolean
-                    description: If <code>true</code>, render the chart with a horizontal orientation.
-                id:
-                    type: string
-                    description: Unique identifier for the element.
-                index:
-                    type: integer
-                    description: Zero-based index of the element in the Dashboard <code>elements</code> array.
-                layout:
-                    $ref: "#/components/schemas/DashboardLayout"
-                    description: Grid layout position and size for the element.
-                search:
-                    $ref: "#/components/schemas/SearchQuery"
-                    description: Search query configuration that drives this visualization.
-                title:
-                    type: string
-                    description: Text displayed in the header of the element's panel.
-                titleAction:
-                    $ref: "#/components/schemas/TitleAction"
-                    description: Clickable action link displayed alongside the element title.
-                type:
-                    $ref: "#/components/schemas/CustomVisualizationElementType"
-                    description: Custom visualization type.
-                    examples:
-                        - custom.throughputMetrics
-                variant:
-                    type: string
-                    const: visualization
-                    description: Element variant, always 'visualization' for custom visualizations.
-            required:
-                - id
-                - layout
-                - search
-                - type
-            title: DashboardCustomVisualization
         DashboardVisualization:
             oneOf:
                 - $ref: "#/components/schemas/DashboardChartVisualization"
                 - $ref: "#/components/schemas/DashboardMetricsVisualization"
                 - $ref: "#/components/schemas/DashboardEventsVisualization"
-                - $ref: "#/components/schemas/DashboardCustomVisualization"
             title: DashboardVisualization
         TimeRange:
             type: object
@@ -68629,6 +68572,7 @@ components:
                 - inputId
                 - layout
                 - type
+                - variant
             title: DashboardInput
         MarkdownElementConfig:
             type: object
@@ -232367,6 +232311,7 @@ components:
                 elements:
                     - id: element_0
                       type: viz-chart.line
+                      variant: chart
                       title: Events over time
                       layout:
                         x: 0
@@ -232424,6 +232369,7 @@ components:
                 elements:
                     - id: element_0
                       type: viz-chart.line
+                      variant: chart
                       title: Events over time
                       layout:
                         x: 0
@@ -232481,6 +232427,7 @@ components:
                 elements:
                     - id: total_events
                       type: viz-counter.single
+                      variant: chart
                       title: Total events
                       layout:
                         x: 0
@@ -232512,6 +232459,7 @@ components:
                                     kind: number
                     - id: top_sources
                       type: viz-counter.wordCloud
+                      variant: chart
                       title: Top sources
                       layout:
                         x: 4
@@ -249687,6 +249635,7 @@ components:
                 elements:
                     - id: element_0
                       type: viz-chart.line
+                      variant: chart
                       title: Events over time
                       layout:
                         x: 0
@@ -249737,6 +249686,7 @@ components:
                                 hidden: false
                     - id: element_1
                       type: list.events
+                      variant: events
                       title: Raw Events
                       layout:
                         x: 0
