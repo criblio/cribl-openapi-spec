@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-alpha.1794523854832-f93b51db
+    version: 4.21.1-alpha.1794611665041-378183a5
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -88800,6 +88800,59 @@ components:
                     type: number
                     description: Maximum number of keys allowed in the App's KV store.
             title: AppKvStoreSettings
+        PaginatedAppSecretSlot:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/AppSecretSlot"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
+        AppSecretSlot:
+            type: object
+            properties:
+                gsmPath:
+                    type: string
+                    description: Global secret ID (<code>folderId/secretId</code>) of the secret the slot is mapped to. Included only when <code>status</code> is <code>mapped</code>.
+                name:
+                    type: string
+                    description: Name of the secret slot, as used in <code>auth.secret</code> or in <code>secret.&lt;slot&gt;</code> expressions in <code>proxies.yml</code>.
+                secretType:
+                    type: string
+                    enum:
+                        - credentials
+                        - keypair
+                        - text
+                    description: Type of global secret that the slot requires, inferred from how <code>proxies.yml</code> uses the slot.
+                    x-speakeasy-unknown-values: allow
+                status:
+                    type: string
+                    enum:
+                        - mapped
+                        - unmapped
+                    description: <code>mapped</code> if the slot is mapped to a global secret that exists, has the slot's <code>secretType</code>, and is in a secret folder shared with Apps. Otherwise, <code>unmapped</code>.
+                    x-speakeasy-unknown-values: allow
+                unresolvedGsmPath:
+                    type: string
+                    description: Global secret ID (<code>folderId/secretId</code>) that the slot is mapped to but that does not resolve to a secret with the slot's <code>secretType</code> in a secret folder shared with Apps. Included only when the slot has a mapping and <code>status</code> is <code>unmapped</code>.
+            required:
+                - name
+                - secretType
+                - status
+            description: A secret slot that the App's <code>proxies.yml</code> uses, with its global secret mapping status.
+            title: AppSecretSlot
         CountedListAppInfo:
             type: object
             required:
@@ -97017,6 +97070,71 @@ components:
                 - branch
                 - synced
             title: GitSyncResult
+        PaginatedAgentToolCatalogItem:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                items:
+                    type: array
+                    description: The pre-limited items in the list of results
+                    items:
+                        $ref: "#/components/schemas/AgentToolCatalogItem"
+                count:
+                    type: integer
+                    description: Total number of items available
+                offset:
+                    type: integer
+                    description: Pagination offset
+                limit:
+                    type: integer
+                    description: Pagination limit
+        WorkflowToolInputSchema:
+            type: object
+            additionalProperties: true
+            title: WorkflowToolInputSchema
+        WorkflowToolSource:
+            type: string
+            enum:
+                - cribl_leader
+                - external_mcp
+            title: WorkflowToolSource
+            x-speakeasy-unknown-values: allow
+        AgentToolCatalogItem:
+            type: object
+            properties:
+                description:
+                    type: string
+                    description: Short description for the tool picker.
+                id:
+                    type: string
+                    description: Stable catalog id (MCP tool name, or <code>mcp_&lt;serverId&gt;_&lt;toolName&gt;</code> for external tools).
+                inputSchema:
+                    $ref: "#/components/schemas/WorkflowToolInputSchema"
+                    description: MCP JSON Schema for execution args.
+                name:
+                    type: string
+                    description: Raw MCP tool name when <code>source</code> is <code>external_mcp</code>.
+                serverDisplayName:
+                    type: string
+                    description: Display name of the MCP Integration when <code>source</code> is <code>external_mcp</code>. Falls back to <code>serverId</code> when the Integration has no display name.
+                serverId:
+                    type: string
+                    description: External MCP server id when <code>source</code> is <code>external_mcp</code>.
+                source:
+                    $ref: "#/components/schemas/WorkflowToolSource"
+                    description: Catalog source for this tool.
+                title:
+                    type: string
+                    description: Display title for the tool picker.
+            required:
+                - description
+                - id
+                - inputSchema
+                - source
+                - title
+            title: AgentToolCatalogItem
         AiDatasetIntelligence:
             type: object
             properties:
@@ -98088,71 +98206,6 @@ components:
                 - state
                 - workflow
             title: WorkflowRun
-        PaginatedWorkflowToolCatalogItem:
-            type: object
-            required:
-                - items
-                - count
-            properties:
-                items:
-                    type: array
-                    description: The pre-limited items in the list of results
-                    items:
-                        $ref: "#/components/schemas/WorkflowToolCatalogItem"
-                count:
-                    type: integer
-                    description: Total number of items available
-                offset:
-                    type: integer
-                    description: Pagination offset
-                limit:
-                    type: integer
-                    description: Pagination limit
-        WorkflowToolInputSchema:
-            type: object
-            additionalProperties: true
-            title: WorkflowToolInputSchema
-        WorkflowToolSource:
-            type: string
-            enum:
-                - cribl_leader
-                - external_mcp
-            title: WorkflowToolSource
-            x-speakeasy-unknown-values: allow
-        WorkflowToolCatalogItem:
-            type: object
-            properties:
-                description:
-                    type: string
-                    description: Short description for the tool picker.
-                id:
-                    type: string
-                    description: Stable catalog id (MCP tool name, or <code>mcp_&lt;serverId&gt;_&lt;toolName&gt;</code> for external tools).
-                inputSchema:
-                    $ref: "#/components/schemas/WorkflowToolInputSchema"
-                    description: MCP JSON Schema for execution args.
-                name:
-                    type: string
-                    description: Raw MCP tool name when <code>source</code> is <code>external_mcp</code>.
-                serverDisplayName:
-                    type: string
-                    description: Display name of the MCP Integration when <code>source</code> is <code>external_mcp</code>. Falls back to <code>serverId</code> when the Integration has no display name.
-                serverId:
-                    type: string
-                    description: External MCP server id when <code>source</code> is <code>external_mcp</code>.
-                source:
-                    $ref: "#/components/schemas/WorkflowToolSource"
-                    description: Catalog source for this tool.
-                title:
-                    type: string
-                    description: Display title for the tool picker.
-            required:
-                - description
-                - id
-                - inputSchema
-                - source
-                - title
-            title: WorkflowToolCatalogItem
         PaginatedWorkflowSummary:
             type: object
             required:
@@ -101363,6 +101416,9 @@ components:
                         - "null"
                         - string
                     description: Pool the executor currently belongs to. <code>null</code> when the executor is unassigned.
+                provisioningTokenId:
+                    type: string
+                    description: Identifier of the provisioning token the executor is using.
                 requestedPoolId:
                     type: string
                     description: Pool identifier requested at enrollment when that pool did not exist. Present only while the executor is unassigned.
@@ -101407,6 +101463,15 @@ components:
                 limit:
                     type: integer
                     description: "Page size applied to this response: the configured default page size when omitted or zero, clamped to the configured maximum. Always present."
+        ExecutorTokenReplaceRequest:
+            type: object
+            properties:
+                newTokenId:
+                    type: string
+                    description: Identifier of the provisioning token to assign to the executor.
+            required:
+                - newTokenId
+            title: ExecutorTokenReplaceRequest
         ExecutorAssignmentUpdate:
             type: object
             properties:
@@ -225802,6 +225867,48 @@ components:
                 type: number
                 description: Global Variable for maximum batch size for processing
                 value: "1000"
+        GlobalVarResponseExamplesExpressionVariable2:
+            summary: Single expression-type Global Variable
+            description: Example object representing one expression-type Global Variable in the response <code>items</code> array.
+            value:
+                items:
+                    - id: dynamic_threshold
+                      lib: custom
+                      type: expression
+                      description: Global Variable that computes a dynamic threshold based on the specified args
+                      value: rate * 1.5
+                      args:
+                        - name: rate
+                          type: any
+                count: 1
+                offset: 0
+                limit: 20
+        GlobalVarResponseExamplesStringVariable2:
+            summary: Single string-type Global Variable
+            description: Example object representing one string-type Global Variable in the response <code>items</code> array.
+            value:
+                items:
+                    - id: app_environment
+                      lib: custom
+                      type: string
+                      description: Global Variable for application environment name
+                      value: '"production"'
+                count: 1
+                offset: 0
+                limit: 20
+        GlobalVarResponseExamplesNumberVariable2:
+            summary: Single number-type Global Variable
+            description: Example object representing one number-type Global Variable in the response <code>items</code> array.
+            value:
+                items:
+                    - id: max_batch_size
+                      lib: custom
+                      type: number
+                      description: Global Variable for maximum batch size for processing
+                      value: "1000"
+                count: 1
+                offset: 0
+                limit: 20
         HmacFunctionResponseExamplesSHA256Webhook:
             summary: Return an HMAC Function for webhook authentication
             description: Example response for returning an HMAC Function that generates a SHA-256 signature header for authenticating outbound webhook requests.
@@ -225846,6 +225953,36 @@ components:
                     - __e['_raw']
                 headerName: Authorization
                 headerExpression: "`HMAC ${C.Crypto.createHmac('sha1', secretKey).update(hashString).digest('base64')}`"
+        HmacFunctionResponseExamplesSHA256Webhook2:
+            summary: Return an HMAC Function for webhook authentication
+            description: Example response for returning an HMAC Function that generates a SHA-256 signature header for authenticating outbound webhook requests.
+            value:
+                items:
+                    - id: sha256-webhook-hmac
+                      lib: custom
+                      description: HMAC Function that generates a SHA256 signature for webhook request authentication
+                      stringBuilders:
+                        - __e['__rawEvent']
+                      headerName: X-Signature
+                      headerExpression: "`sha256=${C.Crypto.createHmac('sha256', secretKey).update(hashString).digest('hex')}`"
+                count: 1
+                offset: 0
+                limit: 20
+        HmacFunctionResponseExamplesSHA1Legacy2:
+            summary: Return an HMAC Function for legacy integrations
+            description: Example response for returning an HMAC Function that generates a SHA-1 signature in the Authorization header for legacy API compatibility.
+            value:
+                items:
+                    - id: sha1-legacy-hmac
+                      lib: custom
+                      description: HMAC Function that generates a SHA1 signature for legacy API compatibility
+                      stringBuilders:
+                        - __e['_raw']
+                      headerName: Authorization
+                      headerExpression: "`HMAC ${C.Crypto.createHmac('sha1', secretKey).update(hashString).digest('base64')}`"
+                count: 1
+                offset: 0
+                limit: 20
         HecTokenResponseExamplesSplunkHecSource:
             summary: Splunk HEC Source with HEC tokens
             description: Example response for adding or updating an HEC token on a Splunk HEC Source.
@@ -227178,6 +227315,71 @@ components:
                 sendToRoutes: true
                 pqEnabled: false
             description: Example request body for creating a Zscaler Cloud NSS Source.
+        InputResponseExamplesSyslogSource2:
+            summary: Syslog Source response
+            description: Example response for getting or updating a Syslog Source.
+            value:
+                items:
+                    - id: syslog-source
+                      type: syslog
+                      host: 0.0.0.0
+                      udpPort: 514
+                      sendToRoutes: true
+                      pqEnabled: false
+                count: 1
+                offset: 0
+                limit: 20
+        InputResponseExamplesSyslogWithPQSource2:
+            summary: Syslog Source with PQ response
+            description: Example response for getting or updating a Syslog Source with persistent queue and drop-on-backpressure configured.
+            value:
+                items:
+                    - id: syslog-pq-source
+                      type: syslog
+                      host: 0.0.0.0
+                      udpPort: 514
+                      sendToRoutes: true
+                      pqEnabled: true
+                      pq:
+                        mode: always
+                        maxBufferSizeBytes: 1MB
+                        maxFileSize: 10MB
+                        maxSize: 5GB
+                        path: $CRIBL_HOME/state/queues
+                        compress: none
+                        onBackpressure: drop
+                count: 1
+                offset: 0
+                limit: 20
+        InputResponseExamplesSplunkHecSource2:
+            summary: Splunk HEC Source response
+            description: Example response for getting or updating a Splunk HEC Source.
+            value:
+                items:
+                    - id: splunk-hec-source
+                      type: splunk_hec
+                      host: 0.0.0.0
+                      port: 8088
+                      splunkHecAPI: /services/collector
+                      sendToRoutes: true
+                      pqEnabled: false
+                count: 1
+                offset: 0
+                limit: 20
+        InputResponseExamplesHttpSource2:
+            summary: HTTP Source response
+            description: Example response for getting or updating an HTTP Source.
+            value:
+                items:
+                    - id: http-source
+                      type: http
+                      host: 0.0.0.0
+                      port: 10080
+                      sendToRoutes: true
+                      pqEnabled: false
+                count: 1
+                offset: 0
+                limit: 20
         UpdateInputExamplesV2AkamaiHec:
             summary: Akamai HEC
             value:
@@ -229492,6 +229694,61 @@ components:
                 schema: PUBLIC
                 table: RAW_EVENTS
             description: Example request body for creating a Snowflake Streaming Destination.
+        OutputResponseExamplesSplunkHecDestination2:
+            summary: Splunk HEC Destination response
+            description: Example response for getting or updating a Splunk HEC Destination.
+            value:
+                items:
+                    - id: splunk-hec-output
+                      type: splunk_hec
+                      host: localhost
+                      port: 8088
+                      hecToken: 1234abcd5678efgh9101ijklEXAMPLETOKEN
+                count: 1
+                offset: 0
+                limit: 20
+        OutputResponseExamplesS3Destination2:
+            summary: Amazon S3 Destination response
+            description: Example response for getting or updating an Amazon S3 Destination.
+            value:
+                items:
+                    - id: s3-output
+                      type: s3
+                      bucket: my-bucket
+                      region: us-east-1
+                      stagePath: /tmp/staging
+                count: 1
+                offset: 0
+                limit: 20
+        OutputResponseExamplesSyslogDestination2:
+            summary: Syslog Destination response
+            description: Example response for getting or updating a Syslog Destination.
+            value:
+                items:
+                    - id: syslog-output
+                      type: syslog
+                      host: localhost
+                      port: 514
+                count: 1
+                offset: 0
+                limit: 20
+        OutputResponseExamplesSnowflakeStreamingDestination2:
+            summary: Snowflake Streaming Destination response
+            description: Example response for getting or updating a Snowflake Streaming Destination.
+            value:
+                items:
+                    - id: snowflake-streaming-output
+                      type: snowflake_streaming
+                      accountIdentifier: MYORG-MYACCOUNT
+                      user: STREAMING_USER
+                      pem:
+                        keyName: my-snowflake-private-key
+                      database: EVENTS_DB
+                      schema: PUBLIC
+                      table: RAW_EVENTS
+                count: 1
+                offset: 0
+                limit: 20
         OutputSamplesResponseExamplesSampleEvents:
             summary: Get sample events for a Destination
             description: Example response for getting sample event data for a Destination.
@@ -229554,6 +229811,17 @@ components:
                 id: access-logs-schema
                 description: Parquet schema for HTTP access log data
                 schema: '{"schema":[{"name":"timestamp","type":"INT64","logicalType":"TIMESTAMP_MILLIS"},{"name":"method","type":"BYTE_ARRAY","logicalType":"UTF8"},{"name":"path","type":"BYTE_ARRAY","logicalType":"UTF8"},{"name":"status_code","type":"INT32"},{"name":"response_bytes","type":"INT64"}]}'
+        ParquetSchemaGetResponseExamplesEventData2:
+            summary: Get a Parquet schema
+            description: Example response for getting a Parquet schema for structured event data.
+            value:
+                count: 1
+                items:
+                    - id: events-parquet-schema
+                      description: Parquet schema for structured event data
+                      schema: '{"schema":[{"name":"timestamp","type":"INT64","logicalType":"TIMESTAMP_MILLIS"},{"name":"source","type":"BYTE_ARRAY","logicalType":"UTF8"},{"name":"message","type":"BYTE_ARRAY","logicalType":"UTF8"},{"name":"severity","type":"INT32"}]}'
+                offset: 0
+                limit: 20
         ParquetSchemaUpdateResponseExamplesEventData:
             summary: Update a Parquet schema
             description: Example response for updating a Parquet schema for structured event data.
@@ -230456,6 +230724,39 @@ components:
                             inherit: ^Parent\.(myID|branchLocation)$
                             unrollIdxField: unroll_idx
                             pretty: false
+        PipelineResponseExamplesEmptyPipeline2:
+            summary: Show an empty Pipeline response
+            description: Example response for showing an empty Pipeline with no functions.
+            value:
+                items:
+                    - id: empty-pipeline
+                      conf:
+                        asyncFuncTimeout: 3000
+                        description: ""
+                        functions: []
+                count: 1
+                offset: 0
+                limit: 20
+        PipelineResponseExamplesEvalPipeline2:
+            summary: Show an Eval Pipeline response
+            description: Example response for showing a Pipeline that uses an Eval function to add fields to events.
+            value:
+                items:
+                    - id: eval-pipeline
+                      conf:
+                        asyncFuncTimeout: 3000
+                        description: Adds environment metadata to events.
+                        functions:
+                            - id: eval
+                              filter: "true"
+                              disabled: false
+                              conf:
+                                add:
+                                    - name: env
+                                      value: "'production'"
+                count: 1
+                offset: 0
+                limit: 20
         ProfilerCreateResponseExamplesProfilerCreated:
             summary: Create a Profiler capture
             description: Example response for creating a new Profiler capture.
@@ -230527,6 +230828,47 @@ components:
                       pipeline: main
                       filter: "true"
                       output: default
+        RoutesResponseExamplesDefaultRoutingTable2:
+            summary: Default Routing table response
+            description: Example response for listing the default Routing table with a single pass-through Route.
+            value:
+                count: 1
+                items:
+                    - id: default
+                      routes:
+                        - id: default
+                          name: default
+                          final: true
+                          disabled: false
+                          pipeline: main
+                          filter: "true"
+                          output: default
+                offset: 0
+                limit: 20
+        RoutesResponseExamplesMultiRouteTable2:
+            summary: Multi-route Routing table response
+            description: Example response for listing a Routing table with multiple Routes that send events to different Pipelines.
+            value:
+                count: 1
+                items:
+                    - id: default
+                      routes:
+                        - id: route-security
+                          name: Security events
+                          final: false
+                          disabled: false
+                          pipeline: security-pipeline
+                          filter: sourcetype=='syslog'
+                          output: splunk-hec
+                        - id: default
+                          name: default
+                          final: true
+                          disabled: false
+                          pipeline: main
+                          filter: "true"
+                          output: default
+                offset: 0
+                limit: 20
         RoutesAppendExamplesSingleRoute:
             summary: Append a single Route to the Routing table
             description: "Example request body for appending a single Route to the end of the default Routing table (<code>id: default</code>)."
@@ -230603,6 +230945,28 @@ components:
                 id: user-activity-schema
                 description: JSON schema for validating user activity log entries
                 schema: '{"type":"object","properties":{"userId":{"type":"string"},"action":{"type":"string"},"timestamp":{"type":"string","format":"date-time"},"metadata":{"type":"object"}},"required":["userId","action","timestamp"]}'
+        SchemaResponseExamplesEventData2:
+            summary: Single JSON schema for structured event data
+            description: Example object representing one JSON schema in the response <code>items</code> array.
+            value:
+                items:
+                    - id: event-data-schema
+                      description: JSON schema for validating structured event data
+                      schema: '{"type":"object","properties":{"timestamp":{"type":"string"},"source":{"type":"string"},"message":{"type":"string"},"severity":{"type":"integer"}},"required":["timestamp","source","message"]}'
+                count: 1
+                offset: 0
+                limit: 20
+        SchemaResponseExamplesUserActivity2:
+            summary: Single JSON schema for user activity log entries
+            description: Example object representing one JSON schema in the response <code>items</code> array.
+            value:
+                items:
+                    - id: user-activity-schema
+                      description: JSON schema for validating user activity log entries
+                      schema: '{"type":"object","properties":{"userId":{"type":"string"},"action":{"type":"string"},"timestamp":{"type":"string","format":"date-time"},"metadata":{"type":"object"}},"required":["userId","action","timestamp"]}'
+                count: 1
+                offset: 0
+                limit: 20
         SecretCreateResponseExamplesSecret:
             summary: Create a secret
             description: Example response that contains the new secret.
@@ -230717,6 +231081,42 @@ components:
                             Unknown: 0
                         timestamp: 1627123456789
                 count: 1
+        InputStatusResponseExamplesGreenSource2:
+            summary: Source with Green health status
+            description: Example response for getting the status of a Source that is healthy.
+            value:
+                items:
+                    - id: syslog-source
+                      type: syslog
+                      status:
+                        health: Green
+                        healthCounts:
+                            Green: 2
+                            Yellow: 0
+                            Red: 0
+                            Unknown: 0
+                        timestamp: 1627123456789
+                count: 1
+                offset: 0
+                limit: 20
+        InputStatusResponseExamplesYellowSource2:
+            summary: Source with Yellow health status
+            description: Example response for getting the status of a Source that is experiencing issues.
+            value:
+                items:
+                    - id: splunk-hec-source
+                      type: splunk_hec
+                      status:
+                        health: Yellow
+                        healthCounts:
+                            Green: 1
+                            Yellow: 1
+                            Red: 0
+                            Unknown: 0
+                        timestamp: 1627123456789
+                count: 1
+                offset: 0
+                limit: 20
         OutputStatusResponseExamplesGreenDestination:
             summary: Destination with Green health status
             description: Example response for getting the status of a Destination that is healthy.
@@ -230749,6 +231149,42 @@ components:
                             Unknown: 0
                         timestamp: 1627123456789
                 count: 1
+        OutputStatusResponseExamplesGreenDestination2:
+            summary: Destination with Green health status
+            description: Example response for getting the status of a Destination that is healthy.
+            value:
+                items:
+                    - id: splunk-hec-output
+                      type: splunk_hec
+                      status:
+                        health: Green
+                        healthCounts:
+                            Green: 2
+                            Yellow: 0
+                            Red: 0
+                            Unknown: 0
+                        timestamp: 1627123456789
+                count: 1
+                offset: 0
+                limit: 20
+        OutputStatusResponseExamplesYellowDestination2:
+            summary: Destination with Yellow health status
+            description: Example response for getting the status of a Destination that is experiencing issues.
+            value:
+                items:
+                    - id: s3-output
+                      type: s3
+                      status:
+                        health: Yellow
+                        healthCounts:
+                            Green: 1
+                            Yellow: 1
+                            Red: 0
+                            Unknown: 0
+                        timestamp: 1627123456789
+                count: 1
+                offset: 0
+                limit: 20
         UpdateLimitsResponseExamplesSystemLimits:
             summary: Update system limits
             description: Example response for updating system limits configuration.
@@ -230999,6 +231435,23 @@ components:
                         dialIn: Telemetry
                         dialOut: Telemetry
                         telemetry: Telemetry
+        MdtDeviceResponseExamplesCiscoIosXr2:
+            summary: Get an MDT device configuration
+            description: Example response for getting the configuration for a Model-Driven Telemetry (MDT) device.
+            value:
+                items:
+                    - id: cisco-ios-xr
+                      name: Cisco IOS XR
+                      description: Decodes Model-Driven Telemetry from Cisco IOS XR devices.
+                      protobuf:
+                        libraryId: cisco-ios-xr-telemetry
+                        typeMappings:
+                            dialIn: Telemetry
+                            dialOut: Telemetry
+                            telemetry: Telemetry
+                count: 1
+                offset: 0
+                limit: 20
         EndpointListCreateResponseExamplesWebTier:
             summary: Create an Endpoint List
             description: Example response after creating a new Endpoint List.
@@ -231790,6 +232243,19 @@ components:
                 regex: \b[1-5]\d{2}\b
                 description: Regex Library entry that matches HTTP status codes
                 sampleData: GET /api/data HTTP/1.1 200 OK
+        RegexGetResponseExamplesIpAddress2:
+            summary: Get a Regex Library entry
+            description: Example response for getting a Regex Library entry that matches IPv4 addresses.
+            value:
+                count: 1
+                items:
+                    - id: ipv4-address
+                      lib: custom
+                      regex: \b(?:\d{1,3}\.){3}\d{1,3}\b
+                      description: Regex Library entry that matches IPv4 addresses
+                      sampleData: Connection from 192.168.1.1 on port 8080
+                offset: 0
+                limit: 20
         RegexUpdateResponseExamplesIpAddress:
             summary: Update a Regex Library entry
             description: Example response for updating a Regex Library entry that matches IPv4 addresses.
@@ -232169,6 +232635,71 @@ components:
                                     type: number
                                     format: "{0,}"
                                     kind: number
+        DashboardResponseExampleDashboard2:
+            summary: Dashboard with one Chart
+            description: Example response for a Dashboard with a single line-chart element.
+            value:
+                items:
+                    - id: search_activity_overview
+                      name: Search Activity Overview
+                      created: 1700000000000
+                      createdBy: jdoe@example.com
+                      modified: 1700086400000
+                      modifiedBy: jdoe@example.com
+                      elements:
+                        - id: element_0
+                          type: viz-chart.line
+                          title: Events over time
+                          layout:
+                            x: 0
+                            y: 0
+                            w: 12
+                            h: 4
+                          search:
+                            type: inline
+                            query: top 10 source | chart count() over _time by source
+                            earliest: -24h
+                            latest: now
+                          config:
+                            visualization:
+                                version: V1
+                                family: chart
+                                chart: line
+                                fieldsConfig:
+                                    fields:
+                                        - name: _time
+                                          type: timestamp
+                                        - name: syslog
+                                          type: number
+                                        - name: auth
+                                          type: number
+                                chartConfig:
+                                    category: _time
+                                    value:
+                                        field:
+                                            - syslog
+                                            - auth
+                                categoryAxisConfig:
+                                    type: time
+                                valueAxisConfig:
+                                    - type: numeric
+                                      position: start
+                                displayConfig:
+                                    colors:
+                                        name: categorical.observable10
+                                    lineInterpolation: linear
+                                    multipleValueAxis: value
+                                    orientation: vertical
+                                    valueInterpolation: leaveNulls
+                                legendConfig:
+                                    hidden: false
+                                    position: bottom
+                                tooltipConfig:
+                                    additionalFields: []
+                                    hidden: false
+                count: 1
+                offset: 0
+                limit: 20
         MoveDashboardExamplesMoveToPack:
             summary: Move a Dashboard to a Pack
             description: Example request body for moving a Dashboard to the specified Pack.
@@ -232677,6 +233208,28 @@ components:
             value:
                 status: error
                 message: Item not found
+        SavedQueryResponseExamplesSavedSearch2:
+            summary: Get a Saved Search
+            description: Example response for getting a Saved Search in the <code>items</code> array.
+            value:
+                items:
+                    - id: saved_daily_health
+                      name: Daily health check
+                      description: Runs each morning to sample host counts.
+                      query: dataset="sample_logs" | summarize count() by host | limit 50
+                      earliest: -24h
+                      latest: now
+                      isPrivate: false
+                      user: jdoe@example.com
+                      displayUsername: jdoe
+                      schedule:
+                        enabled: true
+                        cronSchedule: 0 7 * * *
+                        tz: America/Los_Angeles
+                        keepLastN: 7
+                count: 1
+                offset: 0
+                limit: 20
         MoveSavedQueryContextExamplesIntoPack:
             summary: Move a Saved Search to a Pack
             description: Example request body for moving a Saved Search from the global context to a Pack.
@@ -234246,6 +234799,32 @@ components:
                 endpoint: report
                 cronSchedule: 0 0 * * *
                 bodyExpression: '{ scheduleId, scheduledFor, type: "daily" }'
+        AppScheduleResponseExamplesSingleSchedule2:
+            summary: Single schedule response
+            description: Response containing a single App schedule.
+            value:
+                items:
+                    - id: hourly-sync
+                      endpoint: sync
+                      cronSchedule: 0 * * * *
+                count: 1
+                offset: 0
+                limit: 20
+        AppScheduleResponseExamplesMultipleSchedules2:
+            summary: Multiple schedules response
+            description: Response containing multiple App schedules.
+            value:
+                items:
+                    - id: hourly-sync
+                      endpoint: sync
+                      cronSchedule: 0 * * * *
+                    - id: daily-report
+                      endpoint: report
+                      cronSchedule: 0 0 * * *
+                      bodyExpression: '{ scheduleId, scheduledFor, type: "daily" }'
+                count: 2
+                offset: 0
+                limit: 20
         CreateBannerResponseExamplesBanner:
             summary: Create a Banner
             description: Example response for creating a custom Banner.
@@ -234365,6 +234944,16 @@ components:
             value:
                 id: feature-squash-bundle
                 disabled: false
+        FeaturesResponseExamplesFeature2:
+            summary: Get a feature
+            description: Example response for getting a feature in the response <code>items</code> array.
+            value:
+                items:
+                    - id: feature-squash-bundle
+                      disabled: false
+                count: 1
+                offset: 0
+                limit: 20
         GlobalSecretResponseExamplesGlobalSecret:
             summary: Get a global secret
             description: Example response for getting a global secret from a secret folder.
@@ -236710,6 +237299,28 @@ components:
             value:
                 status: error
                 message: 'Cannot delete provider "my_s3_provider": there are datasets using it'
+        DatasetProviderResponseExampleDefault2:
+            summary: Get an S3 Dataset Provider
+            description: Example response for getting an S3 Dataset Provider.
+            value:
+                items:
+                    - id: prod_s3_logs
+                      description: Production log archive in S3
+                      type: s3
+                      signatureVersion: v4
+                      awsAuthenticationMethod: manual
+                      awsApiKey: access_key
+                      awsSecretKey: "**************"
+                      assumeRoleArn: ""
+                      assumeRoleExternalId: ""
+                      reuseConnections: true
+                      rejectUnauthorized: true
+                      enableAssumeRole: true
+                      enableAbacTagging: false
+                      durationSeconds: 3600
+                count: 1
+                offset: 0
+                limit: 20
         DatasetProviderConnectionTestResponseExamplesSuccess:
             summary: Test a Prometheus Dataset Provider connection
             description: Example response when the configured Prometheus endpoint is reachable and compatible.
@@ -236954,6 +237565,18 @@ components:
             value:
                 status: error
                 message: Forbidden
+        DatasetResponseExampleCreatedS3Dataset2:
+            summary: S3 V1 Dataset
+            description: Example S3 V1 Dataset.
+            value:
+                items:
+                    - id: prod_access_logs
+                      provider: my_s3_provider
+                      type: s3
+                      bucket: company-access-logs
+                count: 1
+                offset: 0
+                limit: 20
         FederatedSearchEngineCountedResponseExamplesSingleEngine:
             summary: List a single federated search engine
             description: Example response for listing a single federated search engine.
@@ -236968,6 +237591,18 @@ components:
             value:
                 status: error
                 message: Item not found
+        FederatedSearchEngineCountedResponseExamplesSingleEngine2:
+            summary: List a single federated search engine
+            description: Example response for listing a single federated search engine.
+            value:
+                count: 1
+                items:
+                    - id: Federated
+                      engineType: federated
+                      tierSize: usage_based
+                      description: Federated Engine
+                offset: 0
+                limit: 20
         FederatedSearchEngineError400ExamplesInvalidEngine:
             summary: Return a validation error for an invalid federated search engine
             description: Example response for returning a validation error when the request body is malformed or fails validation.
@@ -237006,6 +237641,27 @@ components:
                 engineType: local
                 tierSize: medium
                 description: Dedicated engine for analytics workloads
+        LocalSearchEngineCountedResponseExamplesSingleEngine2:
+            summary: Single lakehouse engine object
+            description: Example response for listing a single lakehouse engine.
+            value:
+                count: 1
+                items:
+                    - id: local_ingest_primary
+                      engineType: local
+                      tierSize: small
+                      description: Primary ingestion engine for the default local Dataset.
+                      status: ready
+                      effectiveStatus: ready
+                      lastProvisionedMs: 1700000000000
+                      datasets:
+                        - main
+                      hasMain: true
+                      isStorageDeprovisioned: false
+                      isComputeDeprovisioned: false
+                      metricsLastPublishedAt: 1700000001000
+                offset: 0
+                limit: 20
         LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset:
             summary: Single Dataset ruleset object
             description: Example response for listing a single Dataset ruleset.
@@ -237052,6 +237708,22 @@ components:
                       dataset: main
                       extendExpression: vendor = toupper(vendor)
                       extendExpressionEnabled: true
+        LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset2:
+            summary: Single Dataset ruleset object
+            description: Example response for listing a single Dataset ruleset.
+            value:
+                count: 1
+                items:
+                    - id: default
+                      rules:
+                        - id: default
+                          name: main
+                          description: data catch all
+                          kustoExpression: "*"
+                          sendDataTo: destinationDataset
+                          dataset: main
+                offset: 0
+                limit: 20
         LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset:
             summary: Single Datatype ruleset object
             description: Example response for listing a single Datatype ruleset.
@@ -237090,6 +237762,21 @@ components:
             value:
                 id: default
                 rules: []
+        LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset2:
+            summary: Single Datatype ruleset object
+            description: Example response for listing a single Datatype ruleset.
+            value:
+                count: 1
+                items:
+                    - id: default
+                      rules:
+                        - id: rule_for_palo_alto_traffic
+                          name: Filter for Palo Alto Traffic Syslogs
+                          description: For finding and parsing Palo Alto Traffic Syslogs
+                          kustoExpression: __inputId="cribl_http:pan_traffic_syslog"
+                          datatype: pan_traffic_syslog
+                offset: 0
+                limit: 20
         MonitorConfCloneResponseExamplesMonitor:
             summary: Cloned alert Monitor configuration
             description: Example response body that contains the configuration for a cloned alert Monitor. The clone is disabled until you enable it.
@@ -237133,6 +237820,24 @@ components:
                 schedule_interval_seconds: 60
                 params: {}
                 rules: []
+        MonitorConfResponseExamplesMonitor2:
+            summary: Alert Monitor configuration
+            description: Example response body that contains the configuration for an alert Monitor.
+            value:
+                items:
+                    - id: worker-events-in
+                      name: Worker Events In
+                      product: stream
+                      query: sum(rate(total_in_events{namespace="data_insights"}[1m]))
+                      enabled: true
+                      firing_after: 300
+                      ok_after: 300
+                      schedule_interval_seconds: 60
+                      params: {}
+                      rules: []
+                count: 1
+                offset: 0
+                limit: 20
         AlertSilenceResponseExamplesSilence:
             summary: Alert silence configuration
             description: Example response body that contains the configuration for an alert silence.
@@ -237157,6 +237862,22 @@ components:
                 created_by: admin@example.com
                 begins_at: 1710000000000
                 expires_at: 1710003600000
+        AlertSilenceResponseExamplesSilence2:
+            summary: Alert silence configuration
+            description: Example response body that contains the configuration for an alert silence.
+            value:
+                items:
+                    - id: maintenance-window
+                      name: Maintenance window
+                      monitor_id: worker-events-in
+                      description: Suppress alerts during maintenance
+                      created_at: 1710000000000
+                      created_by: admin@example.com
+                      begins_at: 1710000000000
+                      expires_at: 1710003600000
+                count: 1
+                offset: 0
+                limit: 20
         AlertActivityResponseExamplesFirstPage:
             summary: List alert activity for a metrics dataset
             description: Example response for listing the alert activity recorded on a metrics Dataset. <code>complete</code> is <code>false</code> and <code>next_cursor</code> is present, so pass that cursor back to read the next page.
@@ -239413,6 +240134,25 @@ components:
             description: Response containing the configured KV store settings for the App.
             value:
                 maxKeys: 10000
+        AppListSecretSlotsExamplesV2SecretSlots:
+            summary: Get the secret slots for an App
+            description: Example response for getting the first page of secret slots for an App when <code>limit</code> and <code>offset</code> are omitted, where one slot is unmapped, one is mapped to a secret that no longer resolves, and one is mapped.
+            value:
+                items:
+                    - name: aws_creds
+                      secretType: keypair
+                      status: unmapped
+                    - name: jira_creds
+                      secretType: credentials
+                      status: unmapped
+                      unresolvedGsmPath: old/jira-sa
+                    - name: openai_token
+                      secretType: text
+                      status: mapped
+                      gsmPath: my-folder/openai-api-key
+                count: 3
+                offset: 0
+                limit: 100
         AppListExamplesInstalledApps:
             summary: List installed Apps
             description: Example response for listing installed Apps.
@@ -240573,6 +241313,31 @@ components:
                     run:
                         mode: run
                         type: adhoc
+        JobInfoExamplesRetrieved2:
+            summary: Return a single job
+            description: Example response for returning a single job in a response envelope with <code>count</code> and <code>items</code>.
+            value:
+                count: 1
+                items:
+                    - id: "1727123456.1234567890"
+                      type: collection
+                      status:
+                        state: finished
+                        startTime: 1727123456123
+                        endTime: 1727123500000
+                        message: Collection complete
+                      stats:
+                        collectedEvents: 1000
+                        collectedBytes: 512000
+                      args:
+                        type: collection
+                        collector:
+                            type: filesystem
+                            conf:
+                                path: /var/log/*.log
+                        run:
+                            mode: run
+                            type: adhoc
         JobsListExamplesList:
             summary: Return a page of jobs
             description: Example response for returning a page of jobs with a sample job in <code>items</code>.
@@ -241190,6 +241955,30 @@ components:
                       gid: analytics-workers
                       id: logs-2024
                       policy: DatasetAdmin
+                count: 2
+        ListUsersResponseExamplesUserList2:
+            summary: List all users
+            description: Example response for listing all users on the deployment.
+            value:
+                items:
+                    - id: jsmith
+                      username: jsmith
+                      first: John
+                      last: Smith
+                      email: jsmith@example.com
+                      disabled: false
+                      roles:
+                        - admin
+                      type: user
+                    - id: agarcia
+                      username: agarcia
+                      first: Ana
+                      last: Garcia
+                      email: agarcia@example.com
+                      disabled: false
+                      roles:
+                        - user
+                      type: user
                 count: 2
         DismissSchemaMonitorViolationExamplesDismissedViolation:
             summary: Dismiss a schema violation category
@@ -242095,6 +242884,274 @@ components:
             summary: Undo result
             description: Example response for discarding uncommitted changes.
             value: true
+        ListAgentToolsResponseExamplesCriblLeaderCatalog:
+            summary: Cribl Default catalog (serverId=cribl_leader)
+            description: "Example catalog when serverId=cribl_leader: Cribl Default Select-a-task tools only (RBAC-filtered). Pinable UI metadata is deferred."
+            value:
+                items:
+                    - id: cribl_addToSearchNotebook
+                      source: cribl_leader
+                      title: Add findings to a Notebook
+                      description: Saves findings to a Notebook
+                      inputSchema:
+                        type: object
+                    - id: cribl_getAlerts
+                      source: cribl_leader
+                      title: Retrieve alerts
+                      description: Fetches alerts and system messages
+                      inputSchema:
+                        type: object
+                    - id: cribl_getDestinations
+                      source: cribl_leader
+                      title: Inspect Destinations
+                      description: Reviews Destinations
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSearchContext
+                      source: cribl_leader
+                      title: List datasets and saved searches
+                      description: Lists available datasets and saved searches
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSearchJobResults
+                      source: cribl_leader
+                      title: Retrieve Search results
+                      description: Fetches results from a completed search
+                      inputSchema:
+                        type: object
+                        required:
+                            - jobId
+                        properties:
+                            jobId:
+                                type: string
+                    - id: cribl_getSources
+                      source: cribl_leader
+                      title: Inspect Sources
+                      description: Reviews Sources
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSystemMetrics
+                      source: cribl_leader
+                      title: Retrieve system metrics
+                      description: Fetches system metrics
+                      inputSchema:
+                        type: object
+                    - id: cribl_listWorkerGroups
+                      source: cribl_leader
+                      title: Inspect Worker Groups and health
+                      description: Reviews Worker Group status and health
+                      inputSchema:
+                        type: object
+                    - id: cribl_runSearchQuery
+                      source: cribl_leader
+                      title: Run Search query
+                      description: Executes a search query against a dataset
+                      inputSchema:
+                        type: object
+                        required:
+                            - query
+                        properties:
+                            query:
+                                type: string
+                    - id: cribl_search
+                      source: cribl_leader
+                      title: Search
+                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
+                      inputSchema:
+                        type: object
+                        properties:
+                            naturalLanguageQuery:
+                                type: string
+                            kqlQuery:
+                                type: string
+                            datasetIds:
+                                type: array
+                                items:
+                                    type: string
+                count: 10
+                offset: 0
+                limit: 100
+        ListAgentToolsResponseExamplesCombinedCatalog:
+            summary: "Combined catalog (no serverId: Default + all enabled Integrations)"
+            description: "Example catalog with no serverId: Cribl Default tools plus tools from every enabled MCP Integration. Unreachable servers are omitted. Pass serverId=<integrationId> to narrow the catalog to that Integration only."
+            value:
+                items:
+                    - id: cribl_addToSearchNotebook
+                      source: cribl_leader
+                      title: Add findings to a Notebook
+                      description: Saves findings to a Notebook
+                      inputSchema:
+                        type: object
+                    - id: cribl_getAlerts
+                      source: cribl_leader
+                      title: Retrieve alerts
+                      description: Fetches alerts and system messages
+                      inputSchema:
+                        type: object
+                    - id: cribl_getDestinations
+                      source: cribl_leader
+                      title: Inspect Destinations
+                      description: Reviews Destinations
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSearchContext
+                      source: cribl_leader
+                      title: List datasets and saved searches
+                      description: Lists available datasets and saved searches
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSearchJobResults
+                      source: cribl_leader
+                      title: Retrieve Search results
+                      description: Fetches results from a completed search
+                      inputSchema:
+                        type: object
+                        required:
+                            - jobId
+                        properties:
+                            jobId:
+                                type: string
+                    - id: cribl_getSources
+                      source: cribl_leader
+                      title: Inspect Sources
+                      description: Reviews Sources
+                      inputSchema:
+                        type: object
+                    - id: cribl_getSystemMetrics
+                      source: cribl_leader
+                      title: Retrieve system metrics
+                      description: Fetches system metrics
+                      inputSchema:
+                        type: object
+                    - id: cribl_listWorkerGroups
+                      source: cribl_leader
+                      title: Inspect Worker Groups and health
+                      description: Reviews Worker Group status and health
+                      inputSchema:
+                        type: object
+                    - id: cribl_runSearchQuery
+                      source: cribl_leader
+                      title: Run Search query
+                      description: Executes a search query against a dataset
+                      inputSchema:
+                        type: object
+                        required:
+                            - query
+                        properties:
+                            query:
+                                type: string
+                    - id: cribl_search
+                      source: cribl_leader
+                      title: Search
+                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
+                      inputSchema:
+                        type: object
+                        properties:
+                            naturalLanguageQuery:
+                                type: string
+                            kqlQuery:
+                                type: string
+                            datasetIds:
+                                type: array
+                                items:
+                                    type: string
+                    - id: mcp_jira_create-issue
+                      source: external_mcp
+                      serverId: jira
+                      serverDisplayName: Jira Cloud
+                      name: create_issue
+                      title: create_issue
+                      description: Create a Jira issue
+                      inputSchema:
+                        type: object
+                        required:
+                            - summary
+                        properties:
+                            summary:
+                                type: string
+                    - id: mcp_pd_create-incident
+                      source: external_mcp
+                      serverId: pd
+                      serverDisplayName: PagerDuty on-call
+                      name: create_incident
+                      title: create_incident
+                      description: Create a PagerDuty incident
+                      inputSchema:
+                        type: object
+                        required:
+                            - title
+                        properties:
+                            title:
+                                type: string
+                count: 12
+                offset: 0
+                limit: 100
+        ListAgentToolsResponseExamplesSingleIntegrationCatalog:
+            summary: Single Integration catalog (serverId=pd)
+            description: "Example catalog when serverId names an MCP Integration: only that Integration's tools. Cribl Default tools are excluded; request them with serverId=cribl_leader or by omitting serverId."
+            value:
+                items:
+                    - id: mcp_pd_create-incident
+                      source: external_mcp
+                      serverId: pd
+                      name: create_incident
+                      title: create_incident
+                      description: Create a PagerDuty incident
+                      inputSchema:
+                        type: object
+                        required:
+                            - title
+                        properties:
+                            title:
+                                type: string
+                    - id: mcp_pd_list-incidents
+                      source: external_mcp
+                      serverId: pd
+                      name: list_incidents
+                      title: list_incidents
+                      description: List PagerDuty incidents
+                      inputSchema:
+                        type: object
+                count: 2
+                offset: 0
+                limit: 100
+        ListAgentToolsResponseExamplesPaginatedCatalog:
+            summary: Paginated catalog
+            description: API v2 returns a standard paginated list envelope, using configured defaults when offset and limit are omitted. Tools are ordered by id, so each Integration's tools stay contiguous. This example is unfiltered (no serverId) and requests the page that spans the last Cribl Default tool and the first Integration tool.
+            value:
+                items:
+                    - id: cribl_search
+                      source: cribl_leader
+                      title: Search
+                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
+                      inputSchema:
+                        type: object
+                        properties:
+                            naturalLanguageQuery:
+                                type: string
+                            kqlQuery:
+                                type: string
+                            datasetIds:
+                                type: array
+                                items:
+                                    type: string
+                    - id: mcp_jira_create-issue
+                      source: external_mcp
+                      serverId: jira
+                      serverDisplayName: Jira Cloud
+                      name: create_issue
+                      title: create_issue
+                      description: Create a Jira issue
+                      inputSchema:
+                        type: object
+                        required:
+                            - summary
+                        properties:
+                            summary:
+                                type: string
+                count: 12
+                offset: 9
+                limit: 2
         CreateDatasetIntelligenceResponseExamplesProcessing:
             summary: Generate dataset intelligence
             description: Example response for triggering dataset intelligence generation.
@@ -242728,274 +243785,6 @@ components:
                 stopRequested: true
                 createdAt: 1724000000000
                 modifiedAt: 1724000045000
-        ListWorkflowToolsResponseExamplesCriblLeaderCatalog:
-            summary: Cribl Default catalog (serverId=cribl_leader)
-            description: "Example catalog when serverId=cribl_leader: Cribl Default Select-a-task tools only (RBAC-filtered). Pinable UI metadata is deferred."
-            value:
-                items:
-                    - id: cribl_addToSearchNotebook
-                      source: cribl_leader
-                      title: Add findings to a Notebook
-                      description: Saves findings to a Notebook
-                      inputSchema:
-                        type: object
-                    - id: cribl_getAlerts
-                      source: cribl_leader
-                      title: Retrieve alerts
-                      description: Fetches alerts and system messages
-                      inputSchema:
-                        type: object
-                    - id: cribl_getDestinations
-                      source: cribl_leader
-                      title: Inspect Destinations
-                      description: Reviews Destinations
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSearchContext
-                      source: cribl_leader
-                      title: List datasets and saved searches
-                      description: Lists available datasets and saved searches
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSearchJobResults
-                      source: cribl_leader
-                      title: Retrieve Search results
-                      description: Fetches results from a completed search
-                      inputSchema:
-                        type: object
-                        required:
-                            - jobId
-                        properties:
-                            jobId:
-                                type: string
-                    - id: cribl_getSources
-                      source: cribl_leader
-                      title: Inspect Sources
-                      description: Reviews Sources
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSystemMetrics
-                      source: cribl_leader
-                      title: Retrieve system metrics
-                      description: Fetches system metrics
-                      inputSchema:
-                        type: object
-                    - id: cribl_listWorkerGroups
-                      source: cribl_leader
-                      title: Inspect Worker Groups and health
-                      description: Reviews Worker Group status and health
-                      inputSchema:
-                        type: object
-                    - id: cribl_runSearchQuery
-                      source: cribl_leader
-                      title: Run Search query
-                      description: Executes a search query against a dataset
-                      inputSchema:
-                        type: object
-                        required:
-                            - query
-                        properties:
-                            query:
-                                type: string
-                    - id: cribl_search
-                      source: cribl_leader
-                      title: Search
-                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
-                      inputSchema:
-                        type: object
-                        properties:
-                            naturalLanguageQuery:
-                                type: string
-                            kqlQuery:
-                                type: string
-                            datasetIds:
-                                type: array
-                                items:
-                                    type: string
-                count: 10
-                offset: 0
-                limit: 100
-        ListWorkflowToolsResponseExamplesCombinedCatalog:
-            summary: "Combined catalog (no serverId: Default + all enabled Integrations)"
-            description: "Example catalog with no serverId: Cribl Default tools plus tools from every enabled MCP Integration. Unreachable servers are omitted. Pass serverId=<integrationId> to narrow the catalog to that Integration only."
-            value:
-                items:
-                    - id: cribl_addToSearchNotebook
-                      source: cribl_leader
-                      title: Add findings to a Notebook
-                      description: Saves findings to a Notebook
-                      inputSchema:
-                        type: object
-                    - id: cribl_getAlerts
-                      source: cribl_leader
-                      title: Retrieve alerts
-                      description: Fetches alerts and system messages
-                      inputSchema:
-                        type: object
-                    - id: cribl_getDestinations
-                      source: cribl_leader
-                      title: Inspect Destinations
-                      description: Reviews Destinations
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSearchContext
-                      source: cribl_leader
-                      title: List datasets and saved searches
-                      description: Lists available datasets and saved searches
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSearchJobResults
-                      source: cribl_leader
-                      title: Retrieve Search results
-                      description: Fetches results from a completed search
-                      inputSchema:
-                        type: object
-                        required:
-                            - jobId
-                        properties:
-                            jobId:
-                                type: string
-                    - id: cribl_getSources
-                      source: cribl_leader
-                      title: Inspect Sources
-                      description: Reviews Sources
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSystemMetrics
-                      source: cribl_leader
-                      title: Retrieve system metrics
-                      description: Fetches system metrics
-                      inputSchema:
-                        type: object
-                    - id: cribl_listWorkerGroups
-                      source: cribl_leader
-                      title: Inspect Worker Groups and health
-                      description: Reviews Worker Group status and health
-                      inputSchema:
-                        type: object
-                    - id: cribl_runSearchQuery
-                      source: cribl_leader
-                      title: Run Search query
-                      description: Executes a search query against a dataset
-                      inputSchema:
-                        type: object
-                        required:
-                            - query
-                        properties:
-                            query:
-                                type: string
-                    - id: cribl_search
-                      source: cribl_leader
-                      title: Search
-                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
-                      inputSchema:
-                        type: object
-                        properties:
-                            naturalLanguageQuery:
-                                type: string
-                            kqlQuery:
-                                type: string
-                            datasetIds:
-                                type: array
-                                items:
-                                    type: string
-                    - id: mcp_jira_create-issue
-                      source: external_mcp
-                      serverId: jira
-                      serverDisplayName: Jira Cloud
-                      name: create_issue
-                      title: create_issue
-                      description: Create a Jira issue
-                      inputSchema:
-                        type: object
-                        required:
-                            - summary
-                        properties:
-                            summary:
-                                type: string
-                    - id: mcp_pd_create-incident
-                      source: external_mcp
-                      serverId: pd
-                      serverDisplayName: PagerDuty on-call
-                      name: create_incident
-                      title: create_incident
-                      description: Create a PagerDuty incident
-                      inputSchema:
-                        type: object
-                        required:
-                            - title
-                        properties:
-                            title:
-                                type: string
-                count: 12
-                offset: 0
-                limit: 100
-        ListWorkflowToolsResponseExamplesSingleIntegrationCatalog:
-            summary: Single Integration catalog (serverId=pd)
-            description: "Example catalog when serverId names an MCP Integration: only that Integration's tools. Cribl Default tools are excluded; request them with serverId=cribl_leader or by omitting serverId."
-            value:
-                items:
-                    - id: mcp_pd_create-incident
-                      source: external_mcp
-                      serverId: pd
-                      name: create_incident
-                      title: create_incident
-                      description: Create a PagerDuty incident
-                      inputSchema:
-                        type: object
-                        required:
-                            - title
-                        properties:
-                            title:
-                                type: string
-                    - id: mcp_pd_list-incidents
-                      source: external_mcp
-                      serverId: pd
-                      name: list_incidents
-                      title: list_incidents
-                      description: List PagerDuty incidents
-                      inputSchema:
-                        type: object
-                count: 2
-                offset: 0
-                limit: 100
-        ListWorkflowToolsResponseExamplesPaginatedCatalog:
-            summary: Paginated catalog
-            description: API v2 returns a standard paginated list envelope, using configured defaults when offset and limit are omitted. Tools are ordered by id, so each Integration's tools stay contiguous. This example is unfiltered (no serverId) and requests the page that spans the last Cribl Default tool and the first Integration tool.
-            value:
-                items:
-                    - id: cribl_search
-                      source: cribl_leader
-                      title: Search
-                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
-                      inputSchema:
-                        type: object
-                        properties:
-                            naturalLanguageQuery:
-                                type: string
-                            kqlQuery:
-                                type: string
-                            datasetIds:
-                                type: array
-                                items:
-                                    type: string
-                    - id: mcp_jira_create-issue
-                      source: external_mcp
-                      serverId: jira
-                      serverDisplayName: Jira Cloud
-                      name: create_issue
-                      title: create_issue
-                      description: Create a Jira issue
-                      inputSchema:
-                        type: object
-                        required:
-                            - summary
-                        properties:
-                            summary:
-                                type: string
-                count: 12
-                offset: 9
-                limit: 2
         ListWorkflowsResponseExamplesSummaryList:
             summary: Workflow summaries
             description: GET /ai/workflows returns summary fields only. API v2 uses the configured default page size when pagination parameters are omitted.
@@ -244949,6 +245738,24 @@ components:
                       currentAllocations: 0
                       maxAllocations: 2
                 count: 2
+        ReplaceExecutorTokenResponseExamplesReplaced:
+            summary: Replace the executor provisioning token
+            description: Example response after replacing the provisioning token on an executor.
+            value:
+                id: 123a1234-b123-c123-d123-112233445566
+                poolId: us-east-analytics
+                provisioningTokenId: sample-token
+                status: ready
+                version: 4.12.0
+                connectedAt: 2023-11-14T22:13:20.000Z
+                numCpus: 8
+                currentAllocations: 1
+                maxAllocations: 2
+        ReplaceExecutorTokenExamplesReplaceToken:
+            summary: Replace the provisioning token
+            description: Replace the provisioning token assigned to the executor with a different provisioning token.
+            value:
+                newTokenId: sample-token
         UpdateExecutorAssignmentResponseExamplesAssigned:
             summary: Assign an executor to a pool
             description: Example response after moving an executor into a pool.
@@ -250404,10 +251211,6 @@ tags:
     - name: apps
       description: Actions related to Apps
       x-cribl-availability: both
-      x-cribl-api-context:
-        - leader
-        - node
-        - single
     - name: auth
       description: Actions related to authentication. Do not use the /auth endpoints in Cribl.Cloud deployments. Instead, follow the instructions at https://docs.cribl.io/stream/api-tutorials/#criblcloud to authenticate for Cribl.Cloud.
       x-cribl-availability: both
@@ -254200,12 +255003,12 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedGlobalVar"
                             examples:
-                                GlobalVarResponseExamplesExpressionVariable:
-                                    $ref: "#/components/examples/GlobalVarResponseExamplesExpressionVariable"
-                                GlobalVarResponseExamplesStringVariable:
-                                    $ref: "#/components/examples/GlobalVarResponseExamplesStringVariable"
-                                GlobalVarResponseExamplesNumberVariable:
-                                    $ref: "#/components/examples/GlobalVarResponseExamplesNumberVariable"
+                                GlobalVarResponseExamplesExpressionVariable2:
+                                    $ref: "#/components/examples/GlobalVarResponseExamplesExpressionVariable2"
+                                GlobalVarResponseExamplesStringVariable2:
+                                    $ref: "#/components/examples/GlobalVarResponseExamplesStringVariable2"
+                                GlobalVarResponseExamplesNumberVariable2:
+                                    $ref: "#/components/examples/GlobalVarResponseExamplesNumberVariable2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -254554,12 +255357,12 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedGlobalVar"
                             examples:
-                                GlobalVarResponseExamplesExpressionVariable:
-                                    $ref: "#/components/examples/GlobalVarResponseExamplesExpressionVariable"
-                                GlobalVarResponseExamplesStringVariable:
-                                    $ref: "#/components/examples/GlobalVarResponseExamplesStringVariable"
-                                GlobalVarResponseExamplesNumberVariable:
-                                    $ref: "#/components/examples/GlobalVarResponseExamplesNumberVariable"
+                                GlobalVarResponseExamplesExpressionVariable2:
+                                    $ref: "#/components/examples/GlobalVarResponseExamplesExpressionVariable2"
+                                GlobalVarResponseExamplesStringVariable2:
+                                    $ref: "#/components/examples/GlobalVarResponseExamplesStringVariable2"
+                                GlobalVarResponseExamplesNumberVariable2:
+                                    $ref: "#/components/examples/GlobalVarResponseExamplesNumberVariable2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -254924,10 +255727,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedHmacFunction"
                             examples:
-                                HmacFunctionResponseExamplesSHA256Webhook:
-                                    $ref: "#/components/examples/HmacFunctionResponseExamplesSHA256Webhook"
-                                HmacFunctionResponseExamplesSHA1Legacy:
-                                    $ref: "#/components/examples/HmacFunctionResponseExamplesSHA1Legacy"
+                                HmacFunctionResponseExamplesSHA256Webhook2:
+                                    $ref: "#/components/examples/HmacFunctionResponseExamplesSHA256Webhook2"
+                                HmacFunctionResponseExamplesSHA1Legacy2:
+                                    $ref: "#/components/examples/HmacFunctionResponseExamplesSHA1Legacy2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -255258,10 +256061,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedHmacFunction"
                             examples:
-                                HmacFunctionResponseExamplesSHA256Webhook:
-                                    $ref: "#/components/examples/HmacFunctionResponseExamplesSHA256Webhook"
-                                HmacFunctionResponseExamplesSHA1Legacy:
-                                    $ref: "#/components/examples/HmacFunctionResponseExamplesSHA1Legacy"
+                                HmacFunctionResponseExamplesSHA256Webhook2:
+                                    $ref: "#/components/examples/HmacFunctionResponseExamplesSHA256Webhook2"
+                                HmacFunctionResponseExamplesSHA1Legacy2:
+                                    $ref: "#/components/examples/HmacFunctionResponseExamplesSHA1Legacy2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -255547,14 +256350,14 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedInputResponse"
                             examples:
-                                InputResponseExamplesSyslogSource:
-                                    $ref: "#/components/examples/InputResponseExamplesSyslogSource"
-                                InputResponseExamplesSyslogWithPQSource:
-                                    $ref: "#/components/examples/InputResponseExamplesSyslogWithPQSource"
-                                InputResponseExamplesSplunkHecSource:
-                                    $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
-                                InputResponseExamplesHttpSource:
-                                    $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                                InputResponseExamplesSyslogSource2:
+                                    $ref: "#/components/examples/InputResponseExamplesSyslogSource2"
+                                InputResponseExamplesSyslogWithPQSource2:
+                                    $ref: "#/components/examples/InputResponseExamplesSyslogWithPQSource2"
+                                InputResponseExamplesSplunkHecSource2:
+                                    $ref: "#/components/examples/InputResponseExamplesSplunkHecSource2"
+                                InputResponseExamplesHttpSource2:
+                                    $ref: "#/components/examples/InputResponseExamplesHttpSource2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -256622,14 +257425,14 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedInputResponse"
                             examples:
-                                InputResponseExamplesSyslogSource:
-                                    $ref: "#/components/examples/InputResponseExamplesSyslogSource"
-                                InputResponseExamplesSyslogWithPQSource:
-                                    $ref: "#/components/examples/InputResponseExamplesSyslogWithPQSource"
-                                InputResponseExamplesSplunkHecSource:
-                                    $ref: "#/components/examples/InputResponseExamplesSplunkHecSource"
-                                InputResponseExamplesHttpSource:
-                                    $ref: "#/components/examples/InputResponseExamplesHttpSource"
+                                InputResponseExamplesSyslogSource2:
+                                    $ref: "#/components/examples/InputResponseExamplesSyslogSource2"
+                                InputResponseExamplesSyslogWithPQSource2:
+                                    $ref: "#/components/examples/InputResponseExamplesSyslogWithPQSource2"
+                                InputResponseExamplesSplunkHecSource2:
+                                    $ref: "#/components/examples/InputResponseExamplesSplunkHecSource2"
+                                InputResponseExamplesHttpSource2:
+                                    $ref: "#/components/examples/InputResponseExamplesHttpSource2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -257997,14 +258800,14 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedOutputResponse"
                             examples:
-                                OutputResponseExamplesSplunkHecDestination:
-                                    $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
-                                OutputResponseExamplesS3Destination:
-                                    $ref: "#/components/examples/OutputResponseExamplesS3Destination"
-                                OutputResponseExamplesSyslogDestination:
-                                    $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
-                                OutputResponseExamplesSnowflakeStreamingDestination:
-                                    $ref: "#/components/examples/OutputResponseExamplesSnowflakeStreamingDestination"
+                                OutputResponseExamplesSplunkHecDestination2:
+                                    $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination2"
+                                OutputResponseExamplesS3Destination2:
+                                    $ref: "#/components/examples/OutputResponseExamplesS3Destination2"
+                                OutputResponseExamplesSyslogDestination2:
+                                    $ref: "#/components/examples/OutputResponseExamplesSyslogDestination2"
+                                OutputResponseExamplesSnowflakeStreamingDestination2:
+                                    $ref: "#/components/examples/OutputResponseExamplesSnowflakeStreamingDestination2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -259044,14 +259847,14 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedOutputResponse"
                             examples:
-                                OutputResponseExamplesSplunkHecDestination:
-                                    $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination"
-                                OutputResponseExamplesS3Destination:
-                                    $ref: "#/components/examples/OutputResponseExamplesS3Destination"
-                                OutputResponseExamplesSyslogDestination:
-                                    $ref: "#/components/examples/OutputResponseExamplesSyslogDestination"
-                                OutputResponseExamplesSnowflakeStreamingDestination:
-                                    $ref: "#/components/examples/OutputResponseExamplesSnowflakeStreamingDestination"
+                                OutputResponseExamplesSplunkHecDestination2:
+                                    $ref: "#/components/examples/OutputResponseExamplesSplunkHecDestination2"
+                                OutputResponseExamplesS3Destination2:
+                                    $ref: "#/components/examples/OutputResponseExamplesS3Destination2"
+                                OutputResponseExamplesSyslogDestination2:
+                                    $ref: "#/components/examples/OutputResponseExamplesSyslogDestination2"
+                                OutputResponseExamplesSnowflakeStreamingDestination2:
+                                    $ref: "#/components/examples/OutputResponseExamplesSnowflakeStreamingDestination2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -260209,8 +261012,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedSchemaLibEntry"
                             examples:
-                                ParquetSchemaGetResponseExamplesEventData:
-                                    $ref: "#/components/examples/ParquetSchemaGetResponseExamplesEventData"
+                                ParquetSchemaGetResponseExamplesEventData2:
+                                    $ref: "#/components/examples/ParquetSchemaGetResponseExamplesEventData2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -260615,10 +261418,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedPipeline"
                             examples:
-                                PipelineResponseExamplesEmptyPipeline:
-                                    $ref: "#/components/examples/PipelineResponseExamplesEmptyPipeline"
-                                PipelineResponseExamplesEvalPipeline:
-                                    $ref: "#/components/examples/PipelineResponseExamplesEvalPipeline"
+                                PipelineResponseExamplesEmptyPipeline2:
+                                    $ref: "#/components/examples/PipelineResponseExamplesEmptyPipeline2"
+                                PipelineResponseExamplesEvalPipeline2:
+                                    $ref: "#/components/examples/PipelineResponseExamplesEvalPipeline2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -261181,10 +261984,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedPipeline"
                             examples:
-                                PipelineResponseExamplesEmptyPipeline:
-                                    $ref: "#/components/examples/PipelineResponseExamplesEmptyPipeline"
-                                PipelineResponseExamplesEvalPipeline:
-                                    $ref: "#/components/examples/PipelineResponseExamplesEvalPipeline"
+                                PipelineResponseExamplesEmptyPipeline2:
+                                    $ref: "#/components/examples/PipelineResponseExamplesEmptyPipeline2"
+                                PipelineResponseExamplesEvalPipeline2:
+                                    $ref: "#/components/examples/PipelineResponseExamplesEvalPipeline2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -262072,10 +262875,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedRoutes"
                             examples:
-                                RoutesResponseExamplesDefaultRoutingTable:
-                                    $ref: "#/components/examples/RoutesResponseExamplesDefaultRoutingTable"
-                                RoutesResponseExamplesMultiRouteTable:
-                                    $ref: "#/components/examples/RoutesResponseExamplesMultiRouteTable"
+                                RoutesResponseExamplesDefaultRoutingTable2:
+                                    $ref: "#/components/examples/RoutesResponseExamplesDefaultRoutingTable2"
+                                RoutesResponseExamplesMultiRouteTable2:
+                                    $ref: "#/components/examples/RoutesResponseExamplesMultiRouteTable2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -262459,10 +263262,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedRoutes"
                             examples:
-                                RoutesResponseExamplesDefaultRoutingTable:
-                                    $ref: "#/components/examples/RoutesResponseExamplesDefaultRoutingTable"
-                                RoutesResponseExamplesMultiRouteTable:
-                                    $ref: "#/components/examples/RoutesResponseExamplesMultiRouteTable"
+                                RoutesResponseExamplesDefaultRoutingTable2:
+                                    $ref: "#/components/examples/RoutesResponseExamplesDefaultRoutingTable2"
+                                RoutesResponseExamplesMultiRouteTable2:
+                                    $ref: "#/components/examples/RoutesResponseExamplesMultiRouteTable2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -262706,10 +263509,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedSchemaLibEntry"
                             examples:
-                                SchemaResponseExamplesEventData:
-                                    $ref: "#/components/examples/SchemaResponseExamplesEventData"
-                                SchemaResponseExamplesUserActivity:
-                                    $ref: "#/components/examples/SchemaResponseExamplesUserActivity"
+                                SchemaResponseExamplesEventData2:
+                                    $ref: "#/components/examples/SchemaResponseExamplesEventData2"
+                                SchemaResponseExamplesUserActivity2:
+                                    $ref: "#/components/examples/SchemaResponseExamplesUserActivity2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -263046,10 +263849,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedSchemaLibEntry"
                             examples:
-                                SchemaResponseExamplesEventData:
-                                    $ref: "#/components/examples/SchemaResponseExamplesEventData"
-                                SchemaResponseExamplesUserActivity:
-                                    $ref: "#/components/examples/SchemaResponseExamplesUserActivity"
+                                SchemaResponseExamplesEventData2:
+                                    $ref: "#/components/examples/SchemaResponseExamplesEventData2"
+                                SchemaResponseExamplesUserActivity2:
+                                    $ref: "#/components/examples/SchemaResponseExamplesUserActivity2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -263818,10 +264621,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedInputStatus"
                             examples:
-                                InputStatusResponseExamplesGreenSource:
-                                    $ref: "#/components/examples/InputStatusResponseExamplesGreenSource"
-                                InputStatusResponseExamplesYellowSource:
-                                    $ref: "#/components/examples/InputStatusResponseExamplesYellowSource"
+                                InputStatusResponseExamplesGreenSource2:
+                                    $ref: "#/components/examples/InputStatusResponseExamplesGreenSource2"
+                                InputStatusResponseExamplesYellowSource2:
+                                    $ref: "#/components/examples/InputStatusResponseExamplesYellowSource2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -263995,10 +264798,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedInputStatus"
                             examples:
-                                InputStatusResponseExamplesGreenSource:
-                                    $ref: "#/components/examples/InputStatusResponseExamplesGreenSource"
-                                InputStatusResponseExamplesYellowSource:
-                                    $ref: "#/components/examples/InputStatusResponseExamplesYellowSource"
+                                InputStatusResponseExamplesGreenSource2:
+                                    $ref: "#/components/examples/InputStatusResponseExamplesGreenSource2"
+                                InputStatusResponseExamplesYellowSource2:
+                                    $ref: "#/components/examples/InputStatusResponseExamplesYellowSource2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -264172,10 +264975,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedOutputStatus"
                             examples:
-                                OutputStatusResponseExamplesGreenDestination:
-                                    $ref: "#/components/examples/OutputStatusResponseExamplesGreenDestination"
-                                OutputStatusResponseExamplesYellowDestination:
-                                    $ref: "#/components/examples/OutputStatusResponseExamplesYellowDestination"
+                                OutputStatusResponseExamplesGreenDestination2:
+                                    $ref: "#/components/examples/OutputStatusResponseExamplesGreenDestination2"
+                                OutputStatusResponseExamplesYellowDestination2:
+                                    $ref: "#/components/examples/OutputStatusResponseExamplesYellowDestination2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -264349,10 +265152,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedOutputStatus"
                             examples:
-                                OutputStatusResponseExamplesGreenDestination:
-                                    $ref: "#/components/examples/OutputStatusResponseExamplesGreenDestination"
-                                OutputStatusResponseExamplesYellowDestination:
-                                    $ref: "#/components/examples/OutputStatusResponseExamplesYellowDestination"
+                                OutputStatusResponseExamplesGreenDestination2:
+                                    $ref: "#/components/examples/OutputStatusResponseExamplesGreenDestination2"
+                                OutputStatusResponseExamplesYellowDestination2:
+                                    $ref: "#/components/examples/OutputStatusResponseExamplesYellowDestination2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -265625,8 +266428,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedMdtDeviceConfig"
                             examples:
-                                MdtDeviceResponseExamplesCiscoIosXr:
-                                    $ref: "#/components/examples/MdtDeviceResponseExamplesCiscoIosXr"
+                                MdtDeviceResponseExamplesCiscoIosXr2:
+                                    $ref: "#/components/examples/MdtDeviceResponseExamplesCiscoIosXr2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -270778,8 +271581,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedRegexLibEntry"
                             examples:
-                                RegexGetResponseExamplesIpAddress:
-                                    $ref: "#/components/examples/RegexGetResponseExamplesIpAddress"
+                                RegexGetResponseExamplesIpAddress2:
+                                    $ref: "#/components/examples/RegexGetResponseExamplesIpAddress2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -271108,8 +271911,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedRegexLibEntry"
                             examples:
-                                RegexGetResponseExamplesIpAddress:
-                                    $ref: "#/components/examples/RegexGetResponseExamplesIpAddress"
+                                RegexGetResponseExamplesIpAddress2:
+                                    $ref: "#/components/examples/RegexGetResponseExamplesIpAddress2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -273044,8 +273847,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedSearchDashboardListItem"
                             examples:
-                                DashboardResponseExampleDashboard:
-                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
+                                DashboardResponseExampleDashboard2:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -273397,6 +274200,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -273456,6 +274265,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command, an unsupported policy name, or an attempt to remove your own access.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -273475,6 +274290,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -273528,6 +274349,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -273587,6 +274414,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command or an unsupported policy name.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -273606,6 +274439,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -273751,8 +274590,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedSearchDashboardListItem"
                             examples:
-                                DashboardResponseExampleDashboard:
-                                    $ref: "#/components/examples/DashboardResponseExampleDashboard"
+                                DashboardResponseExampleDashboard2:
+                                    $ref: "#/components/examples/DashboardResponseExampleDashboard2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -274140,6 +274979,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -274206,6 +275051,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command, an unsupported policy name, or an attempt to remove your own access.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -274225,6 +275076,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -274285,6 +275142,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -274351,6 +275214,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command or an unsupported policy name.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -274370,6 +275239,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -275643,6 +276518,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -275702,6 +276583,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command, an unsupported policy name, or an attempt to remove your own access.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -275721,6 +276608,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -275774,6 +276667,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -275833,6 +276732,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command or an unsupported policy name.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -275852,6 +276757,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -276696,6 +277607,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -276755,6 +277672,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command, an unsupported policy name, or an attempt to remove your own access.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -276774,6 +277697,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -276827,6 +277756,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -276886,6 +277821,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command or an unsupported policy name.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -276905,6 +277846,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -277013,8 +277960,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedSavedQuery"
                             examples:
-                                SavedQueryResponseExamplesSavedSearch:
-                                    $ref: "#/components/examples/SavedQueryResponseExamplesSavedSearch"
+                                SavedQueryResponseExamplesSavedSearch2:
+                                    $ref: "#/components/examples/SavedQueryResponseExamplesSavedSearch2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -277803,8 +278750,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedSavedQuery"
                             examples:
-                                SavedQueryResponseExamplesSavedSearch:
-                                    $ref: "#/components/examples/SavedQueryResponseExamplesSavedSearch"
+                                SavedQueryResponseExamplesSavedSearch2:
+                                    $ref: "#/components/examples/SavedQueryResponseExamplesSavedSearch2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -283232,10 +284179,10 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedAppScheduledJob"
                             examples:
-                                AppScheduleResponseExamplesSingleSchedule:
-                                    $ref: "#/components/examples/AppScheduleResponseExamplesSingleSchedule"
-                                AppScheduleResponseExamplesMultipleSchedules:
-                                    $ref: "#/components/examples/AppScheduleResponseExamplesMultipleSchedules"
+                                AppScheduleResponseExamplesSingleSchedule2:
+                                    $ref: "#/components/examples/AppScheduleResponseExamplesSingleSchedule2"
+                                AppScheduleResponseExamplesMultipleSchedules2:
+                                    $ref: "#/components/examples/AppScheduleResponseExamplesMultipleSchedules2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -284236,8 +285183,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedFeaturesEntry"
                             examples:
-                                FeaturesResponseExamplesFeature:
-                                    $ref: "#/components/examples/FeaturesResponseExamplesFeature"
+                                FeaturesResponseExamplesFeature2:
+                                    $ref: "#/components/examples/FeaturesResponseExamplesFeature2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -290042,7 +290989,7 @@ paths:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
                 "400":
-                    description: Failed validation or malformed input — invalid command or unsupported policy name.
+                    description: Failed validation or malformed input — for example, a missing or invalid command, an unsupported policy name, or an attempt to remove your own access.
                     content:
                         application/json:
                             schema:
@@ -290222,7 +291169,7 @@ paths:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
                 "400":
-                    description: Failed validation or malformed input — invalid command or unsupported policy name.
+                    description: Failed validation or malformed input — for example, a missing or invalid command or an unsupported policy name.
                     content:
                         application/json:
                             schema:
@@ -294473,6 +295420,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -294532,6 +295485,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command, an unsupported policy name, or an attempt to remove your own access.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -294551,6 +295510,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -294604,6 +295569,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -294663,6 +295634,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command or an unsupported policy name.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -294682,6 +295659,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -295416,8 +296399,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedDatasetProvider"
                             examples:
-                                DatasetProviderResponseExampleDefault:
-                                    $ref: "#/components/examples/DatasetProviderResponseExampleDefault"
+                                DatasetProviderResponseExampleDefault2:
+                                    $ref: "#/components/examples/DatasetProviderResponseExampleDefault2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -295814,6 +296797,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -295872,6 +296861,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command, an unsupported policy name, or an attempt to remove your own access.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -295891,6 +296886,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -295943,6 +296944,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -296001,6 +297008,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command or an unsupported policy name.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -296020,6 +297033,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -296196,8 +297215,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedDatasetEnriched"
                             examples:
-                                DatasetResponseExampleCreatedS3Dataset:
-                                    $ref: "#/components/examples/DatasetResponseExampleCreatedS3Dataset"
+                                DatasetResponseExampleCreatedS3Dataset2:
+                                    $ref: "#/components/examples/DatasetResponseExampleCreatedS3Dataset2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -296616,6 +297635,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -296675,6 +297700,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command, an unsupported policy name, or an attempt to remove your own access.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -296694,6 +297725,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -296747,6 +297784,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -296806,6 +297849,12 @@ paths:
                             examples:
                                 AclApplyResponseExamplesSuccess:
                                     $ref: "#/components/examples/AclApplyResponseExamplesSuccess"
+                "400":
+                    description: Failed validation or malformed input — for example, a missing or invalid command or an unsupported policy name.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -296825,6 +297874,12 @@ paths:
                         text/plain:
                             schema:
                                 type: string
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
                 "500":
                     description: Unexpected server error.
                     content:
@@ -297162,8 +298217,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedFederatedSearchEngine"
                             examples:
-                                FederatedSearchEngineCountedResponseExamplesSingleEngine:
-                                    $ref: "#/components/examples/FederatedSearchEngineCountedResponseExamplesSingleEngine"
+                                FederatedSearchEngineCountedResponseExamplesSingleEngine2:
+                                    $ref: "#/components/examples/FederatedSearchEngineCountedResponseExamplesSingleEngine2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -297239,8 +298294,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedFederatedSearchEngine"
                             examples:
-                                FederatedSearchEngineCountedResponseExamplesSingleEngine:
-                                    $ref: "#/components/examples/FederatedSearchEngineCountedResponseExamplesSingleEngine"
+                                FederatedSearchEngineCountedResponseExamplesSingleEngine2:
+                                    $ref: "#/components/examples/FederatedSearchEngineCountedResponseExamplesSingleEngine2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -297381,8 +298436,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedLocalSearchEngineApi"
                             examples:
-                                LocalSearchEngineCountedResponseExamplesSingleEngine:
-                                    $ref: "#/components/examples/LocalSearchEngineCountedResponseExamplesSingleEngine"
+                                LocalSearchEngineCountedResponseExamplesSingleEngine2:
+                                    $ref: "#/components/examples/LocalSearchEngineCountedResponseExamplesSingleEngine2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -297729,8 +298784,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedDatasetRuleset"
                             examples:
-                                LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset:
-                                    $ref: "#/components/examples/LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset"
+                                LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset2:
+                                    $ref: "#/components/examples/LocalSearchDatasetRulesetCountedResponseExamplesSingleRuleset2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -298002,8 +299057,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedDatatypeRuleset"
                             examples:
-                                LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset:
-                                    $ref: "#/components/examples/LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset"
+                                LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset2:
+                                    $ref: "#/components/examples/LocalSearchDatatypeRulesetCountedResponseExamplesSingleRuleset2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -298335,8 +299390,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedMonitorConf"
                             examples:
-                                MonitorConfResponseExamplesMonitor:
-                                    $ref: "#/components/examples/MonitorConfResponseExamplesMonitor"
+                                MonitorConfResponseExamplesMonitor2:
+                                    $ref: "#/components/examples/MonitorConfResponseExamplesMonitor2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -298657,8 +299712,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/PaginatedMonitorSilenceConf"
                             examples:
-                                AlertSilenceResponseExamplesSilence:
-                                    $ref: "#/components/examples/AlertSilenceResponseExamplesSilence"
+                                AlertSilenceResponseExamplesSilence2:
+                                    $ref: "#/components/examples/AlertSilenceResponseExamplesSilence2"
                 "400":
                     description: Failed validation or malformed input, such as missing or invalid parameters.
                     content:
@@ -305785,6 +306840,90 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the App.
+    /apps/{id}/secrets:
+        get:
+            operationId: getAppsSecretsById
+            tags:
+                - apps
+            x-speakeasy-group: apps.secrets
+            x-speakeasy-name-override: list
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+            summary: Get the secret slots for an App
+            description: Get the secret slots that the specified App's <code>proxies.yml</code> uses, with the global secret each slot is mapped to. A slot is <code>mapped</code> when its global secret exists, has the slot's <code>secretType</code>, and is in a secret folder shared with Apps. The response includes global secret IDs only, never secret values.
+            responses:
+                "200":
+                    description: List of the App's secret slots and their global secret mapping status
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedAppSecretSlot"
+                            examples:
+                                AppListSecretSlotsExamplesV2SecretSlots:
+                                    $ref: "#/components/examples/AppListSecretSlotsExamplesV2SecretSlots"
+                "400":
+                    description: Invalid <code>limit</code> or <code>offset</code>.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized to perform this action — the caller lacks permission to get the App, or the App is a platform App
+                "404":
+                    description: The requested resource does not exist — App not found
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: Global Secrets Manager is not available for Apps
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the App to get the secret slots for.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of secret slots to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches.
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /apps/{id}/backend/endpoints:
         get:
             operationId: getAppsBackendEndpointsById
@@ -310329,8 +311468,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/CountedListJobInfoResponse"
                             examples:
-                                JobInfoExamplesRetrieved:
-                                    $ref: "#/components/examples/JobInfoExamplesRetrieved"
+                                JobInfoExamplesRetrieved2:
+                                    $ref: "#/components/examples/JobInfoExamplesRetrieved2"
                 "400":
                     description: The job is worker-owned and does not support this mutating action.
                     content:
@@ -314699,8 +315838,8 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/CountedListUser"
                             examples:
-                                ListUsersResponseExamplesUserList:
-                                    $ref: "#/components/examples/ListUsersResponseExamplesUserList"
+                                ListUsersResponseExamplesUserList2:
+                                    $ref: "#/components/examples/ListUsersResponseExamplesUserList2"
                 "400":
                     description: Invalid <code>limit</code> or <code>offset</code>, or the specified <code>groupId</code> belongs to a different Cribl product.
                 "401":
@@ -317811,6 +318950,107 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: Versioning is not available.
+    /ai/tools:
+        get:
+            operationId: getAiTools
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: List agent tools
+            description: Returns tools from the requested source. Omit <code>serverId</code> for Cribl Default tools (RBAC-filtered) plus all enabled Integrations (unreachable servers omitted). Pass <code>serverId=cribl_leader</code> for Cribl Default tools only. Pass any other <code>serverId</code> for that Integration's tools only (502 if unreachable). API v2 applies the configured default page size when pagination parameters are omitted. Tools are ordered by <code>id</code>, which keeps each Integration's tools contiguous.
+            responses:
+                "200":
+                    description: List of AgentToolCatalogItem objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PaginatedAgentToolCatalogItem"
+                            examples:
+                                ListAgentToolsResponseExamplesCriblLeaderCatalog:
+                                    $ref: "#/components/examples/ListAgentToolsResponseExamplesCriblLeaderCatalog"
+                                ListAgentToolsResponseExamplesCombinedCatalog:
+                                    $ref: "#/components/examples/ListAgentToolsResponseExamplesCombinedCatalog"
+                                ListAgentToolsResponseExamplesSingleIntegrationCatalog:
+                                    $ref: "#/components/examples/ListAgentToolsResponseExamplesSingleIntegrationCatalog"
+                                ListAgentToolsResponseExamplesPaginatedCatalog:
+                                    $ref: "#/components/examples/ListAgentToolsResponseExamplesPaginatedCatalog"
+                "400":
+                    description: Invalid pagination params, non-string <code>serverId</code>, or blank <code>serverId</code>
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "404":
+                    description: MCP Integration not found or disabled
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "502":
+                    description: MCP Integration unreachable when listing tools
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            parameters:
+                - name: serverId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: "Strict source filter: <code>cribl_leader</code> for Default-only, an MCP Integration id for that Integration only, or omit for Default + all enabled Integrations. Blank or whitespace-only values are rejected."
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Pagination offset (0-based). Required with <code>limit</code> on API v1.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of tools to return from the offset.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
     /ai/settings/dataset-intelligence/{datasetId}:
         post:
             operationId: createAiSettingsDatasetIntelligenceByDatasetId
@@ -320002,107 +321242,6 @@ paths:
                   schema:
                     type: string
                   description: The run id.
-    /ai/workflow-tools:
-        get:
-            operationId: getAiWorkflowTools
-            tags:
-                - AI
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-                - single
-            summary: List workflow builder tools
-            description: Returns tools from the requested source. Omit <code>serverId</code> for Cribl Default tools (RBAC-filtered) plus all enabled Integrations (unreachable servers omitted). Pass <code>serverId=cribl_leader</code> for Cribl Default tools only. Pass any other <code>serverId</code> for that Integration's tools only (502 if unreachable). API v2 applies the configured default page size when pagination parameters are omitted. Tools are ordered by <code>id</code>, which keeps each Integration's tools contiguous.
-            responses:
-                "200":
-                    description: List of WorkflowToolCatalogItem objects.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/PaginatedWorkflowToolCatalogItem"
-                            examples:
-                                ListWorkflowToolsResponseExamplesCriblLeaderCatalog:
-                                    $ref: "#/components/examples/ListWorkflowToolsResponseExamplesCriblLeaderCatalog"
-                                ListWorkflowToolsResponseExamplesCombinedCatalog:
-                                    $ref: "#/components/examples/ListWorkflowToolsResponseExamplesCombinedCatalog"
-                                ListWorkflowToolsResponseExamplesSingleIntegrationCatalog:
-                                    $ref: "#/components/examples/ListWorkflowToolsResponseExamplesSingleIntegrationCatalog"
-                                ListWorkflowToolsResponseExamplesPaginatedCatalog:
-                                    $ref: "#/components/examples/ListWorkflowToolsResponseExamplesPaginatedCatalog"
-                "400":
-                    description: Invalid pagination params, non-string <code>serverId</code>, or blank <code>serverId</code>
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
-                "404":
-                    description: MCP Integration not found or disabled
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                "502":
-                    description: MCP Integration unreachable when listing tools
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-            parameters:
-                - name: serverId
-                  in: query
-                  required: false
-                  schema:
-                    type: string
-                  description: "Strict source filter: <code>cribl_leader</code> for Default-only, an MCP Integration id for that Integration only, or omit for Default + all enabled Integrations. Blank or whitespace-only values are rejected."
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                  description: Pagination offset (0-based). Required with <code>limit</code> on API v1.
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                  description: Maximum number of tools to return from the offset.
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
     /ai/workflows:
         get:
             operationId: getAiWorkflows
@@ -327503,6 +328642,95 @@ paths:
                       type: limit
                 outputs:
                     results: $.items
+    /search/executors/{id}/rotate-token:
+        post:
+            operationId: createSearchExecutorsRotateTokenById
+            tags:
+                - search-executor-pools
+            x-speakeasy-group: search.executorPools
+            x-speakeasy-name-override: replaceToken
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - searchGroup
+            summary: Replace executor provisioning token
+            description: Replace the provisioning token assigned to the specified executor. The leader pushes the new token to the executor automatically. If the executor is offline, manual reconfiguration is required on reconnect.
+            responses:
+                "200":
+                    description: The created ExecutorView object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ExecutorView"
+                            examples:
+                                ReplaceExecutorTokenResponseExamplesReplaced:
+                                    $ref: "#/components/examples/ReplaceExecutorTokenResponseExamplesReplaced"
+                "400":
+                    description: Failed validation or malformed input — <code>newTokenId</code> is required.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: The authenticated caller lacks permission to replace the executor token.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist — Hybrid Search is not enabled, the executor was not found, or the provisioning token does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "429":
+                    description: Too many concurrent executor pool updates — retry the request.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Internal server error — token rotation is not available.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "503":
+                    description: Service unavailable — the Search service is not reachable.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            requestBody:
+                description: ExecutorTokenReplaceRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ExecutorTokenReplaceRequest"
+                        examples:
+                            ReplaceExecutorTokenExamplesReplaceToken:
+                                $ref: "#/components/examples/ReplaceExecutorTokenExamplesReplaceToken"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the executor whose token to replace.
     /search/executors/{id}/assignment:
         patch:
             operationId: updateSearchExecutorsAssignmentById
