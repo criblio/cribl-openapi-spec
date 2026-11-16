@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.0-cf344609
+    version: 4.21.0-2fda0f00
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -90832,38 +90832,6 @@ components:
                 - expr
                 - id
             title: ExprLibEntry
-        FeatureConsent:
-            type: object
-            properties:
-                accepted:
-                    type: boolean
-                    description: Whether a user with workspace Edit permission accepted this feature's terms for the deployment.
-                acceptedAt:
-                    type: string
-                    description: Time of the consent change in ISO 8601 format, set by the server.
-                acceptedBy:
-                    type: string
-                    description: Authenticated identity of the user with workspace Edit permission, set by the server.
-                termsVersion:
-                    type: string
-                    description: Current version of this feature's consent terms.
-            required:
-                - accepted
-                - termsVersion
-            title: FeatureConsent
-        FeatureConsentUpdate:
-            type: object
-            properties:
-                accepted:
-                    type: boolean
-                    description: Must be true to accept deployment-wide consent for the feature.
-                termsVersion:
-                    type: string
-                    description: Current terms version returned by the feature's consent endpoint.
-            required:
-                - accepted
-                - termsVersion
-            title: FeatureConsentUpdate
         ConditionResponse:
             type: object
             properties:
@@ -240063,38 +240031,6 @@ components:
                     message: disk full
                     severity: low
                 evalType: inplace
-        GetFeatureConsentExamplesConsentRequired:
-            summary: Get feature consent before acceptance
-            value:
-                accepted: false
-                termsVersion: "1"
-        FeatureConsentNotFoundExamplesNotFound:
-            summary: Reject an unknown or disabled feature
-            value:
-                status: error
-                message: Unknown or disabled Feature consent feature
-        FeatureConsentUnavailableExamplesUnavailable:
-            summary: Report unavailable consent settings
-            value:
-                status: error
-                message: Consent settings are not available
-        SavedFeatureConsentExamplesAccepted:
-            summary: Save feature acceptance
-            value:
-                accepted: true
-                termsVersion: "1"
-                acceptedBy: editor@example.com
-                acceptedAt: 2026-11-02T12:00:00.000Z
-        FeatureConsentTermsChangedExamplesTermsChanged:
-            summary: Reject outdated feature terms
-            value:
-                status: error
-                message: Feature consent terms have changed
-        UpdateFeatureConsentExamplesAccept:
-            summary: Accept current feature terms
-            value:
-                accepted: true
-                termsVersion: "1"
         ConditionResponseExamplesHighVolume:
             summary: Get the High Data Volume condition
             description: Example response for getting the High Data Volume condition, which triggers a Notification if the total data ingested within the configured time window exceeds the specified data volume threshold.
@@ -241211,11 +241147,12 @@ components:
                 openedMs: 1793091600000
                 updatedMs: 1793092800000
                 dismissedMs: 1793092800000
-        SchemaMonitorConsentRequiredExamplesConsentRequired:
-            summary: Require administrator consent
+        SchemaMonitorForbiddenExamplesForbidden:
+            summary: Return forbidden for a Schema Monitor request
+            description: Example response for returning a forbidden error when the caller lacks permission to perform the requested Schema Monitor operation.
             value:
                 status: error
-                message: consent-required
+                message: Forbidden
         SchemaMonitorNotFoundExamplesNotFound:
             summary: Report a missing violation
             description: Example response for reporting a violation category that no longer exists.
@@ -250589,12 +250526,6 @@ tags:
       x-cribl-availability: cloud
       x-cribl-api-context:
         - searchGroup
-    - name: FeatureConsent
-      description: Actions related to FeatureConsent
-      x-cribl-availability: both
-      x-cribl-api-context:
-        - leader
-        - single
     - name: features
       description: Actions related to Features
       x-cribl-availability: both
@@ -308993,174 +308924,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the Pack.
-    /consent/{feature}:
-        get:
-            operationId: getConsentByFeature
-            tags:
-                - FeatureConsent
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-                - single
-            summary: Get feature consent
-            description: Get deployment-wide consent for a feature, including the current terms version. Consent is declined until a caller with Stream workspace Edit permission accepts it. This operation remains available before acceptance.
-            responses:
-                "200":
-                    description: Current feature consent and terms version.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/FeatureConsent"
-                            examples:
-                                GetFeatureConsentExamplesConsentRequired:
-                                    $ref: "#/components/examples/GetFeatureConsentExamplesConsentRequired"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Not authorized to view feature consent.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "404":
-                    description: The feature is unknown or disabled.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                            examples:
-                                FeatureConsentNotFoundExamplesNotFound:
-                                    $ref: "#/components/examples/FeatureConsentNotFoundExamplesNotFound"
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                "503":
-                    description: Consent settings are unavailable.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                            examples:
-                                FeatureConsentUnavailableExamplesUnavailable:
-                                    $ref: "#/components/examples/FeatureConsentUnavailableExamplesUnavailable"
-            parameters:
-                - name: feature
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: Registered feature identifier, unique across products. Currently supports <code>schema-monitor</code>.
-        post:
-            operationId: createConsentByFeature
-            tags:
-                - FeatureConsent
-            x-cribl-internal: false
-            x-cribl-availability: both
-            x-cribl-api-context:
-                - leader
-                - single
-            summary: Accept feature consent
-            description: Accept deployment-wide consent for a feature. Acceptance requires Stream workspace Edit permission. Consent for other features is unaffected. Revocation is not supported.
-            responses:
-                "200":
-                    description: Saved consent, including the authenticated actor and server timestamp.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/FeatureConsent"
-                            examples:
-                                SavedFeatureConsentExamplesAccepted:
-                                    $ref: "#/components/examples/SavedFeatureConsentExamplesAccepted"
-                "400":
-                    description: The request must contain acceptance set to true and a nonempty terms version, with no additional fields.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Stream workspace Edit permission and an authenticated user are required.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "404":
-                    description: The feature is unknown or disabled.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                            examples:
-                                FeatureConsentNotFoundExamplesNotFound:
-                                    $ref: "#/components/examples/FeatureConsentNotFoundExamplesNotFound"
-                "409":
-                    description: The supplied terms version is not current.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                            examples:
-                                FeatureConsentTermsChangedExamplesTermsChanged:
-                                    $ref: "#/components/examples/FeatureConsentTermsChangedExamplesTermsChanged"
-                "500":
-                    description: Consent could not be saved.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "503":
-                    description: Consent settings are unavailable or another change is in progress.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                            examples:
-                                FeatureConsentUnavailableExamplesUnavailable:
-                                    $ref: "#/components/examples/FeatureConsentUnavailableExamplesUnavailable"
-            requestBody:
-                description: FeatureConsentUpdate object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/FeatureConsentUpdate"
-                        examples:
-                            UpdateFeatureConsentExamplesAccept:
-                                $ref: "#/components/examples/UpdateFeatureConsentExamplesAccept"
-            parameters:
-                - name: feature
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: Registered feature identifier, unique across products. Currently supports <code>schema-monitor</code>.
     /conditions/{id}:
         get:
             operationId: getConditionsById
@@ -314802,14 +314565,14 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized to perform this operation, or consent has not been accepted (<code>consent-required</code>).
+                    description: Not authorized to perform this operation.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/RestApiJsonError"
                             examples:
-                                SchemaMonitorConsentRequiredExamplesConsentRequired:
-                                    $ref: "#/components/examples/SchemaMonitorConsentRequiredExamplesConsentRequired"
+                                SchemaMonitorForbiddenExamplesForbidden:
+                                    $ref: "#/components/examples/SchemaMonitorForbiddenExamplesForbidden"
                 "404":
                     description: The violation category does not exist or Schema Monitor is disabled.
                     content:
@@ -314895,14 +314658,14 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized to perform this operation, or consent has not been accepted (<code>consent-required</code>).
+                    description: Not authorized to perform this operation.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/RestApiJsonError"
                             examples:
-                                SchemaMonitorConsentRequiredExamplesConsentRequired:
-                                    $ref: "#/components/examples/SchemaMonitorConsentRequiredExamplesConsentRequired"
+                                SchemaMonitorForbiddenExamplesForbidden:
+                                    $ref: "#/components/examples/SchemaMonitorForbiddenExamplesForbidden"
                 "404":
                     description: Schema Monitor is disabled.
                     content:
@@ -315002,14 +314765,14 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized to perform this operation, or consent has not been accepted (<code>consent-required</code>).
+                    description: Not authorized to perform this operation.
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/RestApiJsonError"
                             examples:
-                                SchemaMonitorConsentRequiredExamplesConsentRequired:
-                                    $ref: "#/components/examples/SchemaMonitorConsentRequiredExamplesConsentRequired"
+                                SchemaMonitorForbiddenExamplesForbidden:
+                                    $ref: "#/components/examples/SchemaMonitorForbiddenExamplesForbidden"
                 "404":
                     description: Schema Monitor is disabled.
                     content:
