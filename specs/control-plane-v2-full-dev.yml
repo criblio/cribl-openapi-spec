@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.22.0-alpha.1794784465633-8d3d2a19
+    version: 4.22.0-alpha.1794870815040-477830cb
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -63561,6 +63561,79 @@ components:
                     type: string
                     description: Binds 'reptName' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'reptName' at runtime.
             title: OutputFortisiem
+        OutputFileOutDev:
+            type: object
+            required:
+                - type
+                - destPath
+            properties:
+                id:
+                    type: string
+                    title: Output ID
+                    description: Unique name for this output
+                type:
+                    type: string
+                    enum:
+                        - file_out_dev
+                    description: Connector type identifier.
+                pipeline:
+                    type: string
+                    title: Pipeline
+                    description: Pipeline to process data before sending out to this output
+                systemFields:
+                    type: array
+                    title: System fields
+                    description: Fields to automatically add to events, such as cribl_pipe. Supports wildcards.
+                    items:
+                        type: string
+                environment:
+                    type: string
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                streamtags:
+                    type: array
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    items:
+                        type: string
+                schemaMonitorSettings:
+                    $ref: "#/components/schemas/SchemaMonitorSettingsTypeOptional"
+                    description: Configuration for Schema Monitor on this Destination.
+                destPath:
+                    type: string
+                    title: Target path
+                    description: Target directory for output files on the local filesystem
+                partitionExpr:
+                    type: string
+                    title: Partitioning expression
+                    description: JavaScript expression defining how files are partitioned and organized. Default is date-based. If blank, Stream will fall back to the event's __partition field value – if present – otherwise to each location's root directory.
+                maxFileSizeMB:
+                    type: number
+                    title: File size limit (MB)
+                    description: Maximum uncompressed output file size. Files of this size will be closed and moved to final output location.
+                    maximum: 1024
+                    minimum: 5
+                maxFileOpenTimeSec:
+                    type: number
+                    title: File open time limit (sec)
+                    description: Maximum amount of time to write to a file. Files open for longer than this will be closed and moved to final output location.
+                    minimum: 10
+                    maximum: 1800
+                compress:
+                    type: string
+                    title: Compression
+                    description: Compression method for output files
+                description:
+                    type: string
+                    title: Description
+                    description: Optional description for this configuration.
+                __template_streamtags:
+                    type: string
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                __template_partitionExpr:
+                    type: string
+                    description: Binds 'partitionExpr' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+            title: OutputFileOutDev
         Output:
             oneOf:
                 - $ref: "#/components/schemas/OutputDefault"
@@ -63667,6 +63740,7 @@ components:
                 - $ref: "#/components/schemas/OutputDatabricksZerobus"
                 - $ref: "#/components/schemas/OutputSecuronix"
                 - $ref: "#/components/schemas/OutputFortisiem"
+                - $ref: "#/components/schemas/OutputFileOutDev"
             discriminator:
                 propertyName: type
                 mapping:
@@ -63774,6 +63848,7 @@ components:
                     databricks_zerobus: "#/components/schemas/OutputDatabricksZerobus"
                     securonix: "#/components/schemas/OutputSecuronix"
                     fortisiem: "#/components/schemas/OutputFortisiem"
+                    file_out_dev: "#/components/schemas/OutputFileOutDev"
             title: Output
         PaginatedOutput:
             type: object
@@ -63917,6 +63992,7 @@ components:
                 - traversal_otlp
                 - securonix
                 - fortisiem
+                - file_out_dev
             title: DestinationType
             x-speakeasy-unknown-values: allow
         PaginatedOutputResponse:
@@ -64677,7 +64753,7 @@ components:
                     description: Enable PowerShell to collect process information instead of using the native API.
                 enableWorkerInMemory:
                     type: boolean
-                    description: "Do not persist connection data across restarts. Caution: Leader will restart when this setting is changed."
+                    description: "Do not persist connection data across restarts. Caution: Leader will restart when this setting is changed. In Cribl.Cloud, only Cribl operators can change this on the Leader and on Cribl-managed Worker Groups."
                 eventsMetadataSources:
                     type: array
                     items:
@@ -64721,14 +64797,14 @@ components:
                     type: array
                     items:
                         type: string
-                    description: Additional directories where lookup files are permitted to reside, beyond the default lookup directories under CRIBL_HOME. Use this allowlist to keep lookups on a shared mount or another location outside CRIBL_HOME. Each entry is a directory path; environment variables such as <code>$CRIBL_HOME</code> are expanded, and relative entries resolve against CRIBL_HOME. A lookup file is permitted when it resides within any listed directory. Leaving this empty restricts lookups to the default lookup directories.
+                    description: Additional directories where lookup files are permitted to reside, beyond the default lookup directories under CRIBL_HOME. Use this allowlist to keep lookups on a shared mount or another location outside CRIBL_HOME. Each entry is a directory path; environment variables such as <code>$CRIBL_HOME</code> are expanded, and relative entries resolve against CRIBL_HOME. A lookup file is permitted when it resides within any listed directory. Leaving this empty restricts lookups to the default lookup directories. In Cribl.Cloud, only Cribl operators can change this on the Leader and on Cribl-managed Worker Groups.
                 lookupMaxSize:
                     type: string
-                    description: Maximum allowed disk space for persisting single lookup data file.
+                    description: Maximum allowed disk space for persisting single lookup data file. In Cribl.Cloud, only Cribl operators can change this on the Leader and on Cribl-managed Worker Groups.
                     pattern: ^\d+(\.\d+)?\s*(?:[kmgKMG](b|B))?$
                 lookupMaxTotalSize:
                     type: string
-                    description: Maximum allowed disk space for persisting lookup data and metadata files.
+                    description: Maximum allowed disk space for persisting lookup data and metadata files. In Cribl.Cloud, only Cribl operators can change this on the Leader and on Cribl-managed Worker Groups.
                     pattern: ^\d+(\.\d+)?\s*(?:[kmgKMG](b|B))?$
                 maxDimensionValueSize:
                     type: integer
@@ -83184,6 +83260,9 @@ components:
                 monitor_name:
                     type: string
                     description: Display name of the Monitor. Falls back to <code>monitor_id</code> when absent.
+                monitor_type:
+                    $ref: "#/components/schemas/MonitorType"
+                    description: Type of the Monitor when it recorded the evaluation, such as <code>threshold</code> or <code>change</code>. Absent on evaluations stored before the type was recorded.
                 product:
                     type: string
                     description: Product tag associated with the Monitor.
@@ -90914,7 +90993,7 @@ components:
                 state:
                     type: string
                     const: active
-                    description: Current overlay state.
+                    description: A hotfix is applied to the server.
                     examples:
                         - active
             required:
@@ -90926,7 +91005,7 @@ components:
                 state:
                     type: string
                     const: inactive
-                    description: Current overlay state.
+                    description: No hotfix is applied to the server.
                     examples:
                         - inactive
             required:
@@ -90945,7 +91024,7 @@ components:
                     description: Whether this node is currently the captain (job scheduling coordinator) in a Collectors HA deployment.
                 overlay:
                     $ref: "#/components/schemas/HealthOverlayStatus"
-                    description: Overlay state for this process.
+                    description: Whether Cribl applied a hotfix to the server without a full version upgrade. For information only.
                 role:
                     type: string
                     enum:
@@ -100958,7 +101037,6 @@ components:
                 - dashboards
                 - notebooks
                 - notebook-templates
-                - datasets
             title: SearchFavoriteTypeParam
             x-speakeasy-unknown-values: allow
         PaginatedSearchFavoriteItem:
@@ -100986,7 +101064,7 @@ components:
             properties:
                 context:
                     type: string
-                    description: The Pack that contains the Dashboard. Omitted for the default Pack, Notebooks, Notebook templates, and Datasets.
+                    description: The Pack that contains the Dashboard. Omitted for the default Pack, Notebooks, and Notebook templates.
                 description:
                     type: string
                     description: The description of the object. Omitted when the object has none.
@@ -154082,6 +154160,9 @@ components:
                 - $ref: "#/components/schemas/OutputFortisiemPartialRequest"
                   required:
                     - type
+                - $ref: "#/components/schemas/OutputFileOutDevPartialRequest"
+                  required:
+                    - type
             discriminator:
                 propertyName: type
                 mapping:
@@ -154189,6 +154270,7 @@ components:
                     databricks_zerobus: "#/components/schemas/OutputDatabricksZerobusPartialRequest"
                     securonix: "#/components/schemas/OutputSecuronixPartialRequest"
                     fortisiem: "#/components/schemas/OutputFortisiemPartialRequest"
+                    file_out_dev: "#/components/schemas/OutputFileOutDevPartialRequest"
             title: OutputPartialRequest
             properties:
                 type:
@@ -203586,6 +203668,118 @@ components:
                         - type: string
                         - type: "null"
             title: OutputFortisiemPartialRequest
+        OutputFileOutDevPartialRequest:
+            type: object
+            properties:
+                id:
+                    title: Output ID
+                    description: Unique name for this output
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                type:
+                    type: string
+                    enum:
+                        - file_out_dev
+                    description: Connector type identifier.
+                pipeline:
+                    title: Pipeline
+                    description: Pipeline to process data before sending out to this output
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                systemFields:
+                    title: System fields
+                    description: Fields to automatically add to events, such as cribl_pipe. Supports wildcards.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                environment:
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                streamtags:
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                schemaMonitorSettings:
+                    title: Schema Monitor Settings
+                    description: Configuration for Schema Monitor on this Destination.
+                    anyOf:
+                        - type: object
+                          properties:
+                            enabled:
+                                title: Schema Monitor
+                                description: Enable Schema Monitor to detect schema drift for this Destination. Events are sampled after this output's Pipeline runs, immediately before being sent.
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            targetSchemas:
+                                title: Schema Monitor target schemas
+                                description: Schema Knowledge Objects that sampled events are acceptable against. An event that matches any listed schema does not count as drift.
+                                anyOf:
+                                    - type: array
+                                      items:
+                                        $ref: "#/components/schemas/TargetSchemaConfOutputDefault"
+                                    - type: "null"
+                        - type: "null"
+                destPath:
+                    type: string
+                    title: Target path
+                    description: Target directory for output files on the local filesystem
+                partitionExpr:
+                    title: Partitioning expression
+                    description: JavaScript expression defining how files are partitioned and organized. Default is date-based. If blank, Stream will fall back to the event's __partition field value – if present – otherwise to each location's root directory.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                maxFileSizeMB:
+                    title: File size limit (MB)
+                    description: Maximum uncompressed output file size. Files of this size will be closed and moved to final output location.
+                    anyOf:
+                        - type: number
+                          maximum: 1024
+                          minimum: 5
+                        - type: "null"
+                maxFileOpenTimeSec:
+                    title: File open time limit (sec)
+                    description: Maximum amount of time to write to a file. Files open for longer than this will be closed and moved to final output location.
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                          maximum: 1800
+                        - type: "null"
+                compress:
+                    title: Compression
+                    description: Compression method for output files
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                description:
+                    title: Description
+                    description: Optional description for this configuration.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_streamtags:
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_partitionExpr:
+                    description: Binds 'partitionExpr' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+            title: OutputFileOutDevPartialRequest
         SchemaLibEntryPartialRequest:
             type: object
             additionalProperties: true
@@ -203844,7 +204038,7 @@ components:
                         - type: boolean
                         - type: "null"
                 enableWorkerInMemory:
-                    description: "Do not persist connection data across restarts. Caution: Leader will restart when this setting is changed."
+                    description: "Do not persist connection data across restarts. Caution: Leader will restart when this setting is changed. In Cribl.Cloud, only Cribl operators can change this on the Leader and on Cribl-managed Worker Groups."
                     anyOf:
                         - type: boolean
                         - type: "null"
@@ -203906,20 +204100,20 @@ components:
                           pattern: ^\d+(\.\d+)?\s*(?:[kmgKMG](b|B))?$
                         - type: "null"
                 lookupAllowedPaths:
-                    description: Additional directories where lookup files are permitted to reside, beyond the default lookup directories under CRIBL_HOME. Use this allowlist to keep lookups on a shared mount or another location outside CRIBL_HOME. Each entry is a directory path; environment variables such as <code>$CRIBL_HOME</code> are expanded, and relative entries resolve against CRIBL_HOME. A lookup file is permitted when it resides within any listed directory. Leaving this empty restricts lookups to the default lookup directories.
+                    description: Additional directories where lookup files are permitted to reside, beyond the default lookup directories under CRIBL_HOME. Use this allowlist to keep lookups on a shared mount or another location outside CRIBL_HOME. Each entry is a directory path; environment variables such as <code>$CRIBL_HOME</code> are expanded, and relative entries resolve against CRIBL_HOME. A lookup file is permitted when it resides within any listed directory. Leaving this empty restricts lookups to the default lookup directories. In Cribl.Cloud, only Cribl operators can change this on the Leader and on Cribl-managed Worker Groups.
                     anyOf:
                         - type: array
                           items:
                             type: string
                         - type: "null"
                 lookupMaxSize:
-                    description: Maximum allowed disk space for persisting single lookup data file.
+                    description: Maximum allowed disk space for persisting single lookup data file. In Cribl.Cloud, only Cribl operators can change this on the Leader and on Cribl-managed Worker Groups.
                     anyOf:
                         - type: string
                           pattern: ^\d+(\.\d+)?\s*(?:[kmgKMG](b|B))?$
                         - type: "null"
                 lookupMaxTotalSize:
-                    description: Maximum allowed disk space for persisting lookup data and metadata files.
+                    description: Maximum allowed disk space for persisting lookup data and metadata files. In Cribl.Cloud, only Cribl operators can change this on the Leader and on Cribl-managed Worker Groups.
                     anyOf:
                         - type: string
                           pattern: ^\d+(\.\d+)?\s*(?:[kmgKMG](b|B))?$
@@ -229213,6 +229407,14 @@ components:
                 tls:
                     disabled: false
             description: Example request body for creating a FortiSIEM Destination.
+        OutputCreateExamplesFileOutDev:
+            summary: FileOut (Dev)
+            value:
+                id: file-out-dev-output
+                type: file_out_dev
+                destPath: /data/output
+                compress: gzip
+            description: Example request body for creating a FileOut (Dev) Destination.
         OutputCreateExamplesPrometheus:
             summary: Prometheus
             value:
@@ -245416,7 +245618,7 @@ components:
                     dataset: my_s3_dataset
         SearchFavoritesListResponseExamplesMixedFavorites:
             summary: List the requesting user favorites
-            description: Example response for listing the requesting user favorites across Dashboards, Notebooks, Notebook templates, and Datasets.
+            description: Example response for listing the requesting user favorites across Dashboards, Notebooks, Notebook templates, and Packs.
             value:
                 items:
                     - type: dashboards
@@ -245442,12 +245644,7 @@ components:
                       favoriteCount: 4
                       name: Incident Response
                       modified: 1738944000000
-                    - type: datasets
-                      id: vpc_flow_logs
-                      favoriteCount: 2
-                      name: vpc_flow_logs
-                      description: VPC Flow Logs delivered to S3.
-                count: 5
+                count: 4
                 offset: 0
                 limit: 20
         SearchFavoritesCountResponseExamplesFavoriteCount:
@@ -248022,6 +248219,14 @@ components:
                 tls:
                     disabled: false
             description: "Example request body for updating a FortiSIEM Destination.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+        UpdateOutputExamplesFileOutDevPartialRequest:
+            summary: FileOut (Dev)
+            value:
+                id: file-out-dev-output
+                type: file_out_dev
+                destPath: /data/output
+                compress: gzip
+            description: "Example request body for updating a FileOut (Dev) Destination.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
         UpdateOutputExamplesPrometheusPartialRequest:
             summary: Prometheus
             value:
@@ -258986,6 +259191,8 @@ paths:
                                 $ref: "#/components/examples/OutputCreateExamplesSecuronix"
                             OutputCreateExamplesFortiSIEM:
                                 $ref: "#/components/examples/OutputCreateExamplesFortiSIEM"
+                            OutputCreateExamplesFileOutDev:
+                                $ref: "#/components/examples/OutputCreateExamplesFileOutDev"
                             OutputCreateExamplesPrometheus:
                                 $ref: "#/components/examples/OutputCreateExamplesPrometheus"
                             OutputCreateExamplesAmazonManagedPrometheus:
@@ -259337,6 +259544,8 @@ paths:
                                 $ref: "#/components/examples/UpdateOutputExamplesSecuronixPartialRequest"
                             UpdateOutputExamplesFortiSIEM:
                                 $ref: "#/components/examples/UpdateOutputExamplesFortiSIEMPartialRequest"
+                            UpdateOutputExamplesFileOutDev:
+                                $ref: "#/components/examples/UpdateOutputExamplesFileOutDevPartialRequest"
                             UpdateOutputExamplesPrometheus:
                                 $ref: "#/components/examples/UpdateOutputExamplesPrometheusPartialRequest"
                             UpdateOutputExamplesAmazonManagedPrometheus:
@@ -260039,6 +260248,8 @@ paths:
                                 $ref: "#/components/examples/OutputCreateExamplesSecuronix"
                             OutputCreateExamplesFortiSIEM:
                                 $ref: "#/components/examples/OutputCreateExamplesFortiSIEM"
+                            OutputCreateExamplesFileOutDev:
+                                $ref: "#/components/examples/OutputCreateExamplesFileOutDev"
                             OutputCreateExamplesPrometheus:
                                 $ref: "#/components/examples/OutputCreateExamplesPrometheus"
                             OutputCreateExamplesAmazonManagedPrometheus:
@@ -260403,6 +260614,8 @@ paths:
                                 $ref: "#/components/examples/UpdateOutputExamplesSecuronixPartialRequest"
                             UpdateOutputExamplesFortiSIEM:
                                 $ref: "#/components/examples/UpdateOutputExamplesFortiSIEMPartialRequest"
+                            UpdateOutputExamplesFileOutDev:
+                                $ref: "#/components/examples/UpdateOutputExamplesFileOutDevPartialRequest"
                             UpdateOutputExamplesPrometheus:
                                 $ref: "#/components/examples/UpdateOutputExamplesPrometheusPartialRequest"
                             UpdateOutputExamplesAmazonManagedPrometheus:
@@ -265206,7 +265419,7 @@ paths:
                 - node
                 - single
             summary: Update system limits
-            description: "Update system limits configuration.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update system limits configuration. <br/><br/>In Cribl.Cloud, changing <code>lookupAllowedPaths</code>, <code>lookupMaxSize</code>, <code>lookupMaxTotalSize</code>, or <code>enableWorkerInMemory</code> on the Leader or on a Cribl-managed Worker Group requires Cribl operator permission; other callers receive <code>403</code>.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated system limits configuration.
@@ -265231,11 +265444,7 @@ paths:
                                         status: error
                                         message: Authentication failed (missing or invalid credentials or Bearer token).
                 "403":
-                    description: Not authorized or licensed to perform this action.
-                    content:
-                        text/plain:
-                            schema:
-                                type: string
+                    description: Not authorized. Changing lookupAllowedPaths, lookupMaxSize, lookupMaxTotalSize, or enableWorkerInMemory on the Leader or on a Cribl-managed Worker Group requires Cribl operator permission.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -327617,7 +327826,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Remove a favorite (Cribl.Cloud only)
-            description: Remove the requesting user's favorite for the specified Dashboard, Notebook, Notebook template, or Dataset (Cribl.Cloud only). Removing a favorite that does not exist changes nothing. A favorite can be removed after its object is deleted or the user loses access to it.
+            description: Remove the requesting user's favorite for the specified Dashboard, Notebook, or Notebook template (Cribl.Cloud only). Removing a favorite that does not exist changes nothing. A favorite can be removed after its object is deleted or the user loses access to it.
             responses:
                 "204":
                     description: The favorite was removed successfully.
@@ -327658,7 +327867,7 @@ paths:
                   required: true
                   schema:
                     $ref: "#/components/schemas/SearchFavoriteTypeParam"
-                  description: "The type of the object to remove the favorite from: <code>dashboards</code>, <code>notebooks</code>, <code>notebook-templates</code>, or <code>datasets</code>."
+                  description: "The type of the object to remove the favorite from: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>."
                 - name: id
                   in: path
                   required: true
@@ -327674,7 +327883,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Add a favorite (Cribl.Cloud only)
-            description: Add a favorite for the specified Dashboard, Notebook, Notebook template, or Dataset on behalf of the requesting user (Cribl.Cloud only). The request takes no payload, and repeating it changes nothing.
+            description: Add a favorite for the specified Dashboard, Notebook, or Notebook template on behalf of the requesting user (Cribl.Cloud only). The request takes no payload, and repeating it changes nothing.
             responses:
                 "200":
                     description: The favorite count for the object after the favorite is added.
@@ -327728,7 +327937,7 @@ paths:
                   required: true
                   schema:
                     $ref: "#/components/schemas/SearchFavoriteTypeParam"
-                  description: "The type of the object to favorite: <code>dashboards</code>, <code>notebooks</code>, <code>notebook-templates</code>, or <code>datasets</code>."
+                  description: "The type of the object to favorite: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>."
                 - name: id
                   in: path
                   required: true
@@ -327745,7 +327954,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: List favorites (Cribl.Cloud only)
-            description: Get the Dashboards, Notebooks, Notebook templates, and Datasets that the requesting user has favorited, across every Pack (Cribl.Cloud only). Objects that no longer exist or that the user cannot read are omitted.
+            description: Get the Dashboards, Notebooks, and Notebook templates that the requesting user has favorited, across every Pack (Cribl.Cloud only). Objects that no longer exist or that the user cannot read are omitted.
             responses:
                 "200":
                     description: The requesting user's favorites.
@@ -327793,7 +328002,7 @@ paths:
                   required: false
                   schema:
                     $ref: "#/components/schemas/SearchFavoriteTypeParam"
-                  description: "Limits the response to one object type: <code>dashboards</code>, <code>notebooks</code>, <code>notebook-templates</code>, or <code>datasets</code>. Omit to list every type."
+                  description: "Limits the response to one object type: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>. Omit to list every type."
                 - name: offset
                   in: query
                   required: false
