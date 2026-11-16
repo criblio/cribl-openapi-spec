@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.22.0-alpha.1794784172150-8d3d2a19
+  version: 4.22.0-alpha.1794870540356-477830cb
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -75337,6 +75337,90 @@ components:
             variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'reptName' at runtime.
       title: OutputFortisiem
+    OutputFileOutDev:
+      type: object
+      required:
+        - type
+        - destPath
+      properties:
+        id:
+          type: string
+          title: Output ID
+          description: Unique name for this output
+        type:
+          type: string
+          enum:
+            - file_out_dev
+          description: Connector type identifier.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data before sending out to this output
+        systemFields:
+          type: array
+          title: System fields
+          description: Fields to automatically add to events, such as cribl_pipe. Supports
+            wildcards.
+          items:
+            type: string
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        schemaMonitorSettings:
+          $ref: "#/components/schemas/SchemaMonitorSettingsTypeOptional"
+          description: Configuration for Schema Monitor on this Destination.
+        destPath:
+          type: string
+          title: Target path
+          description: Target directory for output files on the local filesystem
+        partitionExpr:
+          type: string
+          title: Partitioning expression
+          description: JavaScript expression defining how files are partitioned and
+            organized. Default is date-based. If blank, Stream will fall back to
+            the event's __partition field value – if present – otherwise to each
+            location's root directory.
+        maxFileSizeMB:
+          type: number
+          title: File size limit (MB)
+          description: Maximum uncompressed output file size. Files of this size will be
+            closed and moved to final output location.
+          maximum: 1024
+          minimum: 5
+        maxFileOpenTimeSec:
+          type: number
+          title: File open time limit (sec)
+          description: Maximum amount of time to write to a file. Files open for longer
+            than this will be closed and moved to final output location.
+          minimum: 10
+          maximum: 1800
+        compress:
+          type: string
+          title: Compression
+          description: Compression method for output files
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_partitionExpr:
+          type: string
+          description: Binds 'partitionExpr' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+      title: OutputFileOutDev
     Output:
       oneOf:
         - $ref: "#/components/schemas/OutputDefault"
@@ -75443,6 +75527,7 @@ components:
         - $ref: "#/components/schemas/OutputDatabricksZerobus"
         - $ref: "#/components/schemas/OutputSecuronix"
         - $ref: "#/components/schemas/OutputFortisiem"
+        - $ref: "#/components/schemas/OutputFileOutDev"
       discriminator:
         propertyName: type
         mapping:
@@ -75550,6 +75635,7 @@ components:
           databricks_zerobus: "#/components/schemas/OutputDatabricksZerobus"
           securonix: "#/components/schemas/OutputSecuronix"
           fortisiem: "#/components/schemas/OutputFortisiem"
+          file_out_dev: "#/components/schemas/OutputFileOutDev"
       title: Output
     CountedOutputResponse:
       type: object
@@ -75687,6 +75773,7 @@ components:
         - traversal_otlp
         - securonix
         - fortisiem
+        - file_out_dev
       title: DestinationType
       x-speakeasy-unknown-values: allow
     PaginatedOutputResponse:
@@ -78642,7 +78729,7 @@ components:
         state:
           type: string
           const: active
-          description: Current overlay state.
+          description: A hotfix is applied to the server.
           examples:
             - active
       required:
@@ -78654,7 +78741,7 @@ components:
         state:
           type: string
           const: inactive
-          description: Current overlay state.
+          description: No hotfix is applied to the server.
           examples:
             - inactive
       required:
@@ -78674,7 +78761,8 @@ components:
             coordinator) in a Collectors HA deployment.
         overlay:
           $ref: "#/components/schemas/HealthOverlayStatus"
-          description: Overlay state for this process.
+          description: Whether Cribl applied a hotfix to the server without a full version
+            upgrade. For information only.
         role:
           type: string
           enum:
@@ -88664,6 +88752,14 @@ components:
         tls:
           disabled: false
       description: Example request body for creating a FortiSIEM Destination.
+    OutputCreateExamplesFileOutDev:
+      summary: FileOut (Dev)
+      value:
+        id: file-out-dev-output
+        type: file_out_dev
+        destPath: /data/output
+        compress: gzip
+      description: Example request body for creating a FileOut (Dev) Destination.
     OutputCreateExamplesPrometheus:
       summary: Prometheus
       value:
@@ -89976,6 +90072,17 @@ components:
         tls:
           disabled: false
       description: Example request body for updating a FortiSIEM
+        Destination.<br/><br/>The request body must include a complete
+        representation of the Destination that you want to update. This endpoint
+        does not support partial updates.
+    UpdateOutputExamplesFileOutDev:
+      summary: FileOut (Dev)
+      value:
+        id: file-out-dev-output
+        type: file_out_dev
+        destPath: /data/output
+        compress: gzip
+      description: Example request body for updating a FileOut (Dev)
         Destination.<br/><br/>The request body must include a complete
         representation of the Destination that you want to update. This endpoint
         does not support partial updates.
@@ -98272,6 +98379,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesSecuronix"
               OutputCreateExamplesFortiSIEM:
                 $ref: "#/components/examples/OutputCreateExamplesFortiSIEM"
+              OutputCreateExamplesFileOutDev:
+                $ref: "#/components/examples/OutputCreateExamplesFileOutDev"
               OutputCreateExamplesPrometheus:
                 $ref: "#/components/examples/OutputCreateExamplesPrometheus"
               OutputCreateExamplesAmazonManagedPrometheus:
@@ -98639,6 +98748,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesSecuronix"
               UpdateOutputExamplesFortiSIEM:
                 $ref: "#/components/examples/UpdateOutputExamplesFortiSIEM"
+              UpdateOutputExamplesFileOutDev:
+                $ref: "#/components/examples/UpdateOutputExamplesFileOutDev"
               UpdateOutputExamplesPrometheus:
                 $ref: "#/components/examples/UpdateOutputExamplesPrometheus"
               UpdateOutputExamplesAmazonManagedPrometheus:
@@ -103895,6 +104006,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesSecuronix"
               OutputCreateExamplesFortiSIEM:
                 $ref: "#/components/examples/OutputCreateExamplesFortiSIEM"
+              OutputCreateExamplesFileOutDev:
+                $ref: "#/components/examples/OutputCreateExamplesFileOutDev"
               OutputCreateExamplesPrometheus:
                 $ref: "#/components/examples/OutputCreateExamplesPrometheus"
               OutputCreateExamplesAmazonManagedPrometheus:
@@ -104249,6 +104362,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesSecuronix"
               UpdateOutputExamplesFortiSIEM:
                 $ref: "#/components/examples/UpdateOutputExamplesFortiSIEM"
+              UpdateOutputExamplesFileOutDev:
+                $ref: "#/components/examples/UpdateOutputExamplesFileOutDev"
               UpdateOutputExamplesPrometheus:
                 $ref: "#/components/examples/UpdateOutputExamplesPrometheus"
               UpdateOutputExamplesAmazonManagedPrometheus:
