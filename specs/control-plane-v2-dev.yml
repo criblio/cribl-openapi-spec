@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
     - Search context: /api/v2/m/default_search
-  version: 4.22.0-alpha.1794957084495-849b3aec
+  version: 4.22.0-alpha.1795043391680-64d209b7
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -7998,18 +7998,12 @@ components:
               $ref: "#/components/schemas/AuthenticationProtocolOptionsV3User"
               description: Authentication protocol for the SNMPv3 user.
             authKeyType:
-              type: string
-              enum:
-                - manual
-                - secret
+              default: manual
             privProtocol:
               type: string
               description: Privacy protocol for SNMPv3 encryption.
             privKeyType:
-              type: string
-              enum:
-                - manual
-                - secret
+              default: manual
           allOf:
             - oneOf:
                 - $ref: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNone"
@@ -75270,6 +75264,178 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'partitionExpr' at runtime.
       title: OutputFileOutDev
+    OutputCloudChangeEnrichment:
+      type: object
+      required:
+        - type
+        - dataset
+      properties:
+        id:
+          type: string
+          title: Output ID
+          description: Unique name for this output
+        type:
+          type: string
+          enum:
+            - cloud_change_enrichment
+          description: Connector type identifier.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data before sending out to this output
+        systemFields:
+          type: array
+          title: System fields
+          description: Fields to automatically add to events, such as cribl_pipe. Supports
+            wildcards.
+          items:
+            type: string
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        schemaMonitorSettings:
+          $ref: "#/components/schemas/SchemaMonitorSettingsTypeOptional"
+          description: Configuration for Schema Monitor on this Destination.
+        dataset:
+          type: string
+          title: Dataset
+          description: ID of the Cribl Search dataset that receives the enriched events.
+            The dataset determines the Lakehouse engine that stores them.
+          minLength: 1
+          maxLength: 512
+          pattern: ^[a-zA-Z0-9_-]+$
+        inventory:
+          type: object
+          title: Cloud inventory
+          properties:
+            enabled:
+              type: boolean
+              title: Store cloud inventory
+              description: Maintain the Workspace cloud inventory (current state and history
+                of the cloud resources the events change). Inventory engine and
+                retention are Workspace settings under Cloud Connections.
+          description: Cloud inventory
+        description:
+          type: string
+          title: Description
+          description: Optional description of this Destination
+        concurrency:
+          type: number
+          minimum: 1
+          maximum: 32
+          title: Request concurrency
+          description: Maximum number of ongoing requests to the enrichment service before
+            blocking
+        maxPayloadEvents:
+          type: number
+          minimum: 1
+          maximum: 1000
+          title: Events-per-request limit
+          description: Maximum number of events in one request to the enrichment service
+        flushPeriodSec:
+          type: number
+          title: Flush period (sec)
+          description: Maximum time between requests. Small values could cause the payload
+            size to be smaller than the configured Events-per-request limit.
+        timeoutSec:
+          type: number
+          minimum: 90
+          title: Request timeout
+          description: Amount of time, in seconds, to wait for the enrichment service to
+            confirm a request before retrying it. The service confirms a request
+            only after the enriched events are stored, which can take over a
+            minute.
+        filterPassThrough:
+          type: boolean
+          title: Skip events the service discards
+          description: "Do not send failed API calls (events with an errorCode), events other than management events (an eventCategory other than Management: data, network activity and Insights events), or read-only calls other than STS AssumeRole, AssumeRoleWithSAML and AssumeRoleWithWebIdentity. The enrichment service stores none of them. Accounts seen in change data still include the accounts of the skipped events: the Destination reports how many it skipped per account. Turn this off to send every event."
+        onBackpressure:
+          $ref: "#/components/schemas/BackpressureBehaviorOptions"
+          description: How to handle events when all receivers are exerting backpressure
+        pqStrictOrdering:
+          title: Strict ordering
+          description: Use FIFO (first in, first out) processing. Disable to forward new
+            events to receivers before queue is flushed.
+          type: boolean
+        pqRatePerSec:
+          type: number
+          title: Drain rate limit (EPS)
+          description: Throttling rate (in events per second) to impose while writing to
+            Destinations from PQ. Defaults to 0, which disables throttling.
+          minimum: 0
+        pqMode:
+          $ref: "#/components/schemas/ModeOptions"
+          description: In Error mode, PQ writes events to the filesystem if the
+            Destination is unavailable. In Backpressure mode, PQ writes events
+            to the filesystem when it detects backpressure from the Destination.
+            In Always On mode, PQ always writes events to the filesystem.
+        pqMaxBufferSize:
+          type: number
+          title: Buffer size limit (events - deprecated)
+          description: Maximum number of events to hold in memory before writing the
+            events to disk. Deprecated and only supported in workers < v4.17.0.
+            Use pqMaxBufferSizeBytes instead.
+          minimum: 42
+          maximum: 1000
+        pqMaxBackpressureSec:
+          type: number
+          title: Backpressure duration limit
+          description: How long (in seconds) to wait for backpressure to resolve before
+            engaging the queue
+          minimum: 0
+        pqMaxFileSize:
+          type: string
+          title: File size limit
+          description: The maximum size to store in each queue file before closing and
+            optionally compressing (KB, MB, etc.)
+          pattern: ^\d+\s*(?:\w{2})?$
+        pqMaxSize:
+          type: string
+          title: Queue size limit
+          description: The maximum disk space that the queue can consume (as an average
+            per Worker Process) before queueing stops. Enter a numeral with
+            units of KB, MB, etc.
+          pattern: ^\d+\s*(?:\w{2})?$
+        pqPath:
+          type: string
+          title: Queue file path
+          description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/<output-id>. Defaults to $CRIBL_HOME/state/queues."
+        pqCompress:
+          $ref: "#/components/schemas/CompressionOptionsPq"
+          description: Codec to use to compress the persisted data
+        pqOnBackpressure:
+          $ref: "#/components/schemas/QueueFullBehaviorOptions"
+          description: How to handle events when the queue is exerting backpressure (full
+            capacity or low disk). 'Block' is the same behavior as non-PQ
+            blocking. 'Drop new data' throws away incoming data, while leaving
+            the contents of the PQ unchanged.
+        pqMaxBufferSizeBytes:
+          type: string
+          title: Buffer size limit (bytes)
+          description: The maximum size to hold in memory before writing events to disk.
+            Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
+            and the maximum value is 10MB.
+          pattern: ^\d+\s*(?:\w{2})?$
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_onBackpressure:
+          type: string
+          description: Binds 'onBackpressure' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'onBackpressure' at
+            runtime.
+      title: OutputCloudChangeEnrichment
     Output:
       oneOf:
         - $ref: "#/components/schemas/OutputDefault"
@@ -75377,6 +75543,7 @@ components:
         - $ref: "#/components/schemas/OutputSecuronix"
         - $ref: "#/components/schemas/OutputFortisiem"
         - $ref: "#/components/schemas/OutputFileOutDev"
+        - $ref: "#/components/schemas/OutputCloudChangeEnrichment"
       discriminator:
         propertyName: type
         mapping:
@@ -75485,6 +75652,7 @@ components:
           securonix: "#/components/schemas/OutputSecuronix"
           fortisiem: "#/components/schemas/OutputFortisiem"
           file_out_dev: "#/components/schemas/OutputFileOutDev"
+          cloud_change_enrichment: "#/components/schemas/OutputCloudChangeEnrichment"
       title: Output
     OutputResponse:
       allOf:
@@ -75609,6 +75777,7 @@ components:
         - securonix
         - fortisiem
         - file_out_dev
+        - cloud_change_enrichment
       title: DestinationType
       x-speakeasy-unknown-values: allow
     PaginatedOutputResponse:
@@ -75698,26 +75867,26 @@ components:
           description: Configuration for the Pipeline, including functions and settings.
           additionalProperties: false
           properties:
-            asyncFuncTimeout:
-              type: integer
-              title: Async function timeout (ms)
-              description: Timeout (in milliseconds) for asynchronous Pipeline functions.
-              minimum: 0
-              maximum: 10000
-            output:
-              type: string
-              title: Output event destination
-              description: The output destination for events processed by this Pipeline.
             description:
               title: Description
               description: Brief description of the Pipeline.
               type: string
+            output:
+              type: string
+              title: Output event destination
+              description: The output destination for events processed by this Pipeline.
             streamtags:
               type: array
               title: Tags
               description: Metadata tags used for categorization and filtering.
               items:
                 type: string
+            asyncFuncTimeout:
+              type: integer
+              title: Async function timeout (ms)
+              description: Timeout (in milliseconds) for asynchronous Pipeline functions.
+              minimum: 0
+              maximum: 10000
             functions:
               title: Functions
               description: List of Functions to pass data through the Pipeline.
@@ -137372,6 +137541,9 @@ components:
         - $ref: "#/components/schemas/OutputFileOutDevPartialRequest"
           required:
             - type
+        - $ref: "#/components/schemas/OutputCloudChangeEnrichmentPartialRequest"
+          required:
+            - type
       discriminator:
         propertyName: type
         mapping:
@@ -137480,6 +137652,7 @@ components:
           securonix: "#/components/schemas/OutputSecuronixPartialRequest"
           fortisiem: "#/components/schemas/OutputFortisiemPartialRequest"
           file_out_dev: "#/components/schemas/OutputFileOutDevPartialRequest"
+          cloud_change_enrichment: "#/components/schemas/OutputCloudChangeEnrichmentPartialRequest"
       title: OutputPartialRequest
       properties:
         type:
@@ -194415,6 +194588,288 @@ components:
             - type: string
             - type: "null"
       title: OutputFileOutDevPartialRequest
+    OutputCloudChangeEnrichmentPartialRequest:
+      type: object
+      properties:
+        id:
+          title: Output ID
+          description: Unique name for this output
+          anyOf:
+            - type: string
+            - type: "null"
+        type:
+          type: string
+          enum:
+            - cloud_change_enrichment
+          description: Connector type identifier.
+        pipeline:
+          title: Pipeline
+          description: Pipeline to process data before sending out to this output
+          anyOf:
+            - type: string
+            - type: "null"
+        systemFields:
+          title: System fields
+          description: Fields to automatically add to events, such as cribl_pipe. Supports
+            wildcards.
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: "null"
+        environment:
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+          anyOf:
+            - type: string
+            - type: "null"
+        streamtags:
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: "null"
+        schemaMonitorSettings:
+          title: Schema Monitor Settings
+          description: Configuration for Schema Monitor on this Destination.
+          anyOf:
+            - type: object
+              properties:
+                enabled:
+                  title: Schema Monitor
+                  description: Enable Schema Monitor to detect schema drift for this Destination.
+                    Events are sampled after this output's Pipeline runs,
+                    immediately before being sent.
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                targetSchemas:
+                  title: Schema Monitor target schemas
+                  description: Schema Knowledge Objects that sampled events are acceptable
+                    against. An event that matches any listed schema does not
+                    count as drift.
+                  anyOf:
+                    - type: array
+                      items:
+                        $ref: "#/components/schemas/TargetSchemaConfOutputDefault"
+                    - type: "null"
+            - type: "null"
+        dataset:
+          type: string
+          title: Dataset
+          description: ID of the Cribl Search dataset that receives the enriched events.
+            The dataset determines the Lakehouse engine that stores them.
+          minLength: 1
+          maxLength: 512
+          pattern: ^[a-zA-Z0-9_-]+$
+        inventory:
+          title: Cloud inventory
+          description: Cloud inventory
+          anyOf:
+            - type: object
+              properties:
+                enabled:
+                  title: Store cloud inventory
+                  description: Maintain the Workspace cloud inventory (current state and history
+                    of the cloud resources the events change). Inventory engine
+                    and retention are Workspace settings under Cloud
+                    Connections.
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+            - type: "null"
+        description:
+          title: Description
+          description: Optional description of this Destination
+          anyOf:
+            - type: string
+            - type: "null"
+        concurrency:
+          title: Request concurrency
+          description: Maximum number of ongoing requests to the enrichment service before
+            blocking
+          anyOf:
+            - type: number
+              minimum: 1
+              maximum: 32
+            - type: "null"
+        maxPayloadEvents:
+          title: Events-per-request limit
+          description: Maximum number of events in one request to the enrichment service
+          anyOf:
+            - type: number
+              minimum: 1
+              maximum: 1000
+            - type: "null"
+        flushPeriodSec:
+          title: Flush period (sec)
+          description: Maximum time between requests. Small values could cause the payload
+            size to be smaller than the configured Events-per-request limit.
+          anyOf:
+            - type: number
+            - type: "null"
+        timeoutSec:
+          title: Request timeout
+          description: Amount of time, in seconds, to wait for the enrichment service to
+            confirm a request before retrying it. The service confirms a request
+            only after the enriched events are stored, which can take over a
+            minute.
+          anyOf:
+            - type: number
+              minimum: 90
+            - type: "null"
+        filterPassThrough:
+          title: Skip events the service discards
+          description: "Do not send failed API calls (events with an errorCode), events other than management events (an eventCategory other than Management: data, network activity and Insights events), or read-only calls other than STS AssumeRole, AssumeRoleWithSAML and AssumeRoleWithWebIdentity. The enrichment service stores none of them. Accounts seen in change data still include the accounts of the skipped events: the Destination reports how many it skipped per account. Turn this off to send every event."
+          anyOf:
+            - type: boolean
+            - type: "null"
+        onBackpressure:
+          title: Backpressure behavior
+          description: How to handle events when all receivers are exerting backpressure
+          x-speakeasy-enum-descriptions:
+            - Block
+            - Drop
+            - Persistent Queue
+          anyOf:
+            - type: string
+              enum:
+                - block
+                - drop
+                - queue
+              x-speakeasy-unknown-values: allow
+            - type: "null"
+        pqStrictOrdering:
+          title: Strict ordering
+          description: Use FIFO (first in, first out) processing. Disable to forward new
+            events to receivers before queue is flushed.
+          anyOf:
+            - type: boolean
+            - type: "null"
+        pqRatePerSec:
+          title: Drain rate limit (EPS)
+          description: Throttling rate (in events per second) to impose while writing to
+            Destinations from PQ. Defaults to 0, which disables throttling.
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        pqMode:
+          title: Mode
+          description: In Error mode, PQ writes events to the filesystem if the
+            Destination is unavailable. In Backpressure mode, PQ writes events
+            to the filesystem when it detects backpressure from the Destination.
+            In Always On mode, PQ always writes events to the filesystem.
+          x-speakeasy-enum-descriptions:
+            - Error
+            - Backpressure
+            - Always On
+          anyOf:
+            - enum:
+                - error
+                - always
+                - backpressure
+              type: string
+              x-speakeasy-unknown-values: allow
+            - type: "null"
+        pqMaxBufferSize:
+          title: Buffer size limit (events - deprecated)
+          description: Maximum number of events to hold in memory before writing the
+            events to disk. Deprecated and only supported in workers < v4.17.0.
+            Use pqMaxBufferSizeBytes instead.
+          anyOf:
+            - type: number
+              minimum: 42
+              maximum: 1000
+            - type: "null"
+        pqMaxBackpressureSec:
+          title: Backpressure duration limit
+          description: How long (in seconds) to wait for backpressure to resolve before
+            engaging the queue
+          anyOf:
+            - type: number
+              minimum: 0
+            - type: "null"
+        pqMaxFileSize:
+          title: File size limit
+          description: The maximum size to store in each queue file before closing and
+            optionally compressing (KB, MB, etc.)
+          anyOf:
+            - type: string
+              pattern: ^\d+\s*(?:\w{2})?$
+            - type: "null"
+        pqMaxSize:
+          title: Queue size limit
+          description: The maximum disk space that the queue can consume (as an average
+            per Worker Process) before queueing stops. Enter a numeral with
+            units of KB, MB, etc.
+          anyOf:
+            - type: string
+              pattern: ^\d+\s*(?:\w{2})?$
+            - type: "null"
+        pqPath:
+          title: Queue file path
+          description: "The location for the persistent queue files. To this field's value, the system will append: /<worker-id>/<output-id>. Defaults to $CRIBL_HOME/state/queues."
+          anyOf:
+            - type: string
+            - type: "null"
+        pqCompress:
+          x-speakeasy-enum-descriptions:
+            - None
+            - Gzip
+          title: Compression
+          description: Codec to use to compress the persisted data
+          anyOf:
+            - type: string
+              enum:
+                - none
+                - gzip
+              x-speakeasy-unknown-values: allow
+            - type: "null"
+        pqOnBackpressure:
+          x-speakeasy-enum-descriptions:
+            - Block
+            - Drop new data
+          title: Queue-full behavior
+          description: How to handle events when the queue is exerting backpressure (full
+            capacity or low disk). 'Block' is the same behavior as non-PQ
+            blocking. 'Drop new data' throws away incoming data, while leaving
+            the contents of the PQ unchanged.
+          anyOf:
+            - type: string
+              enum:
+                - block
+                - drop
+              x-speakeasy-unknown-values: allow
+            - type: "null"
+        pqMaxBufferSizeBytes:
+          title: Buffer size limit (bytes)
+          description: The maximum size to hold in memory before writing events to disk.
+            Enter a numeral with units of KB, MB, etc. The minimum value is 64KB
+            and the maximum value is 10MB.
+          anyOf:
+            - type: string
+              pattern: ^\d+\s*(?:\w{2})?$
+            - type: "null"
+        __template_streamtags:
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+        __template_onBackpressure:
+          description: Binds 'onBackpressure' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'onBackpressure' at
+            runtime.
+          anyOf:
+            - type: string
+            - type: "null"
+      title: OutputCloudChangeEnrichmentPartialRequest
     PipelinePartialRequest:
       title: PipelinePartialRequest
       type: object
@@ -194428,23 +194883,15 @@ components:
           description: Configuration for the Pipeline, including functions and settings.
           additionalProperties: false
           properties:
-            asyncFuncTimeout:
-              title: Async function timeout (ms)
-              description: Timeout (in milliseconds) for asynchronous Pipeline functions.
+            description:
+              title: Description
+              description: Brief description of the Pipeline.
               anyOf:
-                - type: integer
-                  minimum: 0
-                  maximum: 10000
+                - type: string
                 - type: "null"
             output:
               title: Output event destination
               description: The output destination for events processed by this Pipeline.
-              anyOf:
-                - type: string
-                - type: "null"
-            description:
-              title: Description
-              description: Brief description of the Pipeline.
               anyOf:
                 - type: string
                 - type: "null"
@@ -194455,6 +194902,14 @@ components:
                 - type: array
                   items:
                     type: string
+                - type: "null"
+            asyncFuncTimeout:
+              title: Async function timeout (ms)
+              description: Timeout (in milliseconds) for asynchronous Pipeline functions.
+              anyOf:
+                - type: integer
+                  minimum: 0
+                  maximum: 10000
                 - type: "null"
             functions:
               title: Functions
@@ -208892,6 +209347,15 @@ components:
         destPath: /data/output
         compress: gzip
       description: Example request body for creating a FileOut (Dev) Destination.
+    OutputCreateExamplesCloudChangeEnrichment:
+      summary: Cloud Change Events
+      value:
+        id: cloud-change-events
+        type: cloud_change_enrichment
+        dataset: cloud_changes
+        inventory:
+          enabled: true
+      description: Example request body for creating a Cloud Change Events Destination.
     OutputCreateExamplesPrometheus:
       summary: Prometheus
       value:
@@ -212748,6 +213212,15 @@ components:
         destPath: /data/output
         compress: gzip
       description: "Example request body for updating a FileOut (Dev) Destination.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+    UpdateOutputExamplesCloudChangeEnrichmentPartialRequest:
+      summary: Cloud Change Events
+      value:
+        id: cloud-change-events
+        type: cloud_change_enrichment
+        dataset: cloud_changes
+        inventory:
+          enabled: true
+      description: "Example request body for updating a Cloud Change Events Destination.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
     UpdateOutputExamplesPrometheusPartialRequest:
       summary: Prometheus
       value:
@@ -218072,6 +218545,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesFortiSIEM"
               OutputCreateExamplesFileOutDev:
                 $ref: "#/components/examples/OutputCreateExamplesFileOutDev"
+              OutputCreateExamplesCloudChangeEnrichment:
+                $ref: "#/components/examples/OutputCreateExamplesCloudChangeEnrichment"
               OutputCreateExamplesPrometheus:
                 $ref: "#/components/examples/OutputCreateExamplesPrometheus"
               OutputCreateExamplesAmazonManagedPrometheus:
@@ -218444,6 +218919,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesFortiSIEMPartialRequest"
               UpdateOutputExamplesFileOutDev:
                 $ref: "#/components/examples/UpdateOutputExamplesFileOutDevPartialRequest"
+              UpdateOutputExamplesCloudChangeEnrichment:
+                $ref: "#/components/examples/UpdateOutputExamplesCloudChangeEnrichmentPartialRequest"
               UpdateOutputExamplesPrometheus:
                 $ref: "#/components/examples/UpdateOutputExamplesPrometheusPartialRequest"
               UpdateOutputExamplesAmazonManagedPrometheus:
@@ -223712,6 +224189,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesFortiSIEM"
               OutputCreateExamplesFileOutDev:
                 $ref: "#/components/examples/OutputCreateExamplesFileOutDev"
+              OutputCreateExamplesCloudChangeEnrichment:
+                $ref: "#/components/examples/OutputCreateExamplesCloudChangeEnrichment"
               OutputCreateExamplesPrometheus:
                 $ref: "#/components/examples/OutputCreateExamplesPrometheus"
               OutputCreateExamplesAmazonManagedPrometheus:
@@ -224071,6 +224550,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesFortiSIEMPartialRequest"
               UpdateOutputExamplesFileOutDev:
                 $ref: "#/components/examples/UpdateOutputExamplesFileOutDevPartialRequest"
+              UpdateOutputExamplesCloudChangeEnrichment:
+                $ref: "#/components/examples/UpdateOutputExamplesCloudChangeEnrichmentPartialRequest"
               UpdateOutputExamplesPrometheus:
                 $ref: "#/components/examples/UpdateOutputExamplesPrometheusPartialRequest"
               UpdateOutputExamplesAmazonManagedPrometheus:
