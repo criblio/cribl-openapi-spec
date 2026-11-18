@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.21.1-alpha.1794957248779-7854c883
+    version: 4.21.1-alpha.1795043537840-31f3de79
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -14776,6 +14776,96 @@ components:
                     s3: "#/components/schemas/CollectorS3"
                     script: "#/components/schemas/CollectorScript"
                     splunk: "#/components/schemas/CollectorSplunk"
+        ErasureRequestCreateResp:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Unique identifier for the erasure request.
+            required:
+                - id
+            title: ErasureRequestCreateResp
+        RestApiJsonError:
+            type: object
+            properties:
+                details:
+                    type: object
+                    additionalProperties: true
+                    description: Optional structured details about the error (e.g. validation failures).
+                message:
+                    type: string
+                    description: Human-readable message or serialized validation details for the error.
+                status:
+                    type: string
+                    const: error
+                    description: Always <code>error</code> for API error responses.
+            required:
+                - message
+                - status
+            description: JSON body returned for many REST failures that use RESTEndpoint.sendError (and similar handlers).
+            title: RestApiJsonError
+        ErasureRequestPredicate:
+            type: object
+            properties:
+                expr:
+                    type: string
+                    description: Cribl Search filter expression selecting the records to erase, using the same grammar as the <code>where</code> operator. Aggregation, window, and search-context functions are rejected because the predicate is evaluated one record at a time.
+                type:
+                    type: string
+                    const: expression
+                    description: Predicate grammar. Only <code>expression</code> is supported.
+            required:
+                - expr
+                - type
+            title: ErasureRequestPredicate
+        ErasureRequestCreateReq:
+            type: object
+            properties:
+                datasetIds:
+                    type: array
+                    items:
+                        type: string
+                    description: The <code>id</code> of each Lake Dataset targeted by this erasure request.
+                predicate:
+                    $ref: "#/components/schemas/ErasureRequestPredicate"
+                    description: Criteria selecting the records to erase.
+            required:
+                - datasetIds
+                - predicate
+            title: ErasureRequestCreateReq
+        ErasureRequestGetResp:
+            type: object
+            properties:
+                auditLogDataset:
+                    type: string
+                    description: Name of the dataset where erasure audit log events are written.
+                id:
+                    type: string
+                    description: Unique identifier for the erasure request.
+            required:
+                - auditLogDataset
+                - id
+            title: ErasureRequestGetResp
+        CountedListErasureRequestGetResp:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Total number of items available across all pages, not the number of items in this response.
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/ErasureRequestGetResp"
+                offset:
+                    type: integer
+                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
+                limit:
+                    type: integer
+                    description: "Page size applied to this response: the configured default page size when omitted or zero, clamped to the configured maximum. Always present."
         Connection:
             type: object
             properties:
@@ -15058,25 +15148,6 @@ components:
                 - description
                 - id
             title: DatabaseConnectionConfig
-        RestApiJsonError:
-            type: object
-            properties:
-                details:
-                    type: object
-                    additionalProperties: true
-                    description: Optional structured details about the error (e.g. validation failures).
-                message:
-                    type: string
-                    description: Human-readable message or serialized validation details for the error.
-                status:
-                    type: string
-                    const: error
-                    description: Always <code>error</code> for API error responses.
-            required:
-                - message
-                - status
-            description: JSON body returned for many REST failures that use RESTEndpoint.sendError (and similar handlers).
-            title: RestApiJsonError
         DatabaseConnectionResponseEnvelope:
             type: object
             properties:
@@ -101673,77 +101744,6 @@ components:
                 - $ref: "#/components/schemas/DsdStatusApiResponse"
                 - $ref: "#/components/schemas/DsdScanFailedStatusApiResponse"
             title: DsdGetScanStatusApiResponse
-        ErasureRequestCreateResp:
-            type: object
-            properties:
-                id:
-                    type: string
-                    description: Unique identifier for the erasure request.
-            required:
-                - id
-            title: ErasureRequestCreateResp
-        ErasureRequestPredicate:
-            type: object
-            properties:
-                expr:
-                    type: string
-                    description: Cribl Search filter expression selecting the records to erase, using the same grammar as the <code>where</code> operator. Aggregation, window, and search-context functions are rejected because the predicate is evaluated one record at a time.
-                type:
-                    type: string
-                    const: expression
-                    description: Predicate grammar. Only <code>expression</code> is supported.
-            required:
-                - expr
-                - type
-            title: ErasureRequestPredicate
-        ErasureRequestCreateReq:
-            type: object
-            properties:
-                datasetIds:
-                    type: array
-                    items:
-                        type: string
-                    description: The <code>id</code> of each Lake Dataset targeted by this erasure request.
-                predicate:
-                    $ref: "#/components/schemas/ErasureRequestPredicate"
-                    description: Criteria selecting the records to erase.
-            required:
-                - datasetIds
-                - predicate
-            title: ErasureRequestCreateReq
-        ErasureRequestGetResp:
-            type: object
-            properties:
-                auditLogDataset:
-                    type: string
-                    description: Name of the dataset where erasure audit log events are written.
-                id:
-                    type: string
-                    description: Unique identifier for the erasure request.
-            required:
-                - auditLogDataset
-                - id
-            title: ErasureRequestGetResp
-        CountedListErasureRequestGetResp:
-            type: object
-            required:
-                - items
-                - count
-            properties:
-                count:
-                    type: integer
-                    description: Total number of items available across all pages, not the number of items in this response.
-                items:
-                    type: array
-                    description: The list of items returned in this response.
-                    items:
-                        $ref: "#/components/schemas/ErasureRequestGetResp"
-                offset:
-                    type: integer
-                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
-                limit:
-                    type: integer
-                    description: "Page size applied to this response: the configured default page size when omitted or zero, clamped to the configured maximum. Always present."
         CriblLakeHighsideCallerIdentity:
             type: object
             properties:
@@ -228596,6 +228596,37 @@ components:
                     $ref: "#/components/schemas/RunSettingsTypeSavedJobResponseCollectionSchedule"
                     description: Run settings that control how the scheduled job executes, including log level, task sizing, and timeout.
     examples:
+        LakeErasureRequestCreateResponseExamplesRecordedRequest:
+            summary: Create a Lake Record Erasure request
+            description: Example response for creating a new Lake Record Erasure request.
+            value:
+                id: er_a1b2c3d4
+        LakeErasureRequestCreateExamplesCreateRequest:
+            summary: Erase matching records from two Lake Datasets
+            description: Request the erasure of every record matching a subject, across two Lake Datasets.
+            value:
+                datasetIds:
+                    - default_logs
+                    - default_metrics
+                predicate:
+                    type: expression
+                    expr: user.email == 'jane@example.com'
+        LakeErasureRequestGetResponseExamplesRecordedRequest:
+            summary: Get a Lake Record Erasure request
+            description: Example response for getting a recorded Lake Record Erasure request.
+            value:
+                id: er_a1b2c3d4
+                auditLogDataset: system:erasure-audit-log
+        LakeErasureRequestListResponseExamplesRecordedRequests:
+            summary: List Lake Record Erasure requests
+            description: Example response listing two recorded Lake Record Erasure requests, newest first.
+            value:
+                count: 2
+                items:
+                    - id: er_e5f6g7h8
+                      auditLogDataset: system:erasure-audit-log
+                    - id: er_a1b2c3d4
+                      auditLogDataset: system:erasure-audit-log
         CreateSubscriptionExamplesBasicSubscription:
             summary: Create a Subscription
             description: Example request body for creating a new Subscription and associating it with a Pipeline.
@@ -248746,37 +248777,6 @@ components:
             value:
                 phase: failed
                 error: Scan failed. Ensure that you applied the CloudFormation template that grants the scanner permission to access your account. If the problem persists, contact Cribl Support.
-        LakeErasureRequestCreateResponseExamplesRecordedRequest:
-            summary: Create a Lake Record Erasure request
-            description: Example response for creating a new Lake Record Erasure request.
-            value:
-                id: er_a1b2c3d4
-        LakeErasureRequestCreateExamplesCreateRequest:
-            summary: Erase matching records from two Lake Datasets
-            description: Request the erasure of every record matching a subject, across two Lake Datasets.
-            value:
-                datasetIds:
-                    - default_logs
-                    - default_metrics
-                predicate:
-                    type: expression
-                    expr: user.email == 'jane@example.com'
-        LakeErasureRequestGetResponseExamplesRecordedRequest:
-            summary: Get a Lake Record Erasure request
-            description: Example response for getting a recorded Lake Record Erasure request.
-            value:
-                id: er_a1b2c3d4
-                auditLogDataset: system:erasure-audit-log
-        LakeErasureRequestListResponseExamplesRecordedRequests:
-            summary: List Lake Record Erasure requests
-            description: Example response listing two recorded Lake Record Erasure requests, newest first.
-            value:
-                count: 2
-                items:
-                    - id: er_e5f6g7h8
-                      auditLogDataset: system:erasure-audit-log
-                    - id: er_a1b2c3d4
-                      auditLogDataset: system:erasure-audit-log
         GetLakeHighsideCallerIdentityResponseExamplesDefault:
             summary: Cribl process running as an aws-iso IAM role
             description: Returns the IAM role ARN of the running Cribl leader process, normalised from the STS assumed-role session ARN to the underlying role ARN.
@@ -255357,8 +255357,6 @@ tags:
       description: Actions related to Search Executor Pools
       x-cribl-internal: true
       x-cribl-availability: both
-      x-cribl-api-context:
-        - searchGroup
     - name: search-metrics
       description: Actions related to Search Metrics
       x-cribl-availability: both
@@ -255448,6 +255446,261 @@ tags:
       x-cribl-api-context:
         - leader
 paths:
+    /products/lake/erasure-requests:
+        post:
+            operationId: createErasureRequestGetResp
+            tags:
+                - lake
+            x-speakeasy-group: lakes.erasureRequests
+            x-speakeasy-name-override: create
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Create a Lake Record Erasure request (Cribl.Cloud only)
+            description: Create a new Lake Record Erasure request, recording the criteria that select the records to erase (Cribl.Cloud only).
+            responses:
+                "201":
+                    description: The created ErasureRequestCreateResp object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErasureRequestCreateResp"
+                            examples:
+                                LakeErasureRequestCreateResponseExamplesRecordedRequest:
+                                    $ref: "#/components/examples/LakeErasureRequestCreateResponseExamplesRecordedRequest"
+                    headers:
+                        Location:
+                            required: true
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
+                "400":
+                    description: Failed validation or malformed input — datasetIds missing, empty or repeated; a dataset does not exist or is not eligible for record erasure; or the predicate is not a valid Cribl Search filter expression
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Lake Record Erasure is not enabled, or an enterprise license/plan is required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: ErasureRequestCreateReq object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ErasureRequestCreateReq"
+                        examples:
+                            LakeErasureRequestCreateExamplesCreateRequest:
+                                $ref: "#/components/examples/LakeErasureRequestCreateExamplesCreateRequest"
+        get:
+            operationId: getErasureRequestGetResp
+            tags:
+                - lake
+            x-speakeasy-group: lakes.erasureRequests
+            x-speakeasy-name-override: list
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List Lake Record Erasure requests (Cribl.Cloud only)
+            description: List every Lake Record Erasure request (Cribl.Cloud only). Requests are returned newest first.
+            responses:
+                "200":
+                    description: List of ErasureRequestGetResp objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListErasureRequestGetResp"
+                            examples:
+                                LakeErasureRequestListResponseExamplesRecordedRequests:
+                                    $ref: "#/components/examples/LakeErasureRequestListResponseExamplesRecordedRequests"
+                "400":
+                    description: Failed validation of the <code>limit</code> or <code>offset</code> pagination query parameter.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Lake Record Erasure is not enabled, or an enterprise license/plan is required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum number of Lake Record Erasure requests to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches.
+                - name: offset
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches.
+            x-speakeasy-pagination:
+                type: offsetLimit
+                inputs:
+                    - name: offset
+                      in: parameters
+                      type: offset
+                    - name: limit
+                      in: parameters
+                      type: limit
+                outputs:
+                    results: $.items
+    /products/lake/erasure-requests/{id}:
+        delete:
+            operationId: deleteErasureRequestGetRespById
+            tags:
+                - lake
+            x-speakeasy-group: lakes.erasureRequests
+            x-speakeasy-name-override: delete
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Delete a Lake Record Erasure request (Cribl.Cloud only)
+            description: "Delete the specified Lake Record Erasure request, removing it from the erasure request records (Cribl.Cloud only). The operation is idempotent: deleting a request that is already gone succeeds, and reports that nothing was deleted."
+            responses:
+                "204":
+                    description: The Lake Record Erasure request was deleted, or was already absent
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Lake Record Erasure is not enabled, or an enterprise license/plan is required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake Record Erasure request to delete.
+        get:
+            operationId: getErasureRequestGetRespById
+            tags:
+                - lake
+            x-speakeasy-group: lakes.erasureRequests
+            x-speakeasy-name-override: get
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Get a Lake Record Erasure request (Cribl.Cloud only)
+            description: Get the specified Lake Record Erasure request, including the Lake Dataset its erasure audit log events are written to (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: The requested ErasureRequestGetResp object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErasureRequestGetResp"
+                            examples:
+                                LakeErasureRequestGetResponseExamplesRecordedRequest:
+                                    $ref: "#/components/examples/LakeErasureRequestGetResponseExamplesRecordedRequest"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Lake Record Erasure is not enabled, or an enterprise license/plan is required
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The specified Lake Record Erasure request does not exist
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the Lake Record Erasure request to get.
     /system/subscriptions:
         post:
             operationId: createSubscription
@@ -330131,261 +330384,6 @@ paths:
                   schema:
                     type: string
                   description: The <code>id</code> of the connection to read scan status for.
-    /products/lake/erasure-requests:
-        post:
-            operationId: createProductsLakeErasureRequests
-            tags:
-                - lake
-            x-speakeasy-group: lakes.erasureRequests
-            x-speakeasy-name-override: create
-            x-cribl-internal: false
-            x-cribl-availability: cloud
-            x-cribl-api-context:
-                - leader
-            summary: Create a Lake Record Erasure request (Cribl.Cloud only)
-            description: Create a new Lake Record Erasure request, recording the criteria that select the records to erase (Cribl.Cloud only).
-            responses:
-                "201":
-                    description: The created ErasureRequestCreateResp object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErasureRequestCreateResp"
-                            examples:
-                                LakeErasureRequestCreateResponseExamplesRecordedRequest:
-                                    $ref: "#/components/examples/LakeErasureRequestCreateResponseExamplesRecordedRequest"
-                    headers:
-                        Location:
-                            required: true
-                            description: The canonical URL of the newly created resource.
-                            schema:
-                                type: string
-                "400":
-                    description: Failed validation or malformed input — datasetIds missing, empty or repeated; a dataset does not exist or is not eligible for record erasure; or the predicate is not a valid Cribl Search filter expression
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Lake Record Erasure is not enabled, or an enterprise license/plan is required
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            requestBody:
-                description: ErasureRequestCreateReq object.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/ErasureRequestCreateReq"
-                        examples:
-                            LakeErasureRequestCreateExamplesCreateRequest:
-                                $ref: "#/components/examples/LakeErasureRequestCreateExamplesCreateRequest"
-        get:
-            operationId: getProductsLakeErasureRequests
-            tags:
-                - lake
-            x-speakeasy-group: lakes.erasureRequests
-            x-speakeasy-name-override: list
-            x-cribl-internal: false
-            x-cribl-availability: cloud
-            x-cribl-api-context:
-                - leader
-            summary: List Lake Record Erasure requests (Cribl.Cloud only)
-            description: List every Lake Record Erasure request (Cribl.Cloud only). Requests are returned newest first.
-            responses:
-                "200":
-                    description: List of ErasureRequestGetResp objects.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/CountedListErasureRequestGetResp"
-                            examples:
-                                LakeErasureRequestListResponseExamplesRecordedRequests:
-                                    $ref: "#/components/examples/LakeErasureRequestListResponseExamplesRecordedRequests"
-                "400":
-                    description: Failed validation of the <code>limit</code> or <code>offset</code> pagination query parameter.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Lake Record Erasure is not enabled, or an enterprise license/plan is required
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                  description: Maximum number of Lake Record Erasure requests to return in the response for this request. Use with <code>offset</code> to paginate the response into manageable batches.
-                - name: offset
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                  description: Starting point from which to retrieve results for this request. Use with <code>limit</code> to paginate the response into manageable batches.
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
-    /products/lake/erasure-requests/{id}:
-        delete:
-            operationId: deleteProductsLakeErasureRequestsById
-            tags:
-                - lake
-            x-speakeasy-group: lakes.erasureRequests
-            x-speakeasy-name-override: delete
-            x-cribl-internal: false
-            x-cribl-availability: cloud
-            x-cribl-api-context:
-                - leader
-            summary: Delete a Lake Record Erasure request (Cribl.Cloud only)
-            description: "Delete the specified Lake Record Erasure request, removing it from the erasure request records (Cribl.Cloud only). The operation is idempotent: deleting a request that is already gone succeeds, and reports that nothing was deleted."
-            responses:
-                "204":
-                    description: The Lake Record Erasure request was deleted, or was already absent
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Lake Record Erasure is not enabled, or an enterprise license/plan is required
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: The <code>id</code> of the Lake Record Erasure request to delete.
-        get:
-            operationId: getProductsLakeErasureRequestsById
-            tags:
-                - lake
-            x-speakeasy-group: lakes.erasureRequests
-            x-speakeasy-name-override: get
-            x-cribl-internal: false
-            x-cribl-availability: cloud
-            x-cribl-api-context:
-                - leader
-            summary: Get a Lake Record Erasure request (Cribl.Cloud only)
-            description: Get the specified Lake Record Erasure request, including the Lake Dataset its erasure audit log events are written to (Cribl.Cloud only).
-            responses:
-                "200":
-                    description: The requested ErasureRequestGetResp object.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErasureRequestGetResp"
-                            examples:
-                                LakeErasureRequestGetResponseExamplesRecordedRequest:
-                                    $ref: "#/components/examples/LakeErasureRequestGetResponseExamplesRecordedRequest"
-                "401":
-                    description: Authentication failed (missing or invalid credentials or Bearer token).
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            examples:
-                                authenticationFailed:
-                                    summary: Reject a request with invalid credentials
-                                    description: Example response for rejecting an API request with missing or invalid credentials.
-                                    value:
-                                        status: error
-                                        message: Authentication failed (missing or invalid credentials or Bearer token).
-                "403":
-                    description: Lake Record Erasure is not enabled, or an enterprise license/plan is required
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "404":
-                    description: The specified Lake Record Erasure request does not exist
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
-                "500":
-                    description: Unexpected server error.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-                  description: The <code>id</code> of the Lake Record Erasure request to get.
     /products/lake/highside/caller-identity:
         get:
             operationId: getProductsLakeHighsideCallerIdentity
@@ -337073,3 +337071,57 @@ paths:
                   schema:
                     type: string
                   description: The metrics dataset id within the engine.
+    /system/diagnostic-bundle:
+        get:
+            operationId: getSystemDiagnosticBundle
+            tags:
+                - search-executor-pools
+            x-speakeasy-group: search.executorPools
+            x-speakeasy-name-override: downloadExecutorDiagnosticBundle
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - node
+            summary: Download an executor diagnostic bundle
+            description: Build a diagnostic bundle (tar.gz archive) on a Hybrid Search executor, stream it, and delete it from the executor. Only customer-run (hybrid) executors serve this route; Cribl-managed executors and other nodes do not. It is reached only through the Leader's <code>/w/{nodeId}</code> proxy, which authorizes the caller. <code>{nodeId}</code> is the executor's <code>id</code> from <code>GET /m/default_search/search/executors</code>. An executor builds one bundle at a time, and the Leader runs at most 5 executor diagnostic downloads at once.
+            responses:
+                "200":
+                    content:
+                        application/tar+gzip:
+                            schema:
+                                type: string
+                                format: binary
+                                contentMediaType: application/tar+gzip
+                    description: A tar.gz archive with the executor's redacted configuration, recent supervisor and engine logs, and system information.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized — the caller lacks permission to download the executor's diagnostic bundle, the request did not come through the Leader, or diagnostics are not allowed in this deployment.
+                "404":
+                    description: The requested resource does not exist — the executor is not connected, or it is a Cribl-managed executor, which serves no diagnostic bundle.
+                "429":
+                    description: A bundle is already being built on this executor, earlier builds that did not finish are still running, or the Leader is already running 5 executor diagnostic downloads — retry after the <code>Retry-After</code> interval.
+                    headers:
+                        retry-after:
+                            description: Number of seconds the client should wait before retrying the request
+                            schema:
+                                type: integer
+                                examples:
+                                    - 60
+                "500":
+                    description: The bundle could not be built.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
