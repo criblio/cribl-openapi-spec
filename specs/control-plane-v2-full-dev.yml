@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.22.0-alpha.1795043539051-64d209b7
+    version: 4.22.0-alpha.1795129844986-c8bbfdf0
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -65756,9 +65756,32 @@ components:
                 rolloutSafety:
                     $ref: "#/components/schemas/CloudConnectionsRolloutSafetySettings"
                     description: Limits applied to newly created rollout jobs unless the job overrides them.
+                rolloutSafetyDefaults:
+                    $ref: "#/components/schemas/CloudConnectionsRolloutSafetySettings"
+                    description: Built-in rollout limits used when this Workspace has no override for a property.
+                rolloutSafetyOverrides:
+                    type: object
+                    properties:
+                        maxConcurrentPercent:
+                            type: integer
+                            description: Greatest percentage of target accounts updated concurrently. Defaults to 10 percent.
+                            minimum: 1
+                            maximum: 100
+                        pauseOnFailureThresholdPercent:
+                            type: integer
+                            description: Percentage of failed target accounts at which the rollout pauses. Defaults to 1 percent.
+                            minimum: 0
+                            maximum: 100
+                        waveSizeAccounts:
+                            type: integer
+                            description: Most accounts admitted into one rollout wave. Omit to let the rollout choose its wave size.
+                            minimum: 1
+                    description: Rollout properties explicitly configured for this Workspace. An absent property inherits its default.
             required:
                 - membershipRefresh
                 - rolloutSafety
+                - rolloutSafetyDefaults
+                - rolloutSafetyOverrides
             title: CloudConnectionsWorkspaceSettings
         CloudConnectionsWorkspaceSettingsPatch:
             type: object
@@ -67709,6 +67732,14 @@ components:
                 expectedOutputType:
                     $ref: "#/components/schemas/ExpectedOutputType"
                     description: The expected output type of the search query results.
+                insightsParams:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    description: For System Insights dashboards, values the panel fixes for its query, such as the Source or Destination <code>id</code>.
+                insightsQueryId:
+                    type: string
+                    description: For System Insights dashboards, the <code>id</code> of the server-held query to run instead of <code>query</code>.
                 latest:
                     type:
                         - string
@@ -67949,6 +67980,14 @@ components:
                 enabled:
                     type: boolean
                     description: If <code>false</code>, the query row is ignored during execution.
+                insightsParams:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    description: For System Insights dashboards, values the panel fixes for its query, such as the Source or Destination <code>id</code>.
+                insightsQueryId:
+                    type: string
+                    description: For System Insights dashboards, the <code>id</code> of the server-held query to run instead of <code>query</code>.
                 localId:
                     type: string
                     description: Local query row identifier used for legends, warnings, and persisted query snapshots.
@@ -98804,6 +98843,340 @@ components:
                 - uncoveredAccountCount
                 - warnings
             title: CloudChangeEnrichmentStatus
+        CloudConnectionJobCapabilities:
+            type: object
+            properties:
+                cancel:
+                    type: boolean
+                    description: Whether the owning operation will honor a cancel request in the job's current state.
+                pause:
+                    type: boolean
+                    description: Whether the owning operation will honor a pause request in the job's current state.
+                resume:
+                    type: boolean
+                    description: Whether the owning operation will honor a resume request in the job's current state.
+                retry:
+                    type: boolean
+                    description: Whether the owning operation will honor a retry request in the job's current state.
+            required:
+                - cancel
+                - pause
+                - resume
+                - retry
+            title: CloudConnectionJobCapabilities
+        CloudConnectionJobCause:
+            type: object
+            properties:
+                code:
+                    type: string
+                    description: Stable namespaced code identifying the cause, for example <code>inventory:roleUnavailable</code>.
+                count:
+                    type: number
+                    description: Number of the job's items that failed under this cause.
+                label:
+                    type: string
+                    description: Server-provided, human-readable name of the cause.
+                remedy:
+                    type: string
+                    description: Server-provided text describing how to resolve the cause.
+                retryable:
+                    type: boolean
+                    description: Whether retrying the job can clear this cause.
+                sampleMessage:
+                    type: string
+                    description: One failing item's message, with account ids redacted. Absent when there is nothing safe to show.
+            required:
+                - code
+                - count
+                - label
+                - remedy
+                - retryable
+            title: CloudConnectionJobCause
+        CloudConnectionHandOffMethod:
+            type: string
+            enum:
+                - quick-create
+                - cli
+                - terraform
+                - console
+            title: CloudConnectionHandOffMethod
+            x-speakeasy-unknown-values: allow
+        CloudConnectionHandOffWatchKind:
+            type: string
+            enum:
+                - stack
+                - stackSet
+                - stackSetOperation
+                - stackInstances
+                - verification
+            title: CloudConnectionHandOffWatchKind
+            x-speakeasy-unknown-values: allow
+        CloudConnectionJobHandOff:
+            type: object
+            properties:
+                accountId:
+                    type: string
+                    description: AWS account in which the watched resource is expected to appear.
+                artifactApiPath:
+                    type: string
+                    description: API path that regenerates the artifact on request. The artifact and any secret are never stored with the job.
+                expectedName:
+                    type: string
+                    description: The name the watched resource is expected to have.
+                method:
+                    $ref: "#/components/schemas/CloudConnectionHandOffMethod"
+                    description: "How the customer is asked to apply the artifact: <code>quick-create</code>, <code>cli</code>, <code>terraform</code> or <code>console</code>."
+                region:
+                    type: string
+                    description: AWS region of the watched resource.
+                watchKind:
+                    $ref: "#/components/schemas/CloudConnectionHandOffWatchKind"
+                    description: Which AWS resource Cribl watches to notice the customer applied the artifact.
+            required:
+                - accountId
+                - artifactApiPath
+                - expectedName
+                - method
+                - region
+                - watchKind
+            title: CloudConnectionJobHandOff
+        CloudConnectionJobProgress:
+            type: object
+            properties:
+                completed:
+                    type: number
+                    description: Number of items that have completed.
+                failed:
+                    type: number
+                    description: Number of items that have failed.
+                skipped:
+                    type: number
+                    description: Number of items that were skipped.
+                step:
+                    type: string
+                    description: The step the job is currently in, when the operation exposes steps.
+                total:
+                    type: number
+                    description: Total number of items the job works on.
+            required:
+                - completed
+                - total
+            title: CloudConnectionJobProgress
+        CloudConnectionJobState:
+            type: string
+            enum:
+                - queued
+                - running
+                - waiting
+                - paused
+                - cancelling
+                - succeeded
+                - completedWithWarnings
+                - partiallyFailed
+                - failed
+                - cancelled
+            title: CloudConnectionJobState
+            x-speakeasy-unknown-values: allow
+        CloudConnectionJobStep:
+            type: object
+            properties:
+                finishedAt:
+                    type: number
+                    description: When the step finished, in milliseconds since the epoch.
+                id:
+                    type: string
+                    description: Identifier of the step, unique within the job.
+                label:
+                    type: string
+                    description: Server-provided, human-readable name of the step.
+                startedAt:
+                    type: number
+                    description: When the step started, in milliseconds since the epoch.
+                state:
+                    $ref: "#/components/schemas/CloudConnectionJobState"
+                    description: The step's current state.
+            required:
+                - id
+                - label
+                - state
+            title: CloudConnectionJobStep
+        CloudConnectionJobResponse:
+            type: object
+            properties:
+                capabilities:
+                    $ref: "#/components/schemas/CloudConnectionJobCapabilities"
+                causes:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudConnectionJobCause"
+                connectionId:
+                    type: string
+                    description: The connection the operation runs against, when it has one.
+                createdAt:
+                    type: number
+                    description: When the job was created, in milliseconds since the epoch.
+                deploymentId:
+                    type: string
+                    description: The deployment being handed off, when the operation is a hand-off deployment.
+                handOff:
+                    $ref: "#/components/schemas/CloudConnectionJobHandOff"
+                id:
+                    type: string
+                    description: The job's id, <code>&lt;kind&gt;:&lt;nativeId&gt;</code>. Use it in the job's own paths.
+                itemsTruncated:
+                    type: number
+                    description: Number of the job's per-item results that are not listed, because the job produced more than the API keeps. Absent when every item is listed.
+                kind:
+                    type: string
+                    description: The kind of operation the job tracks. Features register the kinds they own.
+                label:
+                    type: string
+                    description: Server-provided, human-readable name of the job.
+                progress:
+                    $ref: "#/components/schemas/CloudConnectionJobProgress"
+                ruleId:
+                    type: string
+                    description: The rule being rolled out, when the operation is a rule rollout.
+                state:
+                    $ref: "#/components/schemas/CloudConnectionJobState"
+                steps:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudConnectionJobStep"
+                updatedAt:
+                    type: number
+                    description: When the job last changed, in milliseconds since the epoch.
+            required:
+                - capabilities
+                - createdAt
+                - id
+                - kind
+                - label
+                - state
+                - updatedAt
+            title: CloudConnectionJobResponse
+        CloudConnectionJobStateCounts:
+            type: object
+            properties:
+                cancelled:
+                    type: number
+                    description: Jobs that were cancelled.
+                cancelling:
+                    type: number
+                    description: Jobs that are being cancelled.
+                completedWithWarnings:
+                    type: number
+                    description: Jobs that finished with warnings.
+                failed:
+                    type: number
+                    description: Jobs that failed.
+                partiallyFailed:
+                    type: number
+                    description: Jobs that finished with some items failed.
+                paused:
+                    type: number
+                    description: Jobs that have been paused.
+                queued:
+                    type: number
+                    description: Jobs waiting to start.
+                running:
+                    type: number
+                    description: Jobs currently running.
+                succeeded:
+                    type: number
+                    description: Jobs that finished without problems.
+                waiting:
+                    type: number
+                    description: Jobs blocked outside Cribl, such as on a customer action.
+            title: CloudConnectionJobStateCounts
+        CloudConnectionJobSummaryResponse:
+            type: object
+            properties:
+                byKind:
+                    type: object
+                    additionalProperties:
+                        type: number
+                    description: Job counts keyed by job kind. Features register the kinds they own, so the keys are open.
+                byState:
+                    $ref: "#/components/schemas/CloudConnectionJobStateCounts"
+            required:
+                - byKind
+                - byState
+            title: CloudConnectionJobSummaryResponse
+        CloudConnectionJobItem:
+            type: object
+            properties:
+                causeCode:
+                    type: string
+                    description: The <code>code</code> of the cause this item failed under, as listed on the job.
+                finishedAt:
+                    type: number
+                    description: When work on the item finished, in milliseconds since the epoch.
+                id:
+                    type: string
+                    description: Identifier of the item, unique within the job. It is also the keyset paging key.
+                jobId:
+                    type: string
+                    description: The <code>id</code> of the job the item belongs to.
+                kind:
+                    type: string
+                    enum:
+                        - account
+                        - accountRegion
+                        - source
+                        - stackInstance
+                        - step
+                    description: "What the item is: an account, an account and region, a stack instance, a Source, or a step."
+                    x-speakeasy-unknown-values: allow
+                label:
+                    type: string
+                    description: Server-provided, human-readable name of the item.
+                startedAt:
+                    type: number
+                    description: When work on the item started, in milliseconds since the epoch.
+                state:
+                    $ref: "#/components/schemas/CloudConnectionJobState"
+                    description: The item's current state.
+            required:
+                - id
+                - jobId
+                - kind
+                - state
+            title: CloudConnectionJobItem
+        CloudConnectionJobItemListResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudConnectionJobItem"
+                nextCursor:
+                    type: string
+                    description: Opaque cursor for the next page. Present only while more items remain.
+            required:
+                - items
+            title: CloudConnectionJobItemListResponse
+        CloudConnectionJobListResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudConnectionJobResponse"
+                nextCursor:
+                    type: string
+                    description: Opaque cursor for the next page. Present only while more jobs remain.
+            required:
+                - items
+            title: CloudConnectionJobListResponse
+        CloudConnectionJobRetryRequestBody:
+            type: object
+            properties:
+                causeCodes:
+                    type: array
+                    items:
+                        type: string
+            title: CloudConnectionJobRetryRequestBody
         DsdAccountFilterType:
             type: string
             enum:
@@ -101872,6 +102245,15 @@ components:
                 - notebook-templates
             title: SearchFavoriteTypeParam
             x-speakeasy-unknown-values: allow
+        SearchFavoriteListTypeParam:
+            type: string
+            enum:
+                - dashboards
+                - notebooks
+                - notebook-templates
+                - datasets
+            title: SearchFavoriteListTypeParam
+            x-speakeasy-unknown-values: allow
         PaginatedSearchFavoriteItem:
             type: object
             required:
@@ -101897,7 +102279,7 @@ components:
             properties:
                 context:
                     type: string
-                    description: The Pack that contains the Dashboard. Omitted for the default Pack, Notebooks, and Notebook templates.
+                    description: The Pack that contains the Dashboard. Omitted for the default Pack, Notebooks, Notebook templates, and Datasets.
                 description:
                     type: string
                     description: The description of the object. Omitted when the object has none.
@@ -101914,7 +102296,7 @@ components:
                     type: string
                     description: The display name of the object, or its <code>id</code> when the object has no name.
                 type:
-                    $ref: "#/components/schemas/SearchFavoriteTypeParam"
+                    $ref: "#/components/schemas/SearchFavoriteListTypeParam"
                     description: The type of the favorited object.
             required:
                 - favoriteCount
@@ -232680,6 +233062,11 @@ components:
                     waveSizeAccounts: 50
                     maxConcurrentPercent: 10
                     pauseOnFailureThresholdPercent: 1
+                rolloutSafetyDefaults:
+                    maxConcurrentPercent: 10
+                    pauseOnFailureThresholdPercent: 1
+                rolloutSafetyOverrides:
+                    waveSizeAccounts: 50
                 membershipRefresh:
                     mode: automatic
                     tz: UTC
@@ -232690,6 +233077,11 @@ components:
                 rolloutSafety:
                     maxConcurrentPercent: 20
                     pauseOnFailureThresholdPercent: 1
+                rolloutSafetyDefaults:
+                    maxConcurrentPercent: 10
+                    pauseOnFailureThresholdPercent: 1
+                rolloutSafetyOverrides:
+                    maxConcurrentPercent: 20
                 membershipRefresh:
                     mode: automatic
                     tz: UTC
@@ -245190,6 +245582,199 @@ components:
                     atMaxTasks: false
                 warnings: []
                 lastReconcileAt: 1767225660000
+        CloudConnectionJobExamplesRunningScan:
+            summary: Read a running inventory scan
+            description: A job part way through its accounts, with its one failure so far grouped under a cause.
+            value:
+                id: inventoryScan:01HQ8Z6K9VZ4P7E3M2Y5X1A8B
+                kind: inventoryScan
+                state: running
+                label: Inventory scan of Acme organization
+                createdAt: 1767225600000
+                updatedAt: 1767225720000
+                connectionId: 9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71
+                progress:
+                    total: 14
+                    completed: 9
+                    failed: 1
+                causes:
+                    - code: aws.sts.assumeRoleDenied
+                      label: Cribl could not assume the connection role in some accounts
+                      count: 1
+                      sampleMessage: User is not authorized to perform sts:AssumeRole on resource in account ************
+                      retryable: true
+                      remedy: Deploy the connection template in these member accounts, then retry the job.
+                capabilities:
+                    cancel: true
+                    pause: true
+                    resume: false
+                    retry: false
+        CloudConnectionJobExamplesWaitingHandOff:
+            summary: Read a job waiting on a customer action
+            description: "A job blocked outside Cribl: the hand-off names the StackSet Cribl is watching for and the API path that regenerates the template to deploy."
+            value:
+                id: handOffDeployment:9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71
+                kind: handOffDeployment
+                state: waiting
+                label: Deploy the organization StackSet
+                createdAt: 1767225300000
+                updatedAt: 1767225300000
+                connectionId: 9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71
+                handOff:
+                    method: quick-create
+                    artifactApiPath: /system/cloud-connections/connections/9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71/permissions-template
+                    watchKind: stackSet
+                    expectedName: cribl-cloud-connection-org-9b2e4d16
+                    region: us-east-1
+                    accountId: "210987654321"
+                capabilities:
+                    cancel: true
+                    pause: true
+                    resume: false
+                    retry: false
+        CloudConnectionJobExamplesCancelled:
+            summary: Read a job that was cancelled
+            description: Cancelling a waiting job stops Cribl tracking it and changes nothing in the connected account.
+            value:
+                id: handOffDeployment:9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71
+                kind: handOffDeployment
+                state: cancelled
+                label: Deploy the organization StackSet
+                createdAt: 1767225300000
+                updatedAt: 1767225900000
+                connectionId: 9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71
+                capabilities:
+                    cancel: false
+                    pause: false
+                    resume: false
+                    retry: false
+        CloudConnectionJobSummaryExamplesAllJobs:
+            summary: Count every job by state and by kind
+            description: Counts over the same jobs and the same filters as the job listing.
+            value:
+                byState:
+                    running: 1
+                    waiting: 1
+                    succeeded: 18
+                    partiallyFailed: 2
+                    failed: 1
+                byKind:
+                    inventoryScan: 14
+                    discoveryScan: 6
+                    handOffDeployment: 3
+        CloudConnectionJobItemListExamplesAccountResults:
+            summary: List what a scan did to each account and region
+            description: One item per account and region, with the failed ones naming the cause they are grouped under.
+            value:
+                items:
+                    - id: 123456789012/us-east-1
+                      jobId: inventoryScan:01HQ8Z6K9VZ4P7E3M2Y5X1A8B
+                      kind: accountRegion
+                      state: succeeded
+                      label: 123456789012 us-east-1
+                    - id: 210987654321/us-east-1
+                      jobId: inventoryScan:01HQ8Z6K9VZ4P7E3M2Y5X1A8B
+                      kind: accountRegion
+                      state: failed
+                      label: 210987654321 us-east-1
+                      causeCode: aws.sts.assumeRoleDenied
+                nextCursor: eyJ2IjoxLCJpIjoiMjEwOTg3NjU0MzIxL3VzLWVhc3QtMSJ9
+        CloudConnectionJobItemListExamplesStackInstanceResults:
+            summary: List the stack instances of a hand-off deployment
+            description: Once the StackSet appears, the job reports one item per stack instance.
+            value:
+                items:
+                    - id: 123456789012/us-east-1
+                      jobId: handOffDeployment:9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71
+                      kind: stackInstance
+                      state: succeeded
+                      label: 123456789012 us-east-1
+        CloudConnectionJobListExamplesActiveJobsFirstPage:
+            summary: List the active jobs of every Cloud Connections feature
+            description: The first page of the active jobs, most recently updated first, with a cursor to fetch the rest.
+            value:
+                items:
+                    - id: inventoryScan:01HQ8Z6K9VZ4P7E3M2Y5X1A8B
+                      kind: inventoryScan
+                      state: running
+                      label: Inventory scan of Acme organization
+                      createdAt: 1767225600000
+                      updatedAt: 1767225720000
+                      connectionId: 9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71
+                      progress:
+                        total: 14
+                        completed: 9
+                        failed: 1
+                      causes:
+                        - code: aws.sts.assumeRoleDenied
+                          label: Cribl could not assume the connection role in some accounts
+                          count: 1
+                          sampleMessage: User is not authorized to perform sts:AssumeRole on resource in account ************
+                          retryable: true
+                          remedy: Deploy the connection template in these member accounts, then retry the job.
+                      capabilities:
+                        cancel: true
+                        pause: true
+                        resume: false
+                        retry: false
+                    - id: handOffDeployment:9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71
+                      kind: handOffDeployment
+                      state: waiting
+                      label: Deploy the organization StackSet
+                      createdAt: 1767225300000
+                      updatedAt: 1767225300000
+                      connectionId: 9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71
+                      handOff:
+                        method: quick-create
+                        artifactApiPath: /system/cloud-connections/connections/9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71/permissions-template
+                        watchKind: stackSet
+                        expectedName: cribl-cloud-connection-org-9b2e4d16
+                        region: us-east-1
+                        accountId: "210987654321"
+                      capabilities:
+                        cancel: true
+                        pause: true
+                        resume: false
+                        retry: false
+                nextCursor: eyJ2IjoxLCJnIjowLCJ1IjoxNzY3MjI1MzAwMDAwLCJpIjoiaGFuZE9mZkRlcGxveW1lbnQ6OWIyZTRkMTYifQ
+        CloudConnectionJobListExamplesLastPage:
+            summary: Read the last page of jobs
+            description: No cursor comes back once the page is the last one.
+            value:
+                items:
+                    - id: inventoryScan:01HQ8Z6K9VZ4P7E3M2Y5X1A8B
+                      kind: inventoryScan
+                      state: running
+                      label: Inventory scan of Acme organization
+                      createdAt: 1767225600000
+                      updatedAt: 1767225720000
+                      connectionId: 9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71
+                      progress:
+                        total: 14
+                        completed: 9
+                        failed: 1
+                      causes:
+                        - code: aws.sts.assumeRoleDenied
+                          label: Cribl could not assume the connection role in some accounts
+                          count: 1
+                          sampleMessage: User is not authorized to perform sts:AssumeRole on resource in account ************
+                          retryable: true
+                          remedy: Deploy the connection template in these member accounts, then retry the job.
+                      capabilities:
+                        cancel: true
+                        pause: true
+                        resume: false
+                        retry: false
+        CloudConnectionJobRetryExamplesEveryFailure:
+            summary: Retry every failed item of a job
+            description: An empty body retries every item that failed, whatever it failed under.
+            value: {}
+        CloudConnectionJobRetryExamplesOneCause:
+            summary: Retry only the items of one failure
+            description: Retries the accounts Cribl could not assume the connection role in, once the connection template has been deployed there, and leaves the rest of the job alone.
+            value:
+                causeCodes:
+                    - aws.sts.assumeRoleDenied
         CloudConnectionResourceExamplesAwsAccount:
             summary: A connected AWS account
             description: One AWS account whose setup was verified. The STS External ID is never included.
@@ -246825,7 +247410,7 @@ components:
                     dataset: my_s3_dataset
         SearchFavoritesListResponseExamplesMixedFavorites:
             summary: List the requesting user favorites
-            description: Example response for listing the requesting user favorites across Dashboards, Notebooks, Notebook templates, and Packs.
+            description: Example response for listing the requesting user favorites across Dashboards, Notebooks, Notebook templates, and Datasets.
             value:
                 items:
                     - type: dashboards
@@ -246851,7 +247436,12 @@ components:
                       favoriteCount: 4
                       name: Incident Response
                       modified: 1738944000000
-                count: 4
+                    - type: datasets
+                      id: vpc_flow_logs
+                      favoriteCount: 2
+                      name: vpc_flow_logs
+                      description: VPC Flow Logs delivered to S3.
+                count: 5
                 offset: 0
                 limit: 20
         SearchFavoritesCountResponseExamplesFavoriteCount:
@@ -267771,7 +268361,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Get Cloud Connections Workspace settings (Cribl.Cloud only)
-            description: Get the Workspace-wide settings used for rollout safety and membership refresh (Cribl.Cloud only).
+            description: Get the Workspace-wide settings used for rollout safety and membership refresh, including which rollout limits are inherited from the defaults and which are configured for this Workspace (Cribl.Cloud only).
             responses:
                 "200":
                     description: The Workspace-wide Cloud Connections settings.
@@ -323500,6 +324090,608 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+    /system/cloud-connections/jobs/{jobId}/cancel:
+        post:
+            operationId: createSystemCloudConnectionsJobsCancelByJobId
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Cancel a Cloud Connections job (Cribl.Cloud only)
+            description: "Stop the specified job (Cribl.Cloud only). Cancelling a job that is waiting on a customer action only stops Cribl tracking it: nothing already deployed in the connected account is changed or removed.<br/><br/>A job whose <code>capabilities.cancel</code> is <code>false</code> cannot be cancelled in its current state, and the request is refused without changing the job."
+            responses:
+                "200":
+                    description: The job as it stands after the cancel
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudConnectionJobResponse"
+                            examples:
+                                CloudConnectionJobExamplesRunningScan:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesRunningScan"
+                                CloudConnectionJobExamplesWaitingHandOff:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesWaitingHandOff"
+                                CloudConnectionJobExamplesCancelled:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesCancelled"
+                "400":
+                    description: Failed validation or malformed input, such as a request body that carries properties.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: The caller does not hold the permission of the operation this job runs
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist — unknown job id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: Request conflicts with current resource state — this job cannot be cancelled while it is in this state
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: jobId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the job to cancel.
+    /system/cloud-connections/jobs/{jobId}:
+        get:
+            operationId: getSystemCloudConnectionsJobsByJobId
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Get a Cloud Connections job (Cribl.Cloud only)
+            description: Get the specified Cloud Connections job, with its progress, its failures grouped by cause, the controls it will currently honor, and the hand-off when it is waiting on a customer action (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: The job
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudConnectionJobResponse"
+                            examples:
+                                CloudConnectionJobExamplesRunningScan:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesRunningScan"
+                                CloudConnectionJobExamplesWaitingHandOff:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesWaitingHandOff"
+                                CloudConnectionJobExamplesCancelled:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesCancelled"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist — unknown job id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: jobId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the job to retrieve.
+    /system/cloud-connections/jobs/summary:
+        get:
+            operationId: getSystemCloudConnectionsJobsSummary
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Count Cloud Connections jobs by state and kind (Cribl.Cloud only)
+            description: Get how many Cloud Connections jobs are in each state and of each kind, over the same jobs and the same filters as the jobs query (Cribl.Cloud only). Use it to show counts without paging through them.
+            responses:
+                "200":
+                    description: Job counts in <code>byState</code> and <code>byKind</code>
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudConnectionJobSummaryResponse"
+                            examples:
+                                CloudConnectionJobSummaryExamplesAllJobs:
+                                    $ref: "#/components/examples/CloudConnectionJobSummaryExamplesAllJobs"
+                "400":
+                    description: Failed validation or malformed input, such as an unknown <code>state</code>.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: state
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Count only jobs in this state group (<code>active</code> or <code>finished</code>), or in one of the job states named. Repeat the parameter or separate values with commas to name more than one state; a state group cannot be combined with a state.
+                - name: kind
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Count only jobs of the kinds named, as reported in a job's <code>kind</code>. Repeat the parameter or separate values with commas to name more than one kind.
+                - name: connectionId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Count only jobs running against this connection.
+                - name: ruleId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Count only jobs rolling out this rule.
+                - name: deploymentId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Count only jobs for this deployment.
+                - name: since
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Count only jobs updated at or after this time, in milliseconds since the epoch.
+    /system/cloud-connections/jobs/{jobId}/items:
+        get:
+            operationId: getSystemCloudConnectionsJobsItemsByJobId
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List the per-item results of a Cloud Connections job (Cribl.Cloud only)
+            description: "Get what the specified job did to each of the things it works on: an account, an account and region, a stack instance, a Source, or a step (Cribl.Cloud only). Which identity properties an item carries depends on what the job's items are.<br/><br/>An item that failed names the <code>causeCode</code> of the cause it is grouped under on the job, so a caller can list only the items of one failure."
+            responses:
+                "200":
+                    description: One page of per-item results in <code>items</code>, with <code>nextCursor</code> present only while more items remain
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudConnectionJobItemListResponse"
+                            examples:
+                                CloudConnectionJobItemListExamplesAccountResults:
+                                    $ref: "#/components/examples/CloudConnectionJobItemListExamplesAccountResults"
+                                CloudConnectionJobItemListExamplesStackInstanceResults:
+                                    $ref: "#/components/examples/CloudConnectionJobItemListExamplesStackInstanceResults"
+                "400":
+                    description: Failed validation or malformed input, such as an unknown <code>state</code> or a <code>cursor</code> this API did not issue.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist — unknown job id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: jobId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the job whose per-item results to list.
+                - name: state
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Return only items in one of the job states named. Repeat the parameter or separate values with commas to name more than one state.
+                - name: cause
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Return only items that failed under one of the cause codes named, as reported in a cause's <code>code</code>. Repeat the parameter or separate values with commas to name more than one code.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum items per page (default <code>100</code>, capped at <code>1000</code>).
+                - name: cursor
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Opaque token for fetching the next page. Use the <code>nextCursor</code> value from the previous response; it is a keyset cursor over the item ids, so an item whose state changes between two requests stays on the page it was on.
+    /system/cloud-connections/jobs:
+        get:
+            operationId: getSystemCloudConnectionsJobs
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List Cloud Connections jobs (Cribl.Cloud only)
+            description: "Get the long-running operations of this Cribl.Cloud workspace's Cloud Connections features — inventory and discovery scans, input configuration, membership refreshes, verifications and deployments that wait on a customer action — in one list (Cribl.Cloud only).<br/><br/>Active jobs come first, each group ordered by most recently updated. A job that is blocked on something outside Cribl reports <code>state: waiting</code>, and when it is blocked on a customer action it also carries the <code>handOff</code> describing what Cribl is watching for."
+            responses:
+                "200":
+                    description: One page of jobs in <code>items</code>, with <code>nextCursor</code> present only while more jobs remain
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudConnectionJobListResponse"
+                            examples:
+                                CloudConnectionJobListExamplesActiveJobsFirstPage:
+                                    $ref: "#/components/examples/CloudConnectionJobListExamplesActiveJobsFirstPage"
+                                CloudConnectionJobListExamplesLastPage:
+                                    $ref: "#/components/examples/CloudConnectionJobListExamplesLastPage"
+                "400":
+                    description: Failed validation or malformed input, such as an unknown <code>state</code> or a <code>cursor</code> this API did not issue.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: state
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Return only jobs in this state group (<code>active</code> or <code>finished</code>), or in one of the job states named. Repeat the parameter or separate values with commas to name more than one state; a state group cannot be combined with a state.
+                - name: kind
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Return only jobs of the kinds named, as reported in a job's <code>kind</code>. Repeat the parameter or separate values with commas to name more than one kind.
+                - name: connectionId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Return only jobs running against this connection.
+                - name: ruleId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Return only jobs rolling out this rule.
+                - name: deploymentId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Return only jobs for this deployment.
+                - name: since
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Return only jobs updated at or after this time, in milliseconds since the epoch.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Maximum jobs per page (default <code>100</code>, capped at <code>1000</code>).
+                - name: cursor
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Opaque token for fetching the next page. Use the <code>nextCursor</code> value from the previous response; it is a keyset cursor over the listing's own order, so a job added or removed between two requests does not shift the rows of a page the way an offset would. The order is by state group and then by <code>updatedAt</code>, both of which change, so a job whose state or update time changes between two requests can be repeated on a later page or missed.
+    /system/cloud-connections/jobs/{jobId}/pause:
+        post:
+            operationId: createSystemCloudConnectionsJobsPauseByJobId
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Pause a Cloud Connections job (Cribl.Cloud only)
+            description: Stop the specified job from starting more work, leaving what it already started to finish (Cribl.Cloud only). Resume it to let it carry on.<br/><br/>A job whose <code>capabilities.pause</code> is <code>false</code> cannot be paused in its current state, and the request is refused without changing the job.
+            responses:
+                "200":
+                    description: The job as it stands after the pause
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudConnectionJobResponse"
+                            examples:
+                                CloudConnectionJobExamplesRunningScan:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesRunningScan"
+                                CloudConnectionJobExamplesWaitingHandOff:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesWaitingHandOff"
+                                CloudConnectionJobExamplesCancelled:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesCancelled"
+                "400":
+                    description: Failed validation or malformed input, such as a request body that carries properties.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: The caller does not hold the permission of the operation this job runs
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist — unknown job id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: Request conflicts with current resource state — this job cannot be paused while it is in this state
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: jobId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the job to pause.
+    /system/cloud-connections/jobs/{jobId}/resume:
+        post:
+            operationId: createSystemCloudConnectionsJobsResumeByJobId
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Resume a paused Cloud Connections job (Cribl.Cloud only)
+            description: Let the specified paused job carry on from where it stopped (Cribl.Cloud only).<br/><br/>A job whose <code>capabilities.resume</code> is <code>false</code> cannot be resumed in its current state, and the request is refused without changing the job.
+            responses:
+                "200":
+                    description: The job as it stands after the resume
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudConnectionJobResponse"
+                            examples:
+                                CloudConnectionJobExamplesRunningScan:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesRunningScan"
+                                CloudConnectionJobExamplesWaitingHandOff:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesWaitingHandOff"
+                                CloudConnectionJobExamplesCancelled:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesCancelled"
+                "400":
+                    description: Failed validation or malformed input, such as a request body that carries properties.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: The caller does not hold the permission of the operation this job runs
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist — unknown job id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: Request conflicts with current resource state — this job is not paused
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: jobId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the job to resume.
+    /system/cloud-connections/jobs/{jobId}/retry:
+        post:
+            operationId: createSystemCloudConnectionsJobsRetryByJobId
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Retry the failed work of a Cloud Connections job (Cribl.Cloud only)
+            description: "Run the failed items of the specified job again (Cribl.Cloud only). Only the items that failed are retried; the ones that succeeded are left alone.<br/><br/>Name <code>causeCodes</code> to retry only the items failing under those causes, taking each code from a cause's <code>code</code> on the job. Omit it to retry every failed item. A cause whose <code>retryable</code> is <code>false</code> is not worth retrying, and a job whose <code>capabilities.retry</code> is <code>false</code> cannot be retried in its current state: the request is then refused without changing the job."
+            responses:
+                "200":
+                    description: The job as it stands after the retry
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudConnectionJobResponse"
+                            examples:
+                                CloudConnectionJobExamplesRunningScan:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesRunningScan"
+                                CloudConnectionJobExamplesWaitingHandOff:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesWaitingHandOff"
+                                CloudConnectionJobExamplesCancelled:
+                                    $ref: "#/components/examples/CloudConnectionJobExamplesCancelled"
+                "400":
+                    description: Failed validation or malformed input, such as an unknown property in the request body.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: The caller does not hold the permission of the operation this job runs
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist — unknown job id
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: Request conflicts with current resource state — this job cannot be retried while it is in this state
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            requestBody:
+                description: CloudConnectionJobRetryRequestBody object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/CloudConnectionJobRetryRequestBody"
+                        examples:
+                            CloudConnectionJobRetryExamplesEveryFailure:
+                                $ref: "#/components/examples/CloudConnectionJobRetryExamplesEveryFailure"
+                            CloudConnectionJobRetryExamplesOneCause:
+                                $ref: "#/components/examples/CloudConnectionJobRetryExamplesOneCause"
+            parameters:
+                - name: jobId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the job to retry.
     /system/cloud-connections/connections/{connectionId}:
         delete:
             operationId: deleteSystemCloudConnectionsConnectionsByConnectionId
@@ -329119,7 +330311,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: List favorites (Cribl.Cloud only)
-            description: Get the Dashboards, Notebooks, and Notebook templates that the requesting user has favorited, across every Pack (Cribl.Cloud only). Objects that no longer exist or that the user cannot read are omitted.
+            description: Get the Dashboards, Notebooks, Notebook templates, and Datasets that the requesting user has favorited, across every Pack (Cribl.Cloud only). Objects that no longer exist or that the user cannot read are omitted.
             responses:
                 "200":
                     description: The requesting user's favorites.
@@ -329166,8 +330358,8 @@ paths:
                   in: query
                   required: false
                   schema:
-                    $ref: "#/components/schemas/SearchFavoriteTypeParam"
-                  description: "Limits the response to one object type: <code>dashboards</code>, <code>notebooks</code>, or <code>notebook-templates</code>. Omit to list every type."
+                    $ref: "#/components/schemas/SearchFavoriteListTypeParam"
+                  description: "Limits the response to one object type: <code>dashboards</code>, <code>notebooks</code>, <code>notebook-templates</code>, or <code>datasets</code>. Omit to list every type."
                 - name: offset
                   in: query
                   required: false
@@ -331047,19 +332239,13 @@ paths:
                   required: false
                   schema:
                     $ref: "#/components/schemas/SearchQuerySource"
-                  description: Origin of the request, used to classify the Search Job that runs the query.
+                  description: "Origin of the request, used to classify the Search Job that runs the query. <code>systemInsights</code> is rejected with a 400: run System Insights queries with <code>GET /system-insights/query</code>."
                 - name: expectedOutputType
                   in: query
                   required: false
                   schema:
                     $ref: "#/components/schemas/SearchQueryExpectedOutputType"
                   description: For metrics queries, whether to run as a <code>range</code> query or an <code>instant</code> query.
-                - name: rangeBucketReducer
-                  in: query
-                  required: false
-                  schema:
-                    type: string
-                  description: Honored only for System Insights range queries. Set to <code>latest</code> so each resolution bucket plots the value an instant evaluation at the bucket end returns (the latest sample, or the aggregation over the literal window such as <code>[5m]</code>) instead of aggregating the whole bucket.
                 - name: step
                   in: query
                   required: false
