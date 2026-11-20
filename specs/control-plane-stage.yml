@@ -17,7 +17,7 @@ info:
     - Host (Worker or Edge Node) context: /api/v1/w/{nodeId}
 
     - Search context: /api/v1/m/default_search
-  version: 4.21.1-alpha.1795129577312-7ff63f3c
+  version: 4.21.1-alpha.1795216097882-262e8e0c
   contact:
     name: Support
     url: https://portal.support.cribl.io
@@ -7998,12 +7998,16 @@ components:
               $ref: "#/components/schemas/AuthenticationProtocolOptionsV3User"
               description: Authentication protocol for the SNMPv3 user.
             authKeyType:
-              default: manual
+              $ref: "#/components/schemas/V3AuthenticationKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNone"
+              description: Select Manual to enter the key directly, or Secret to use a stored
+                text secret
             privProtocol:
               type: string
               description: Privacy protocol for SNMPv3 encryption.
             privKeyType:
-              default: manual
+              $ref: "#/components/schemas/V3PrivacyKeyTypeOptionsSnmpTrapSerializeV3UserAuthProtocolNotNonePrivProtocolNotNone"
+              description: Select Manual to enter the key directly, or Secret to use a stored
+                text secret
           allOf:
             - oneOf:
                 - $ref: "#/components/schemas/SnmpTrapSerializeV3UserAuthProtocolNone"
@@ -74937,6 +74941,361 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
       title: OutputOracleCloudS3
+    OutputHitachiVspOneObjectS3:
+      type: object
+      required:
+        - type
+        - bucket
+        - stagePath
+        - endpoint
+      properties:
+        id:
+          type: string
+          title: Output ID
+          description: Unique name for this output
+        type:
+          type: string
+          enum:
+            - hitachi_vsp_one_object_s3
+          description: Connector type identifier.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data before sending out to this output
+        systemFields:
+          type: array
+          title: System fields
+          description: Fields to automatically add to events, such as cribl_pipe. Supports
+            wildcards.
+          items:
+            type: string
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        schemaMonitorSettings:
+          $ref: "#/components/schemas/SchemaMonitorSettingsTypeOptional"
+          description: Configuration for Schema Monitor on this Destination.
+        endpoint:
+          type: string
+          title: Hitachi VSP One Object endpoint
+          description: "Hitachi VSP One Object S3-compatible endpoint URL (example: https://vsp-one-object.example.com)"
+          pattern: ^https?://.*
+        awsAuthenticationMethod:
+          $ref: "#/components/schemas/AuthenticationMethodOptionsSecret"
+          description: Authentication method.
+        reuseConnections:
+          type: boolean
+          title: Reuse connections
+          description: Reuse connections between requests, which can improve performance
+        rejectUnauthorized:
+          type: boolean
+          title: Reject unauthorized certificates
+          description: Reject certificates that cannot be verified against a valid CA,
+            such as self-signed certificates
+        bucket:
+          type: string
+          title: Hitachi VSP One Object bucket name
+          description: "Name of the destination Hitachi VSP One Object bucket. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at initialization time. Example referencing a Global Variable: `myBucket-${C.vars.myVar}`"
+        region:
+          type: string
+          title: Region
+          description: Region where the Hitachi VSP One Object bucket is located
+        destPath:
+          type: string
+          title: Key prefix
+          description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+        maxConcurrentFileParts:
+          type: number
+          title: Concurrent file parts upload limit
+          description: Maximum number of parts to upload in parallel per file. Minimum
+            part size is 5MB.
+          minimum: 1
+          maximum: 10
+        verifyPermissions:
+          type: boolean
+          title: Verify if bucket exists
+          description: Disable if you can access files within the bucket but not the
+            bucket itself
+        maxClosingFilesToBackpressure:
+          type: number
+          title: Staging file limit
+          description: Maximum number of files that can be waiting for upload before
+            backpressure is applied
+          minimum: 10
+          maximum: 4200
+        stagePath:
+          type: string
+          title: Staging location
+          description: Filesystem location in which to buffer files, before compressing
+            and moving to final destination. Use performant and stable storage.
+        addIdToStagePath:
+          type: boolean
+          title: Add output ID
+          description: Add the Output ID value to staging location
+        removeEmptyDirs:
+          type: boolean
+          title: Remove empty staging directories
+          description: Remove empty staging directories after moving files
+        partitionExpr:
+          type: string
+          title: Partitioning expression
+          description: JavaScript expression defining how files are partitioned and
+            organized. Default is date-based. If blank, Stream will fall back to
+            the event's __partition field value – if present – otherwise to each
+            location's root directory.
+        format:
+          $ref: "#/components/schemas/DataFormatOptions"
+          description: Format of the output data
+        baseFileName:
+          type: string
+          title: File name prefix expression
+          description: JavaScript expression to define the output filename prefix (can be
+            constant)
+        fileNameSuffix:
+          type: string
+          title: File name suffix expression
+          description: JavaScript expression to define the output filename suffix (can be
+            constant).  The `__format` variable refers to the value of the `Data
+            format` field (`json` or `raw`).  The `__compression` field refers
+            to the kind of compression being used (`none` or `gzip`).
+        maxFileSizeMB:
+          type: number
+          title: File size limit (MB)
+          description: Maximum uncompressed output file size. Files of this size will be
+            closed and moved to final output location.
+          maximum: 1024
+          minimum: 5
+        maxFileOpenTimeSec:
+          type: number
+          title: File open time limit (sec)
+          description: Maximum amount of time to write to a file. Files open for longer
+            than this will be closed and moved to final output location.
+          minimum: 10
+          maximum: 86400
+        maxFileIdleTimeSec:
+          type: number
+          title: Idle time limit (sec)
+          description: Maximum amount of time to keep inactive files open. Files open for
+            longer than this will be closed and moved to final output location.
+          minimum: 5
+          maximum: 86400
+        maxOpenFiles:
+          type: number
+          title: Open file limit
+          description: Maximum number of files to keep open concurrently. When exceeded,
+            @{product} will close the oldest open files and move them to the
+            final output location.
+          minimum: 10
+          maximum: 2000
+        headerLine:
+          type: string
+          title: Header line
+          description: If set, this line will be written to the beginning of each output
+            file
+        writeHighWaterMark:
+          type: number
+          title: Writing high watermark (KB)
+          description: Buffer size used to write to a file
+          maximum: 4096
+          minimum: 16
+        onBackpressure:
+          $ref: "#/components/schemas/BackpressureBehaviorOptionsBlockDrop"
+          description: How to handle events when all receivers are exerting backpressure
+        deadletterEnabled:
+          type: boolean
+          title: Enable dead-lettering
+          description: If a file fails to move to its final destination after the maximum
+            number of retries, move it to a designated directory to prevent
+            further errors
+        onDiskFullBackpressure:
+          $ref: "#/components/schemas/DiskSpaceProtectionOptions"
+          description: How to handle events when disk space is below the global 'Min free
+            disk space' limit
+        forceCloseOnShutdown:
+          type: boolean
+          title: Force close on shutdown
+          description: Force all staged files to close during an orderly Node shutdown.
+            This triggers immediate upload of in-progress data — regardless of
+            idle time, file age, or size thresholds — to minimize data loss.
+        retrySettings:
+          $ref: "#/components/schemas/RetrySettingsType"
+          description: Retry settings for failed file uploads.
+        orphans:
+          $ref: "#/components/schemas/OrphanFileRecoveryType"
+          description: Orphan file recovery
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        awsSecret:
+          type: string
+          title: Secret key pair
+          description: Select or create a stored secret that references your access key
+            and secret key
+        compress:
+          $ref: "#/components/schemas/CompressionOptionsHttp"
+          description: Data compression format to apply to HTTP content before it is
+            delivered
+        compressionLevel:
+          $ref: "#/components/schemas/CompressionLevelOptions"
+          description: Compression level to apply before moving files to final destination
+        automaticSchema:
+          type: boolean
+          title: Automatic schema
+          description: Automatically calculate the schema based on the events of each
+            Parquet file generated
+        parquetSchema:
+          type: string
+          title: Parquet schema
+          description: To add a new schema, navigate to Processing > Knowledge > Parquet
+            Schemas
+          minLength: 1
+        parquetVersion:
+          $ref: "#/components/schemas/ParquetVersionOptions"
+          description: Determines which data types are supported and how they are
+            represented
+        parquetDataPageVersion:
+          $ref: "#/components/schemas/DataPageVersionOptions"
+          description: Serialization format of data pages. Note that some reader
+            implementations use Data page V2's attributes to work more
+            efficiently, while others ignore it.
+        parquetRowGroupLength:
+          type: number
+          title: Group row limit
+          description: The number of rows that every group will contain. The final group
+            can contain a smaller number of rows.
+          minimum: 1
+          maximum: 67108864
+        parquetPageSize:
+          type: string
+          title: Page size
+          description: Target memory size for page segments, such as 1MB or 128MB.
+            Generally, lower values improve reading speed, while higher values
+            improve compression.
+          pattern: ^\d+\s*(?:[kK][bB]|[mM][bB]|[gG][bB]|[tT][bB])?$
+        shouldLogInvalidRows:
+          type: boolean
+          title: Log invalid rows
+          description: Log up to 3 rows that @{product} skips due to data mismatch
+        keyValueMetadata:
+          type: array
+          title: Metadata (optional)
+          description: 'The metadata of files the Destination writes will include the
+            properties you add here as key-value pairs. Useful for tagging.
+            Examples: "key":"OCSF Event Class", "value":"9001"'
+          minItems: 0
+          items:
+            $ref: "#/components/schemas/KeyValueMetadataConfOutputFilesystem"
+        enableStatistics:
+          type: boolean
+          title: Write statistics
+          description: Statistics profile an entire file in terms of minimum/maximum
+            values within data, numbers of nulls, etc. You can use Parquet tools
+            to view statistics.
+        enableWritePageIndex:
+          type: boolean
+          title: Write page indexes
+          description: One page index contains statistics for one data page. Parquet
+            readers use statistics to enable page skipping.
+        enablePageChecksum:
+          type: boolean
+          title: Write page checksum
+          description: Parquet tools can use the checksum of a Parquet page to verify data
+            integrity
+        emptyDirCleanupSec:
+          type: number
+          title: Staging cleanup period
+          description: How frequently, in seconds, to clean up empty directories
+          minimum: 10
+          maximum: 86400
+        directoryBatchSize:
+          type: number
+          title: Directory batch size
+          description: Number of directories to process in each batch during cleanup of
+            empty directories. Minimum is 10, maximum is 10000. Higher values
+            may require more memory.
+        deadletterPath:
+          type: string
+          title: Dead-letter location
+          description: Storage location for files that fail to reach their final
+            destination after maximum retries are exceeded
+        maxRetryNum:
+          type: number
+          title: Retry limit
+          description: The maximum number of times a file will attempt to move to its
+            final destination before being dead-lettered
+          minimum: 1
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_endpoint:
+          type: string
+          description: Binds 'endpoint' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'endpoint' at runtime.
+        __template_bucket:
+          type: string
+          description: Binds 'bucket' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'bucket' at runtime.
+        __template_region:
+          type: string
+          description: Binds 'region' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'region' at runtime.
+        __template_destPath:
+          type: string
+          description: Binds 'destPath' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'destPath' at runtime.
+        __template_partitionExpr:
+          type: string
+          description: Binds 'partitionExpr' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+        __template_format:
+          type: string
+          description: Binds 'format' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'format' at runtime.
+        __template_baseFileName:
+          type: string
+          description: Binds 'baseFileName' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'baseFileName' at runtime.
+        __template_fileNameSuffix:
+          type: string
+          description: Binds 'fileNameSuffix' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'fileNameSuffix' at
+            runtime.
+        __template_onBackpressure:
+          type: string
+          description: Binds 'onBackpressure' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'onBackpressure' at
+            runtime.
+        __template_compress:
+          type: string
+          description: Binds 'compress' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'compress' at runtime.
+        __template_parquetSchema:
+          type: string
+          description: Binds 'parquetSchema' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputHitachiVspOneObjectS3
     OutputDatabricksZerobus:
       type: object
       required:
@@ -77512,6 +77871,1442 @@ components:
             Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
             (group-scoped). Variable value overrides 'parquetSchema' at runtime.
       title: OutputInfinidatS3
+    OutputEverpureFlashbladeS3:
+      type: object
+      required:
+        - type
+        - bucket
+        - stagePath
+        - endpoint
+      properties:
+        id:
+          type: string
+          title: Output ID
+          description: Unique name for this output
+        type:
+          type: string
+          enum:
+            - everpure_flashblade_s3
+          description: Connector type identifier.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data before sending out to this output
+        systemFields:
+          type: array
+          title: System fields
+          description: Fields to automatically add to events, such as cribl_pipe. Supports
+            wildcards.
+          items:
+            type: string
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        schemaMonitorSettings:
+          $ref: "#/components/schemas/SchemaMonitorSettingsTypeOptional"
+          description: Configuration for Schema Monitor on this Destination.
+        awsAuthenticationMethod:
+          $ref: "#/components/schemas/AuthenticationMethodOptionsSecret"
+          description: Authentication method.
+        reuseConnections:
+          type: boolean
+          title: Reuse connections
+          description: Reuse connections between requests, which can improve performance
+        rejectUnauthorized:
+          type: boolean
+          title: Reject unauthorized certificates
+          description: Reject certificates that cannot be verified against a valid CA,
+            such as self-signed certificates
+        bucket:
+          type: string
+          title: Everpure FlashBlade bucket name
+          description: "Name of the destination Everpure FlashBlade bucket. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at initialization time. Example referencing a Global Variable: `myBucket-${C.vars.myVar}`"
+        region:
+          type: string
+          title: Region
+          description: Region where the Everpure FlashBlade bucket is located
+        destPath:
+          type: string
+          title: Key prefix
+          description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+        maxConcurrentFileParts:
+          type: number
+          title: Concurrent file parts upload limit
+          description: Maximum number of parts to upload in parallel per file. Minimum
+            part size is 5MB.
+          minimum: 1
+          maximum: 10
+        verifyPermissions:
+          type: boolean
+          title: Verify if bucket exists
+          description: Disable if you can access files within the bucket but not the
+            bucket itself
+        maxClosingFilesToBackpressure:
+          type: number
+          title: Staging file limit
+          description: Maximum number of files that can be waiting for upload before
+            backpressure is applied
+          minimum: 10
+          maximum: 4200
+        stagePath:
+          type: string
+          title: Staging location
+          description: Filesystem location in which to buffer files, before compressing
+            and moving to final destination. Use performant and stable storage.
+        addIdToStagePath:
+          type: boolean
+          title: Add output ID
+          description: Add the Output ID value to staging location
+        removeEmptyDirs:
+          type: boolean
+          title: Remove empty staging directories
+          description: Remove empty staging directories after moving files
+        partitionExpr:
+          type: string
+          title: Partitioning expression
+          description: JavaScript expression defining how files are partitioned and
+            organized. Default is date-based. If blank, Stream will fall back to
+            the event's __partition field value – if present – otherwise to each
+            location's root directory.
+        format:
+          $ref: "#/components/schemas/DataFormatOptions"
+          description: Format of the output data
+        baseFileName:
+          type: string
+          title: File name prefix expression
+          description: JavaScript expression to define the output filename prefix (can be
+            constant)
+        fileNameSuffix:
+          type: string
+          title: File name suffix expression
+          description: JavaScript expression to define the output filename suffix (can be
+            constant).  The `__format` variable refers to the value of the `Data
+            format` field (`json` or `raw`).  The `__compression` field refers
+            to the kind of compression being used (`none` or `gzip`).
+        maxFileSizeMB:
+          type: number
+          title: File size limit (MB)
+          description: Maximum uncompressed output file size. Files of this size will be
+            closed and moved to final output location.
+          maximum: 1024
+          minimum: 5
+        maxFileOpenTimeSec:
+          type: number
+          title: File open time limit (sec)
+          description: Maximum amount of time to write to a file. Files open for longer
+            than this will be closed and moved to final output location.
+          minimum: 10
+          maximum: 86400
+        maxFileIdleTimeSec:
+          type: number
+          title: Idle time limit (sec)
+          description: Maximum amount of time to keep inactive files open. Files open for
+            longer than this will be closed and moved to final output location.
+          minimum: 5
+          maximum: 86400
+        maxOpenFiles:
+          type: number
+          title: Open file limit
+          description: Maximum number of files to keep open concurrently. When exceeded,
+            @{product} will close the oldest open files and move them to the
+            final output location.
+          minimum: 10
+          maximum: 2000
+        headerLine:
+          type: string
+          title: Header line
+          description: If set, this line will be written to the beginning of each output
+            file
+        writeHighWaterMark:
+          type: number
+          title: Writing high watermark (KB)
+          description: Buffer size used to write to a file
+          maximum: 4096
+          minimum: 16
+        onBackpressure:
+          $ref: "#/components/schemas/BackpressureBehaviorOptionsBlockDrop"
+          description: How to handle events when all receivers are exerting backpressure
+        deadletterEnabled:
+          type: boolean
+          title: Enable dead-lettering
+          description: If a file fails to move to its final destination after the maximum
+            number of retries, move it to a designated directory to prevent
+            further errors
+        onDiskFullBackpressure:
+          $ref: "#/components/schemas/DiskSpaceProtectionOptions"
+          description: How to handle events when disk space is below the global 'Min free
+            disk space' limit
+        forceCloseOnShutdown:
+          type: boolean
+          title: Force close on shutdown
+          description: Force all staged files to close during an orderly Node shutdown.
+            This triggers immediate upload of in-progress data — regardless of
+            idle time, file age, or size thresholds — to minimize data loss.
+        retrySettings:
+          $ref: "#/components/schemas/RetrySettingsType"
+          description: Retry settings for failed file uploads.
+        orphans:
+          $ref: "#/components/schemas/OrphanFileRecoveryType"
+          description: Orphan file recovery
+        endpoint:
+          type: string
+          title: Everpure FlashBlade endpoint
+          description: "FlashBlade Object Store S3 endpoint — the array data VIP or its DNS name (example: https://flashblade-vip.example.com)"
+          pattern: ^https?://.*
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        awsSecret:
+          type: string
+          title: Secret key pair
+          description: Select or create a stored secret that references your access key
+            and secret key
+        compress:
+          $ref: "#/components/schemas/CompressionOptionsHttp"
+          description: Data compression format to apply to HTTP content before it is
+            delivered
+        compressionLevel:
+          $ref: "#/components/schemas/CompressionLevelOptions"
+          description: Compression level to apply before moving files to final destination
+        automaticSchema:
+          type: boolean
+          title: Automatic schema
+          description: Automatically calculate the schema based on the events of each
+            Parquet file generated
+        parquetSchema:
+          type: string
+          title: Parquet schema
+          description: To add a new schema, navigate to Processing > Knowledge > Parquet
+            Schemas
+          minLength: 1
+        parquetVersion:
+          $ref: "#/components/schemas/ParquetVersionOptions"
+          description: Determines which data types are supported and how they are
+            represented
+        parquetDataPageVersion:
+          $ref: "#/components/schemas/DataPageVersionOptions"
+          description: Serialization format of data pages. Note that some reader
+            implementations use Data page V2's attributes to work more
+            efficiently, while others ignore it.
+        parquetRowGroupLength:
+          type: number
+          title: Group row limit
+          description: The number of rows that every group will contain. The final group
+            can contain a smaller number of rows.
+          minimum: 1
+          maximum: 67108864
+        parquetPageSize:
+          type: string
+          title: Page size
+          description: Target memory size for page segments, such as 1MB or 128MB.
+            Generally, lower values improve reading speed, while higher values
+            improve compression.
+          pattern: ^\d+\s*(?:[kK][bB]|[mM][bB]|[gG][bB]|[tT][bB])?$
+        shouldLogInvalidRows:
+          type: boolean
+          title: Log invalid rows
+          description: Log up to 3 rows that @{product} skips due to data mismatch
+        keyValueMetadata:
+          type: array
+          title: Metadata (optional)
+          description: 'The metadata of files the Destination writes will include the
+            properties you add here as key-value pairs. Useful for tagging.
+            Examples: "key":"OCSF Event Class", "value":"9001"'
+          minItems: 0
+          items:
+            $ref: "#/components/schemas/KeyValueMetadataConfOutputFilesystem"
+        enableStatistics:
+          type: boolean
+          title: Write statistics
+          description: Statistics profile an entire file in terms of minimum/maximum
+            values within data, numbers of nulls, etc. You can use Parquet tools
+            to view statistics.
+        enableWritePageIndex:
+          type: boolean
+          title: Write page indexes
+          description: One page index contains statistics for one data page. Parquet
+            readers use statistics to enable page skipping.
+        enablePageChecksum:
+          type: boolean
+          title: Write page checksum
+          description: Parquet tools can use the checksum of a Parquet page to verify data
+            integrity
+        emptyDirCleanupSec:
+          type: number
+          title: Staging cleanup period
+          description: How frequently, in seconds, to clean up empty directories
+          minimum: 10
+          maximum: 86400
+        directoryBatchSize:
+          type: number
+          title: Directory batch size
+          description: Number of directories to process in each batch during cleanup of
+            empty directories. Minimum is 10, maximum is 10000. Higher values
+            may require more memory.
+        deadletterPath:
+          type: string
+          title: Dead-letter location
+          description: Storage location for files that fail to reach their final
+            destination after maximum retries are exceeded
+        maxRetryNum:
+          type: number
+          title: Retry limit
+          description: The maximum number of times a file will attempt to move to its
+            final destination before being dead-lettered
+          minimum: 1
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_bucket:
+          type: string
+          description: Binds 'bucket' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'bucket' at runtime.
+        __template_region:
+          type: string
+          description: Binds 'region' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'region' at runtime.
+        __template_destPath:
+          type: string
+          description: Binds 'destPath' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'destPath' at runtime.
+        __template_partitionExpr:
+          type: string
+          description: Binds 'partitionExpr' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+        __template_format:
+          type: string
+          description: Binds 'format' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'format' at runtime.
+        __template_baseFileName:
+          type: string
+          description: Binds 'baseFileName' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'baseFileName' at runtime.
+        __template_fileNameSuffix:
+          type: string
+          description: Binds 'fileNameSuffix' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'fileNameSuffix' at
+            runtime.
+        __template_onBackpressure:
+          type: string
+          description: Binds 'onBackpressure' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'onBackpressure' at
+            runtime.
+        __template_endpoint:
+          type: string
+          description: Binds 'endpoint' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'endpoint' at runtime.
+        __template_compress:
+          type: string
+          description: Binds 'compress' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'compress' at runtime.
+        __template_parquetSchema:
+          type: string
+          description: Binds 'parquetSchema' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputEverpureFlashbladeS3
+    OutputHitachiContentPlatformS3:
+      type: object
+      required:
+        - type
+        - bucket
+        - stagePath
+        - endpoint
+      properties:
+        id:
+          type: string
+          title: Output ID
+          description: Unique name for this output
+        type:
+          type: string
+          enum:
+            - hitachi_content_platform_s3
+          description: Connector type identifier.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data before sending out to this output
+        systemFields:
+          type: array
+          title: System fields
+          description: Fields to automatically add to events, such as cribl_pipe. Supports
+            wildcards.
+          items:
+            type: string
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        schemaMonitorSettings:
+          $ref: "#/components/schemas/SchemaMonitorSettingsTypeOptional"
+          description: Configuration for Schema Monitor on this Destination.
+        awsAuthenticationMethod:
+          $ref: "#/components/schemas/AuthenticationMethodOptionsSecret"
+          description: Authentication method.
+        reuseConnections:
+          type: boolean
+          title: Reuse connections
+          description: Reuse connections between requests, which can improve performance
+        rejectUnauthorized:
+          type: boolean
+          title: Reject unauthorized certificates
+          description: Reject certificates that cannot be verified against a valid CA,
+            such as self-signed certificates
+        bucket:
+          type: string
+          title: Hitachi Content Platform bucket name
+          description: "Name of the destination Hitachi Content Platform bucket. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at initialization time. Example referencing a Global Variable: `myBucket-${C.vars.myVar}`"
+        region:
+          type: string
+          title: Region
+          description: Region where the Hitachi Content Platform bucket is located
+        destPath:
+          type: string
+          title: Key prefix
+          description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+        maxConcurrentFileParts:
+          type: number
+          title: Concurrent file parts upload limit
+          description: Maximum number of parts to upload in parallel per file. Minimum
+            part size is 5MB.
+          minimum: 1
+          maximum: 10
+        verifyPermissions:
+          type: boolean
+          title: Verify if bucket exists
+          description: Disable if you can access files within the bucket but not the
+            bucket itself
+        maxClosingFilesToBackpressure:
+          type: number
+          title: Staging file limit
+          description: Maximum number of files that can be waiting for upload before
+            backpressure is applied
+          minimum: 10
+          maximum: 4200
+        stagePath:
+          type: string
+          title: Staging location
+          description: Filesystem location in which to buffer files, before compressing
+            and moving to final destination. Use performant and stable storage.
+        addIdToStagePath:
+          type: boolean
+          title: Add output ID
+          description: Add the Output ID value to staging location
+        removeEmptyDirs:
+          type: boolean
+          title: Remove empty staging directories
+          description: Remove empty staging directories after moving files
+        partitionExpr:
+          type: string
+          title: Partitioning expression
+          description: JavaScript expression defining how files are partitioned and
+            organized. Default is date-based. If blank, Stream will fall back to
+            the event's __partition field value – if present – otherwise to each
+            location's root directory.
+        format:
+          $ref: "#/components/schemas/DataFormatOptions"
+          description: Format of the output data
+        baseFileName:
+          type: string
+          title: File name prefix expression
+          description: JavaScript expression to define the output filename prefix (can be
+            constant)
+        fileNameSuffix:
+          type: string
+          title: File name suffix expression
+          description: JavaScript expression to define the output filename suffix (can be
+            constant).  The `__format` variable refers to the value of the `Data
+            format` field (`json` or `raw`).  The `__compression` field refers
+            to the kind of compression being used (`none` or `gzip`).
+        maxFileSizeMB:
+          type: number
+          title: File size limit (MB)
+          description: Maximum uncompressed output file size. Files of this size will be
+            closed and moved to final output location.
+          maximum: 1024
+          minimum: 5
+        maxFileOpenTimeSec:
+          type: number
+          title: File open time limit (sec)
+          description: Maximum amount of time to write to a file. Files open for longer
+            than this will be closed and moved to final output location.
+          minimum: 10
+          maximum: 86400
+        maxFileIdleTimeSec:
+          type: number
+          title: Idle time limit (sec)
+          description: Maximum amount of time to keep inactive files open. Files open for
+            longer than this will be closed and moved to final output location.
+          minimum: 5
+          maximum: 86400
+        maxOpenFiles:
+          type: number
+          title: Open file limit
+          description: Maximum number of files to keep open concurrently. When exceeded,
+            @{product} will close the oldest open files and move them to the
+            final output location.
+          minimum: 10
+          maximum: 2000
+        headerLine:
+          type: string
+          title: Header line
+          description: If set, this line will be written to the beginning of each output
+            file
+        writeHighWaterMark:
+          type: number
+          title: Writing high watermark (KB)
+          description: Buffer size used to write to a file
+          maximum: 4096
+          minimum: 16
+        onBackpressure:
+          $ref: "#/components/schemas/BackpressureBehaviorOptionsBlockDrop"
+          description: How to handle events when all receivers are exerting backpressure
+        deadletterEnabled:
+          type: boolean
+          title: Enable dead-lettering
+          description: If a file fails to move to its final destination after the maximum
+            number of retries, move it to a designated directory to prevent
+            further errors
+        onDiskFullBackpressure:
+          $ref: "#/components/schemas/DiskSpaceProtectionOptions"
+          description: How to handle events when disk space is below the global 'Min free
+            disk space' limit
+        forceCloseOnShutdown:
+          type: boolean
+          title: Force close on shutdown
+          description: Force all staged files to close during an orderly Node shutdown.
+            This triggers immediate upload of in-progress data — regardless of
+            idle time, file age, or size thresholds — to minimize data loss.
+        retrySettings:
+          $ref: "#/components/schemas/RetrySettingsType"
+          description: Retry settings for failed file uploads.
+        orphans:
+          $ref: "#/components/schemas/OrphanFileRecoveryType"
+          description: Orphan file recovery
+        objectACL:
+          $ref: "#/components/schemas/ObjectAclOptions"
+          description: Object ACL to assign to uploaded objects
+        endpoint:
+          type: string
+          title: Hitachi Content Platform endpoint
+          description: "Hitachi Content Platform (HCP) S3-compatible endpoint URL (example: https://hcp.example.com)"
+          pattern: ^https?://.*
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        awsSecret:
+          type: string
+          title: Secret key pair
+          description: Select or create a stored secret that references your access key
+            and secret key
+        compress:
+          $ref: "#/components/schemas/CompressionOptionsHttp"
+          description: Data compression format to apply to HTTP content before it is
+            delivered
+        compressionLevel:
+          $ref: "#/components/schemas/CompressionLevelOptions"
+          description: Compression level to apply before moving files to final destination
+        automaticSchema:
+          type: boolean
+          title: Automatic schema
+          description: Automatically calculate the schema based on the events of each
+            Parquet file generated
+        parquetSchema:
+          type: string
+          title: Parquet schema
+          description: To add a new schema, navigate to Processing > Knowledge > Parquet
+            Schemas
+          minLength: 1
+        parquetVersion:
+          $ref: "#/components/schemas/ParquetVersionOptions"
+          description: Determines which data types are supported and how they are
+            represented
+        parquetDataPageVersion:
+          $ref: "#/components/schemas/DataPageVersionOptions"
+          description: Serialization format of data pages. Note that some reader
+            implementations use Data page V2's attributes to work more
+            efficiently, while others ignore it.
+        parquetRowGroupLength:
+          type: number
+          title: Group row limit
+          description: The number of rows that every group will contain. The final group
+            can contain a smaller number of rows.
+          minimum: 1
+          maximum: 67108864
+        parquetPageSize:
+          type: string
+          title: Page size
+          description: Target memory size for page segments, such as 1MB or 128MB.
+            Generally, lower values improve reading speed, while higher values
+            improve compression.
+          pattern: ^\d+\s*(?:[kK][bB]|[mM][bB]|[gG][bB]|[tT][bB])?$
+        shouldLogInvalidRows:
+          type: boolean
+          title: Log invalid rows
+          description: Log up to 3 rows that @{product} skips due to data mismatch
+        keyValueMetadata:
+          type: array
+          title: Metadata (optional)
+          description: 'The metadata of files the Destination writes will include the
+            properties you add here as key-value pairs. Useful for tagging.
+            Examples: "key":"OCSF Event Class", "value":"9001"'
+          minItems: 0
+          items:
+            $ref: "#/components/schemas/KeyValueMetadataConfOutputFilesystem"
+        enableStatistics:
+          type: boolean
+          title: Write statistics
+          description: Statistics profile an entire file in terms of minimum/maximum
+            values within data, numbers of nulls, etc. You can use Parquet tools
+            to view statistics.
+        enableWritePageIndex:
+          type: boolean
+          title: Write page indexes
+          description: One page index contains statistics for one data page. Parquet
+            readers use statistics to enable page skipping.
+        enablePageChecksum:
+          type: boolean
+          title: Write page checksum
+          description: Parquet tools can use the checksum of a Parquet page to verify data
+            integrity
+        emptyDirCleanupSec:
+          type: number
+          title: Staging cleanup period
+          description: How frequently, in seconds, to clean up empty directories
+          minimum: 10
+          maximum: 86400
+        directoryBatchSize:
+          type: number
+          title: Directory batch size
+          description: Number of directories to process in each batch during cleanup of
+            empty directories. Minimum is 10, maximum is 10000. Higher values
+            may require more memory.
+        deadletterPath:
+          type: string
+          title: Dead-letter location
+          description: Storage location for files that fail to reach their final
+            destination after maximum retries are exceeded
+        maxRetryNum:
+          type: number
+          title: Retry limit
+          description: The maximum number of times a file will attempt to move to its
+            final destination before being dead-lettered
+          minimum: 1
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_bucket:
+          type: string
+          description: Binds 'bucket' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'bucket' at runtime.
+        __template_region:
+          type: string
+          description: Binds 'region' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'region' at runtime.
+        __template_destPath:
+          type: string
+          description: Binds 'destPath' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'destPath' at runtime.
+        __template_partitionExpr:
+          type: string
+          description: Binds 'partitionExpr' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+        __template_format:
+          type: string
+          description: Binds 'format' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'format' at runtime.
+        __template_baseFileName:
+          type: string
+          description: Binds 'baseFileName' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'baseFileName' at runtime.
+        __template_fileNameSuffix:
+          type: string
+          description: Binds 'fileNameSuffix' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'fileNameSuffix' at
+            runtime.
+        __template_onBackpressure:
+          type: string
+          description: Binds 'onBackpressure' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'onBackpressure' at
+            runtime.
+        __template_objectACL:
+          type: string
+          description: Binds 'objectACL' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'objectACL' at runtime.
+        __template_endpoint:
+          type: string
+          description: Binds 'endpoint' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'endpoint' at runtime.
+        __template_compress:
+          type: string
+          description: Binds 'compress' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'compress' at runtime.
+        __template_parquetSchema:
+          type: string
+          description: Binds 'parquetSchema' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputHitachiContentPlatformS3
+    OutputCephS3:
+      type: object
+      required:
+        - type
+        - bucket
+        - stagePath
+        - endpoint
+      properties:
+        id:
+          type: string
+          title: Output ID
+          description: Unique name for this output
+        type:
+          type: string
+          enum:
+            - ceph_s3
+          description: Connector type identifier.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data before sending out to this output
+        systemFields:
+          type: array
+          title: System fields
+          description: Fields to automatically add to events, such as cribl_pipe. Supports
+            wildcards.
+          items:
+            type: string
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        schemaMonitorSettings:
+          $ref: "#/components/schemas/SchemaMonitorSettingsTypeOptional"
+          description: Configuration for Schema Monitor on this Destination.
+        awsAuthenticationMethod:
+          $ref: "#/components/schemas/AuthenticationMethodOptionsSecret"
+          description: Authentication method.
+        reuseConnections:
+          type: boolean
+          title: Reuse connections
+          description: Reuse connections between requests, which can improve performance
+        rejectUnauthorized:
+          type: boolean
+          title: Reject unauthorized certificates
+          description: Reject certificates that cannot be verified against a valid CA,
+            such as self-signed certificates
+        bucket:
+          type: string
+          title: Ceph bucket name
+          description: "Name of the destination Ceph bucket. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at initialization time. Example referencing a Global Variable: `myBucket-${C.vars.myVar}`"
+        region:
+          type: string
+          title: Region
+          description: Region where the Ceph bucket is located
+        destPath:
+          type: string
+          title: Key prefix
+          description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+        maxConcurrentFileParts:
+          type: number
+          title: Concurrent file parts upload limit
+          description: Maximum number of parts to upload in parallel per file. Minimum
+            part size is 5MB.
+          minimum: 1
+          maximum: 10
+        verifyPermissions:
+          type: boolean
+          title: Verify if bucket exists
+          description: Disable if you can access files within the bucket but not the
+            bucket itself
+        maxClosingFilesToBackpressure:
+          type: number
+          title: Staging file limit
+          description: Maximum number of files that can be waiting for upload before
+            backpressure is applied
+          minimum: 10
+          maximum: 4200
+        stagePath:
+          type: string
+          title: Staging location
+          description: Filesystem location in which to buffer files, before compressing
+            and moving to final destination. Use performant and stable storage.
+        addIdToStagePath:
+          type: boolean
+          title: Add output ID
+          description: Add the Output ID value to staging location
+        removeEmptyDirs:
+          type: boolean
+          title: Remove empty staging directories
+          description: Remove empty staging directories after moving files
+        partitionExpr:
+          type: string
+          title: Partitioning expression
+          description: JavaScript expression defining how files are partitioned and
+            organized. Default is date-based. If blank, Stream will fall back to
+            the event's __partition field value – if present – otherwise to each
+            location's root directory.
+        format:
+          $ref: "#/components/schemas/DataFormatOptions"
+          description: Format of the output data
+        baseFileName:
+          type: string
+          title: File name prefix expression
+          description: JavaScript expression to define the output filename prefix (can be
+            constant)
+        fileNameSuffix:
+          type: string
+          title: File name suffix expression
+          description: JavaScript expression to define the output filename suffix (can be
+            constant).  The `__format` variable refers to the value of the `Data
+            format` field (`json` or `raw`).  The `__compression` field refers
+            to the kind of compression being used (`none` or `gzip`).
+        maxFileSizeMB:
+          type: number
+          title: File size limit (MB)
+          description: Maximum uncompressed output file size. Files of this size will be
+            closed and moved to final output location.
+          maximum: 1024
+          minimum: 5
+        maxFileOpenTimeSec:
+          type: number
+          title: File open time limit (sec)
+          description: Maximum amount of time to write to a file. Files open for longer
+            than this will be closed and moved to final output location.
+          minimum: 10
+          maximum: 86400
+        maxFileIdleTimeSec:
+          type: number
+          title: Idle time limit (sec)
+          description: Maximum amount of time to keep inactive files open. Files open for
+            longer than this will be closed and moved to final output location.
+          minimum: 5
+          maximum: 86400
+        maxOpenFiles:
+          type: number
+          title: Open file limit
+          description: Maximum number of files to keep open concurrently. When exceeded,
+            @{product} will close the oldest open files and move them to the
+            final output location.
+          minimum: 10
+          maximum: 2000
+        headerLine:
+          type: string
+          title: Header line
+          description: If set, this line will be written to the beginning of each output
+            file
+        writeHighWaterMark:
+          type: number
+          title: Writing high watermark (KB)
+          description: Buffer size used to write to a file
+          maximum: 4096
+          minimum: 16
+        onBackpressure:
+          $ref: "#/components/schemas/BackpressureBehaviorOptionsBlockDrop"
+          description: How to handle events when all receivers are exerting backpressure
+        deadletterEnabled:
+          type: boolean
+          title: Enable dead-lettering
+          description: If a file fails to move to its final destination after the maximum
+            number of retries, move it to a designated directory to prevent
+            further errors
+        onDiskFullBackpressure:
+          $ref: "#/components/schemas/DiskSpaceProtectionOptions"
+          description: How to handle events when disk space is below the global 'Min free
+            disk space' limit
+        forceCloseOnShutdown:
+          type: boolean
+          title: Force close on shutdown
+          description: Force all staged files to close during an orderly Node shutdown.
+            This triggers immediate upload of in-progress data — regardless of
+            idle time, file age, or size thresholds — to minimize data loss.
+        retrySettings:
+          $ref: "#/components/schemas/RetrySettingsType"
+          description: Retry settings for failed file uploads.
+        orphans:
+          $ref: "#/components/schemas/OrphanFileRecoveryType"
+          description: Orphan file recovery
+        endpoint:
+          type: string
+          title: Ceph endpoint
+          description: "Ceph RADOS Gateway (RGW) S3 endpoint URL for the cluster where the bucket is located (example: https://rgw.example.com)"
+          pattern: ^https?://.*
+        objectACL:
+          $ref: "#/components/schemas/ObjectAclOptions"
+          description: Object ACL to assign to uploaded objects
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        awsSecret:
+          type: string
+          title: Secret key pair
+          description: Select or create a stored secret that references your access key
+            and secret key
+        compress:
+          $ref: "#/components/schemas/CompressionOptionsHttp"
+          description: Data compression format to apply to HTTP content before it is
+            delivered
+        compressionLevel:
+          $ref: "#/components/schemas/CompressionLevelOptions"
+          description: Compression level to apply before moving files to final destination
+        automaticSchema:
+          type: boolean
+          title: Automatic schema
+          description: Automatically calculate the schema based on the events of each
+            Parquet file generated
+        parquetSchema:
+          type: string
+          title: Parquet schema
+          description: To add a new schema, navigate to Processing > Knowledge > Parquet
+            Schemas
+          minLength: 1
+        parquetVersion:
+          $ref: "#/components/schemas/ParquetVersionOptions"
+          description: Determines which data types are supported and how they are
+            represented
+        parquetDataPageVersion:
+          $ref: "#/components/schemas/DataPageVersionOptions"
+          description: Serialization format of data pages. Note that some reader
+            implementations use Data page V2's attributes to work more
+            efficiently, while others ignore it.
+        parquetRowGroupLength:
+          type: number
+          title: Group row limit
+          description: The number of rows that every group will contain. The final group
+            can contain a smaller number of rows.
+          minimum: 1
+          maximum: 67108864
+        parquetPageSize:
+          type: string
+          title: Page size
+          description: Target memory size for page segments, such as 1MB or 128MB.
+            Generally, lower values improve reading speed, while higher values
+            improve compression.
+          pattern: ^\d+\s*(?:[kK][bB]|[mM][bB]|[gG][bB]|[tT][bB])?$
+        shouldLogInvalidRows:
+          type: boolean
+          title: Log invalid rows
+          description: Log up to 3 rows that @{product} skips due to data mismatch
+        keyValueMetadata:
+          type: array
+          title: Metadata (optional)
+          description: 'The metadata of files the Destination writes will include the
+            properties you add here as key-value pairs. Useful for tagging.
+            Examples: "key":"OCSF Event Class", "value":"9001"'
+          minItems: 0
+          items:
+            $ref: "#/components/schemas/KeyValueMetadataConfOutputFilesystem"
+        enableStatistics:
+          type: boolean
+          title: Write statistics
+          description: Statistics profile an entire file in terms of minimum/maximum
+            values within data, numbers of nulls, etc. You can use Parquet tools
+            to view statistics.
+        enableWritePageIndex:
+          type: boolean
+          title: Write page indexes
+          description: One page index contains statistics for one data page. Parquet
+            readers use statistics to enable page skipping.
+        enablePageChecksum:
+          type: boolean
+          title: Write page checksum
+          description: Parquet tools can use the checksum of a Parquet page to verify data
+            integrity
+        emptyDirCleanupSec:
+          type: number
+          title: Staging cleanup period
+          description: How frequently, in seconds, to clean up empty directories
+          minimum: 10
+          maximum: 86400
+        directoryBatchSize:
+          type: number
+          title: Directory batch size
+          description: Number of directories to process in each batch during cleanup of
+            empty directories. Minimum is 10, maximum is 10000. Higher values
+            may require more memory.
+        deadletterPath:
+          type: string
+          title: Dead-letter location
+          description: Storage location for files that fail to reach their final
+            destination after maximum retries are exceeded
+        maxRetryNum:
+          type: number
+          title: Retry limit
+          description: The maximum number of times a file will attempt to move to its
+            final destination before being dead-lettered
+          minimum: 1
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_bucket:
+          type: string
+          description: Binds 'bucket' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'bucket' at runtime.
+        __template_region:
+          type: string
+          description: Binds 'region' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'region' at runtime.
+        __template_destPath:
+          type: string
+          description: Binds 'destPath' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'destPath' at runtime.
+        __template_partitionExpr:
+          type: string
+          description: Binds 'partitionExpr' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+        __template_format:
+          type: string
+          description: Binds 'format' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'format' at runtime.
+        __template_baseFileName:
+          type: string
+          description: Binds 'baseFileName' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'baseFileName' at runtime.
+        __template_fileNameSuffix:
+          type: string
+          description: Binds 'fileNameSuffix' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'fileNameSuffix' at
+            runtime.
+        __template_onBackpressure:
+          type: string
+          description: Binds 'onBackpressure' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'onBackpressure' at
+            runtime.
+        __template_endpoint:
+          type: string
+          description: Binds 'endpoint' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'endpoint' at runtime.
+        __template_objectACL:
+          type: string
+          description: Binds 'objectACL' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'objectACL' at runtime.
+        __template_compress:
+          type: string
+          description: Binds 'compress' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'compress' at runtime.
+        __template_parquetSchema:
+          type: string
+          description: Binds 'parquetSchema' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputCephS3
+    OutputNetappOntapS3:
+      type: object
+      required:
+        - type
+        - bucket
+        - stagePath
+        - endpoint
+      properties:
+        id:
+          type: string
+          title: Output ID
+          description: Unique name for this output
+        type:
+          type: string
+          enum:
+            - netapp_ontap_s3
+          description: Connector type identifier.
+        pipeline:
+          type: string
+          title: Pipeline
+          description: Pipeline to process data before sending out to this output
+        systemFields:
+          type: array
+          title: System fields
+          description: Fields to automatically add to events, such as cribl_pipe. Supports
+            wildcards.
+          items:
+            type: string
+        environment:
+          type: string
+          title: Environment
+          description: Optionally, enable this config only on a specified Git branch. If
+            empty, will be enabled everywhere.
+        streamtags:
+          type: array
+          title: Tags
+          description: Metadata tags used for categorization and filtering.
+          items:
+            type: string
+        schemaMonitorSettings:
+          $ref: "#/components/schemas/SchemaMonitorSettingsTypeOptional"
+          description: Configuration for Schema Monitor on this Destination.
+        awsAuthenticationMethod:
+          $ref: "#/components/schemas/AuthenticationMethodOptionsSecret"
+          description: Authentication method.
+        reuseConnections:
+          type: boolean
+          title: Reuse connections
+          description: Reuse connections between requests, which can improve performance
+        rejectUnauthorized:
+          type: boolean
+          title: Reject unauthorized certificates
+          description: Reject certificates that cannot be verified against a valid CA,
+            such as self-signed certificates
+        bucket:
+          type: string
+          title: NetApp ONTAP S3 bucket name
+          description: "Name of the destination NetApp ONTAP S3 bucket. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at initialization time. Example referencing a Global Variable: `myBucket-${C.vars.myVar}`"
+        region:
+          type: string
+          title: Region
+          description: Region where the NetApp ONTAP S3 bucket is located
+        destPath:
+          type: string
+          title: Key prefix
+          description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+        maxConcurrentFileParts:
+          type: number
+          title: Concurrent file parts upload limit
+          description: Maximum number of parts to upload in parallel per file. Minimum
+            part size is 5MB.
+          minimum: 1
+          maximum: 10
+        verifyPermissions:
+          type: boolean
+          title: Verify if bucket exists
+          description: Disable if you can access files within the bucket but not the
+            bucket itself
+        maxClosingFilesToBackpressure:
+          type: number
+          title: Staging file limit
+          description: Maximum number of files that can be waiting for upload before
+            backpressure is applied
+          minimum: 10
+          maximum: 4200
+        stagePath:
+          type: string
+          title: Staging location
+          description: Filesystem location in which to buffer files, before compressing
+            and moving to final destination. Use performant and stable storage.
+        addIdToStagePath:
+          type: boolean
+          title: Add output ID
+          description: Add the Output ID value to staging location
+        removeEmptyDirs:
+          type: boolean
+          title: Remove empty staging directories
+          description: Remove empty staging directories after moving files
+        partitionExpr:
+          type: string
+          title: Partitioning expression
+          description: JavaScript expression defining how files are partitioned and
+            organized. Default is date-based. If blank, Stream will fall back to
+            the event's __partition field value – if present – otherwise to each
+            location's root directory.
+        format:
+          $ref: "#/components/schemas/DataFormatOptions"
+          description: Format of the output data
+        baseFileName:
+          type: string
+          title: File name prefix expression
+          description: JavaScript expression to define the output filename prefix (can be
+            constant)
+        fileNameSuffix:
+          type: string
+          title: File name suffix expression
+          description: JavaScript expression to define the output filename suffix (can be
+            constant).  The `__format` variable refers to the value of the `Data
+            format` field (`json` or `raw`).  The `__compression` field refers
+            to the kind of compression being used (`none` or `gzip`).
+        maxFileSizeMB:
+          type: number
+          title: File size limit (MB)
+          description: Maximum uncompressed output file size. Files of this size will be
+            closed and moved to final output location.
+          maximum: 1024
+          minimum: 5
+        maxFileOpenTimeSec:
+          type: number
+          title: File open time limit (sec)
+          description: Maximum amount of time to write to a file. Files open for longer
+            than this will be closed and moved to final output location.
+          minimum: 10
+          maximum: 86400
+        maxFileIdleTimeSec:
+          type: number
+          title: Idle time limit (sec)
+          description: Maximum amount of time to keep inactive files open. Files open for
+            longer than this will be closed and moved to final output location.
+          minimum: 5
+          maximum: 86400
+        maxOpenFiles:
+          type: number
+          title: Open file limit
+          description: Maximum number of files to keep open concurrently. When exceeded,
+            @{product} will close the oldest open files and move them to the
+            final output location.
+          minimum: 10
+          maximum: 2000
+        headerLine:
+          type: string
+          title: Header line
+          description: If set, this line will be written to the beginning of each output
+            file
+        writeHighWaterMark:
+          type: number
+          title: Writing high watermark (KB)
+          description: Buffer size used to write to a file
+          maximum: 4096
+          minimum: 16
+        onBackpressure:
+          $ref: "#/components/schemas/BackpressureBehaviorOptionsBlockDrop"
+          description: How to handle events when all receivers are exerting backpressure
+        deadletterEnabled:
+          type: boolean
+          title: Enable dead-lettering
+          description: If a file fails to move to its final destination after the maximum
+            number of retries, move it to a designated directory to prevent
+            further errors
+        onDiskFullBackpressure:
+          $ref: "#/components/schemas/DiskSpaceProtectionOptions"
+          description: How to handle events when disk space is below the global 'Min free
+            disk space' limit
+        forceCloseOnShutdown:
+          type: boolean
+          title: Force close on shutdown
+          description: Force all staged files to close during an orderly Node shutdown.
+            This triggers immediate upload of in-progress data — regardless of
+            idle time, file age, or size thresholds — to minimize data loss.
+        retrySettings:
+          $ref: "#/components/schemas/RetrySettingsType"
+          description: Retry settings for failed file uploads.
+        orphans:
+          $ref: "#/components/schemas/OrphanFileRecoveryType"
+          description: Orphan file recovery
+        endpoint:
+          type: string
+          title: NetApp ONTAP S3 endpoint
+          description: "ONTAP S3 server endpoint URL — the FQDN or data LIF of the object store server (example: https://ontap-s3.example.com)"
+          pattern: ^https?://.*
+        description:
+          type: string
+          title: Description
+          description: Optional description for this configuration.
+        awsSecret:
+          type: string
+          title: Secret key pair
+          description: Select or create a stored secret that references your access key
+            and secret key
+        compress:
+          $ref: "#/components/schemas/CompressionOptionsHttp"
+          description: Data compression format to apply to HTTP content before it is
+            delivered
+        compressionLevel:
+          $ref: "#/components/schemas/CompressionLevelOptions"
+          description: Compression level to apply before moving files to final destination
+        automaticSchema:
+          type: boolean
+          title: Automatic schema
+          description: Automatically calculate the schema based on the events of each
+            Parquet file generated
+        parquetSchema:
+          type: string
+          title: Parquet schema
+          description: To add a new schema, navigate to Processing > Knowledge > Parquet
+            Schemas
+          minLength: 1
+        parquetVersion:
+          $ref: "#/components/schemas/ParquetVersionOptions"
+          description: Determines which data types are supported and how they are
+            represented
+        parquetDataPageVersion:
+          $ref: "#/components/schemas/DataPageVersionOptions"
+          description: Serialization format of data pages. Note that some reader
+            implementations use Data page V2's attributes to work more
+            efficiently, while others ignore it.
+        parquetRowGroupLength:
+          type: number
+          title: Group row limit
+          description: The number of rows that every group will contain. The final group
+            can contain a smaller number of rows.
+          minimum: 1
+          maximum: 67108864
+        parquetPageSize:
+          type: string
+          title: Page size
+          description: Target memory size for page segments, such as 1MB or 128MB.
+            Generally, lower values improve reading speed, while higher values
+            improve compression.
+          pattern: ^\d+\s*(?:[kK][bB]|[mM][bB]|[gG][bB]|[tT][bB])?$
+        shouldLogInvalidRows:
+          type: boolean
+          title: Log invalid rows
+          description: Log up to 3 rows that @{product} skips due to data mismatch
+        keyValueMetadata:
+          type: array
+          title: Metadata (optional)
+          description: 'The metadata of files the Destination writes will include the
+            properties you add here as key-value pairs. Useful for tagging.
+            Examples: "key":"OCSF Event Class", "value":"9001"'
+          minItems: 0
+          items:
+            $ref: "#/components/schemas/KeyValueMetadataConfOutputFilesystem"
+        enableStatistics:
+          type: boolean
+          title: Write statistics
+          description: Statistics profile an entire file in terms of minimum/maximum
+            values within data, numbers of nulls, etc. You can use Parquet tools
+            to view statistics.
+        enableWritePageIndex:
+          type: boolean
+          title: Write page indexes
+          description: One page index contains statistics for one data page. Parquet
+            readers use statistics to enable page skipping.
+        enablePageChecksum:
+          type: boolean
+          title: Write page checksum
+          description: Parquet tools can use the checksum of a Parquet page to verify data
+            integrity
+        emptyDirCleanupSec:
+          type: number
+          title: Staging cleanup period
+          description: How frequently, in seconds, to clean up empty directories
+          minimum: 10
+          maximum: 86400
+        directoryBatchSize:
+          type: number
+          title: Directory batch size
+          description: Number of directories to process in each batch during cleanup of
+            empty directories. Minimum is 10, maximum is 10000. Higher values
+            may require more memory.
+        deadletterPath:
+          type: string
+          title: Dead-letter location
+          description: Storage location for files that fail to reach their final
+            destination after maximum retries are exceeded
+        maxRetryNum:
+          type: number
+          title: Retry limit
+          description: The maximum number of times a file will attempt to move to its
+            final destination before being dead-lettered
+          minimum: 1
+        __template_streamtags:
+          type: string
+          description: Binds 'streamtags' to a variable for dynamic value resolution. Set
+            to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'streamtags' at runtime.
+        __template_bucket:
+          type: string
+          description: Binds 'bucket' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'bucket' at runtime.
+        __template_region:
+          type: string
+          description: Binds 'region' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'region' at runtime.
+        __template_destPath:
+          type: string
+          description: Binds 'destPath' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'destPath' at runtime.
+        __template_partitionExpr:
+          type: string
+          description: Binds 'partitionExpr' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+        __template_format:
+          type: string
+          description: Binds 'format' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'format' at runtime.
+        __template_baseFileName:
+          type: string
+          description: Binds 'baseFileName' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'baseFileName' at runtime.
+        __template_fileNameSuffix:
+          type: string
+          description: Binds 'fileNameSuffix' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'fileNameSuffix' at
+            runtime.
+        __template_onBackpressure:
+          type: string
+          description: Binds 'onBackpressure' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'onBackpressure' at
+            runtime.
+        __template_endpoint:
+          type: string
+          description: Binds 'endpoint' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'endpoint' at runtime.
+        __template_compress:
+          type: string
+          description: Binds 'compress' to a variable for dynamic value resolution. Set to
+            variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'compress' at runtime.
+        __template_parquetSchema:
+          type: string
+          description: Binds 'parquetSchema' to a variable for dynamic value resolution.
+            Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID
+            (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+      title: OutputNetappOntapS3
     OutputZadaraS3:
       type: object
       required:
@@ -77979,6 +79774,7 @@ components:
         - $ref: "#/components/schemas/OutputDigitaloceanSpacesS3"
         - $ref: "#/components/schemas/OutputIbmCloudS3"
         - $ref: "#/components/schemas/OutputOracleCloudS3"
+        - $ref: "#/components/schemas/OutputHitachiVspOneObjectS3"
         - $ref: "#/components/schemas/OutputDatabricksZerobus"
         - $ref: "#/components/schemas/OutputSecuronix"
         - $ref: "#/components/schemas/OutputFortisiem"
@@ -77987,6 +79783,10 @@ components:
         - $ref: "#/components/schemas/OutputHuaweiCloudObsS3"
         - $ref: "#/components/schemas/OutputCubbitS3"
         - $ref: "#/components/schemas/OutputInfinidatS3"
+        - $ref: "#/components/schemas/OutputEverpureFlashbladeS3"
+        - $ref: "#/components/schemas/OutputHitachiContentPlatformS3"
+        - $ref: "#/components/schemas/OutputCephS3"
+        - $ref: "#/components/schemas/OutputNetappOntapS3"
         - $ref: "#/components/schemas/OutputZadaraS3"
       discriminator:
         propertyName: type
@@ -78093,6 +79893,7 @@ components:
           digitalocean_spaces_s3: "#/components/schemas/OutputDigitaloceanSpacesS3"
           ibm_cloud_s3: "#/components/schemas/OutputIbmCloudS3"
           oracle_cloud_s3: "#/components/schemas/OutputOracleCloudS3"
+          hitachi_vsp_one_object_s3: "#/components/schemas/OutputHitachiVspOneObjectS3"
           databricks_zerobus: "#/components/schemas/OutputDatabricksZerobus"
           securonix: "#/components/schemas/OutputSecuronix"
           fortisiem: "#/components/schemas/OutputFortisiem"
@@ -78101,6 +79902,10 @@ components:
           huawei_cloud_obs_s3: "#/components/schemas/OutputHuaweiCloudObsS3"
           cubbit_s3: "#/components/schemas/OutputCubbitS3"
           infinidat_s3: "#/components/schemas/OutputInfinidatS3"
+          everpure_flashblade_s3: "#/components/schemas/OutputEverpureFlashbladeS3"
+          hitachi_content_platform_s3: "#/components/schemas/OutputHitachiContentPlatformS3"
+          ceph_s3: "#/components/schemas/OutputCephS3"
+          netapp_ontap_s3: "#/components/schemas/OutputNetappOntapS3"
           zadara_s3: "#/components/schemas/OutputZadaraS3"
       title: Output
     CountedOutputResponse:
@@ -78216,6 +80021,7 @@ components:
         - storj_s3
         - alphasoc_s3
         - dell_s3
+        - hitachi_content_platform_s3
         - wasabi
         - seagate_lyve_cloud_s3
         - cloudian_s3
@@ -78236,6 +80042,7 @@ components:
         - snowflake_streaming
         - ibm_cloud_s3
         - oracle_cloud_s3
+        - hitachi_vsp_one_object_s3
         - databricks_zerobus
         - traversal_otlp
         - securonix
@@ -78245,6 +80052,9 @@ components:
         - huawei_cloud_obs_s3
         - cubbit_s3
         - infinidat_s3
+        - everpure_flashblade_s3
+        - ceph_s3
+        - netapp_ontap_s3
         - zadara_s3
       title: DestinationType
       x-speakeasy-unknown-values: allow
@@ -90773,6 +92583,15 @@ components:
         endpoint: https://powerscale.example.com:9021
         stagePath: /tmp/staging
       description: Example request body for creating a Dell PowerScale OneFS Destination.
+    OutputCreateExampleshitachiContentPlatformS3:
+      summary: Hitachi Content Platform
+      value:
+        id: hitachi-content-platform-s3-output
+        type: hitachi_content_platform_s3
+        bucket: my-bucket
+        endpoint: https://hcp.example.com
+        stagePath: /tmp/staging
+      description: Example request body for creating a Hitachi Content Platform Destination.
     OutputCreateExampleswasabi:
       summary: Wasabi
       value:
@@ -90809,6 +92628,15 @@ components:
         endpoint: https://activescale.example.com
         stagePath: /tmp/staging
       description: Example request body for creating a Quantum ActiveScale Destination.
+    OutputCreateExamplesNetappOntapS3:
+      summary: NetApp ONTAP S3
+      value:
+        id: netapp-ontap-s3-output
+        type: netapp_ontap_s3
+        bucket: my-bucket
+        endpoint: https://ontap-s3.example.com
+        stagePath: /tmp/staging
+      description: Example request body for creating a NetApp ONTAP S3 Destination.
     OutputCreateExamplesCubbitS3:
       summary: Cubbit
       value:
@@ -90818,6 +92646,15 @@ components:
         endpoint: https://s3.cubbit.eu
         stagePath: /tmp/staging
       description: Example request body for creating a Cubbit Destination.
+    OutputCreateExamplesEverpureFlashbladeS3:
+      summary: Everpure FlashBlade
+      value:
+        id: everpure-flashblade-s3-output
+        type: everpure_flashblade_s3
+        bucket: my-bucket
+        endpoint: https://flashblade-vip.example.com
+        stagePath: /tmp/staging
+      description: Example request body for creating a Everpure FlashBlade Destination.
     OutputCreateExamplesZadaraS3:
       summary: Zadara
       value:
@@ -90990,6 +92827,27 @@ components:
         stagePath: /tmp/staging
       description: Example request body for creating a Oracle Cloud Object Storage
         Destination.
+    OutputCreateExamplescephS3:
+      summary: Ceph
+      value:
+        id: ceph-s3-output
+        type: ceph_s3
+        bucket: my-bucket
+        endpoint: https://rgw.example.com
+        stagePath: /tmp/staging
+        awsAuthenticationMethod: secret
+        awsSecret: my-ceph-credentials
+      description: Example request body for creating a Ceph Destination.
+    OutputCreateExampleshitachiVspOneObjectS3:
+      summary: Hitachi VSP One Object
+      value:
+        id: hitachi-vsp-one-object-s3-output
+        type: hitachi_vsp_one_object_s3
+        bucket: my-bucket
+        region: us-east-1
+        endpoint: https://vsp-one-object.example.com
+        stagePath: /tmp/staging
+      description: Example request body for creating a Hitachi VSP One Object Destination.
     OutputCreateExamplesAzureBlob:
       summary: Azure Blob
       value:
@@ -92004,6 +93862,18 @@ components:
         Destination.<br/><br/>The request body must include a complete
         representation of the Destination that you want to update. This endpoint
         does not support partial updates.
+    UpdateOutputExampleshitachiContentPlatformS3:
+      summary: Hitachi Content Platform
+      value:
+        id: hitachi-content-platform-s3-output
+        type: hitachi_content_platform_s3
+        bucket: my-bucket
+        endpoint: https://hcp.example.com
+        stagePath: /tmp/staging
+      description: Example request body for updating a Hitachi Content Platform
+        Destination.<br/><br/>The request body must include a complete
+        representation of the Destination that you want to update. This endpoint
+        does not support partial updates.
     UpdateOutputExampleswasabi:
       summary: Wasabi
       value:
@@ -92051,6 +93921,18 @@ components:
         Destination.<br/><br/>The request body must include a complete
         representation of the Destination that you want to update. This endpoint
         does not support partial updates.
+    UpdateOutputExamplesNetappOntapS3:
+      summary: NetApp ONTAP S3
+      value:
+        id: netapp-ontap-s3-output
+        type: netapp_ontap_s3
+        bucket: my-bucket
+        endpoint: https://ontap-s3.example.com
+        stagePath: /tmp/staging
+      description: Example request body for updating a NetApp ONTAP S3
+        Destination.<br/><br/>The request body must include a complete
+        representation of the Destination that you want to update. This endpoint
+        does not support partial updates.
     UpdateOutputExamplesCubbitS3:
       summary: Cubbit
       value:
@@ -92060,6 +93942,18 @@ components:
         endpoint: https://s3.cubbit.eu
         stagePath: /tmp/staging
       description: Example request body for updating a Cubbit
+        Destination.<br/><br/>The request body must include a complete
+        representation of the Destination that you want to update. This endpoint
+        does not support partial updates.
+    UpdateOutputExamplesEverpureFlashbladeS3:
+      summary: Everpure FlashBlade
+      value:
+        id: everpure-flashblade-s3-output
+        type: everpure_flashblade_s3
+        bucket: my-bucket
+        endpoint: https://flashblade-vip.example.com
+        stagePath: /tmp/staging
+      description: Example request body for updating a Everpure FlashBlade
         Destination.<br/><br/>The request body must include a complete
         representation of the Destination that you want to update. This endpoint
         does not support partial updates.
@@ -92288,6 +94182,32 @@ components:
         endpoint: https://mynamespace.compat.objectstorage.us-ashburn-1.oraclecloud.com
         stagePath: /tmp/staging
       description: Example request body for updating a Oracle Cloud Object Storage
+        Destination.<br/><br/>The request body must include a complete
+        representation of the Destination that you want to update. This endpoint
+        does not support partial updates.
+    UpdateOutputExamplescephS3:
+      summary: Ceph
+      value:
+        id: ceph-s3-output
+        type: ceph_s3
+        bucket: my-bucket
+        endpoint: https://rgw.example.com
+        stagePath: /tmp/staging
+        awsAuthenticationMethod: secret
+        awsSecret: my-ceph-credentials
+      description: Example request body for updating a Ceph Destination.<br/><br/>The
+        request body must include a complete representation of the Destination
+        that you want to update. This endpoint does not support partial updates.
+    UpdateOutputExampleshitachiVspOneObjectS3:
+      summary: Hitachi VSP One Object
+      value:
+        id: hitachi-vsp-one-object-s3-output
+        type: hitachi_vsp_one_object_s3
+        bucket: my-bucket
+        region: us-east-1
+        endpoint: https://vsp-one-object.example.com
+        stagePath: /tmp/staging
+      description: Example request body for updating a Hitachi VSP One Object
         Destination.<br/><br/>The request body must include a complete
         representation of the Destination that you want to update. This endpoint
         does not support partial updates.
@@ -100904,6 +102824,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesAlphasocS3"
               OutputCreateExamplesdellS3:
                 $ref: "#/components/examples/OutputCreateExamplesdellS3"
+              OutputCreateExampleshitachiContentPlatformS3:
+                $ref: "#/components/examples/OutputCreateExampleshitachiContentPlatformS3"
               OutputCreateExampleswasabi:
                 $ref: "#/components/examples/OutputCreateExampleswasabi"
               OutputCreateExamplesSeagateLyveCloudS3:
@@ -100912,8 +102834,12 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesVastS3"
               OutputCreateExamplesQuantumActivescaleS3:
                 $ref: "#/components/examples/OutputCreateExamplesQuantumActivescaleS3"
+              OutputCreateExamplesNetappOntapS3:
+                $ref: "#/components/examples/OutputCreateExamplesNetappOntapS3"
               OutputCreateExamplesCubbitS3:
                 $ref: "#/components/examples/OutputCreateExamplesCubbitS3"
+              OutputCreateExamplesEverpureFlashbladeS3:
+                $ref: "#/components/examples/OutputCreateExamplesEverpureFlashbladeS3"
               OutputCreateExamplesZadaraS3:
                 $ref: "#/components/examples/OutputCreateExamplesZadaraS3"
               OutputCreateExamplescloudianS3:
@@ -100952,6 +102878,10 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesibmCloudS3"
               OutputCreateExamplesoracleCloudS3:
                 $ref: "#/components/examples/OutputCreateExamplesoracleCloudS3"
+              OutputCreateExamplescephS3:
+                $ref: "#/components/examples/OutputCreateExamplescephS3"
+              OutputCreateExampleshitachiVspOneObjectS3:
+                $ref: "#/components/examples/OutputCreateExampleshitachiVspOneObjectS3"
               OutputCreateExamplesAzureBlob:
                 $ref: "#/components/examples/OutputCreateExamplesAzureBlob"
               OutputCreateExamplesAzureDataExplorer:
@@ -101285,6 +103215,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesAlphasocS3"
               UpdateOutputExamplesdellS3:
                 $ref: "#/components/examples/UpdateOutputExamplesdellS3"
+              UpdateOutputExampleshitachiContentPlatformS3:
+                $ref: "#/components/examples/UpdateOutputExampleshitachiContentPlatformS3"
               UpdateOutputExampleswasabi:
                 $ref: "#/components/examples/UpdateOutputExampleswasabi"
               UpdateOutputExamplesSeagateLyveCloudS3:
@@ -101293,8 +103225,12 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesVastS3"
               UpdateOutputExamplesQuantumActivescaleS3:
                 $ref: "#/components/examples/UpdateOutputExamplesQuantumActivescaleS3"
+              UpdateOutputExamplesNetappOntapS3:
+                $ref: "#/components/examples/UpdateOutputExamplesNetappOntapS3"
               UpdateOutputExamplesCubbitS3:
                 $ref: "#/components/examples/UpdateOutputExamplesCubbitS3"
+              UpdateOutputExamplesEverpureFlashbladeS3:
+                $ref: "#/components/examples/UpdateOutputExamplesEverpureFlashbladeS3"
               UpdateOutputExamplesZadaraS3:
                 $ref: "#/components/examples/UpdateOutputExamplesZadaraS3"
               UpdateOutputExamplescloudianS3:
@@ -101333,6 +103269,10 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesibmCloudS3"
               UpdateOutputExamplesoracleCloudS3:
                 $ref: "#/components/examples/UpdateOutputExamplesoracleCloudS3"
+              UpdateOutputExamplescephS3:
+                $ref: "#/components/examples/UpdateOutputExamplescephS3"
+              UpdateOutputExampleshitachiVspOneObjectS3:
+                $ref: "#/components/examples/UpdateOutputExampleshitachiVspOneObjectS3"
               UpdateOutputExamplesAzureBlob:
                 $ref: "#/components/examples/UpdateOutputExamplesAzureBlob"
               UpdateOutputExamplesAzureDataExplorer:
@@ -106556,6 +108496,8 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesAlphasocS3"
               OutputCreateExamplesdellS3:
                 $ref: "#/components/examples/OutputCreateExamplesdellS3"
+              OutputCreateExampleshitachiContentPlatformS3:
+                $ref: "#/components/examples/OutputCreateExampleshitachiContentPlatformS3"
               OutputCreateExampleswasabi:
                 $ref: "#/components/examples/OutputCreateExampleswasabi"
               OutputCreateExamplesSeagateLyveCloudS3:
@@ -106564,8 +108506,12 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesVastS3"
               OutputCreateExamplesQuantumActivescaleS3:
                 $ref: "#/components/examples/OutputCreateExamplesQuantumActivescaleS3"
+              OutputCreateExamplesNetappOntapS3:
+                $ref: "#/components/examples/OutputCreateExamplesNetappOntapS3"
               OutputCreateExamplesCubbitS3:
                 $ref: "#/components/examples/OutputCreateExamplesCubbitS3"
+              OutputCreateExamplesEverpureFlashbladeS3:
+                $ref: "#/components/examples/OutputCreateExamplesEverpureFlashbladeS3"
               OutputCreateExamplesZadaraS3:
                 $ref: "#/components/examples/OutputCreateExamplesZadaraS3"
               OutputCreateExamplescloudianS3:
@@ -106604,6 +108550,10 @@ paths:
                 $ref: "#/components/examples/OutputCreateExamplesibmCloudS3"
               OutputCreateExamplesoracleCloudS3:
                 $ref: "#/components/examples/OutputCreateExamplesoracleCloudS3"
+              OutputCreateExamplescephS3:
+                $ref: "#/components/examples/OutputCreateExamplescephS3"
+              OutputCreateExampleshitachiVspOneObjectS3:
+                $ref: "#/components/examples/OutputCreateExampleshitachiVspOneObjectS3"
               OutputCreateExamplesAzureBlob:
                 $ref: "#/components/examples/OutputCreateExamplesAzureBlob"
               OutputCreateExamplesAzureDataExplorer:
@@ -106924,6 +108874,8 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesAlphasocS3"
               UpdateOutputExamplesdellS3:
                 $ref: "#/components/examples/UpdateOutputExamplesdellS3"
+              UpdateOutputExampleshitachiContentPlatformS3:
+                $ref: "#/components/examples/UpdateOutputExampleshitachiContentPlatformS3"
               UpdateOutputExampleswasabi:
                 $ref: "#/components/examples/UpdateOutputExampleswasabi"
               UpdateOutputExamplesSeagateLyveCloudS3:
@@ -106932,8 +108884,12 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesVastS3"
               UpdateOutputExamplesQuantumActivescaleS3:
                 $ref: "#/components/examples/UpdateOutputExamplesQuantumActivescaleS3"
+              UpdateOutputExamplesNetappOntapS3:
+                $ref: "#/components/examples/UpdateOutputExamplesNetappOntapS3"
               UpdateOutputExamplesCubbitS3:
                 $ref: "#/components/examples/UpdateOutputExamplesCubbitS3"
+              UpdateOutputExamplesEverpureFlashbladeS3:
+                $ref: "#/components/examples/UpdateOutputExamplesEverpureFlashbladeS3"
               UpdateOutputExamplesZadaraS3:
                 $ref: "#/components/examples/UpdateOutputExamplesZadaraS3"
               UpdateOutputExamplescloudianS3:
@@ -106972,6 +108928,10 @@ paths:
                 $ref: "#/components/examples/UpdateOutputExamplesibmCloudS3"
               UpdateOutputExamplesoracleCloudS3:
                 $ref: "#/components/examples/UpdateOutputExamplesoracleCloudS3"
+              UpdateOutputExamplescephS3:
+                $ref: "#/components/examples/UpdateOutputExamplescephS3"
+              UpdateOutputExampleshitachiVspOneObjectS3:
+                $ref: "#/components/examples/UpdateOutputExampleshitachiVspOneObjectS3"
               UpdateOutputExamplesAzureBlob:
                 $ref: "#/components/examples/UpdateOutputExamplesAzureBlob"
               UpdateOutputExamplesAzureDataExplorer:
