@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.22.0-alpha.1795129844986-c8bbfdf0
+    version: 4.22.0-alpha.1795216351221-50019109
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -82935,7 +82935,7 @@ components:
                         - small
                         - xlarge
                         - xsmall
-                    description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code> through <code>10xlarge</code> requires the <code>cribl_operator</code> role. <code>2xlarge-plus</code> additionally requires the <code>feature-search-2xlarge-plus</code> feature flag, and is limited to a single engine node.
+                    description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>7xlarge</code> through <code>10xlarge</code> requires the <code>cribl_operator</code> role. <code>2xlarge-plus</code> additionally requires the <code>feature-search-2xlarge-plus</code> feature flag, and is limited to a single engine node.
                     x-speakeasy-unknown-values: allow
             required:
                 - engineType
@@ -98289,16 +98289,6 @@ components:
             required:
                 - accountIds
             title: CloudChangeSeenAccountsBulkRequest
-        CloudChangeSeenAccountUncoveredReason:
-            type: string
-            enum:
-                - noConnection
-                - connectionNotVerified
-                - excludedByFilter
-                - roleNotAssumable
-                - credentialMissing
-            title: CloudChangeSeenAccountUncoveredReason
-            x-speakeasy-unknown-values: allow
         CloudChangeSeenAccount:
             type: object
             properties:
@@ -98345,8 +98335,15 @@ components:
                     type: string
                     description: Names of the organization root and organizational units that contain the account, from the root, separated by <code> / </code> (an organizational unit whose name was not listed appears as its ID). Present only for a member account of a connected organization.
                 reason:
-                    $ref: "#/components/schemas/CloudChangeSeenAccountUncoveredReason"
+                    type: string
+                    enum:
+                        - connectionNotVerified
+                        - credentialMissing
+                        - excludedByFilter
+                        - noConnection
+                        - roleNotAssumable
                     description: Why the account is not covered, when it is not.
+                    x-speakeasy-unknown-values: allow
             required:
                 - accountId
                 - asEvent
@@ -98448,6 +98445,46 @@ components:
                 - operatorDefault
                 - quotaTaskCeiling
             title: CloudChangeEnrichmentCapacity
+        CloudChangeEnrichmentOutcomeCounts:
+            type: object
+            properties:
+                byCause:
+                    type: object
+                    additionalProperties:
+                        type: number
+                    description: "The failed events by stable cause code: an operation's error kind, or the batch failure."
+                enriched:
+                    type: integer
+                    description: Eligible events fully enriched.
+                failed:
+                    type: integer
+                    description: Eligible events not fully enriched.
+            required:
+                - byCause
+                - enriched
+                - failed
+            title: CloudChangeEnrichmentOutcomeCounts
+        CloudChangeEnrichmentTaskOutcomes:
+            type: object
+            properties:
+                initial:
+                    $ref: "#/components/schemas/CloudChangeEnrichmentOutcomeCounts"
+                    description: "Events on the batch's first processed attempt: enriched, or failed by cause. Their sum is the event volume."
+                retry:
+                    $ref: "#/components/schemas/CloudChangeEnrichmentOutcomeCounts"
+                    description: Events fully enriched on a later attempt (<code>failed</code> is always 0).
+                terminal:
+                    $ref: "#/components/schemas/CloudChangeEnrichmentOutcomeCounts"
+                    description: Events whose outcome is final without full enrichment, by cause (<code>enriched</code> is always 0).
+                unattributed:
+                    $ref: "#/components/schemas/CloudChangeEnrichmentOutcomeCounts"
+                    description: Events of requests that did not say which attempt they are (an older Destination).
+            required:
+                - initial
+                - retry
+                - terminal
+                - unattributed
+            title: CloudChangeEnrichmentTaskOutcomes
         CloudChangeEnrichmentRescanAccount:
             type: object
             properties:
@@ -98556,6 +98593,9 @@ components:
                 cache:
                     type: string
                     description: "State of the cache of assumed-role credentials and event correlation: <code>ok</code> or <code>degraded: …</code>. Absent from tasks that do not report it."
+                enrichment:
+                    $ref: "#/components/schemas/CloudChangeEnrichmentTaskOutcomes"
+                    description: Cumulative outcomes of events eligible for enrichment. Absent from older task builds.
                 inventoryGap:
                     $ref: "#/components/schemas/CloudChangeEnrichmentTaskInventoryGap"
                     description: Inventory history rows the service could not write to the inventory engine yet, and accounts that need a rescan to restore their inventory state. Absent when there are none, and from tasks that do not report it.
@@ -98568,6 +98608,9 @@ components:
                 restore:
                     $ref: "#/components/schemas/CloudChangeEnrichmentTaskRestore"
                     description: Restore of the inventory cache from the cloud inventory after the cache restarted empty, when the task ran one. Absent from tasks that do not report it.
+                utilization:
+                    type: number
+                    description: "The task's latest 60-second average admission utilization, 0-100: the busiest of its request slots, AWS call pool and enrichment deadline. Absent from older task builds and before the first average."
                 writes:
                     $ref: "#/components/schemas/CloudChangeEnrichmentTaskWrites"
                     description: Events the task received, wrote and dropped (pass-through), and write requests that failed, since it started.
@@ -98596,6 +98639,9 @@ components:
                 appliedVersion:
                     type: string
                     description: Version of the runtime configuration the task runs; empty before it applied any.
+                eventsPerSecond:
+                    type: number
+                    description: Events received per second since this task's previous report. Absent until two reports arrive.
                 health:
                     $ref: "#/components/schemas/CloudChangeEnrichmentTaskHealth"
                     description: Health the task reported.
@@ -98734,6 +98780,168 @@ components:
             required:
                 - state
             title: CloudChangeEnrichmentLheIngestStatus
+        CloudChangeEnrichmentCauseAccounts:
+            type: object
+            properties:
+                reason:
+                    type: string
+                    enum:
+                        - connectionNotVerified
+                        - credentialMissing
+                        - excludedByFilter
+                        - noConnection
+                        - roleNotAssumable
+                    description: The reason to filter the accounts in the change data without a usable Cloud Connection by; absent to list all of them.
+                    x-speakeasy-unknown-values: allow
+            title: CloudChangeEnrichmentCauseAccounts
+        CloudChangeEnrichmentCause:
+            type: object
+            properties:
+                accounts:
+                    $ref: "#/components/schemas/CloudChangeEnrichmentCauseAccounts"
+                    description: The accounts to review for this cause; absent when the cause is not about accounts.
+                code:
+                    type: string
+                    description: Stable cause code. <code>unrecognized</code> counts causes this leader does not know (a newer task).
+                count:
+                    type: integer
+                    description: Events (or, in the account fallback, accounts) with this cause over the reported window.
+                label:
+                    type: string
+                    description: Display label supplied by the server.
+                remedy:
+                    type: string
+                    description: Suggested operator action.
+            required:
+                - code
+                - count
+                - label
+                - remedy
+            title: CloudChangeEnrichmentCause
+        CloudChangeEnrichmentOutcomeTotals:
+            type: object
+            properties:
+                initialEnriched:
+                    type: integer
+                    description: Events fully enriched on their first attempt.
+                initialFailed:
+                    type: integer
+                    description: Events not fully enriched on their first attempt (retried, or final).
+                pending:
+                    type: integer
+                    description: "Events that failed their first attempt and are not decided yet: <code>initialFailed - retryEnriched - terminalFailed</code>, at least 0."
+                retryEnriched:
+                    type: integer
+                    description: Events fully enriched on a retry.
+                terminalFailed:
+                    type: integer
+                    description: Events whose outcome is final without full enrichment.
+                unattributed:
+                    type: integer
+                    description: Events of requests that did not say which attempt they are (an older Destination), not in the other counts.
+            required:
+                - initialEnriched
+                - initialFailed
+                - pending
+                - retryEnriched
+                - terminalFailed
+                - unattributed
+            title: CloudChangeEnrichmentOutcomeTotals
+        CloudChangeEnrichmentPartialReason:
+            type: string
+            enum:
+                - noTaskCounters
+                - tasksWithoutCounters
+                - unattributedEvents
+                - unrecognizedCauses
+            title: CloudChangeEnrichmentPartialReason
+            x-speakeasy-unknown-values: allow
+        CloudChangeEnrichmentLoadPoint:
+            type: object
+            properties:
+                at:
+                    type: integer
+                    description: Sample time in milliseconds since the epoch.
+                capacityEventsPerSecond:
+                    type: number
+                    description: Estimated events per second the effective maximum task count could handle (see <code>capacityEventsPerSecond</code> of the load status); absent before tasks report their utilization.
+                eventsPerSecond:
+                    type: number
+                    description: Events received per second across reporting tasks.
+            required:
+                - at
+                - eventsPerSecond
+            title: CloudChangeEnrichmentLoadPoint
+        CloudChangeEnrichmentLoadStatus:
+            type: object
+            properties:
+                capacityEventsPerSecond:
+                    type: number
+                    description: "Estimated events per second the effective maximum task count could handle: the reporting tasks' rate divided by their utilization (tasks below 10 % utilization are left out), times the maximum. The last estimate is kept while tasks are idle; absent before one. This is not a guaranteed limit."
+                causeUnit:
+                    type: string
+                    enum:
+                        - accounts
+                        - events
+                    description: "Unit of cause counts: events from tasks, or accounts in the fallback for older tasks."
+                    x-speakeasy-unknown-values: allow
+                causes:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudChangeEnrichmentCause"
+                    description: Why eligible events were finally not enriched (events), or why accounts have no usable Cloud Connection (accounts).
+                eligibleEvents:
+                    type: integer
+                    description: Eligible events over the outcome window (first attempts).
+                enrichedEvents:
+                    type: integer
+                    description: Eligible events fully enriched over the outcome window, on the first attempt or a retry.
+                enrichedShare:
+                    type: number
+                    description: Share of eligible events fully enriched, on the first attempt or a retry, over the outcome window; absent until tasks report outcomes.
+                eventsPerSecond:
+                    type: number
+                    description: Events received per second across reporting tasks.
+                initialCauses:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudChangeEnrichmentCause"
+                    description: Why eligible events failed their first attempt (retried or final); empty in the account fallback.
+                initialEnrichedShare:
+                    type: number
+                    description: Share of eligible events fully enriched on their first attempt over the outcome window.
+                outcomeWindowHours:
+                    type: integer
+                    description: Hours the outcomes and causes cover (7 days); the load series covers 24 hours.
+                outcomes:
+                    $ref: "#/components/schemas/CloudChangeEnrichmentOutcomeTotals"
+                    description: Outcomes of the eligible events over the outcome window; absent until tasks report outcomes.
+                partial:
+                    type: boolean
+                    description: Whether the cause breakdown is incomplete; <code>partialReasons</code> says why.
+                partialReasons:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudChangeEnrichmentPartialReason"
+                    description: Why the cause breakdown is incomplete; empty when it is not.
+                perTaskCapacityEventsPerSecond:
+                    type: number
+                    description: Estimated events per second one task could handle (see <code>capacityEventsPerSecond</code>).
+                series:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudChangeEnrichmentLoadPoint"
+                    description: Up to 24 hours of one-minute load samples.
+            required:
+                - causeUnit
+                - causes
+                - eventsPerSecond
+                - initialCauses
+                - outcomeWindowHours
+                - partial
+                - partialReasons
+                - series
+            title: CloudChangeEnrichmentLoadStatus
         CloudChangeEnrichmentStoppedReason:
             type: string
             enum:
@@ -98812,6 +99020,9 @@ components:
                 lheIngestStatus:
                     $ref: "#/components/schemas/CloudChangeEnrichmentLheIngestStatus"
                     description: Whether the service can write enriched events to Cribl Search, when the service is running.
+                load:
+                    $ref: "#/components/schemas/CloudChangeEnrichmentLoadStatus"
+                    description: Current event load, recent load samples and enrichment outcomes. Absent while the Change Events feature is off.
                 provisioned:
                     type: boolean
                     description: Whether the enrichment service infrastructure exists for this Workspace.
@@ -98843,6 +99054,415 @@ components:
                 - uncoveredAccountCount
                 - warnings
             title: CloudChangeEnrichmentStatus
+        CloudAccountGroupingColumn:
+            type: object
+            properties:
+                accountIds:
+                    type: array
+                    items:
+                        type: string
+                    description: Account IDs assigned to this custom category. Each ID is a 12-digit AWS account ID.
+                    maxItems: 10000
+                id:
+                    type: string
+                    description: Unique identifier for the grouping column.
+                label:
+                    type: string
+                    description: Display name of the grouping column.
+                ouIds:
+                    type: array
+                    items:
+                        type: string
+                    description: Organizational unit or root IDs assigned to this custom category, including descendant accounts.
+                    maxItems: 10000
+            required:
+                - id
+                - label
+            title: CloudAccountGroupingColumn
+        CloudAccountGroupingKind:
+            type: string
+            enum:
+                - organization
+                - ouLevel
+                - customCategories
+            title: CloudAccountGroupingKind
+            x-speakeasy-unknown-values: allow
+        CloudAccountGroupingDefinition:
+            type: object
+            properties:
+                available:
+                    type: boolean
+                    description: Whether this grouping can currently be selected.
+                builtIn:
+                    type: boolean
+                    description: Whether the grouping is built in.
+                columns:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountGroupingColumn"
+                    description: Columns defined for a custom category grouping.
+                id:
+                    type: string
+                    description: Unique identifier for the account grouping.
+                isDefault:
+                    type: boolean
+                    description: Whether this grouping is the default account view.
+                kind:
+                    $ref: "#/components/schemas/CloudAccountGroupingKind"
+                    description: Type of account grouping.
+                name:
+                    type: string
+                    description: Display name of the account grouping.
+                ouLevel:
+                    type: number
+                    description: Organizational unit depth for an OU-level grouping, starting at one.
+                owner:
+                    type: string
+                    description: Owner of a custom grouping, when present.
+                unavailableReason:
+                    type: string
+                    description: Reason the grouping cannot be selected, when unavailable.
+            required:
+                - available
+                - builtIn
+                - id
+                - isDefault
+                - kind
+                - name
+            title: CloudAccountGroupingDefinition
+        CloudAccountGroupingCreate:
+            type: object
+            properties:
+                columns:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountGroupingColumn"
+                    description: Ordered categories; the first matching category owns an account.
+                    minItems: 1
+                    maxItems: 100
+                id:
+                    type: string
+                    description: Unique identifier for the Workspace grouping.
+                    pattern: ^[a-zA-Z0-9][a-zA-Z0-9_-]*$
+                    minLength: 1
+                    maxLength: 128
+                isDefault:
+                    type: boolean
+                    description: Make this grouping the Workspace default when true.
+                kind:
+                    type: string
+                    const: customCategories
+                    description: Supported editable grouping type.
+                name:
+                    type: string
+                    description: Display name of the Workspace grouping.
+                    minLength: 1
+                    maxLength: 128
+            required:
+                - columns
+                - id
+                - kind
+                - name
+            title: CloudAccountGroupingCreate
+        CountedListCloudAccountGroupingDefinition:
+            type: object
+            required:
+                - items
+                - count
+            properties:
+                count:
+                    type: integer
+                    description: Total number of items available
+                items:
+                    type: array
+                    description: The list of items returned in this response.
+                    items:
+                        $ref: "#/components/schemas/CloudAccountGroupingDefinition"
+                offset:
+                    type: integer
+                    description: Zero-based index of the first returned item within the full result set. Always present; defaults to 0.
+                limit:
+                    type: integer
+                    description: Maximum number of items included in this response. Always present; defaults to the number of items returned.
+        CloudAccountGroupingPatch:
+            type: object
+            properties:
+                columns:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountGroupingColumn"
+                    description: Replaces the full ordered category list. Omit this property to keep the current categories.
+                    minItems: 1
+                    maxItems: 100
+                isDefault:
+                    type: boolean
+                    description: Make this grouping the Workspace default. False is rejected because a default is required.
+                kind:
+                    type: string
+                    const: customCategories
+                    description: Supported editable grouping type.
+                name:
+                    type: string
+                    description: New display name of the Workspace grouping.
+                    minLength: 1
+                    maxLength: 128
+            title: CloudAccountGroupingPatch
+        CloudAccountDiscoveryStateCounts:
+            type: object
+            properties:
+                failed:
+                    type: number
+                    description: Number of accounts whose source discovery failed.
+                notStarted:
+                    type: number
+                    description: Number of accounts whose source discovery has not started.
+                queued:
+                    type: number
+                    description: Number of accounts queued for source discovery.
+                running:
+                    type: number
+                    description: Number of accounts currently running source discovery.
+                succeeded:
+                    type: number
+                    description: Number of accounts whose source discovery succeeded.
+                unknown:
+                    type: number
+                    description: Number of accounts whose discovery state is unknown until a rescan.
+            title: CloudAccountDiscoveryStateCounts
+        CloudAccountInventoryStateCounts:
+            type: object
+            properties:
+                failed:
+                    type: number
+                    description: Number of accounts whose inventory scan failed.
+                notScanned:
+                    type: number
+                    description: Number of accounts whose inventory has not been scanned.
+                queued:
+                    type: number
+                    description: Number of accounts queued for an inventory scan.
+                running:
+                    type: number
+                    description: Number of accounts currently running an inventory scan.
+                succeeded:
+                    type: number
+                    description: Number of accounts whose inventory scan succeeded.
+            title: CloudAccountInventoryStateCounts
+        CloudAccountMembershipStateCounts:
+            type: object
+            properties:
+                active:
+                    type: number
+                    description: Number of active organization members.
+                pending:
+                    type: number
+                    description: Number of pending organization members.
+                removed:
+                    type: number
+                    description: Number of removed organization members.
+                suspended:
+                    type: number
+                    description: Number of suspended organization members.
+                unknown:
+                    type: number
+                    description: Number of organization members in an unrecognized state.
+            title: CloudAccountMembershipStateCounts
+        CloudAccountTrustStateCounts:
+            type: object
+            properties:
+                connected:
+                    type: number
+                    description: Number of accounts Cribl can use its role in.
+                failed:
+                    type: number
+                    description: Number of accounts whose last access check failed.
+                unknown:
+                    type: number
+                    description: Number of accounts whose access has not been checked.
+            title: CloudAccountTrustStateCounts
+        CloudAccountIndexRollup:
+            type: object
+            properties:
+                changedCount7d:
+                    type: number
+                    description: Number of accounts with a Change Event in the last seven days, when available.
+                collectingCount:
+                    type: number
+                    description: Number of accounts with at least one collected source.
+                connectedCount:
+                    type: number
+                    description: Number of accounts Cribl can use its role in.
+                count:
+                    type: number
+                    description: Total number of accounts in this rollup.
+                coverageCauses:
+                    type: object
+                    additionalProperties:
+                        type: number
+                    description: Account counts by Change Events coverage cause, when available.
+                discoveredCount:
+                    type: number
+                    description: Number of accounts with at least one discovered source.
+                discoveryStates:
+                    $ref: "#/components/schemas/CloudAccountDiscoveryStateCounts"
+                    description: Account counts by source discovery state.
+                freshInventoryCount:
+                    type: number
+                    description: Number of accounts with fresh inventory data, when available.
+                id:
+                    type: string
+                    description: Unique identifier for the grouping column or organizational unit.
+                inScopeCount:
+                    type: number
+                    description: Number of accounts included in their Cloud Connection's scope.
+                inventoryStates:
+                    $ref: "#/components/schemas/CloudAccountInventoryStateCounts"
+                    description: Account counts by inventory scan state, when available.
+                label:
+                    type: string
+                    description: Display name of the grouping column or organizational unit.
+                membershipStates:
+                    $ref: "#/components/schemas/CloudAccountMembershipStateCounts"
+                    description: Account counts by organization membership state.
+                trustStates:
+                    $ref: "#/components/schemas/CloudAccountTrustStateCounts"
+                    description: Account counts by connection verification state.
+            required:
+                - collectingCount
+                - connectedCount
+                - count
+                - discoveredCount
+                - discoveryStates
+                - id
+                - inScopeCount
+                - label
+                - membershipStates
+                - trustStates
+            title: CloudAccountIndexRollup
+        CloudAccountIndexRollups:
+            type: object
+            properties:
+                columns:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountIndexRollup"
+                    description: Account counts for each column in the selected grouping.
+                groupingId:
+                    type: string
+                    description: Identifier of the grouping used for the columns.
+                ouNodes:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountIndexRollup"
+                    description: Account counts for each organizational unit in the hierarchy.
+            required:
+                - columns
+                - groupingId
+                - ouNodes
+            title: CloudAccountIndexRollups
+        CloudAccountGroupingPreview:
+            type: object
+            properties:
+                columns:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountGroupingColumn"
+                    description: Ordered categories to evaluate against the Workspace account index without saving.
+                    minItems: 1
+                    maxItems: 100
+            required:
+                - columns
+            title: CloudAccountGroupingPreview
+        CloudAccountIndexConnectionReason:
+            type: string
+            enum:
+                - memberListMissing
+                - staleMemberList
+                - missingAccountStates
+                - refreshFailed
+            title: CloudAccountIndexConnectionReason
+            x-speakeasy-unknown-values: allow
+        CloudAccountIndexRemedy:
+            type: object
+            properties:
+                action:
+                    type: string
+                    const: refreshMembership
+                    description: "What the action does: <code>refreshMembership</code> lists the organization's members again."
+                method:
+                    type: string
+                    const: POST
+                    description: HTTP method of the action.
+                path:
+                    type: string
+                    description: Path of the action, relative to the API root.
+            required:
+                - action
+                - method
+                - path
+            title: CloudAccountIndexRemedy
+        CloudAccountIndexConnectionStatus:
+            type: object
+            properties:
+                asOf:
+                    type: number
+                    description: When the connection's accounts were last refreshed, in epoch milliseconds.
+                connectionId:
+                    type: string
+                    description: Unique identifier for the Cloud Connection.
+                message:
+                    type: string
+                    description: A readable description of the reasons.
+                reasons:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountIndexConnectionReason"
+                    description: Why the connection's accounts are not fully available.
+                remedy:
+                    $ref: "#/components/schemas/CloudAccountIndexRemedy"
+                    description: The action that brings the accounts up to date, when there is one.
+                state:
+                    type: string
+                    enum:
+                        - partial
+                        - unavailable
+                    description: <code>partial</code> when some of its accounts or their states are missing or stale, <code>unavailable</code> when none are listed.
+                    x-speakeasy-unknown-values: allow
+            required:
+                - asOf
+                - connectionId
+                - message
+                - reasons
+                - state
+            title: CloudAccountIndexConnectionStatus
+        CloudAccountIndexAvailabilityResponse:
+            type: object
+            properties:
+                availableFields:
+                    type: array
+                    items:
+                        type: string
+                    description: Account fields available while the index is ready.
+                connections:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountIndexConnectionStatus"
+                    description: The Cloud Connections whose accounts are not fully available, with why and how to fix it.
+                partial:
+                    type: boolean
+                    description: Whether some Cloud Connections' accounts are missing or out of date; see <code>connections</code>.
+                ready:
+                    type: boolean
+                    description: "Whether the account index is ready to serve reads: its first build ran."
+                reason:
+                    type: string
+                    description: Reason the account index is unavailable, when it is not ready.
+            required:
+                - availableFields
+                - connections
+                - partial
+                - ready
+            title: CloudAccountIndexAvailabilityResponse
         CloudConnectionJobCapabilities:
             type: object
             properties:
@@ -99055,6 +99675,428 @@ components:
                 - state
                 - updatedAt
             title: CloudConnectionJobResponse
+        CloudAccountBulkSkipped:
+            type: object
+            properties:
+                notActive:
+                    type: number
+                    description: Accounts that are not active AWS accounts (suspended, pending, closed, or in an unknown state).
+                notListed:
+                    type: number
+                    description: Accounts not in their Cloud Connection's last member listing; refresh the organization membership.
+                outOfScope:
+                    type: number
+                    description: Accounts outside their Cloud Connection's scope.
+            title: CloudAccountBulkSkipped
+        CloudAccountBulkActionResponse:
+            type: object
+            properties:
+                job:
+                    $ref: "#/components/schemas/CloudConnectionJobResponse"
+                    description: The job working through the selected accounts (<code>accountVerification</code> or <code>accountInventoryScan</code>); follow it under <code>/system/cloud-connections/jobs/{id}</code>.
+                skipped:
+                    $ref: "#/components/schemas/CloudAccountBulkSkipped"
+                    description: "Selected accounts left out of the job: Cribl acts only on active accounts each connection's deployment covers."
+            required:
+                - job
+                - skipped
+            title: CloudAccountBulkActionResponse
+        CloudAccountRef:
+            type: object
+            properties:
+                accountId:
+                    type: string
+                    description: AWS account ID.
+                connectionId:
+                    type: string
+                    description: Unique identifier for the Cloud Connection.
+            required:
+                - accountId
+                - connectionId
+            title: CloudAccountRef
+        CloudAccountDiscoveryState:
+            type: string
+            enum:
+                - notStarted
+                - queued
+                - running
+                - succeeded
+                - failed
+                - unknown
+            title: CloudAccountDiscoveryState
+            x-speakeasy-unknown-values: allow
+        CloudAccountInventoryState:
+            type: string
+            enum:
+                - notScanned
+                - queued
+                - running
+                - succeeded
+                - failed
+            title: CloudAccountInventoryState
+            x-speakeasy-unknown-values: allow
+        CloudAccountMembershipState:
+            type: string
+            enum:
+                - active
+                - suspended
+                - pending
+                - removed
+                - unknown
+            title: CloudAccountMembershipState
+            x-speakeasy-unknown-values: allow
+        CloudAccountTrustState:
+            type: string
+            enum:
+                - connected
+                - failed
+                - unknown
+            title: CloudAccountTrustState
+            x-speakeasy-unknown-values: allow
+        CloudAccountIndexFilters:
+            type: object
+            properties:
+                changedSince:
+                    type: number
+                    description: Only the accounts with a Change Event at or after this time, in epoch milliseconds. Available only while Change Events is.
+                connectionId:
+                    type: string
+                    description: Only the accounts of this Cloud Connection.
+                coverageCauses:
+                    type: array
+                    items:
+                        type: string
+                    description: Only the accounts with one of these Change Events coverage causes. Available only while Change Events is.
+                discoveryStates:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountDiscoveryState"
+                    description: Only the accounts in one of these source discovery states.
+                inScope:
+                    type: boolean
+                    description: Only the accounts inside (<code>true</code>) or outside (<code>false</code>) their Cloud Connection's scope.
+                inventoryStates:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountInventoryState"
+                    description: Only the accounts in one of these inventory states. Available only while the inventory store is.
+                membershipStates:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountMembershipState"
+                    description: Only the accounts in one of these AWS Organizations membership states.
+                organizationId:
+                    type: string
+                    description: Only the accounts of this AWS Organizations management account ID.
+                ouSubtree:
+                    type: string
+                    description: Only the accounts in this organizational unit path or below it.
+                search:
+                    type: string
+                    description: Text matched against account IDs and account names.
+                trustStates:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountTrustState"
+                    description: Only the accounts in one of these trust states.
+            title: CloudAccountIndexFilters
+        CloudAccountIndexField:
+            type: string
+            enum:
+                - connectionId
+                - organizationId
+                - ouPath
+                - ouName
+                - accountId
+                - accountName
+                - membershipState
+                - inScope
+                - trustState
+                - lastMembershipListedAt
+                - discoveryState
+                - discoveredSourceCount
+                - collectedSourceCount
+                - lastChangeEventAt
+                - changeEventCount7d
+                - coverageCause
+                - lastInventoryScanAt
+                - inventoryState
+                - inventoryFreshness
+            title: CloudAccountIndexField
+            x-speakeasy-unknown-values: allow
+        CloudAccountSortOrder:
+            type: string
+            enum:
+                - asc
+                - desc
+            title: CloudAccountSortOrder
+            x-speakeasy-unknown-values: allow
+        CloudAccountIndexSort:
+            type: object
+            properties:
+                field:
+                    $ref: "#/components/schemas/CloudAccountIndexField"
+                    description: Field to sort by; must be one of the available fields.
+                order:
+                    $ref: "#/components/schemas/CloudAccountSortOrder"
+                    description: Sort order.
+            required:
+                - field
+                - order
+            title: CloudAccountIndexSort
+        CloudAccountSelectionQuery:
+            type: object
+            properties:
+                filters:
+                    $ref: "#/components/schemas/CloudAccountIndexFilters"
+                    description: The accounts to include.
+                groupingId:
+                    type: string
+                    description: "Grouping ID from the groupings list, for rollups (default: by organization)."
+                sort:
+                    $ref: "#/components/schemas/CloudAccountIndexSort"
+                    description: "The order of the accounts (default: by account ID, ascending)."
+            title: CloudAccountSelectionQuery
+        CloudAccountSelection:
+            oneOf:
+                - type: object
+                  properties:
+                    accounts:
+                        type: array
+                        items:
+                            $ref: "#/components/schemas/CloudAccountRef"
+                    mode:
+                        type: string
+                        const: ids
+                        description: Discriminator value.
+                  required:
+                    - accounts
+                    - mode
+                - type: object
+                  properties:
+                    excluded:
+                        type: array
+                        items:
+                            $ref: "#/components/schemas/CloudAccountRef"
+                    mode:
+                        type: string
+                        const: allMatching
+                        description: Discriminator value.
+                    query:
+                        $ref: "#/components/schemas/CloudAccountSelectionQuery"
+                  required:
+                    - mode
+                    - query
+            title: CloudAccountSelection
+        CloudAccountBulkActionRequest:
+            type: object
+            properties:
+                selection:
+                    $ref: "#/components/schemas/CloudAccountSelection"
+                    description: 'The accounts to act on: <code>{"mode":"ids","accounts":[...]}</code> or <code>{"mode":"allMatching","query":{...},"excluded":[...]}</code>. At most 10,000 accounts.'
+            required:
+                - selection
+            title: CloudAccountBulkActionRequest
+        CloudAccountIndexRow:
+            type: object
+            properties:
+                accountId:
+                    type: string
+                    description: AWS account ID.
+                accountName:
+                    type: string
+                    description: Name of the AWS account, when known.
+                alsoInConnectionIds:
+                    type: array
+                    items:
+                        type: string
+                    description: Other Cloud Connections that also list this account, when there are any.
+                changeEvents:
+                    type: object
+                    properties:
+                        coverageCause:
+                            type: string
+                            description: Reason Change Events coverage needs attention, when applicable.
+                        eventCount7d:
+                            type: number
+                            description: Number of Change Events observed in the last seven days.
+                        lastChangeEventAt:
+                            type: number
+                            description: Time of the latest Change Event, in epoch milliseconds.
+                    required:
+                        - eventCount7d
+                    description: Change Events data, present only when Change Events is available.
+                collectedSourceCount:
+                    type: number
+                    description: Number of the account's sources configured for collection.
+                connectionId:
+                    type: string
+                    description: Unique identifier for the Cloud Connection containing this account.
+                discoveredSourceCount:
+                    type: number
+                    description: Number of sources discovered for the account; absent when unknown (scanned before the leader recorded counts; a rescan records it).
+                discoveryState:
+                    $ref: "#/components/schemas/CloudAccountDiscoveryState"
+                    description: Current source discovery state for the account.
+                inScope:
+                    type: boolean
+                    description: Whether the account matches the Cloud Connection's scope.
+                inventory:
+                    type: object
+                    properties:
+                        freshness:
+                            type: string
+                            enum:
+                                - fresh
+                                - stale
+                                - unknown
+                            description: Freshness of the latest inventory data.
+                            x-speakeasy-unknown-values: allow
+                        lastScanAt:
+                            type: number
+                            description: Time of the latest inventory scan, in epoch milliseconds.
+                        state:
+                            $ref: "#/components/schemas/CloudAccountInventoryState"
+                            description: Current inventory scan state.
+                    required:
+                        - state
+                    description: Inventory data, present only when Change Events and the inventory store are available.
+                lastMembershipListedAt:
+                    type: number
+                    description: Time of the most recent organization membership listing, in epoch milliseconds.
+                membershipState:
+                    $ref: "#/components/schemas/CloudAccountMembershipState"
+                    description: AWS Organizations membership state of the account.
+                organizationId:
+                    type: string
+                    description: AWS Organizations management account ID, when available.
+                ouName:
+                    type: string
+                    description: Name of the account's organizational unit, when available.
+                ouPath:
+                    type: string
+                    description: Path from the organization root to the account's organizational unit.
+                trustCheckedAt:
+                    type: number
+                    description: When the account's access was last checked, in epoch milliseconds; absent when never checked.
+                trustState:
+                    $ref: "#/components/schemas/CloudAccountTrustState"
+                    description: "Whether Cribl can use its role in the account: connected, failed, or unknown until checked."
+            required:
+                - accountId
+                - collectedSourceCount
+                - connectionId
+                - discoveryState
+                - inScope
+                - membershipState
+                - trustState
+            title: CloudAccountIndexRow
+        CloudAccountIndexPage:
+            type: object
+            properties:
+                availableFields:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountIndexField"
+                    description: Fields whose data providers are available for this response.
+                items:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountIndexRow"
+                    description: Account rows in this page.
+                nextCursor:
+                    type: string
+                    description: Opaque cursor to use for the next page, when more rows match.
+                total:
+                    type: number
+                    description: Total number of matching accounts across all pages.
+            required:
+                - availableFields
+                - items
+                - total
+            title: CloudAccountIndexPage
+        CloudAccountAttentionCause:
+            type: object
+            properties:
+                code:
+                    type: string
+                    description: Stable code identifying why accounts need attention.
+                count:
+                    type: number
+                    description: Number of accounts affected by this cause.
+                exampleAccountIds:
+                    type: array
+                    items:
+                        type: string
+                    description: IDs of up to three affected accounts.
+                label:
+                    type: string
+                    description: Human-readable name of the attention cause.
+            required:
+                - code
+                - count
+                - label
+            title: CloudAccountAttentionCause
+        CloudAccountIndexSummary:
+            type: object
+            properties:
+                availableFields:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountIndexField"
+                    description: Fields whose data providers are available for this response.
+                byCloud:
+                    type: object
+                    additionalProperties:
+                        type: number
+                    description: Number of distinct matching accounts by cloud provider.
+                collecting:
+                    type: number
+                    description: Number of matching accounts with at least one collected source.
+                connections:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountIndexConnectionStatus"
+                    description: The Cloud Connections whose accounts are not fully available.
+                discovered:
+                    type: number
+                    description: Number of matching accounts with at least one discovered source.
+                inScope:
+                    type: number
+                    description: Number of matching accounts included in a Cloud Connection's scope.
+                needsAttention:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/CloudAccountAttentionCause"
+                    description: Attention causes with counts and example account IDs.
+                partial:
+                    type: boolean
+                    description: Whether some connections' accounts are missing or out of date; see <code>connections</code>.
+                rows:
+                    type: number
+                    description: Number of matching connection and account rows (an account listed by several connections counts once per connection).
+                scannedInLast24Hours:
+                    type: number
+                    description: Number of accounts scanned in the last 24 hours, when inventory data is available.
+                total:
+                    type: number
+                    description: Number of distinct matching accounts.
+                trustConnected:
+                    type: number
+                    description: Number of matching accounts Cribl can use its role in.
+            required:
+                - availableFields
+                - byCloud
+                - collecting
+                - connections
+                - discovered
+                - inScope
+                - needsAttention
+                - partial
+                - rows
+                - total
+                - trustConnected
+            title: CloudAccountIndexSummary
         CloudConnectionJobStateCounts:
             type: object
             properties:
@@ -220429,7 +221471,7 @@ components:
                         - small
                         - xlarge
                         - xsmall
-                    description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>3xlarge</code> through <code>10xlarge</code> requires the <code>cribl_operator</code> role. <code>2xlarge-plus</code> additionally requires the <code>feature-search-2xlarge-plus</code> feature flag, and is limited to a single engine node.
+                    description: Storage and compute [tier size](https://docs.cribl.io/search/engine-setup/#sizes-list) for the lakehouse engine. Configuring sizes <code>7xlarge</code> through <code>10xlarge</code> requires the <code>cribl_operator</code> role. <code>2xlarge-plus</code> additionally requires the <code>feature-search-2xlarge-plus</code> feature flag, and is limited to a single engine node.
                     x-speakeasy-unknown-values: allow
             description: "Lakehouse engine: provisioned storage and compute for ingest and search."
             title: LocalSearchEngineApiPartialRequest
@@ -245477,9 +246519,11 @@ components:
                         - taskArn: arn:aws:ecs:us-west-2:123456789012:task/cribl-cce/6f1d2c3b4a5e4f60b7c8d9e0f1a2b3c4
                           appliedVersion: 3f9a1c7e5b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a
                           lastSeenAt: 1767225655000
+                          eventsPerSecond: 1200
                         - taskArn: arn:aws:ecs:us-west-2:123456789012:task/cribl-cce/0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d
                           appliedVersion: 3f9a1c7e5b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a
                           lastSeenAt: 1767225652000
+                          eventsPerSecond: 900
                     silentTasks: 0
                 uncoveredAccountCount: 3
                 accountsRoleNotAssumable: 0
@@ -245506,6 +246550,45 @@ components:
                     fargateVcpuQuotaIsDefault: false
                     quotaTaskCeiling: 96
                     atMaxTasks: false
+                load:
+                    eventsPerSecond: 2100
+                    capacityEventsPerSecond: 8000
+                    perTaskCapacityEventsPerSecond: 2000
+                    outcomeWindowHours: 168
+                    outcomes:
+                        initialEnriched: 1200
+                        initialFailed: 300
+                        retryEnriched: 40
+                        terminalFailed: 255
+                        pending: 5
+                        unattributed: 0
+                    enrichedShare: 0.8267
+                    initialEnrichedShare: 0.8
+                    eligibleEvents: 1500
+                    enrichedEvents: 1240
+                    partial: false
+                    partialReasons: []
+                    causeUnit: events
+                    causes:
+                        - code: no_credentials
+                          label: No usable credentials for the account
+                          count: 255
+                          remedy: Connect the account, verify its Cloud Connection, or include it in the connection scope through the connection deployment.
+                          accounts: {}
+                    initialCauses:
+                        - code: no_credentials
+                          label: No usable credentials for the account
+                          count: 255
+                          remedy: Connect the account, verify its Cloud Connection, or include it in the connection scope through the connection deployment.
+                          accounts: {}
+                        - code: deadline
+                          label: The batch ran out of time
+                          count: 45
+                          remedy: The Destination retries the batch. Persistent timeouts call for more tasks or a lower event rate.
+                    series:
+                        - at: 1767225660000
+                          eventsPerSecond: 2100
+                          capacityEventsPerSecond: 8000
                 warnings: []
                 lastReconcileAt: 1767225660000
         CloudChangeEnrichmentStatusExamplesNoDestination:
@@ -245551,9 +246634,11 @@ components:
                         - taskArn: arn:aws:ecs:us-west-2:123456789012:task/cribl-cce/6f1d2c3b4a5e4f60b7c8d9e0f1a2b3c4
                           appliedVersion: 3f9a1c7e5b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a
                           lastSeenAt: 1767225655000
+                          eventsPerSecond: 1200
                         - taskArn: arn:aws:ecs:us-west-2:123456789012:task/cribl-cce/0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d
                           appliedVersion: 3f9a1c7e5b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a
                           lastSeenAt: 1767225652000
+                          eventsPerSecond: 900
                     silentTasks: 0
                 uncoveredAccountCount: 3
                 accountsRoleNotAssumable: 0
@@ -245580,8 +246665,482 @@ components:
                     fargateVcpuQuotaIsDefault: false
                     quotaTaskCeiling: 96
                     atMaxTasks: false
+                load:
+                    eventsPerSecond: 2100
+                    capacityEventsPerSecond: 8000
+                    perTaskCapacityEventsPerSecond: 2000
+                    outcomeWindowHours: 168
+                    outcomes:
+                        initialEnriched: 1200
+                        initialFailed: 300
+                        retryEnriched: 40
+                        terminalFailed: 255
+                        pending: 5
+                        unattributed: 0
+                    enrichedShare: 0.8267
+                    initialEnrichedShare: 0.8
+                    eligibleEvents: 1500
+                    enrichedEvents: 1240
+                    partial: false
+                    partialReasons: []
+                    causeUnit: events
+                    causes:
+                        - code: no_credentials
+                          label: No usable credentials for the account
+                          count: 255
+                          remedy: Connect the account, verify its Cloud Connection, or include it in the connection scope through the connection deployment.
+                          accounts: {}
+                    initialCauses:
+                        - code: no_credentials
+                          label: No usable credentials for the account
+                          count: 255
+                          remedy: Connect the account, verify its Cloud Connection, or include it in the connection scope through the connection deployment.
+                          accounts: {}
+                        - code: deadline
+                          label: The batch ran out of time
+                          count: 45
+                          remedy: The Destination retries the batch. Persistent timeouts call for more tasks or a lower event rate.
+                    series:
+                        - at: 1767225660000
+                          eventsPerSecond: 2100
+                          capacityEventsPerSecond: 8000
                 warnings: []
                 lastReconcileAt: 1767225660000
+        CloudWorkspaceGroupingCreateResponseExamplesEnvironment:
+            summary: Create an Environment grouping
+            description: Example response for creating the Workspace default grouping.
+            value:
+                id: environment
+                name: Environment
+                kind: customCategories
+                columns:
+                    - id: production
+                      label: Production
+                      ouIds:
+                        - ou-abcd12-12345678
+                    - id: sandbox
+                      label: Sandbox
+                      accountIds:
+                        - "345678901234"
+                builtIn: false
+                isDefault: true
+                available: true
+                owner: admin@example.com
+        CloudWorkspaceGroupingCreateExamplesEnvironment:
+            summary: Create an Environment grouping
+            description: Example request body for creating shared Production and Sandbox categories.
+            value:
+                id: environment
+                name: Environment
+                kind: customCategories
+                columns:
+                    - id: production
+                      label: Production
+                      ouIds:
+                        - ou-abcd12-12345678
+                    - id: sandbox
+                      label: Sandbox
+                      accountIds:
+                        - "345678901234"
+                isDefault: true
+        CloudWorkspaceGroupingGetExamplesEnvironment:
+            summary: Get the Environment grouping
+            description: Example response for getting saved Production and Sandbox categories.
+            value:
+                id: environment
+                name: Environment
+                kind: customCategories
+                columns:
+                    - id: production
+                      label: Production
+                      ouIds:
+                        - ou-abcd12-12345678
+                    - id: sandbox
+                      label: Sandbox
+                      accountIds:
+                        - "345678901234"
+                builtIn: false
+                isDefault: true
+                available: true
+                owner: admin@example.com
+        CloudWorkspaceGroupingsListExamplesWorkspaceGroupings:
+            summary: List shared Workspace groupings
+            description: Example response for listing built-in and custom category groupings with a custom Workspace default.
+            value:
+                items:
+                    - id: by-organization
+                      name: By organization
+                      kind: organization
+                      builtIn: true
+                      isDefault: false
+                      available: true
+                    - id: by-ou-level-1
+                      name: By OU level 1
+                      kind: ouLevel
+                      ouLevel: 1
+                      builtIn: true
+                      isDefault: false
+                      available: true
+                    - id: environment
+                      name: Environment
+                      kind: customCategories
+                      columns:
+                        - id: production
+                          label: Production
+                        - id: sandbox
+                          label: Sandbox
+                      builtIn: false
+                      isDefault: true
+                      available: true
+                      owner: admin@example.com
+                count: 3
+        CloudWorkspaceGroupingPatchResponseExamplesRenamed:
+            summary: Rename the Environment grouping
+            description: Example response for renaming a saved grouping while retaining its categories.
+            value:
+                id: environment
+                name: Account environments
+                kind: customCategories
+                columns:
+                    - id: production
+                      label: Production
+                      ouIds:
+                        - ou-abcd12-12345678
+                    - id: sandbox
+                      label: Sandbox
+                      accountIds:
+                        - "345678901234"
+                builtIn: false
+                isDefault: true
+                available: true
+                owner: admin@example.com
+        CloudWorkspaceGroupingPatchExamplesSelectDefault:
+            summary: Select the Workspace default grouping
+            description: Example request body for selecting a saved grouping as the Workspace default.
+            value:
+                isDefault: true
+        CloudWorkspaceGroupingPatchExamplesRename:
+            summary: Rename the Environment grouping
+            description: Example request body for renaming a saved grouping.
+            value:
+                name: Account environments
+        CloudWorkspaceGroupingPreviewResponseExamplesEnvironment:
+            summary: Preview Production and Sandbox categories
+            description: Example response for previewing two assigned accounts and an empty Unassigned category.
+            value:
+                groupingId: preview
+                columns:
+                    - id: production
+                      label: Production
+                      count: 1
+                      inScopeCount: 1
+                      connectedCount: 1
+                      discoveredCount: 0
+                      collectingCount: 0
+                      membershipStates:
+                        active: 1
+                      trustStates:
+                        connected: 1
+                      discoveryStates:
+                        notStarted: 1
+                    - id: sandbox
+                      label: Sandbox
+                      count: 1
+                      inScopeCount: 1
+                      connectedCount: 1
+                      discoveredCount: 0
+                      collectingCount: 0
+                      membershipStates:
+                        active: 1
+                      trustStates:
+                        connected: 1
+                      discoveryStates:
+                        notStarted: 1
+                    - id: unassigned
+                      label: Unassigned
+                      count: 0
+                      inScopeCount: 0
+                      connectedCount: 0
+                      discoveredCount: 0
+                      collectingCount: 0
+                      membershipStates: {}
+                      trustStates: {}
+                      discoveryStates: {}
+                ouNodes:
+                    - id: 75b44fec-7a42-4c3e-8dcb-523419d456cc:r-abcd12
+                      label: r-abcd12
+                      count: 1
+                      inScopeCount: 1
+                      connectedCount: 1
+                      discoveredCount: 0
+                      collectingCount: 0
+                      membershipStates:
+                        active: 1
+                      trustStates:
+                        connected: 1
+                      discoveryStates:
+                        notStarted: 1
+        CloudWorkspaceGroupingPreviewExamplesEnvironment:
+            summary: Preview Production and Sandbox categories
+            description: Example request body for previewing an unsaved account grouping.
+            value:
+                columns:
+                    - id: production
+                      label: Production
+                      ouIds:
+                        - ou-abcd12-12345678
+                    - id: sandbox
+                      label: Sandbox
+                      accountIds:
+                        - "345678901234"
+        CloudAccountIndexAvailabilityResponseExamplesReady:
+            summary: Check a ready account index
+            description: Example response for checking an index whose accounts are all available.
+            value:
+                ready: true
+                availableFields:
+                    - connectionId
+                    - organizationId
+                    - ouPath
+                    - ouName
+                    - accountId
+                    - accountName
+                    - membershipState
+                    - inScope
+                    - trustState
+                    - lastMembershipListedAt
+                    - discoveryState
+                    - discoveredSourceCount
+                    - collectedSourceCount
+                partial: false
+                connections: []
+        CloudAccountIndexAvailabilityResponseExamplesPartial:
+            summary: Check an index with an outdated member list
+            description: "Example response for an organization whose member list predates account states: only its active members are listed until the membership is refreshed."
+            value:
+                ready: true
+                availableFields:
+                    - connectionId
+                    - organizationId
+                    - ouPath
+                    - ouName
+                    - accountId
+                    - accountName
+                    - membershipState
+                    - inScope
+                    - trustState
+                    - lastMembershipListedAt
+                    - discoveryState
+                    - discoveredSourceCount
+                    - collectedSourceCount
+                partial: true
+                connections:
+                    - connectionId: 75b44fec-7a42-4c3e-8dcb-523419d456cc
+                      state: partial
+                      reasons:
+                        - missingAccountStates
+                      message: The organization's member list predates account states; only active members are shown.
+                      remedy:
+                        action: refreshMembership
+                        method: POST
+                        path: /system/cloud-connections/connections/75b44fec-7a42-4c3e-8dcb-523419d456cc/org-membership/refresh
+                      asOf: 1794892800000
+        CloudAccountIndexAvailabilityResponseExamplesInitializing:
+            summary: Check an initializing account index
+            description: Example response for checking an index before its first build.
+            value:
+                ready: false
+                reason: The account index is initializing.
+                availableFields: []
+                partial: false
+                connections: []
+        CloudAccountGroupingsResponseExamplesBuiltInGroupings:
+            summary: List built-in account groupings
+            description: Example response for listing the organization and first-level OU groupings in a Workspace.
+            value:
+                items:
+                    - id: by-organization
+                      name: By organization
+                      kind: organization
+                      builtIn: true
+                      isDefault: true
+                      available: true
+                    - id: by-ou-level-1
+                      name: By OU level 1
+                      kind: ouLevel
+                      ouLevel: 1
+                      builtIn: true
+                      isDefault: false
+                      available: true
+                count: 2
+        CloudAccountBulkActionResponseExamplesReverifyMatching:
+            summary: Re-verify every matching account
+            description: "Example response for re-verifying all 7,771 accounts of an OU: one job over the 7,756 active, in-scope ones, followed under the jobs API, with the 15 others skipped."
+            value:
+                job:
+                    id: accountVerification:0f8b6a52-1b7e-4a0c-9a5e-3c2b1f6d9e47
+                    kind: accountVerification
+                    label: Re-verify access to 7756 accounts
+                    state: queued
+                    connectionId: 75b44fec-7a42-4c3e-8dcb-523419d456cc
+                    createdAt: 1794892800000
+                    updatedAt: 1794892800000
+                    progress:
+                        total: 7756
+                        completed: 0
+                        failed: 0
+                    capabilities:
+                        cancel: true
+                        pause: false
+                        resume: false
+                        retry: false
+                skipped:
+                    notActive: 12
+                    outOfScope: 3
+        CloudAccountBulkActionRequestExamplesAllMatching:
+            summary: Select every account of an OU
+            description: Example request selecting every account of an OU subtree, minus one unchecked account.
+            value:
+                selection:
+                    mode: allMatching
+                    query:
+                        filters:
+                            connectionId: 75b44fec-7a42-4c3e-8dcb-523419d456cc
+                            ouSubtree: r-abcd12/ou-abcd12-12345678
+                    excluded:
+                        - connectionId: 75b44fec-7a42-4c3e-8dcb-523419d456cc
+                          accountId: "345678901234"
+        CloudAccountBulkActionRequestExamplesExplicitAccounts:
+            summary: Select explicit accounts
+            description: Example request selecting two accounts by connection and account ID.
+            value:
+                selection:
+                    mode: ids
+                    accounts:
+                        - connectionId: 75b44fec-7a42-4c3e-8dcb-523419d456cc
+                          accountId: "234567890123"
+                        - connectionId: 75b44fec-7a42-4c3e-8dcb-523419d456cc
+                          accountId: "345678901234"
+        CloudAccountIndexPageResponseExamplesOrganizationMembers:
+            summary: Read connected organization members
+            description: Example response for reading active and suspended AWS accounts after a membership refresh.
+            value:
+                items:
+                    - connectionId: 75b44fec-7a42-4c3e-8dcb-523419d456cc
+                      organizationId: "123456789012"
+                      accountId: "234567890123"
+                      accountName: Production
+                      ouPath: r-abcd12/ou-abcd12-12345678
+                      ouName: Production
+                      membershipState: active
+                      inScope: true
+                      trustState: connected
+                      trustCheckedAt: 1794892700000
+                      lastMembershipListedAt: 1794892800000
+                      discoveryState: succeeded
+                      discoveredSourceCount: 2
+                      collectedSourceCount: 1
+                    - connectionId: 75b44fec-7a42-4c3e-8dcb-523419d456cc
+                      organizationId: "123456789012"
+                      accountId: "345678901234"
+                      accountName: Sandbox
+                      ouPath: r-abcd12/ou-abcd12-87654321
+                      ouName: Sandbox
+                      membershipState: suspended
+                      inScope: false
+                      trustState: unknown
+                      lastMembershipListedAt: 1794892800000
+                      discoveryState: notStarted
+                      collectedSourceCount: 0
+                total: 2
+                availableFields:
+                    - connectionId
+                    - organizationId
+                    - ouPath
+                    - ouName
+                    - accountId
+                    - accountName
+                    - membershipState
+                    - inScope
+                    - trustState
+                    - lastMembershipListedAt
+                    - discoveryState
+                    - discoveredSourceCount
+                    - collectedSourceCount
+        CloudAccountIndexRollupsResponseExamplesOrganizationAndRoot:
+            summary: Read organization and OU account rollups
+            description: Example response for reading counts for two active accounts in one organization root.
+            value:
+                groupingId: by-organization
+                columns:
+                    - id: org:123456789012
+                      label: "123456789012"
+                      count: 2
+                      inScopeCount: 2
+                      connectedCount: 2
+                      discoveredCount: 1
+                      collectingCount: 1
+                      membershipStates:
+                        active: 2
+                      trustStates:
+                        connected: 2
+                      discoveryStates:
+                        succeeded: 1
+                        notStarted: 1
+                ouNodes:
+                    - id: 75b44fec-7a42-4c3e-8dcb-523419d456cc:r-abcd12
+                      label: r-abcd12
+                      count: 2
+                      inScopeCount: 2
+                      connectedCount: 2
+                      discoveredCount: 1
+                      collectingCount: 1
+                      membershipStates:
+                        active: 2
+                      trustStates:
+                        connected: 2
+                      discoveryStates:
+                        succeeded: 1
+                        notStarted: 1
+        CloudAccountIndexSummaryResponseExamplesWorkspaceFunnel:
+            summary: Read the account funnel and attention counts
+            description: Example response for reading Workspace account totals while Change Events and inventory are unavailable.
+            value:
+                total: 2
+                rows: 2
+                byCloud:
+                    AWS: 2
+                inScope: 1
+                trustConnected: 1
+                discovered: 1
+                collecting: 1
+                needsAttention:
+                    - code: outside-scope
+                      label: Outside connection scope
+                      count: 1
+                      exampleAccountIds:
+                        - "345678901234"
+                    - code: trust-unknown
+                      label: Access not checked
+                      count: 1
+                      exampleAccountIds:
+                        - "345678901234"
+                availableFields:
+                    - connectionId
+                    - organizationId
+                    - ouPath
+                    - ouName
+                    - accountId
+                    - accountName
+                    - membershipState
+                    - inScope
+                    - trustState
+                    - lastMembershipListedAt
+                    - discoveryState
+                    - discoveredSourceCount
+                    - collectedSourceCount
+                partial: false
+                connections: []
         CloudConnectionJobExamplesRunningScan:
             summary: Read a running inventory scan
             description: A job part way through its accounts, with its one failure so far grouped under a cause.
@@ -313086,7 +314645,7 @@ paths:
                 "204":
                     description: Invite accepted successfully.
                 "400":
-                    description: Invalid request body, the password does not meet the identity provider's password requirements, the identity provider is not configured, or the invite is expired, revoked, or already accepted.
+                    description: Invalid request body, the invite ID is invalid, the password does not meet the identity provider's password requirements, the identity provider is not configured, or the invite is expired, revoked, or already accepted.
                 "401":
                     description: Missing or invalid invite verifier.
                     content:
@@ -313160,7 +314719,7 @@ paths:
                                 InviteVerifyResponseExamplesVerifiedInvite:
                                     $ref: "#/components/examples/InviteVerifyResponseExamplesVerifiedInvite"
                 "400":
-                    description: Invite is expired, revoked, or already accepted, or verifier is missing.
+                    description: Invite is expired, revoked, or already accepted, the invite ID is invalid, or verifier is missing.
                 "401":
                     description: Verifier is invalid.
                     content:
@@ -323911,6 +325470,12 @@ paths:
                   schema:
                     type: string
                   description: <code>id</code> of the Cloud Connection whose covered (or would-be covered) accounts to list. Omit to list the accounts of every connection and accounts without one.
+                - name: reason
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: "Why an account has no usable Cloud Connection: <code>noConnection</code>, <code>connectionNotVerified</code>, <code>excludedByFilter</code>, <code>roleNotAssumable</code>, or <code>credentialMissing</code>. Omit to list all reasons."
                 - name: sort
                   in: query
                   required: false
@@ -324014,7 +325579,7 @@ paths:
             x-cribl-api-context:
                 - leader
             summary: Get Cloud Change Enrichment status (Cribl.Cloud only)
-            description: "Get the state of the Cloud Change Enrichment service for this Cribl.Cloud Workspace: whether it runs and why, its task counts and autoscaling bounds, and the deployed Cloud Change Event Sources it cannot enrich (Cribl.Cloud only)."
+            description: "Get the state of the Cloud Change Enrichment service for this Cribl.Cloud Workspace: whether it runs and why, its task counts, one-minute load samples from the last 24 hours, causes of events it could not fully enrich, autoscaling bounds, and the deployed Cloud Change Event Sources it cannot enrich (Cribl.Cloud only)."
             responses:
                 "200":
                     description: The Cloud Change Enrichment service status.
@@ -324090,6 +325655,923 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+    /system/cloud-connections/groupings:
+        post:
+            operationId: createSystemCloudConnectionsGroupings
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Create a Workspace account grouping (Cribl.Cloud only)
+            description: Save ordered custom categories for the Workspace (Cribl.Cloud only). Organization Admins and roles granted Cloud Connections Workspace Settings access can create groupings. Tag-key groupings are unavailable. The Workspace supports up to 100 custom groupings.
+            responses:
+                "201":
+                    description: The created CloudAccountGroupingDefinition object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudAccountGroupingDefinition"
+                            examples:
+                                CloudWorkspaceGroupingCreateResponseExamplesEnvironment:
+                                    $ref: "#/components/examples/CloudWorkspaceGroupingCreateResponseExamplesEnvironment"
+                    headers:
+                        Location:
+                            description: The canonical URL of the newly created resource.
+                            schema:
+                                type: string
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: Request conflicts with current resource state (duplicate, invalid state, or business rule).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: HTTP 503
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            requestBody:
+                description: CloudAccountGroupingCreate object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/CloudAccountGroupingCreate"
+                        examples:
+                            CloudWorkspaceGroupingCreateExamplesEnvironment:
+                                $ref: "#/components/examples/CloudWorkspaceGroupingCreateExamplesEnvironment"
+        get:
+            operationId: getSystemCloudConnectionsGroupings
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List Workspace account groupings (Cribl.Cloud only)
+            description: Get built-in and custom groupings shared by everyone in the Workspace, including the default and ordered column names (Cribl.Cloud only). Get an individual grouping to read its category assignments.
+            responses:
+                "200":
+                    description: List of CloudAccountGroupingDefinition objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListCloudAccountGroupingDefinition"
+                            examples:
+                                CloudWorkspaceGroupingsListExamplesWorkspaceGroupings:
+                                    $ref: "#/components/examples/CloudWorkspaceGroupingsListExamplesWorkspaceGroupings"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+    /system/cloud-connections/groupings/{id}:
+        delete:
+            operationId: deleteSystemCloudConnectionsGroupingsById
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Delete a Workspace account grouping (Cribl.Cloud only)
+            description: Delete a custom grouping with Workspace Settings access (Cribl.Cloud only). Deleting the default restores grouping by organization. Built-in groupings cannot be deleted.
+            responses:
+                "204":
+                    description: No Content
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: HTTP 503
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: required ID of the custom Workspace account grouping to delete.
+        get:
+            operationId: getSystemCloudConnectionsGroupingsById
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Get a Workspace account grouping (Cribl.Cloud only)
+            description: Get the saved definition and Workspace default status of a built-in or custom grouping (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: The requested CloudAccountGroupingDefinition object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudAccountGroupingDefinition"
+                            examples:
+                                CloudWorkspaceGroupingGetExamplesEnvironment:
+                                    $ref: "#/components/examples/CloudWorkspaceGroupingGetExamplesEnvironment"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: required ID of the Workspace account grouping to get.
+        patch:
+            operationId: updateSystemCloudConnectionsGroupingsById
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Update a Workspace account grouping (Cribl.Cloud only)
+            description: Change custom categories or select the Workspace default (Cribl.Cloud only). Built-in groupings accept only selecting them as default; their definitions cannot be edited. Changes require Workspace Settings access. Only supplied properties change. Null is invalid because required definition properties and the default cannot be removed.
+            responses:
+                "200":
+                    description: The updated CloudAccountGroupingDefinition object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudAccountGroupingDefinition"
+                            examples:
+                                CloudWorkspaceGroupingPatchResponseExamplesRenamed:
+                                    $ref: "#/components/examples/CloudWorkspaceGroupingPatchResponseExamplesRenamed"
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: HTTP 503
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            requestBody:
+                description: CloudAccountGroupingPatch object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/CloudAccountGroupingPatch"
+                        examples:
+                            CloudWorkspaceGroupingPatchExamplesSelectDefault:
+                                $ref: "#/components/examples/CloudWorkspaceGroupingPatchExamplesSelectDefault"
+                            CloudWorkspaceGroupingPatchExamplesRename:
+                                $ref: "#/components/examples/CloudWorkspaceGroupingPatchExamplesRename"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: required ID of the Workspace account grouping to update.
+    /system/cloud-connections/groupings/preview:
+        post:
+            operationId: createSystemCloudConnectionsGroupingsPreview
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Preview Workspace account categories (Cribl.Cloud only)
+            description: Calculate counts for unsaved custom categories against the Workspace account index (Cribl.Cloud only). The first matching category owns an account; unmatched accounts appear in Unassigned. No configuration is saved.
+            responses:
+                "200":
+                    description: The created CloudAccountIndexRollups object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudAccountIndexRollups"
+                            examples:
+                                CloudWorkspaceGroupingPreviewResponseExamplesEnvironment:
+                                    $ref: "#/components/examples/CloudWorkspaceGroupingPreviewResponseExamplesEnvironment"
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: HTTP 503
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            requestBody:
+                description: CloudAccountGroupingPreview object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/CloudAccountGroupingPreview"
+                        examples:
+                            CloudWorkspaceGroupingPreviewExamplesEnvironment:
+                                $ref: "#/components/examples/CloudWorkspaceGroupingPreviewExamplesEnvironment"
+    /system/cloud-connections/accounts/availability:
+        get:
+            operationId: getSystemCloudConnectionsAccountsAvailability
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Get account index availability (Cribl.Cloud only)
+            description: Check whether the Workspace account index is ready, and which Cloud Connections' accounts are missing or out of date, with the action that brings each up to date (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: The requested CloudAccountIndexAvailabilityResponse object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudAccountIndexAvailabilityResponse"
+                            examples:
+                                CloudAccountIndexAvailabilityResponseExamplesReady:
+                                    $ref: "#/components/examples/CloudAccountIndexAvailabilityResponseExamplesReady"
+                                CloudAccountIndexAvailabilityResponseExamplesPartial:
+                                    $ref: "#/components/examples/CloudAccountIndexAvailabilityResponseExamplesPartial"
+                                CloudAccountIndexAvailabilityResponseExamplesInitializing:
+                                    $ref: "#/components/examples/CloudAccountIndexAvailabilityResponseExamplesInitializing"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+    /system/cloud-connections/accounts/groupings:
+        get:
+            operationId: getSystemCloudConnectionsAccountsGroupings
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List account groupings (Cribl.Cloud only)
+            description: List built-in and custom groupings available to Workspace account views, with their default status and ordered column names (Cribl.Cloud only). Category assignment rules are available from the individual grouping resource.
+            responses:
+                "200":
+                    description: List of CloudAccountGroupingDefinition objects.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CountedListCloudAccountGroupingDefinition"
+                            examples:
+                                CloudAccountGroupingsResponseExamplesBuiltInGroupings:
+                                    $ref: "#/components/examples/CloudAccountGroupingsResponseExamplesBuiltInGroupings"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: HTTP 503
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+    /system/cloud-connections/accounts/actions/inventory-scan:
+        post:
+            operationId: createSystemCloudConnectionsAccountsActionsInventoryScan
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Scan accounts into the inventory (Cribl.Cloud only)
+            description: Scan the selected accounts into the cloud inventory in one job, which runs one inventory scan campaign per Cloud Connection in turn (Cribl.Cloud only). Available only while the inventory store is. Selects at most 10,000 accounts; only active accounts inside their connection's scope are scanned, and the others are reported as skipped. Requires the permission to start and cancel cloud inventory campaigns.
+            responses:
+                "202":
+                    description: The created CloudAccountBulkActionResponse object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudAccountBulkActionResponse"
+                            examples:
+                                CloudAccountBulkActionResponseExamplesReverifyMatching:
+                                    $ref: "#/components/examples/CloudAccountBulkActionResponseExamplesReverifyMatching"
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: HTTP 503
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            requestBody:
+                description: CloudAccountBulkActionRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/CloudAccountBulkActionRequest"
+                        examples:
+                            CloudAccountBulkActionRequestExamplesAllMatching:
+                                $ref: "#/components/examples/CloudAccountBulkActionRequestExamplesAllMatching"
+                            CloudAccountBulkActionRequestExamplesExplicitAccounts:
+                                $ref: "#/components/examples/CloudAccountBulkActionRequestExamplesExplicitAccounts"
+    /system/cloud-connections/accounts:
+        get:
+            operationId: getSystemCloudConnectionsAccounts
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: List connected cloud accounts (Cribl.Cloud only)
+            description: Get a keyset-paged, filterable view of connected AWS accounts across the Workspace (Cribl.Cloud only). The index is hydrated from durable local state and does not call AWS for this request.
+            responses:
+                "200":
+                    description: The requested CloudAccountIndexPage object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudAccountIndexPage"
+                            examples:
+                                CloudAccountIndexPageResponseExamplesOrganizationMembers:
+                                    $ref: "#/components/examples/CloudAccountIndexPageResponseExamplesOrganizationMembers"
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: HTTP 503
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            parameters:
+                - name: connectionId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Restrict results to one Cloud Connection id.
+                - name: organizationId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Restrict results to one organization management account id.
+                - name: ouSubtree
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Restrict results to an OU path and its descendants.
+                - name: membershipStates
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Comma-separated active, suspended, pending, removed or unknown states.
+                - name: inScope
+                  in: query
+                  required: false
+                  schema:
+                    type: boolean
+                  description: Restrict results to accounts included or excluded by the connection scope.
+                - name: trustStates
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Comma-separated connected, failed or unknown states.
+                - name: discoveryStates
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Comma-separated discovery states.
+                - name: coverageCauses
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Comma-separated Change Events coverage causes; available only with Change Events.
+                - name: search
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Search account ids and account names.
+                - name: changedSince
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Epoch milliseconds; available only with Change Events.
+                - name: inventoryStates
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Comma-separated inventory states; available only with the inventory store.
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                  description: Number of rows, from 1 to 200 (default 100).
+                - name: cursor
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Opaque cursor returned by the previous page.
+                - name: sortField
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Field to sort by (default accountId).
+                - name: sortOrder
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: asc or desc (default asc).
+    /system/cloud-connections/accounts/actions/reverify:
+        post:
+            operationId: createSystemCloudConnectionsAccountsActionsReverify
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Re-verify access to accounts (Cribl.Cloud only)
+            description: Check, in one job, that Cribl can assume each selected account's Cloud Connection role, and record the result as the account's trust state (Cribl.Cloud only). A connection's own account is recorded as the connection's verification. Selects at most 10,000 accounts; only active accounts inside their connection's scope are checked, and the others are reported as skipped. Requires the permission to verify Cloud Connections.
+            responses:
+                "202":
+                    description: The created CloudAccountBulkActionResponse object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudAccountBulkActionResponse"
+                            examples:
+                                CloudAccountBulkActionResponseExamplesReverifyMatching:
+                                    $ref: "#/components/examples/CloudAccountBulkActionResponseExamplesReverifyMatching"
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: HTTP 503
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            requestBody:
+                description: CloudAccountBulkActionRequest object.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/CloudAccountBulkActionRequest"
+                        examples:
+                            CloudAccountBulkActionRequestExamplesAllMatching:
+                                $ref: "#/components/examples/CloudAccountBulkActionRequestExamplesAllMatching"
+                            CloudAccountBulkActionRequestExamplesExplicitAccounts:
+                                $ref: "#/components/examples/CloudAccountBulkActionRequestExamplesExplicitAccounts"
+    /system/cloud-connections/accounts/rollups:
+        get:
+            operationId: getSystemCloudConnectionsAccountsRollups
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Get cloud account rollups (Cribl.Cloud only)
+            description: Get counts by organizational unit and the selected Workspace grouping from the account index (Cribl.Cloud only).
+            responses:
+                "200":
+                    description: The requested CloudAccountIndexRollups object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudAccountIndexRollups"
+                            examples:
+                                CloudAccountIndexRollupsResponseExamplesOrganizationAndRoot:
+                                    $ref: "#/components/examples/CloudAccountIndexRollupsResponseExamplesOrganizationAndRoot"
+                "400":
+                    description: Failed validation or malformed input, such as missing or invalid parameters.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: HTTP 503
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            parameters:
+                - name: groupingId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Grouping id from the groupings list (default the Workspace default).
+                - name: connectionId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Restrict rollups to one Cloud Connection id.
+                - name: organizationId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Restrict rollups to one organization management account id.
+                - name: ouSubtree
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Restrict rollups to an OU subtree.
+    /system/cloud-connections/accounts/summary:
+        get:
+            operationId: getSystemCloudConnectionsAccountsSummary
+            tags:
+                - cloud-connections
+            x-cribl-internal: false
+            x-cribl-availability: cloud
+            x-cribl-api-context:
+                - leader
+            summary: Summarize connected cloud accounts (Cribl.Cloud only)
+            description: Get Workspace account funnel counts and needs-attention causes from the server-side index (Cribl.Cloud only). Counts are of distinct accounts; <code>partial</code> lists the Cloud Connections whose accounts are incomplete.
+            responses:
+                "200":
+                    description: The requested CloudAccountIndexSummary object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/CloudAccountIndexSummary"
+                            examples:
+                                CloudAccountIndexSummaryResponseExamplesWorkspaceFunnel:
+                                    $ref: "#/components/examples/CloudAccountIndexSummaryResponseExamplesWorkspaceFunnel"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: HTTP 503
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            parameters:
+                - name: connectionId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Restrict the summary to one Cloud Connection id.
+                - name: organizationId
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Restrict the summary to one organization management account id.
+                - name: ouSubtree
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: Restrict the summary to an OU subtree.
     /system/cloud-connections/jobs/{jobId}/cancel:
         post:
             operationId: createSystemCloudConnectionsJobsCancelByJobId
@@ -335719,7 +338201,7 @@ paths:
             operationId: getSystemInsightsQuery
             tags:
                 - insights
-            x-cribl-internal: true
+            x-cribl-internal: false
             x-cribl-availability: both
             x-cribl-api-context:
                 - searchGroup
@@ -335815,13 +338297,13 @@ paths:
                   required: false
                   schema:
                     type: integer
-                  description: Echoed in the first line of the response. The response always carries every row.
+                  description: "Compatibility only: accepted and echoed in the first line of the response, but does not skip any rows. The response always carries every row."
                 - name: limit
                   in: query
                   required: false
                   schema:
                     type: integer
-                  description: Echoed in the first line of the response. The response always carries every row.
+                  description: "Compatibility only: accepted and echoed in the first line of the response, but does not cap the row count. The response always carries every row."
             x-speakeasy-pagination:
                 type: offsetLimit
                 inputs:
