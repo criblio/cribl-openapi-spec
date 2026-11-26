@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.22.0-alpha.1795648408517-dd35a274
+    version: 4.22.0-alpha.1795734628467-bc90122b
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -5045,6 +5045,10 @@ components:
                     title: Saved query Id
                     description: Id of the saved query
                     type: string
+                savedQueryName:
+                    title: Saved query name
+                    description: Display name of the saved query when the run was scheduled
+                    type: string
                 trigger:
                     title: Trigger condition expression
                     description: Js expression that filters events, a greater than 'Trigger Count' events will trigger the notification
@@ -5093,7 +5097,7 @@ components:
                     type: string
                 message:
                     title: Message content
-                    description: "Message content template, available fields: searchId, resultSet, savedQueryId, notificationId, searchResultsUrl"
+                    description: "Message content template, available fields: searchId, resultSet, savedQueryId, savedQueryName, notificationId, searchResultsUrl"
                     type: string
                 authToken:
                     title: Api Auth Token
@@ -68735,6 +68739,290 @@ components:
                     type: string
                     description: Binds 'parquetSchema' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'parquetSchema' at runtime.
             title: OutputZadaraS3
+        OutputFujitsuEternusS3:
+            type: object
+            required:
+                - type
+                - bucket
+                - stagePath
+                - endpoint
+            properties:
+                id:
+                    type: string
+                    title: Output ID
+                    description: Unique name for this output
+                type:
+                    type: string
+                    enum:
+                        - fujitsu_eternus_s3
+                    description: Connector type identifier.
+                pipeline:
+                    type: string
+                    title: Pipeline
+                    description: Pipeline to process data before sending out to this output
+                systemFields:
+                    type: array
+                    title: System fields
+                    description: Fields to automatically add to events, such as cribl_pipe. Supports wildcards.
+                    items:
+                        type: string
+                environment:
+                    type: string
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                streamtags:
+                    type: array
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    items:
+                        type: string
+                schemaMonitorSettings:
+                    $ref: "#/components/schemas/SchemaMonitorSettingsTypeOptional"
+                    description: Configuration for Schema Monitor on this Destination.
+                awsAuthenticationMethod:
+                    $ref: "#/components/schemas/AuthenticationMethodOptionsSecret"
+                    description: Authentication method.
+                reuseConnections:
+                    type: boolean
+                    title: Reuse connections
+                    description: Reuse connections between requests, which can improve performance
+                rejectUnauthorized:
+                    type: boolean
+                    title: Reject unauthorized certificates
+                    description: Reject certificates that cannot be verified against a valid CA, such as self-signed certificates
+                bucket:
+                    type: string
+                    title: Fujitsu ETERNUS bucket name
+                    description: "Name of the destination Fujitsu ETERNUS bucket. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at initialization time. Example referencing a Global Variable: `myBucket-${C.vars.myVar}`"
+                region:
+                    type: string
+                    title: Region
+                    description: Region where the Fujitsu ETERNUS bucket is located
+                destPath:
+                    type: string
+                    title: Key prefix
+                    description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+                maxConcurrentFileParts:
+                    type: number
+                    title: Concurrent file parts upload limit
+                    description: Maximum number of parts to upload in parallel per file. Minimum part size is 5MB.
+                    minimum: 1
+                    maximum: 10
+                verifyPermissions:
+                    type: boolean
+                    title: Verify if bucket exists
+                    description: Disable if you can access files within the bucket but not the bucket itself
+                maxClosingFilesToBackpressure:
+                    type: number
+                    title: Staging file limit
+                    description: Maximum number of files that can be waiting for upload before backpressure is applied
+                    minimum: 10
+                    maximum: 4200
+                stagePath:
+                    type: string
+                    title: Staging location
+                    description: Filesystem location in which to buffer files, before compressing and moving to final destination. Use performant and stable storage.
+                addIdToStagePath:
+                    type: boolean
+                    title: Add output ID
+                    description: Add the Output ID value to staging location
+                removeEmptyDirs:
+                    type: boolean
+                    title: Remove empty staging directories
+                    description: Remove empty staging directories after moving files
+                partitionExpr:
+                    type: string
+                    title: Partitioning expression
+                    description: JavaScript expression defining how files are partitioned and organized. Default is date-based. If blank, Stream will fall back to the event's __partition field value – if present – otherwise to each location's root directory.
+                format:
+                    $ref: "#/components/schemas/DataFormatOptions"
+                    description: Format of the output data
+                baseFileName:
+                    type: string
+                    title: File name prefix expression
+                    description: JavaScript expression to define the output filename prefix (can be constant)
+                fileNameSuffix:
+                    type: string
+                    title: File name suffix expression
+                    description: JavaScript expression to define the output filename suffix (can be constant).  The `__format` variable refers to the value of the `Data format` field (`json` or `raw`).  The `__compression` field refers to the kind of compression being used (`none` or `gzip`).
+                maxFileSizeMB:
+                    type: number
+                    title: File size limit (MB)
+                    description: Maximum uncompressed output file size. Files of this size will be closed and moved to final output location.
+                    maximum: 1024
+                    minimum: 5
+                maxFileOpenTimeSec:
+                    type: number
+                    title: File open time limit (sec)
+                    description: Maximum amount of time to write to a file. Files open for longer than this will be closed and moved to final output location.
+                    minimum: 10
+                    maximum: 86400
+                maxFileIdleTimeSec:
+                    type: number
+                    title: Idle time limit (sec)
+                    description: Maximum amount of time to keep inactive files open. Files open for longer than this will be closed and moved to final output location.
+                    minimum: 5
+                    maximum: 86400
+                maxOpenFiles:
+                    type: number
+                    title: Open file limit
+                    description: Maximum number of files to keep open concurrently. When exceeded, @{product} will close the oldest open files and move them to the final output location.
+                    minimum: 10
+                    maximum: 2000
+                headerLine:
+                    type: string
+                    title: Header line
+                    description: If set, this line will be written to the beginning of each output file
+                writeHighWaterMark:
+                    type: number
+                    title: Writing high watermark (KB)
+                    description: Buffer size used to write to a file
+                    maximum: 4096
+                    minimum: 16
+                onBackpressure:
+                    $ref: "#/components/schemas/BackpressureBehaviorOptionsBlockDrop"
+                    description: How to handle events when all receivers are exerting backpressure
+                deadletterEnabled:
+                    type: boolean
+                    title: Enable dead-lettering
+                    description: If a file fails to move to its final destination after the maximum number of retries, move it to a designated directory to prevent further errors
+                onDiskFullBackpressure:
+                    $ref: "#/components/schemas/DiskSpaceProtectionOptions"
+                    description: How to handle events when disk space is below the global 'Min free disk space' limit
+                forceCloseOnShutdown:
+                    type: boolean
+                    title: Force close on shutdown
+                    description: Force all staged files to close during an orderly Node shutdown. This triggers immediate upload of in-progress data — regardless of idle time, file age, or size thresholds — to minimize data loss.
+                retrySettings:
+                    $ref: "#/components/schemas/RetrySettingsType"
+                    description: Retry settings for failed file uploads.
+                orphans:
+                    $ref: "#/components/schemas/OrphanFileRecoveryType"
+                    description: Orphan file recovery
+                endpoint:
+                    type: string
+                    title: Fujitsu ETERNUS endpoint
+                    description: "Fujitsu ETERNUS S3 endpoint URL — the appliance hostname for CS8000 COSS or AX/HX ONTAP S3 (example: https://eternus-s3.example.com)"
+                    pattern: ^https?://.*
+                description:
+                    type: string
+                    title: Description
+                    description: Optional description for this configuration.
+                awsSecret:
+                    type: string
+                    title: Secret key pair
+                    description: Select or create a stored secret that references your access key and secret key
+                compress:
+                    $ref: "#/components/schemas/CompressionOptionsHttp"
+                    description: Data compression format to apply to HTTP content before it is delivered
+                compressionLevel:
+                    $ref: "#/components/schemas/CompressionLevelOptions"
+                    description: Compression level to apply before moving files to final destination
+                automaticSchema:
+                    type: boolean
+                    title: Automatic schema
+                    description: Automatically calculate the schema based on the events of each Parquet file generated
+                parquetSchema:
+                    type: string
+                    title: Parquet schema
+                    description: To add a new schema, navigate to Processing > Knowledge > Parquet Schemas
+                    minLength: 1
+                parquetVersion:
+                    $ref: "#/components/schemas/ParquetVersionOptions"
+                    description: Determines which data types are supported and how they are represented
+                parquetDataPageVersion:
+                    $ref: "#/components/schemas/DataPageVersionOptions"
+                    description: Serialization format of data pages. Note that some reader implementations use Data page V2's attributes to work more efficiently, while others ignore it.
+                parquetRowGroupLength:
+                    type: number
+                    title: Group row limit
+                    description: The number of rows that every group will contain. The final group can contain a smaller number of rows.
+                    minimum: 1
+                    maximum: 67108864
+                parquetPageSize:
+                    type: string
+                    title: Page size
+                    description: Target memory size for page segments, such as 1MB or 128MB. Generally, lower values improve reading speed, while higher values improve compression.
+                    pattern: ^\d+\s*(?:[kK][bB]|[mM][bB]|[gG][bB]|[tT][bB])?$
+                shouldLogInvalidRows:
+                    type: boolean
+                    title: Log invalid rows
+                    description: Log up to 3 rows that @{product} skips due to data mismatch
+                keyValueMetadata:
+                    type: array
+                    title: Metadata (optional)
+                    description: 'The metadata of files the Destination writes will include the properties you add here as key-value pairs. Useful for tagging. Examples: "key":"OCSF Event Class", "value":"9001"'
+                    minItems: 0
+                    items:
+                        $ref: "#/components/schemas/KeyValueMetadataConfOutputFilesystem"
+                enableStatistics:
+                    type: boolean
+                    title: Write statistics
+                    description: Statistics profile an entire file in terms of minimum/maximum values within data, numbers of nulls, etc. You can use Parquet tools to view statistics.
+                enableWritePageIndex:
+                    type: boolean
+                    title: Write page indexes
+                    description: One page index contains statistics for one data page. Parquet readers use statistics to enable page skipping.
+                enablePageChecksum:
+                    type: boolean
+                    title: Write page checksum
+                    description: Parquet tools can use the checksum of a Parquet page to verify data integrity
+                emptyDirCleanupSec:
+                    type: number
+                    title: Staging cleanup period
+                    description: How frequently, in seconds, to clean up empty directories
+                    minimum: 10
+                    maximum: 86400
+                directoryBatchSize:
+                    type: number
+                    title: Directory batch size
+                    description: Number of directories to process in each batch during cleanup of empty directories. Minimum is 10, maximum is 10000. Higher values may require more memory.
+                deadletterPath:
+                    type: string
+                    title: Dead-letter location
+                    description: Storage location for files that fail to reach their final destination after maximum retries are exceeded
+                maxRetryNum:
+                    type: number
+                    title: Retry limit
+                    description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
+                    minimum: 1
+                __template_streamtags:
+                    type: string
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                __template_bucket:
+                    type: string
+                    description: Binds 'bucket' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'bucket' at runtime.
+                __template_region:
+                    type: string
+                    description: Binds 'region' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'region' at runtime.
+                __template_destPath:
+                    type: string
+                    description: Binds 'destPath' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'destPath' at runtime.
+                __template_partitionExpr:
+                    type: string
+                    description: Binds 'partitionExpr' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+                __template_format:
+                    type: string
+                    description: Binds 'format' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'format' at runtime.
+                __template_baseFileName:
+                    type: string
+                    description: Binds 'baseFileName' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'baseFileName' at runtime.
+                __template_fileNameSuffix:
+                    type: string
+                    description: Binds 'fileNameSuffix' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'fileNameSuffix' at runtime.
+                __template_onBackpressure:
+                    type: string
+                    description: Binds 'onBackpressure' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'onBackpressure' at runtime.
+                __template_endpoint:
+                    type: string
+                    description: Binds 'endpoint' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'endpoint' at runtime.
+                __template_compress:
+                    type: string
+                    description: Binds 'compress' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'compress' at runtime.
+                __template_parquetSchema:
+                    type: string
+                    description: Binds 'parquetSchema' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+            title: OutputFujitsuEternusS3
         OutputDatacoreSwarmS3:
             type: object
             required:
@@ -69025,6 +69313,309 @@ components:
                     type: string
                     description: Binds 'parquetSchema' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'parquetSchema' at runtime.
             title: OutputDatacoreSwarmS3
+        OutputXskyXeosS3:
+            type: object
+            required:
+                - type
+                - bucket
+                - stagePath
+                - endpoint
+            properties:
+                id:
+                    type: string
+                    title: Output ID
+                    description: Unique name for this output
+                type:
+                    type: string
+                    enum:
+                        - xsky_xeos_s3
+                    description: Connector type identifier.
+                pipeline:
+                    type: string
+                    title: Pipeline
+                    description: Pipeline to process data before sending out to this output
+                systemFields:
+                    type: array
+                    title: System fields
+                    description: Fields to automatically add to events, such as cribl_pipe. Supports wildcards.
+                    items:
+                        type: string
+                environment:
+                    type: string
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                streamtags:
+                    type: array
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    items:
+                        type: string
+                schemaMonitorSettings:
+                    $ref: "#/components/schemas/SchemaMonitorSettingsTypeOptional"
+                    description: Configuration for Schema Monitor on this Destination.
+                awsAuthenticationMethod:
+                    $ref: "#/components/schemas/AuthenticationMethodOptionsSecret"
+                    description: Authentication method.
+                reuseConnections:
+                    type: boolean
+                    title: Reuse connections
+                    description: Reuse connections between requests, which can improve performance
+                rejectUnauthorized:
+                    type: boolean
+                    title: Reject unauthorized certificates
+                    description: Reject certificates that cannot be verified against a valid CA, such as self-signed certificates
+                bucket:
+                    type: string
+                    title: XSKY XEOS bucket name
+                    description: "Name of the destination XSKY XEOS bucket. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at initialization time. Example referencing a Global Variable: `myBucket-${C.vars.myVar}`"
+                region:
+                    type: string
+                    title: Region
+                    description: Region where the XSKY XEOS bucket is located
+                destPath:
+                    type: string
+                    title: Key prefix
+                    description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+                maxConcurrentFileParts:
+                    type: number
+                    title: Concurrent file parts upload limit
+                    description: Maximum number of parts to upload in parallel per file. Minimum part size is 5MB.
+                    minimum: 1
+                    maximum: 10
+                verifyPermissions:
+                    type: boolean
+                    title: Verify if bucket exists
+                    description: Disable if you can access files within the bucket but not the bucket itself
+                maxClosingFilesToBackpressure:
+                    type: number
+                    title: Staging file limit
+                    description: Maximum number of files that can be waiting for upload before backpressure is applied
+                    minimum: 10
+                    maximum: 4200
+                stagePath:
+                    type: string
+                    title: Staging location
+                    description: Filesystem location in which to buffer files, before compressing and moving to final destination. Use performant and stable storage.
+                addIdToStagePath:
+                    type: boolean
+                    title: Add output ID
+                    description: Add the Output ID value to staging location
+                removeEmptyDirs:
+                    type: boolean
+                    title: Remove empty staging directories
+                    description: Remove empty staging directories after moving files
+                partitionExpr:
+                    type: string
+                    title: Partitioning expression
+                    description: JavaScript expression defining how files are partitioned and organized. Default is date-based. If blank, Stream will fall back to the event's __partition field value – if present – otherwise to each location's root directory.
+                format:
+                    $ref: "#/components/schemas/DataFormatOptions"
+                    description: Format of the output data
+                baseFileName:
+                    type: string
+                    title: File name prefix expression
+                    description: JavaScript expression to define the output filename prefix (can be constant)
+                fileNameSuffix:
+                    type: string
+                    title: File name suffix expression
+                    description: JavaScript expression to define the output filename suffix (can be constant).  The `__format` variable refers to the value of the `Data format` field (`json` or `raw`).  The `__compression` field refers to the kind of compression being used (`none` or `gzip`).
+                maxFileSizeMB:
+                    type: number
+                    title: File size limit (MB)
+                    description: Maximum uncompressed output file size. Files of this size will be closed and moved to final output location.
+                    maximum: 1024
+                    minimum: 5
+                maxFileOpenTimeSec:
+                    type: number
+                    title: File open time limit (sec)
+                    description: Maximum amount of time to write to a file. Files open for longer than this will be closed and moved to final output location.
+                    minimum: 10
+                    maximum: 86400
+                maxFileIdleTimeSec:
+                    type: number
+                    title: Idle time limit (sec)
+                    description: Maximum amount of time to keep inactive files open. Files open for longer than this will be closed and moved to final output location.
+                    minimum: 5
+                    maximum: 86400
+                maxOpenFiles:
+                    type: number
+                    title: Open file limit
+                    description: Maximum number of files to keep open concurrently. When exceeded, @{product} will close the oldest open files and move them to the final output location.
+                    minimum: 10
+                    maximum: 2000
+                headerLine:
+                    type: string
+                    title: Header line
+                    description: If set, this line will be written to the beginning of each output file
+                writeHighWaterMark:
+                    type: number
+                    title: Writing high watermark (KB)
+                    description: Buffer size used to write to a file
+                    maximum: 4096
+                    minimum: 16
+                onBackpressure:
+                    $ref: "#/components/schemas/BackpressureBehaviorOptionsBlockDrop"
+                    description: How to handle events when all receivers are exerting backpressure
+                deadletterEnabled:
+                    type: boolean
+                    title: Enable dead-lettering
+                    description: If a file fails to move to its final destination after the maximum number of retries, move it to a designated directory to prevent further errors
+                onDiskFullBackpressure:
+                    $ref: "#/components/schemas/DiskSpaceProtectionOptions"
+                    description: How to handle events when disk space is below the global 'Min free disk space' limit
+                forceCloseOnShutdown:
+                    type: boolean
+                    title: Force close on shutdown
+                    description: Force all staged files to close during an orderly Node shutdown. This triggers immediate upload of in-progress data — regardless of idle time, file age, or size thresholds — to minimize data loss.
+                retrySettings:
+                    $ref: "#/components/schemas/RetrySettingsType"
+                    description: Retry settings for failed file uploads.
+                orphans:
+                    $ref: "#/components/schemas/OrphanFileRecoveryType"
+                    description: Orphan file recovery
+                endpoint:
+                    type: string
+                    title: XSKY XEOS endpoint
+                    description: "XSKY XEOS object storage gateway endpoint URL (example: https://xeos.example.com)"
+                    pattern: ^https?://.*
+                objectACL:
+                    $ref: "#/components/schemas/ObjectAclOptions"
+                    description: Object ACL to assign to uploaded objects
+                serverSideEncryption:
+                    $ref: "#/components/schemas/ServerSideEncryptionForUploadedObjectsOptions"
+                    description: Server-side encryption to use for uploaded objects
+                kmsKeyId:
+                    type: string
+                    title: KMS key ID
+                    description: ID or ARN of the KMS customer-managed key to use for encryption
+                description:
+                    type: string
+                    title: Description
+                    description: Optional description for this configuration.
+                awsSecret:
+                    type: string
+                    title: Secret key pair
+                    description: Select or create a stored secret that references your access key and secret key
+                compress:
+                    $ref: "#/components/schemas/CompressionOptionsHttp"
+                    description: Data compression format to apply to HTTP content before it is delivered
+                compressionLevel:
+                    $ref: "#/components/schemas/CompressionLevelOptions"
+                    description: Compression level to apply before moving files to final destination
+                automaticSchema:
+                    type: boolean
+                    title: Automatic schema
+                    description: Automatically calculate the schema based on the events of each Parquet file generated
+                parquetSchema:
+                    type: string
+                    title: Parquet schema
+                    description: To add a new schema, navigate to Processing > Knowledge > Parquet Schemas
+                    minLength: 1
+                parquetVersion:
+                    $ref: "#/components/schemas/ParquetVersionOptions"
+                    description: Determines which data types are supported and how they are represented
+                parquetDataPageVersion:
+                    $ref: "#/components/schemas/DataPageVersionOptions"
+                    description: Serialization format of data pages. Note that some reader implementations use Data page V2's attributes to work more efficiently, while others ignore it.
+                parquetRowGroupLength:
+                    type: number
+                    title: Group row limit
+                    description: The number of rows that every group will contain. The final group can contain a smaller number of rows.
+                    minimum: 1
+                    maximum: 67108864
+                parquetPageSize:
+                    type: string
+                    title: Page size
+                    description: Target memory size for page segments, such as 1MB or 128MB. Generally, lower values improve reading speed, while higher values improve compression.
+                    pattern: ^\d+\s*(?:[kK][bB]|[mM][bB]|[gG][bB]|[tT][bB])?$
+                shouldLogInvalidRows:
+                    type: boolean
+                    title: Log invalid rows
+                    description: Log up to 3 rows that @{product} skips due to data mismatch
+                keyValueMetadata:
+                    type: array
+                    title: Metadata (optional)
+                    description: 'The metadata of files the Destination writes will include the properties you add here as key-value pairs. Useful for tagging. Examples: "key":"OCSF Event Class", "value":"9001"'
+                    minItems: 0
+                    items:
+                        $ref: "#/components/schemas/KeyValueMetadataConfOutputFilesystem"
+                enableStatistics:
+                    type: boolean
+                    title: Write statistics
+                    description: Statistics profile an entire file in terms of minimum/maximum values within data, numbers of nulls, etc. You can use Parquet tools to view statistics.
+                enableWritePageIndex:
+                    type: boolean
+                    title: Write page indexes
+                    description: One page index contains statistics for one data page. Parquet readers use statistics to enable page skipping.
+                enablePageChecksum:
+                    type: boolean
+                    title: Write page checksum
+                    description: Parquet tools can use the checksum of a Parquet page to verify data integrity
+                emptyDirCleanupSec:
+                    type: number
+                    title: Staging cleanup period
+                    description: How frequently, in seconds, to clean up empty directories
+                    minimum: 10
+                    maximum: 86400
+                directoryBatchSize:
+                    type: number
+                    title: Directory batch size
+                    description: Number of directories to process in each batch during cleanup of empty directories. Minimum is 10, maximum is 10000. Higher values may require more memory.
+                deadletterPath:
+                    type: string
+                    title: Dead-letter location
+                    description: Storage location for files that fail to reach their final destination after maximum retries are exceeded
+                maxRetryNum:
+                    type: number
+                    title: Retry limit
+                    description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
+                    minimum: 1
+                __template_streamtags:
+                    type: string
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                __template_bucket:
+                    type: string
+                    description: Binds 'bucket' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'bucket' at runtime.
+                __template_region:
+                    type: string
+                    description: Binds 'region' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'region' at runtime.
+                __template_destPath:
+                    type: string
+                    description: Binds 'destPath' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'destPath' at runtime.
+                __template_partitionExpr:
+                    type: string
+                    description: Binds 'partitionExpr' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+                __template_format:
+                    type: string
+                    description: Binds 'format' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'format' at runtime.
+                __template_baseFileName:
+                    type: string
+                    description: Binds 'baseFileName' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'baseFileName' at runtime.
+                __template_fileNameSuffix:
+                    type: string
+                    description: Binds 'fileNameSuffix' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'fileNameSuffix' at runtime.
+                __template_onBackpressure:
+                    type: string
+                    description: Binds 'onBackpressure' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'onBackpressure' at runtime.
+                __template_endpoint:
+                    type: string
+                    description: Binds 'endpoint' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'endpoint' at runtime.
+                __template_objectACL:
+                    type: string
+                    description: Binds 'objectACL' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'objectACL' at runtime.
+                __template_serverSideEncryption:
+                    type: string
+                    description: Binds 'serverSideEncryption' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'serverSideEncryption' at runtime.
+                __template_kmsKeyId:
+                    type: string
+                    description: Binds 'kmsKeyId' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'kmsKeyId' at runtime.
+                __template_compress:
+                    type: string
+                    description: Binds 'compress' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'compress' at runtime.
+                __template_parquetSchema:
+                    type: string
+                    description: Binds 'parquetSchema' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+            title: OutputXskyXeosS3
         Output:
             oneOf:
                 - $ref: "#/components/schemas/OutputDefault"
@@ -69150,7 +69741,9 @@ components:
                 - $ref: "#/components/schemas/OutputNetappOntapS3"
                 - $ref: "#/components/schemas/OutputVultrObjectStorageS3"
                 - $ref: "#/components/schemas/OutputZadaraS3"
+                - $ref: "#/components/schemas/OutputFujitsuEternusS3"
                 - $ref: "#/components/schemas/OutputDatacoreSwarmS3"
+                - $ref: "#/components/schemas/OutputXskyXeosS3"
             discriminator:
                 propertyName: type
                 mapping:
@@ -69277,7 +69870,9 @@ components:
                     netapp_ontap_s3: "#/components/schemas/OutputNetappOntapS3"
                     vultr_object_storage_s3: "#/components/schemas/OutputVultrObjectStorageS3"
                     zadara_s3: "#/components/schemas/OutputZadaraS3"
+                    fujitsu_eternus_s3: "#/components/schemas/OutputFujitsuEternusS3"
                     datacore_swarm_s3: "#/components/schemas/OutputDatacoreSwarmS3"
+                    xsky_xeos_s3: "#/components/schemas/OutputXskyXeosS3"
             title: Output
         PaginatedOutput:
             type: object
@@ -69440,7 +70035,9 @@ components:
                 - netapp_ontap_s3
                 - vultr_object_storage_s3
                 - zadara_s3
+                - fujitsu_eternus_s3
                 - datacore_swarm_s3
+                - xsky_xeos_s3
             title: DestinationType
             x-speakeasy-unknown-values: allow
         PaginatedOutputResponse:
@@ -76683,6 +77280,12 @@ components:
                 subQueryText:
                     type: string
                     description: Sub-query text for this stage.
+                viewEarliestMs:
+                    type: number
+                    description: Dataset View earliest time bound in epoch milliseconds.
+                viewLatestMs:
+                    type: number
+                    description: Dataset View latest time bound in epoch milliseconds.
             required:
                 - dependencies
                 - filter
@@ -77138,7 +77741,7 @@ components:
                     description: Early-pipeline sampling probability. On create, inclusive range <code>0</code>–<code>1</code> per (<code>minimum</code> <code>0</code>, <code>maximum</code> <code>1</code>).
                 savedQueryName:
                     type: string
-                    description: Display name of the Saved Query linked via ; populated when requested from the jobs API.
+                    description: Display name of the Saved Query linked via . Scheduled jobs record the name when the run is scheduled; the jobs list API returns the current name when saved-query names are requested.
                 searchParameterDeclarations:
                     type: array
                     items:
@@ -102935,71 +103538,207 @@ components:
                 - branch
                 - synced
             title: GitSyncResult
-        PaginatedAgentToolCatalogItem:
-            type: object
-            required:
-                - items
-                - count
-            properties:
-                items:
-                    type: array
-                    description: The pre-limited items in the list of results
-                    items:
-                        $ref: "#/components/schemas/AgentToolCatalogItem"
-                count:
-                    type: integer
-                    description: Total number of items available
-                offset:
-                    type: integer
-                    description: Pagination offset
-                limit:
-                    type: integer
-                    description: Pagination limit
-        WorkflowToolInputSchema:
-            type: object
-            additionalProperties: true
-            title: WorkflowToolInputSchema
-        WorkflowToolSource:
-            type: string
-            enum:
-                - cribl_leader
-                - external_mcp
-            title: WorkflowToolSource
-            x-speakeasy-unknown-values: allow
-        AgentToolCatalogItem:
+        McpTool:
             type: object
             properties:
                 description:
                     type: string
-                    description: Short description for the tool picker.
-                id:
-                    type: string
-                    description: Stable catalog id (MCP tool name, or <code>mcp_&lt;serverId&gt;_&lt;toolName&gt;</code> for external tools).
-                inputSchema:
-                    $ref: "#/components/schemas/WorkflowToolInputSchema"
-                    description: MCP JSON Schema for execution args.
+                    description: What the tool does, as the server describes it.
                 name:
                     type: string
-                    description: Raw MCP tool name when <code>source</code> is <code>external_mcp</code>.
-                serverDisplayName:
-                    type: string
-                    description: Display name of the MCP Integration when <code>source</code> is <code>external_mcp</code>. Falls back to <code>serverId</code> when the Integration has no display name.
-                serverId:
-                    type: string
-                    description: External MCP server id when <code>source</code> is <code>external_mcp</code>.
-                source:
-                    $ref: "#/components/schemas/WorkflowToolSource"
-                    description: Catalog source for this tool.
+                    description: Tool name, as the Integration's MCP server spells it.
+                readOnly:
+                    type: boolean
+                    description: Whether the server annotated the tool as changing nothing. A tool it did not annotate is reported as changing something.
                 title:
                     type: string
-                    description: Display title for the tool picker.
+                    description: Display title the server gives the tool; its name when the server gives none.
             required:
                 - description
-                - id
-                - inputSchema
-                - source
+                - name
+                - readOnly
                 - title
-            title: AgentToolCatalogItem
+            title: McpTool
+        McpServerTools:
+            type: object
+            properties:
+                displayName:
+                    type: string
+                    description: Integration display name; its id when it has none.
+                serverId:
+                    type: string
+                    description: Integration id.
+                tools:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/McpTool"
+                    description: The tools the Integration offers.
+            required:
+                - displayName
+                - serverId
+                - tools
+            title: McpServerTools
+        McpToolsResponse:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/McpServerTools"
+                    description: One entry per MCP Integration, by id.
+            required:
+                - items
+            title: McpToolsResponse
+        RestTagCount:
+            type: object
+            properties:
+                operations:
+                    type: number
+                    description: How many operations carry the tag.
+                tag:
+                    type: string
+                    description: Tag name.
+            required:
+                - operations
+                - tag
+            title: RestTagCount
+        RestTagList:
+            type: object
+            properties:
+                tags:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/RestTagCount"
+                    description: Every tag of the API, the largest first.
+            required:
+                - tags
+            title: RestTagList
+        RestOperation:
+            type: object
+            properties:
+                method:
+                    $ref: "#/components/schemas/MethodOptionsRestOperation"
+                    description: HTTP method.
+                paths:
+                    type: array
+                    items:
+                        type: string
+                    description: Paths the Leader answers at, below <code>/api/v1</code>, with the mount applied. A <code>{placeholder}</code> is an id to fill in.
+                readOnly:
+                    type: boolean
+                    description: Whether a call changes nothing, which is every <code>GET</code>.
+                specPath:
+                    type: string
+                    description: Path as the OpenAPI document spells it, without its mount.
+                summary:
+                    type: string
+                    description: One-line summary of the operation.
+                tags:
+                    type: array
+                    items:
+                        type: string
+                    description: Tags the operation is grouped under.
+            required:
+                - method
+                - paths
+                - readOnly
+                - specPath
+                - summary
+                - tags
+            title: RestOperation
+        RestOperationMatches:
+            type: object
+            properties:
+                entries:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/RestOperation"
+                    description: The matching operations, without their parameters.
+                total:
+                    type: number
+                    description: How many operations matched, of which <code>entries</code> holds the first page.
+            required:
+                - entries
+                - total
+            title: RestOperationMatches
+        RestOperationParam:
+            type: object
+            properties:
+                description:
+                    type: string
+                    description: What the parameter does, shortened.
+                in:
+                    type: string
+                    description: "Where the parameter goes: <code>path</code>, <code>query</code> or <code>header</code>."
+                name:
+                    type: string
+                    description: Parameter name, as the operation spells it.
+                required:
+                    type: boolean
+                    description: Present and <code>true</code> when the operation rejects a call that omits the parameter.
+                schema:
+                    type: object
+                    additionalProperties: true
+                    description: "The value's JSON Schema, compacted, when it says more than <code>type</code>: the values an enum allows, the type of an array's items, the alternatives a value may take."
+                type:
+                    type: string
+                    description: JSON type of the value, when the operation declares one.
+            required:
+                - in
+                - name
+            title: RestOperationParam
+        RestOperationDetail:
+            type: object
+            properties:
+                description:
+                    type: string
+                    description: The operation's own description, shortened and stripped of markup.
+                method:
+                    $ref: "#/components/schemas/MethodOptionsRestOperation"
+                    description: HTTP method.
+                parameters:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/RestOperationParam"
+                    description: Path, query and header parameters the operation takes.
+                paths:
+                    type: array
+                    items:
+                        type: string
+                    description: Paths the Leader answers at, below <code>/api/v1</code>, with the mount applied. A <code>{placeholder}</code> is an id to fill in.
+                readOnly:
+                    type: boolean
+                    description: Whether a call changes nothing, which is every <code>GET</code>.
+                requestBody:
+                    type: object
+                    additionalProperties: true
+                    description: JSON request body schema, with references resolved a few levels deep and prose shortened.
+                specPath:
+                    type: string
+                    description: Path as the OpenAPI document spells it, without its mount.
+                summary:
+                    type: string
+                    description: One-line summary of the operation.
+                tags:
+                    type: array
+                    items:
+                        type: string
+                    description: Tags the operation is grouped under.
+            required:
+                - method
+                - parameters
+                - paths
+                - readOnly
+                - specPath
+                - summary
+                - tags
+            title: RestOperationDetail
+        RestLookupResponse:
+            oneOf:
+                - $ref: "#/components/schemas/RestTagList"
+                - $ref: "#/components/schemas/RestOperationMatches"
+                - $ref: "#/components/schemas/RestOperationDetail"
+            title: RestLookupResponse
         AiDatasetIntelligence:
             type: object
             properties:
@@ -163773,7 +164512,13 @@ components:
                 - $ref: "#/components/schemas/OutputZadaraS3PartialRequest"
                   required:
                     - type
+                - $ref: "#/components/schemas/OutputFujitsuEternusS3PartialRequest"
+                  required:
+                    - type
                 - $ref: "#/components/schemas/OutputDatacoreSwarmS3PartialRequest"
+                  required:
+                    - type
+                - $ref: "#/components/schemas/OutputXskyXeosS3PartialRequest"
                   required:
                     - type
             discriminator:
@@ -163902,7 +164647,9 @@ components:
                     netapp_ontap_s3: "#/components/schemas/OutputNetappOntapS3PartialRequest"
                     vultr_object_storage_s3: "#/components/schemas/OutputVultrObjectStorageS3PartialRequest"
                     zadara_s3: "#/components/schemas/OutputZadaraS3PartialRequest"
+                    fujitsu_eternus_s3: "#/components/schemas/OutputFujitsuEternusS3PartialRequest"
                     datacore_swarm_s3: "#/components/schemas/OutputDatacoreSwarmS3PartialRequest"
+                    xsky_xeos_s3: "#/components/schemas/OutputXskyXeosS3PartialRequest"
             title: OutputPartialRequest
             properties:
                 type:
@@ -222959,6 +223706,539 @@ components:
                         - type: string
                         - type: "null"
             title: OutputZadaraS3PartialRequest
+        OutputFujitsuEternusS3PartialRequest:
+            type: object
+            properties:
+                id:
+                    title: Output ID
+                    description: Unique name for this output
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                type:
+                    type: string
+                    enum:
+                        - fujitsu_eternus_s3
+                    description: Connector type identifier.
+                pipeline:
+                    title: Pipeline
+                    description: Pipeline to process data before sending out to this output
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                systemFields:
+                    title: System fields
+                    description: Fields to automatically add to events, such as cribl_pipe. Supports wildcards.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                environment:
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                streamtags:
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                schemaMonitorSettings:
+                    title: Schema Monitor Settings
+                    description: Configuration for Schema Monitor on this Destination.
+                    anyOf:
+                        - type: object
+                          properties:
+                            enabled:
+                                title: Schema Monitor
+                                description: Enable Schema Monitor to detect schema drift for this Destination. Events are sampled after this output's Pipeline runs, immediately before being sent.
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            targetSchemas:
+                                title: Schema Monitor target schemas
+                                description: Schema Knowledge Objects that sampled events are acceptable against. An event that matches any listed schema does not count as drift.
+                                anyOf:
+                                    - type: array
+                                      items:
+                                        $ref: "#/components/schemas/TargetSchemaConfOutputDefault"
+                                    - type: "null"
+                        - type: "null"
+                awsAuthenticationMethod:
+                    title: Authentication method
+                    description: Authentication method.
+                    x-speakeasy-enum-descriptions:
+                        - Secret
+                    anyOf:
+                        - type: string
+                          enum:
+                            - secret
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                reuseConnections:
+                    title: Reuse connections
+                    description: Reuse connections between requests, which can improve performance
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                rejectUnauthorized:
+                    title: Reject unauthorized certificates
+                    description: Reject certificates that cannot be verified against a valid CA, such as self-signed certificates
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                bucket:
+                    type: string
+                    title: Fujitsu ETERNUS bucket name
+                    description: "Name of the destination Fujitsu ETERNUS bucket. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at initialization time. Example referencing a Global Variable: `myBucket-${C.vars.myVar}`"
+                region:
+                    title: Region
+                    description: Region where the Fujitsu ETERNUS bucket is located
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                destPath:
+                    title: Key prefix
+                    description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                maxConcurrentFileParts:
+                    title: Concurrent file parts upload limit
+                    description: Maximum number of parts to upload in parallel per file. Minimum part size is 5MB.
+                    anyOf:
+                        - type: number
+                          minimum: 1
+                          maximum: 10
+                        - type: "null"
+                verifyPermissions:
+                    title: Verify if bucket exists
+                    description: Disable if you can access files within the bucket but not the bucket itself
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                maxClosingFilesToBackpressure:
+                    title: Staging file limit
+                    description: Maximum number of files that can be waiting for upload before backpressure is applied
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                          maximum: 4200
+                        - type: "null"
+                stagePath:
+                    type: string
+                    title: Staging location
+                    description: Filesystem location in which to buffer files, before compressing and moving to final destination. Use performant and stable storage.
+                addIdToStagePath:
+                    title: Add output ID
+                    description: Add the Output ID value to staging location
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                removeEmptyDirs:
+                    title: Remove empty staging directories
+                    description: Remove empty staging directories after moving files
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                partitionExpr:
+                    title: Partitioning expression
+                    description: JavaScript expression defining how files are partitioned and organized. Default is date-based. If blank, Stream will fall back to the event's __partition field value – if present – otherwise to each location's root directory.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                format:
+                    title: Data format
+                    description: Format of the output data
+                    x-speakeasy-enum-descriptions:
+                        - JSON
+                        - Raw
+                        - Parquet
+                    anyOf:
+                        - type: string
+                          enum:
+                            - json
+                            - raw
+                            - parquet
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                baseFileName:
+                    title: File name prefix expression
+                    description: JavaScript expression to define the output filename prefix (can be constant)
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                fileNameSuffix:
+                    title: File name suffix expression
+                    description: JavaScript expression to define the output filename suffix (can be constant).  The `__format` variable refers to the value of the `Data format` field (`json` or `raw`).  The `__compression` field refers to the kind of compression being used (`none` or `gzip`).
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                maxFileSizeMB:
+                    title: File size limit (MB)
+                    description: Maximum uncompressed output file size. Files of this size will be closed and moved to final output location.
+                    anyOf:
+                        - type: number
+                          maximum: 1024
+                          minimum: 5
+                        - type: "null"
+                maxFileOpenTimeSec:
+                    title: File open time limit (sec)
+                    description: Maximum amount of time to write to a file. Files open for longer than this will be closed and moved to final output location.
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                          maximum: 86400
+                        - type: "null"
+                maxFileIdleTimeSec:
+                    title: Idle time limit (sec)
+                    description: Maximum amount of time to keep inactive files open. Files open for longer than this will be closed and moved to final output location.
+                    anyOf:
+                        - type: number
+                          minimum: 5
+                          maximum: 86400
+                        - type: "null"
+                maxOpenFiles:
+                    title: Open file limit
+                    description: Maximum number of files to keep open concurrently. When exceeded, @{product} will close the oldest open files and move them to the final output location.
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                          maximum: 2000
+                        - type: "null"
+                headerLine:
+                    title: Header line
+                    description: If set, this line will be written to the beginning of each output file
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                writeHighWaterMark:
+                    title: Writing high watermark (KB)
+                    description: Buffer size used to write to a file
+                    anyOf:
+                        - type: number
+                          maximum: 4096
+                          minimum: 16
+                        - type: "null"
+                onBackpressure:
+                    title: Backpressure behavior
+                    description: How to handle events when all receivers are exerting backpressure
+                    x-speakeasy-enum-descriptions:
+                        - Block
+                        - Drop
+                    anyOf:
+                        - type: string
+                          enum:
+                            - block
+                            - drop
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                deadletterEnabled:
+                    title: Enable dead-lettering
+                    description: If a file fails to move to its final destination after the maximum number of retries, move it to a designated directory to prevent further errors
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                onDiskFullBackpressure:
+                    title: Disk space protection
+                    description: How to handle events when disk space is below the global 'Min free disk space' limit
+                    x-speakeasy-enum-descriptions:
+                        - Block
+                        - Drop
+                    anyOf:
+                        - type: string
+                          enum:
+                            - block
+                            - drop
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                forceCloseOnShutdown:
+                    title: Force close on shutdown
+                    description: Force all staged files to close during an orderly Node shutdown. This triggers immediate upload of in-progress data — regardless of idle time, file age, or size thresholds — to minimize data loss.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                retrySettings:
+                    description: Retry settings for failed file uploads.
+                    anyOf:
+                        - type: object
+                          properties:
+                            enabled:
+                                title: Enable retry backoff
+                                description: Apply exponential backoff with jitter when file uploads fail repeatedly.
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            initialBackoffMs:
+                                title: Initial backoff (ms)
+                                description: "Initial delay before first retry attempt. Valid range: 1s-5min (1000-300000ms). Values outside this range will be clamped to the nearest valid value."
+                                anyOf:
+                                    - type: number
+                                    - type: "null"
+                            backoffMultiplier:
+                                title: Backoff multiplier
+                                description: "Multiplier applied to backoff delay after each retry. Valid range: 1-10. Values outside this range will be clamped to the nearest valid value."
+                                anyOf:
+                                    - type: number
+                                    - type: "null"
+                            maxBackoffMs:
+                                title: Max backoff (ms)
+                                description: "Maximum delay between retry attempts. Valid range: 1s-10min (1000-600000ms). Values outside this range will be clamped to the nearest valid value."
+                                anyOf:
+                                    - type: number
+                                    - type: "null"
+                            jitterPercent:
+                                title: Jitter (%)
+                                description: "Random jitter percentage added to backoff delay to prevent thundering herd. Valid range: 0-100. Values outside this range will be clamped to the nearest valid value."
+                                anyOf:
+                                    - type: number
+                                    - type: "null"
+                        - type: "null"
+                orphans:
+                    title: Orphan file recovery
+                    description: Orphan file recovery
+                    anyOf:
+                        - type: object
+                          properties:
+                            disabled:
+                                title: Disabled
+                                description: Periodically scan the staging directory for files not tracked by any Worker manifest to recover them
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            periodMin:
+                                title: Period (minutes)
+                                description: Minimum interval between reconciliation runs
+                                anyOf:
+                                    - type: number
+                                      minimum: 5
+                                      maximum: 1440
+                                    - type: "null"
+                        - type: "null"
+                endpoint:
+                    type: string
+                    title: Fujitsu ETERNUS endpoint
+                    description: "Fujitsu ETERNUS S3 endpoint URL — the appliance hostname for CS8000 COSS or AX/HX ONTAP S3 (example: https://eternus-s3.example.com)"
+                    pattern: ^https?://.*
+                description:
+                    title: Description
+                    description: Optional description for this configuration.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                awsSecret:
+                    title: Secret key pair
+                    description: Select or create a stored secret that references your access key and secret key
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                compress:
+                    title: Compression
+                    description: Data compression format to apply to HTTP content before it is delivered
+                    anyOf:
+                        - type: string
+                          enum:
+                            - none
+                            - gzip
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                compressionLevel:
+                    title: Compression level
+                    description: Compression level to apply before moving files to final destination
+                    x-speakeasy-enum-descriptions:
+                        - Best Speed
+                        - Normal
+                        - Best Compression
+                    anyOf:
+                        - type: string
+                          enum:
+                            - best_speed
+                            - normal
+                            - best_compression
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                automaticSchema:
+                    title: Automatic schema
+                    description: Automatically calculate the schema based on the events of each Parquet file generated
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                parquetSchema:
+                    title: Parquet schema
+                    description: To add a new schema, navigate to Processing > Knowledge > Parquet Schemas
+                    anyOf:
+                        - type: string
+                          minLength: 1
+                        - type: "null"
+                parquetVersion:
+                    title: Parquet version
+                    x-speakeasy-enum-descriptions:
+                        - "1.0"
+                        - "2.4"
+                        - "2.6"
+                    description: Determines which data types are supported and how they are represented
+                    anyOf:
+                        - type: string
+                          enum:
+                            - PARQUET_1_0
+                            - PARQUET_2_4
+                            - PARQUET_2_6
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                parquetDataPageVersion:
+                    title: Data page version
+                    x-speakeasy-enum-descriptions:
+                        - V1
+                        - V2
+                    description: Serialization format of data pages. Note that some reader implementations use Data page V2's attributes to work more efficiently, while others ignore it.
+                    anyOf:
+                        - type: string
+                          enum:
+                            - DATA_PAGE_V1
+                            - DATA_PAGE_V2
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                parquetRowGroupLength:
+                    title: Group row limit
+                    description: The number of rows that every group will contain. The final group can contain a smaller number of rows.
+                    anyOf:
+                        - type: number
+                          minimum: 1
+                          maximum: 67108864
+                        - type: "null"
+                parquetPageSize:
+                    title: Page size
+                    description: Target memory size for page segments, such as 1MB or 128MB. Generally, lower values improve reading speed, while higher values improve compression.
+                    anyOf:
+                        - type: string
+                          pattern: ^\d+\s*(?:[kK][bB]|[mM][bB]|[gG][bB]|[tT][bB])?$
+                        - type: "null"
+                shouldLogInvalidRows:
+                    title: Log invalid rows
+                    description: Log up to 3 rows that @{product} skips due to data mismatch
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                keyValueMetadata:
+                    title: Metadata (optional)
+                    description: 'The metadata of files the Destination writes will include the properties you add here as key-value pairs. Useful for tagging. Examples: "key":"OCSF Event Class", "value":"9001"'
+                    anyOf:
+                        - type: array
+                          minItems: 0
+                          items:
+                            $ref: "#/components/schemas/KeyValueMetadataConfOutputFilesystem"
+                        - type: "null"
+                enableStatistics:
+                    title: Write statistics
+                    description: Statistics profile an entire file in terms of minimum/maximum values within data, numbers of nulls, etc. You can use Parquet tools to view statistics.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                enableWritePageIndex:
+                    title: Write page indexes
+                    description: One page index contains statistics for one data page. Parquet readers use statistics to enable page skipping.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                enablePageChecksum:
+                    title: Write page checksum
+                    description: Parquet tools can use the checksum of a Parquet page to verify data integrity
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                emptyDirCleanupSec:
+                    title: Staging cleanup period
+                    description: How frequently, in seconds, to clean up empty directories
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                          maximum: 86400
+                        - type: "null"
+                directoryBatchSize:
+                    title: Directory batch size
+                    description: Number of directories to process in each batch during cleanup of empty directories. Minimum is 10, maximum is 10000. Higher values may require more memory.
+                    anyOf:
+                        - type: number
+                        - type: "null"
+                deadletterPath:
+                    title: Dead-letter location
+                    description: Storage location for files that fail to reach their final destination after maximum retries are exceeded
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                maxRetryNum:
+                    title: Retry limit
+                    description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
+                    anyOf:
+                        - type: number
+                          minimum: 1
+                        - type: "null"
+                __template_streamtags:
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_bucket:
+                    description: Binds 'bucket' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'bucket' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_region:
+                    description: Binds 'region' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'region' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_destPath:
+                    description: Binds 'destPath' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'destPath' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_partitionExpr:
+                    description: Binds 'partitionExpr' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_format:
+                    description: Binds 'format' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'format' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_baseFileName:
+                    description: Binds 'baseFileName' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'baseFileName' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_fileNameSuffix:
+                    description: Binds 'fileNameSuffix' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'fileNameSuffix' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_onBackpressure:
+                    description: Binds 'onBackpressure' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'onBackpressure' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_endpoint:
+                    description: Binds 'endpoint' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'endpoint' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_compress:
+                    description: Binds 'compress' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'compress' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_parquetSchema:
+                    description: Binds 'parquetSchema' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+            title: OutputFujitsuEternusS3PartialRequest
         OutputDatacoreSwarmS3PartialRequest:
             type: object
             properties:
@@ -223520,6 +224800,596 @@ components:
                         - type: string
                         - type: "null"
             title: OutputDatacoreSwarmS3PartialRequest
+        OutputXskyXeosS3PartialRequest:
+            type: object
+            properties:
+                id:
+                    title: Output ID
+                    description: Unique name for this output
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                type:
+                    type: string
+                    enum:
+                        - xsky_xeos_s3
+                    description: Connector type identifier.
+                pipeline:
+                    title: Pipeline
+                    description: Pipeline to process data before sending out to this output
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                systemFields:
+                    title: System fields
+                    description: Fields to automatically add to events, such as cribl_pipe. Supports wildcards.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                environment:
+                    title: Environment
+                    description: Optionally, enable this config only on a specified Git branch. If empty, will be enabled everywhere.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                streamtags:
+                    title: Tags
+                    description: Metadata tags used for categorization and filtering.
+                    anyOf:
+                        - type: array
+                          items:
+                            type: string
+                        - type: "null"
+                schemaMonitorSettings:
+                    title: Schema Monitor Settings
+                    description: Configuration for Schema Monitor on this Destination.
+                    anyOf:
+                        - type: object
+                          properties:
+                            enabled:
+                                title: Schema Monitor
+                                description: Enable Schema Monitor to detect schema drift for this Destination. Events are sampled after this output's Pipeline runs, immediately before being sent.
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            targetSchemas:
+                                title: Schema Monitor target schemas
+                                description: Schema Knowledge Objects that sampled events are acceptable against. An event that matches any listed schema does not count as drift.
+                                anyOf:
+                                    - type: array
+                                      items:
+                                        $ref: "#/components/schemas/TargetSchemaConfOutputDefault"
+                                    - type: "null"
+                        - type: "null"
+                awsAuthenticationMethod:
+                    title: Authentication method
+                    description: Authentication method.
+                    x-speakeasy-enum-descriptions:
+                        - Secret
+                    anyOf:
+                        - type: string
+                          enum:
+                            - secret
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                reuseConnections:
+                    title: Reuse connections
+                    description: Reuse connections between requests, which can improve performance
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                rejectUnauthorized:
+                    title: Reject unauthorized certificates
+                    description: Reject certificates that cannot be verified against a valid CA, such as self-signed certificates
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                bucket:
+                    type: string
+                    title: XSKY XEOS bucket name
+                    description: "Name of the destination XSKY XEOS bucket. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at initialization time. Example referencing a Global Variable: `myBucket-${C.vars.myVar}`"
+                region:
+                    title: Region
+                    description: Region where the XSKY XEOS bucket is located
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                destPath:
+                    title: Key prefix
+                    description: "Prefix to prepend to files before uploading. Must be a JavaScript expression (which can evaluate to a constant value), enclosed in quotes or backticks. Can be evaluated only at init time. Example referencing a Global Variable: `myKeyPrefix-${C.vars.myVar}`"
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                maxConcurrentFileParts:
+                    title: Concurrent file parts upload limit
+                    description: Maximum number of parts to upload in parallel per file. Minimum part size is 5MB.
+                    anyOf:
+                        - type: number
+                          minimum: 1
+                          maximum: 10
+                        - type: "null"
+                verifyPermissions:
+                    title: Verify if bucket exists
+                    description: Disable if you can access files within the bucket but not the bucket itself
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                maxClosingFilesToBackpressure:
+                    title: Staging file limit
+                    description: Maximum number of files that can be waiting for upload before backpressure is applied
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                          maximum: 4200
+                        - type: "null"
+                stagePath:
+                    type: string
+                    title: Staging location
+                    description: Filesystem location in which to buffer files, before compressing and moving to final destination. Use performant and stable storage.
+                addIdToStagePath:
+                    title: Add output ID
+                    description: Add the Output ID value to staging location
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                removeEmptyDirs:
+                    title: Remove empty staging directories
+                    description: Remove empty staging directories after moving files
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                partitionExpr:
+                    title: Partitioning expression
+                    description: JavaScript expression defining how files are partitioned and organized. Default is date-based. If blank, Stream will fall back to the event's __partition field value – if present – otherwise to each location's root directory.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                format:
+                    title: Data format
+                    description: Format of the output data
+                    x-speakeasy-enum-descriptions:
+                        - JSON
+                        - Raw
+                        - Parquet
+                    anyOf:
+                        - type: string
+                          enum:
+                            - json
+                            - raw
+                            - parquet
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                baseFileName:
+                    title: File name prefix expression
+                    description: JavaScript expression to define the output filename prefix (can be constant)
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                fileNameSuffix:
+                    title: File name suffix expression
+                    description: JavaScript expression to define the output filename suffix (can be constant).  The `__format` variable refers to the value of the `Data format` field (`json` or `raw`).  The `__compression` field refers to the kind of compression being used (`none` or `gzip`).
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                maxFileSizeMB:
+                    title: File size limit (MB)
+                    description: Maximum uncompressed output file size. Files of this size will be closed and moved to final output location.
+                    anyOf:
+                        - type: number
+                          maximum: 1024
+                          minimum: 5
+                        - type: "null"
+                maxFileOpenTimeSec:
+                    title: File open time limit (sec)
+                    description: Maximum amount of time to write to a file. Files open for longer than this will be closed and moved to final output location.
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                          maximum: 86400
+                        - type: "null"
+                maxFileIdleTimeSec:
+                    title: Idle time limit (sec)
+                    description: Maximum amount of time to keep inactive files open. Files open for longer than this will be closed and moved to final output location.
+                    anyOf:
+                        - type: number
+                          minimum: 5
+                          maximum: 86400
+                        - type: "null"
+                maxOpenFiles:
+                    title: Open file limit
+                    description: Maximum number of files to keep open concurrently. When exceeded, @{product} will close the oldest open files and move them to the final output location.
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                          maximum: 2000
+                        - type: "null"
+                headerLine:
+                    title: Header line
+                    description: If set, this line will be written to the beginning of each output file
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                writeHighWaterMark:
+                    title: Writing high watermark (KB)
+                    description: Buffer size used to write to a file
+                    anyOf:
+                        - type: number
+                          maximum: 4096
+                          minimum: 16
+                        - type: "null"
+                onBackpressure:
+                    title: Backpressure behavior
+                    description: How to handle events when all receivers are exerting backpressure
+                    x-speakeasy-enum-descriptions:
+                        - Block
+                        - Drop
+                    anyOf:
+                        - type: string
+                          enum:
+                            - block
+                            - drop
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                deadletterEnabled:
+                    title: Enable dead-lettering
+                    description: If a file fails to move to its final destination after the maximum number of retries, move it to a designated directory to prevent further errors
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                onDiskFullBackpressure:
+                    title: Disk space protection
+                    description: How to handle events when disk space is below the global 'Min free disk space' limit
+                    x-speakeasy-enum-descriptions:
+                        - Block
+                        - Drop
+                    anyOf:
+                        - type: string
+                          enum:
+                            - block
+                            - drop
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                forceCloseOnShutdown:
+                    title: Force close on shutdown
+                    description: Force all staged files to close during an orderly Node shutdown. This triggers immediate upload of in-progress data — regardless of idle time, file age, or size thresholds — to minimize data loss.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                retrySettings:
+                    description: Retry settings for failed file uploads.
+                    anyOf:
+                        - type: object
+                          properties:
+                            enabled:
+                                title: Enable retry backoff
+                                description: Apply exponential backoff with jitter when file uploads fail repeatedly.
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            initialBackoffMs:
+                                title: Initial backoff (ms)
+                                description: "Initial delay before first retry attempt. Valid range: 1s-5min (1000-300000ms). Values outside this range will be clamped to the nearest valid value."
+                                anyOf:
+                                    - type: number
+                                    - type: "null"
+                            backoffMultiplier:
+                                title: Backoff multiplier
+                                description: "Multiplier applied to backoff delay after each retry. Valid range: 1-10. Values outside this range will be clamped to the nearest valid value."
+                                anyOf:
+                                    - type: number
+                                    - type: "null"
+                            maxBackoffMs:
+                                title: Max backoff (ms)
+                                description: "Maximum delay between retry attempts. Valid range: 1s-10min (1000-600000ms). Values outside this range will be clamped to the nearest valid value."
+                                anyOf:
+                                    - type: number
+                                    - type: "null"
+                            jitterPercent:
+                                title: Jitter (%)
+                                description: "Random jitter percentage added to backoff delay to prevent thundering herd. Valid range: 0-100. Values outside this range will be clamped to the nearest valid value."
+                                anyOf:
+                                    - type: number
+                                    - type: "null"
+                        - type: "null"
+                orphans:
+                    title: Orphan file recovery
+                    description: Orphan file recovery
+                    anyOf:
+                        - type: object
+                          properties:
+                            disabled:
+                                title: Disabled
+                                description: Periodically scan the staging directory for files not tracked by any Worker manifest to recover them
+                                anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                            periodMin:
+                                title: Period (minutes)
+                                description: Minimum interval between reconciliation runs
+                                anyOf:
+                                    - type: number
+                                      minimum: 5
+                                      maximum: 1440
+                                    - type: "null"
+                        - type: "null"
+                endpoint:
+                    type: string
+                    title: XSKY XEOS endpoint
+                    description: "XSKY XEOS object storage gateway endpoint URL (example: https://xeos.example.com)"
+                    pattern: ^https?://.*
+                objectACL:
+                    title: Object ACL
+                    description: Object ACL to assign to uploaded objects
+                    x-speakeasy-enum-descriptions:
+                        - Private
+                        - Public Read Only
+                        - Public Read/Write
+                        - Authenticated Read Only
+                        - AWS EC2 AMI Read Only
+                        - Bucket Owner Read Only
+                        - Bucket Owner Full Control
+                    anyOf:
+                        - type: string
+                          enum:
+                            - private
+                            - public-read
+                            - public-read-write
+                            - authenticated-read
+                            - aws-exec-read
+                            - bucket-owner-read
+                            - bucket-owner-full-control
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                serverSideEncryption:
+                    title: Server-side encryption for uploaded objects
+                    description: Server-side encryption to use for uploaded objects
+                    x-speakeasy-enum-descriptions:
+                        - Amazon S3 Managed Key
+                        - AWS KMS Managed Key
+                    anyOf:
+                        - type: string
+                          enum:
+                            - AES256
+                            - aws:kms
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                kmsKeyId:
+                    title: KMS key ID
+                    description: ID or ARN of the KMS customer-managed key to use for encryption
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                description:
+                    title: Description
+                    description: Optional description for this configuration.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                awsSecret:
+                    title: Secret key pair
+                    description: Select or create a stored secret that references your access key and secret key
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                compress:
+                    title: Compression
+                    description: Data compression format to apply to HTTP content before it is delivered
+                    anyOf:
+                        - type: string
+                          enum:
+                            - none
+                            - gzip
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                compressionLevel:
+                    title: Compression level
+                    description: Compression level to apply before moving files to final destination
+                    x-speakeasy-enum-descriptions:
+                        - Best Speed
+                        - Normal
+                        - Best Compression
+                    anyOf:
+                        - type: string
+                          enum:
+                            - best_speed
+                            - normal
+                            - best_compression
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                automaticSchema:
+                    title: Automatic schema
+                    description: Automatically calculate the schema based on the events of each Parquet file generated
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                parquetSchema:
+                    title: Parquet schema
+                    description: To add a new schema, navigate to Processing > Knowledge > Parquet Schemas
+                    anyOf:
+                        - type: string
+                          minLength: 1
+                        - type: "null"
+                parquetVersion:
+                    title: Parquet version
+                    x-speakeasy-enum-descriptions:
+                        - "1.0"
+                        - "2.4"
+                        - "2.6"
+                    description: Determines which data types are supported and how they are represented
+                    anyOf:
+                        - type: string
+                          enum:
+                            - PARQUET_1_0
+                            - PARQUET_2_4
+                            - PARQUET_2_6
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                parquetDataPageVersion:
+                    title: Data page version
+                    x-speakeasy-enum-descriptions:
+                        - V1
+                        - V2
+                    description: Serialization format of data pages. Note that some reader implementations use Data page V2's attributes to work more efficiently, while others ignore it.
+                    anyOf:
+                        - type: string
+                          enum:
+                            - DATA_PAGE_V1
+                            - DATA_PAGE_V2
+                          x-speakeasy-unknown-values: allow
+                        - type: "null"
+                parquetRowGroupLength:
+                    title: Group row limit
+                    description: The number of rows that every group will contain. The final group can contain a smaller number of rows.
+                    anyOf:
+                        - type: number
+                          minimum: 1
+                          maximum: 67108864
+                        - type: "null"
+                parquetPageSize:
+                    title: Page size
+                    description: Target memory size for page segments, such as 1MB or 128MB. Generally, lower values improve reading speed, while higher values improve compression.
+                    anyOf:
+                        - type: string
+                          pattern: ^\d+\s*(?:[kK][bB]|[mM][bB]|[gG][bB]|[tT][bB])?$
+                        - type: "null"
+                shouldLogInvalidRows:
+                    title: Log invalid rows
+                    description: Log up to 3 rows that @{product} skips due to data mismatch
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                keyValueMetadata:
+                    title: Metadata (optional)
+                    description: 'The metadata of files the Destination writes will include the properties you add here as key-value pairs. Useful for tagging. Examples: "key":"OCSF Event Class", "value":"9001"'
+                    anyOf:
+                        - type: array
+                          minItems: 0
+                          items:
+                            $ref: "#/components/schemas/KeyValueMetadataConfOutputFilesystem"
+                        - type: "null"
+                enableStatistics:
+                    title: Write statistics
+                    description: Statistics profile an entire file in terms of minimum/maximum values within data, numbers of nulls, etc. You can use Parquet tools to view statistics.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                enableWritePageIndex:
+                    title: Write page indexes
+                    description: One page index contains statistics for one data page. Parquet readers use statistics to enable page skipping.
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                enablePageChecksum:
+                    title: Write page checksum
+                    description: Parquet tools can use the checksum of a Parquet page to verify data integrity
+                    anyOf:
+                        - type: boolean
+                        - type: "null"
+                emptyDirCleanupSec:
+                    title: Staging cleanup period
+                    description: How frequently, in seconds, to clean up empty directories
+                    anyOf:
+                        - type: number
+                          minimum: 10
+                          maximum: 86400
+                        - type: "null"
+                directoryBatchSize:
+                    title: Directory batch size
+                    description: Number of directories to process in each batch during cleanup of empty directories. Minimum is 10, maximum is 10000. Higher values may require more memory.
+                    anyOf:
+                        - type: number
+                        - type: "null"
+                deadletterPath:
+                    title: Dead-letter location
+                    description: Storage location for files that fail to reach their final destination after maximum retries are exceeded
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                maxRetryNum:
+                    title: Retry limit
+                    description: The maximum number of times a file will attempt to move to its final destination before being dead-lettered
+                    anyOf:
+                        - type: number
+                          minimum: 1
+                        - type: "null"
+                __template_streamtags:
+                    description: Binds 'streamtags' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'streamtags' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_bucket:
+                    description: Binds 'bucket' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'bucket' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_region:
+                    description: Binds 'region' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'region' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_destPath:
+                    description: Binds 'destPath' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'destPath' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_partitionExpr:
+                    description: Binds 'partitionExpr' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'partitionExpr' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_format:
+                    description: Binds 'format' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'format' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_baseFileName:
+                    description: Binds 'baseFileName' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'baseFileName' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_fileNameSuffix:
+                    description: Binds 'fileNameSuffix' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'fileNameSuffix' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_onBackpressure:
+                    description: Binds 'onBackpressure' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'onBackpressure' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_endpoint:
+                    description: Binds 'endpoint' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'endpoint' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_objectACL:
+                    description: Binds 'objectACL' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'objectACL' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_serverSideEncryption:
+                    description: Binds 'serverSideEncryption' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'serverSideEncryption' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_kmsKeyId:
+                    description: Binds 'kmsKeyId' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'kmsKeyId' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_compress:
+                    description: Binds 'compress' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'compress' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+                __template_parquetSchema:
+                    description: Binds 'parquetSchema' to a variable for dynamic value resolution. Set to variable ID (pack-scoped) or 'cribl.'/'edge.' prefixed ID (group-scoped). Variable value overrides 'parquetSchema' at runtime.
+                    anyOf:
+                        - type: string
+                        - type: "null"
+            title: OutputXskyXeosS3PartialRequest
         SchemaLibEntryPartialRequest:
             type: object
             additionalProperties: true
@@ -243299,6 +245169,16 @@ components:
                 - memory
                 - minimum
             description: Worker Process configuration.
+        MethodOptionsRestOperation:
+            type: string
+            enum:
+                - DELETE
+                - GET
+                - PATCH
+                - POST
+                - PUT
+            description: HTTP method.
+            x-speakeasy-unknown-values: allow
         NameOptionsAiProviderListModelsRequest:
             type: string
             enum:
@@ -249081,6 +250961,15 @@ components:
                 endpoint: https://vsa-00000001-cloud-01.zadara.com
                 stagePath: /tmp/staging
             description: Example request body for creating a Zadara Destination.
+        OutputCreateExamplesXskyXeosS3:
+            summary: XSKY XEOS
+            value:
+                id: xsky-xeos-s3-output
+                type: xsky_xeos_s3
+                bucket: my-bucket
+                endpoint: https://xeos.example.com
+                stagePath: /tmp/staging
+            description: Example request body for creating a XSKY XEOS Destination.
         OutputCreateExamplescloudianS3:
             summary: Cloudian
             value:
@@ -249273,6 +251162,15 @@ components:
                 endpoint: https://vsp-one-object.example.com
                 stagePath: /tmp/staging
             description: Example request body for creating a Hitachi VSP One Object Destination.
+        OutputCreateExamplesfujitsuEternusS3:
+            summary: Fujitsu ETERNUS
+            value:
+                id: fujitsu-eternus-s3-output
+                type: fujitsu_eternus_s3
+                bucket: my-bucket
+                endpoint: https://eternus-coss.example.com
+                stagePath: /tmp/staging
+            description: Example request body for creating a Fujitsu ETERNUS Destination.
         OutputCreateExamplesAzureBlob:
             summary: Azure Blob
             value:
@@ -263446,274 +265344,93 @@ components:
             summary: Undo result
             description: Example response for discarding uncommitted changes.
             value: true
-        ListAgentToolsResponseExamplesCriblLeaderCatalog:
-            summary: Cribl Default catalog (serverId=cribl_leader)
-            description: "Example catalog when serverId=cribl_leader: Cribl Default Select-a-task tools only (RBAC-filtered). Pinable UI metadata is deferred."
+        McpToolsResponseExamplesAllIntegrations:
+            summary: List the tools of every enabled Integration
+            description: "Answer when no serverId is set: every enabled MCP Integration that offers tools, with those tools."
             value:
                 items:
-                    - id: cribl_addToSearchNotebook
-                      source: cribl_leader
-                      title: Add findings to a Notebook
-                      description: Saves findings to a Notebook
-                      inputSchema:
-                        type: object
-                    - id: cribl_getAlerts
-                      source: cribl_leader
-                      title: Retrieve alerts
-                      description: Fetches alerts and system messages
-                      inputSchema:
-                        type: object
-                    - id: cribl_getDestinations
-                      source: cribl_leader
-                      title: Inspect Destinations
-                      description: Reviews Destinations
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSearchContext
-                      source: cribl_leader
-                      title: List datasets and saved searches
-                      description: Lists available datasets and saved searches
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSearchJobResults
-                      source: cribl_leader
-                      title: Retrieve Search results
-                      description: Fetches results from a completed search
-                      inputSchema:
-                        type: object
-                        required:
-                            - jobId
-                        properties:
-                            jobId:
-                                type: string
-                    - id: cribl_getSources
-                      source: cribl_leader
-                      title: Inspect Sources
-                      description: Reviews Sources
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSystemMetrics
-                      source: cribl_leader
-                      title: Retrieve system metrics
-                      description: Fetches system metrics
-                      inputSchema:
-                        type: object
-                    - id: cribl_listWorkerGroups
-                      source: cribl_leader
-                      title: Inspect Worker Groups and health
-                      description: Reviews Worker Group status and health
-                      inputSchema:
-                        type: object
-                    - id: cribl_runSearchQuery
-                      source: cribl_leader
-                      title: Run Search query
-                      description: Executes a search query against a dataset
-                      inputSchema:
-                        type: object
-                        required:
-                            - query
-                        properties:
-                            query:
-                                type: string
-                    - id: cribl_search
-                      source: cribl_leader
-                      title: Search
-                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
-                      inputSchema:
-                        type: object
-                        properties:
-                            naturalLanguageQuery:
-                                type: string
-                            kqlQuery:
-                                type: string
-                            datasetIds:
-                                type: array
-                                items:
-                                    type: string
-                count: 10
-                offset: 0
-                limit: 100
-        ListAgentToolsResponseExamplesCombinedCatalog:
-            summary: "Combined catalog (no serverId: Default + all enabled Integrations)"
-            description: "Example catalog with no serverId: Cribl Default tools plus tools from every enabled MCP Integration. Unreachable servers are omitted. Pass serverId=<integrationId> to narrow the catalog to that Integration only."
+                    - serverId: jira
+                      displayName: Jira Cloud
+                      tools:
+                        - name: create_issue
+                          title: Create issue
+                          description: Create a Jira issue
+                          readOnly: false
+                        - name: search_issues
+                          title: Search issues
+                          description: Search Jira issues with JQL
+                          readOnly: true
+                    - serverId: pd
+                      displayName: PagerDuty on-call
+                      tools:
+                        - name: create_incident
+                          title: create_incident
+                          description: Create a PagerDuty incident
+                          readOnly: false
+        McpToolsResponseExamplesSingleIntegration:
+            summary: List the tools of one Integration
+            description: "Answer for serverId=pd: that Integration only."
             value:
                 items:
-                    - id: cribl_addToSearchNotebook
-                      source: cribl_leader
-                      title: Add findings to a Notebook
-                      description: Saves findings to a Notebook
-                      inputSchema:
-                        type: object
-                    - id: cribl_getAlerts
-                      source: cribl_leader
-                      title: Retrieve alerts
-                      description: Fetches alerts and system messages
-                      inputSchema:
-                        type: object
-                    - id: cribl_getDestinations
-                      source: cribl_leader
-                      title: Inspect Destinations
-                      description: Reviews Destinations
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSearchContext
-                      source: cribl_leader
-                      title: List datasets and saved searches
-                      description: Lists available datasets and saved searches
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSearchJobResults
-                      source: cribl_leader
-                      title: Retrieve Search results
-                      description: Fetches results from a completed search
-                      inputSchema:
-                        type: object
-                        required:
-                            - jobId
-                        properties:
-                            jobId:
-                                type: string
-                    - id: cribl_getSources
-                      source: cribl_leader
-                      title: Inspect Sources
-                      description: Reviews Sources
-                      inputSchema:
-                        type: object
-                    - id: cribl_getSystemMetrics
-                      source: cribl_leader
-                      title: Retrieve system metrics
-                      description: Fetches system metrics
-                      inputSchema:
-                        type: object
-                    - id: cribl_listWorkerGroups
-                      source: cribl_leader
-                      title: Inspect Worker Groups and health
-                      description: Reviews Worker Group status and health
-                      inputSchema:
-                        type: object
-                    - id: cribl_runSearchQuery
-                      source: cribl_leader
-                      title: Run Search query
-                      description: Executes a search query against a dataset
-                      inputSchema:
-                        type: object
-                        required:
-                            - query
-                        properties:
-                            query:
-                                type: string
-                    - id: cribl_search
-                      source: cribl_leader
-                      title: Search
-                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
-                      inputSchema:
-                        type: object
-                        properties:
-                            naturalLanguageQuery:
-                                type: string
-                            kqlQuery:
-                                type: string
-                            datasetIds:
-                                type: array
-                                items:
-                                    type: string
-                    - id: mcp_jira_create-issue
-                      source: external_mcp
-                      serverId: jira
-                      serverDisplayName: Jira Cloud
-                      name: create_issue
-                      title: create_issue
-                      description: Create a Jira issue
-                      inputSchema:
-                        type: object
-                        required:
-                            - summary
-                        properties:
-                            summary:
-                                type: string
-                    - id: mcp_pd_create-incident
-                      source: external_mcp
-                      serverId: pd
-                      serverDisplayName: PagerDuty on-call
-                      name: create_incident
-                      title: create_incident
-                      description: Create a PagerDuty incident
-                      inputSchema:
-                        type: object
-                        required:
-                            - title
-                        properties:
-                            title:
-                                type: string
-                count: 12
-                offset: 0
-                limit: 100
-        ListAgentToolsResponseExamplesSingleIntegrationCatalog:
-            summary: Single Integration catalog (serverId=pd)
-            description: "Example catalog when serverId names an MCP Integration: only that Integration's tools. Cribl Default tools are excluded; request them with serverId=cribl_leader or by omitting serverId."
+                    - serverId: pd
+                      displayName: PagerDuty on-call
+                      tools:
+                        - name: create_incident
+                          title: create_incident
+                          description: Create a PagerDuty incident
+                          readOnly: false
+        RestApiLookupResponseExamplesTags:
+            summary: List the tags of the API
+            description: "Answer when no query parameter is set: every tag of the Cribl REST API with how many operations it holds, the largest first. Use a tag name as a search word."
             value:
-                items:
-                    - id: mcp_pd_create-incident
-                      source: external_mcp
-                      serverId: pd
-                      name: create_incident
-                      title: create_incident
-                      description: Create a PagerDuty incident
-                      inputSchema:
-                        type: object
-                        required:
-                            - title
-                        properties:
-                            title:
-                                type: string
-                    - id: mcp_pd_list-incidents
-                      source: external_mcp
-                      serverId: pd
-                      name: list_incidents
-                      title: list_incidents
-                      description: List PagerDuty incidents
-                      inputSchema:
-                        type: object
-                count: 2
-                offset: 0
-                limit: 100
-        ListAgentToolsResponseExamplesPaginatedCatalog:
-            summary: Paginated catalog
-            description: API v2 returns a standard paginated list envelope, using configured defaults when offset and limit are omitted. Tools are ordered by id, so each Integration's tools stay contiguous. This example is unfiltered (no serverId) and requests the page that spans the last Cribl Default tool and the first Integration tool.
+                tags:
+                    - tag: Search
+                      operations: 96
+                    - tag: Sources
+                      operations: 41
+                    - tag: Destinations
+                      operations: 38
+        RestApiLookupResponseExamplesMatches:
+            summary: Search for operations
+            description: "Answer for query=search jobs: the operations whose path, summary or tags hold every word. Operations come back without their parameters; look one up by path for those."
             value:
-                items:
-                    - id: cribl_search
-                      source: cribl_leader
-                      title: Search
-                      description: "Runs Cribl Search with natural language or KQL: dataset selection, query generation, repair, execution, and result collection in one call."
-                      inputSchema:
-                        type: object
-                        properties:
-                            naturalLanguageQuery:
-                                type: string
-                            kqlQuery:
-                                type: string
-                            datasetIds:
-                                type: array
-                                items:
-                                    type: string
-                    - id: mcp_jira_create-issue
-                      source: external_mcp
-                      serverId: jira
-                      serverDisplayName: Jira Cloud
-                      name: create_issue
-                      title: create_issue
-                      description: Create a Jira issue
-                      inputSchema:
-                        type: object
-                        required:
-                            - summary
-                        properties:
-                            summary:
-                                type: string
-                count: 12
-                offset: 9
-                limit: 2
+                total: 11
+                entries:
+                    - method: GET
+                      paths:
+                        - /m/default_search/search/jobs
+                      specPath: /search/jobs
+                      summary: List Search jobs
+                      tags:
+                        - Search
+                      readOnly: true
+                    - method: POST
+                      paths:
+                        - /m/default_search/search/jobs
+                      specPath: /search/jobs
+                      summary: Create a Search job
+                      tags:
+                        - Search
+                      readOnly: false
+        RestApiLookupResponseExamplesOperation:
+            summary: Describe one operation
+            description: "Answer for path=/system/inputs&method=GET: one operation with the parameters it takes, and the request body schema when it takes one."
+            value:
+                method: GET
+                paths:
+                    - /m/{groupId}/system/inputs
+                    - /w/{nodeId}/system/inputs
+                specPath: /system/inputs
+                summary: List Sources
+                tags:
+                    - Sources
+                readOnly: true
+                description: Lists the Sources configured in the Worker Group or Fleet the path names.
+                parameters:
+                    - name: type
+                      in: query
+                      type: string
+                      description: Restricts the response to one Source type.
         CreateDatasetIntelligenceResponseExamplesProcessing:
             summary: Generate dataset intelligence
             description: Example response for triggering dataset intelligence generation.
@@ -270428,6 +272145,15 @@ components:
                 endpoint: https://vsa-00000001-cloud-01.zadara.com
                 stagePath: /tmp/staging
             description: "Example request body for updating a Zadara Destination.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+        UpdateOutputExamplesXskyXeosS3PartialRequest:
+            summary: XSKY XEOS
+            value:
+                id: xsky-xeos-s3-output
+                type: xsky_xeos_s3
+                bucket: my-bucket
+                endpoint: https://xeos.example.com
+                stagePath: /tmp/staging
+            description: "Example request body for updating a XSKY XEOS Destination.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
         UpdateOutputExamplescloudianS3PartialRequest:
             summary: Cloudian
             value:
@@ -270620,6 +272346,15 @@ components:
                 endpoint: https://vsp-one-object.example.com
                 stagePath: /tmp/staging
             description: "Example request body for updating a Hitachi VSP One Object Destination.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+        UpdateOutputExamplesfujitsuEternusS3PartialRequest:
+            summary: Fujitsu ETERNUS
+            value:
+                id: fujitsu-eternus-s3-output
+                type: fujitsu_eternus_s3
+                bucket: my-bucket
+                endpoint: https://eternus-coss.example.com
+                stagePath: /tmp/staging
+            description: "Example request body for updating a Fujitsu ETERNUS Destination.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
         UpdateOutputExamplesAzureBlobPartialRequest:
             summary: Azure Blob
             value:
@@ -282168,6 +283903,8 @@ paths:
                                 $ref: "#/components/examples/OutputCreateExamplesvultrObjectStorageS3"
                             OutputCreateExamplesZadaraS3:
                                 $ref: "#/components/examples/OutputCreateExamplesZadaraS3"
+                            OutputCreateExamplesXskyXeosS3:
+                                $ref: "#/components/examples/OutputCreateExamplesXskyXeosS3"
                             OutputCreateExamplescloudianS3:
                                 $ref: "#/components/examples/OutputCreateExamplescloudianS3"
                             OutputCreateExamplesscalityS3:
@@ -282210,6 +283947,8 @@ paths:
                                 $ref: "#/components/examples/OutputCreateExamplescephS3"
                             OutputCreateExampleshitachiVspOneObjectS3:
                                 $ref: "#/components/examples/OutputCreateExampleshitachiVspOneObjectS3"
+                            OutputCreateExamplesfujitsuEternusS3:
+                                $ref: "#/components/examples/OutputCreateExamplesfujitsuEternusS3"
                             OutputCreateExamplesAzureBlob:
                                 $ref: "#/components/examples/OutputCreateExamplesAzureBlob"
                             OutputCreateExamplesAzureDataExplorer:
@@ -282560,6 +284299,8 @@ paths:
                                 $ref: "#/components/examples/UpdateOutputExamplesvultrObjectStorageS3PartialRequest"
                             UpdateOutputExamplesZadaraS3:
                                 $ref: "#/components/examples/UpdateOutputExamplesZadaraS3PartialRequest"
+                            UpdateOutputExamplesXskyXeosS3:
+                                $ref: "#/components/examples/UpdateOutputExamplesXskyXeosS3PartialRequest"
                             UpdateOutputExamplescloudianS3:
                                 $ref: "#/components/examples/UpdateOutputExamplescloudianS3PartialRequest"
                             UpdateOutputExamplesscalityS3:
@@ -282602,6 +284343,8 @@ paths:
                                 $ref: "#/components/examples/UpdateOutputExamplescephS3PartialRequest"
                             UpdateOutputExampleshitachiVspOneObjectS3:
                                 $ref: "#/components/examples/UpdateOutputExampleshitachiVspOneObjectS3PartialRequest"
+                            UpdateOutputExamplesfujitsuEternusS3:
+                                $ref: "#/components/examples/UpdateOutputExamplesfujitsuEternusS3PartialRequest"
                             UpdateOutputExamplesAzureBlob:
                                 $ref: "#/components/examples/UpdateOutputExamplesAzureBlobPartialRequest"
                             UpdateOutputExamplesAzureDataExplorer:
@@ -283302,6 +285045,8 @@ paths:
                                 $ref: "#/components/examples/OutputCreateExamplesvultrObjectStorageS3"
                             OutputCreateExamplesZadaraS3:
                                 $ref: "#/components/examples/OutputCreateExamplesZadaraS3"
+                            OutputCreateExamplesXskyXeosS3:
+                                $ref: "#/components/examples/OutputCreateExamplesXskyXeosS3"
                             OutputCreateExamplescloudianS3:
                                 $ref: "#/components/examples/OutputCreateExamplescloudianS3"
                             OutputCreateExamplesscalityS3:
@@ -283344,6 +285089,8 @@ paths:
                                 $ref: "#/components/examples/OutputCreateExamplescephS3"
                             OutputCreateExampleshitachiVspOneObjectS3:
                                 $ref: "#/components/examples/OutputCreateExampleshitachiVspOneObjectS3"
+                            OutputCreateExamplesfujitsuEternusS3:
+                                $ref: "#/components/examples/OutputCreateExamplesfujitsuEternusS3"
                             OutputCreateExamplesAzureBlob:
                                 $ref: "#/components/examples/OutputCreateExamplesAzureBlob"
                             OutputCreateExamplesAzureDataExplorer:
@@ -283707,6 +285454,8 @@ paths:
                                 $ref: "#/components/examples/UpdateOutputExamplesvultrObjectStorageS3PartialRequest"
                             UpdateOutputExamplesZadaraS3:
                                 $ref: "#/components/examples/UpdateOutputExamplesZadaraS3PartialRequest"
+                            UpdateOutputExamplesXskyXeosS3:
+                                $ref: "#/components/examples/UpdateOutputExamplesXskyXeosS3PartialRequest"
                             UpdateOutputExamplescloudianS3:
                                 $ref: "#/components/examples/UpdateOutputExamplescloudianS3PartialRequest"
                             UpdateOutputExamplesscalityS3:
@@ -283749,6 +285498,8 @@ paths:
                                 $ref: "#/components/examples/UpdateOutputExamplescephS3PartialRequest"
                             UpdateOutputExampleshitachiVspOneObjectS3:
                                 $ref: "#/components/examples/UpdateOutputExampleshitachiVspOneObjectS3PartialRequest"
+                            UpdateOutputExamplesfujitsuEternusS3:
+                                $ref: "#/components/examples/UpdateOutputExamplesfujitsuEternusS3PartialRequest"
                             UpdateOutputExamplesAzureBlob:
                                 $ref: "#/components/examples/UpdateOutputExamplesAzureBlobPartialRequest"
                             UpdateOutputExamplesAzureDataExplorer:
@@ -316717,6 +318468,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/Error"
+                "503":
+                    description: The upstream identity provider failed to delete the user's identity — the user was not deleted and the request can be retried.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
             parameters:
                 - name: id
                   in: path
@@ -319098,6 +320855,8 @@ paths:
                             description: The canonical URL of the newly created resource.
                             schema:
                                 type: string
+                "400":
+                    description: The request is invalid — the <code>id</code> ends in the reserved <code>_view</code> suffix, or the <code>query</code> is not one a Dataset View can run. The response message names the rule the definition broke.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -319118,7 +320877,7 @@ paths:
                             schema:
                                 type: string
                 "409":
-                    description: Request conflicts with current resource state — a Dataset View with this <code>id</code> already exists.
+                    description: Request conflicts with current resource state — the <code>id</code> is already in use by another Dataset View or by a Dataset.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -319340,6 +321099,8 @@ paths:
                             examples:
                                 DatasetViewUpdateResponseExamplesUpdated:
                                     $ref: "#/components/examples/DatasetViewUpdateResponseExamplesUpdated"
+                "400":
+                    description: The request is invalid — the <code>query</code> is not one a Dataset View can run. The response message names the rule the definition broke.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -343846,9 +345607,9 @@ paths:
                                 $ref: "#/components/schemas/Error"
                 "503":
                     description: Versioning is not available.
-    /ai/tools:
+    /ai/tools/mcp:
         get:
-            operationId: getAiTools
+            operationId: getAiToolsMcp
             tags:
                 - AI
             x-cribl-internal: false
@@ -343856,30 +345617,20 @@ paths:
             x-cribl-api-context:
                 - leader
                 - single
-            summary: List agent tools
-            description: Returns tools from the requested source. Omit <code>serverId</code> for Cribl Default tools (RBAC-filtered) plus all enabled Integrations (unreachable servers omitted). Pass <code>serverId=cribl_leader</code> for Cribl Default tools only. Pass any other <code>serverId</code> for that Integration's tools only (502 if unreachable). API v2 applies the configured default page size when pagination parameters are omitted. Tools are ordered by <code>id</code>, which keeps each Integration's tools contiguous.
+            summary: List MCP Integration tools
+            description: "Returns the tools of the MCP Integrations enabled on this Leader, one item per Integration, never including an Integration's credentials. Omit <code>serverId</code> for every enabled Integration that offers tools; Integrations that are unreachable or offer no tool are omitted. Pass <code>serverId</code> for one Integration only. Tools come without their input schemas: this lookup is for choosing tools, and an agent that uses an Integration lists its tools, schemas included, from the server itself."
             responses:
                 "200":
-                    description: List of AgentToolCatalogItem objects.
+                    description: The requested McpToolsResponse object.
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/PaginatedAgentToolCatalogItem"
+                                $ref: "#/components/schemas/McpToolsResponse"
                             examples:
-                                ListAgentToolsResponseExamplesCriblLeaderCatalog:
-                                    $ref: "#/components/examples/ListAgentToolsResponseExamplesCriblLeaderCatalog"
-                                ListAgentToolsResponseExamplesCombinedCatalog:
-                                    $ref: "#/components/examples/ListAgentToolsResponseExamplesCombinedCatalog"
-                                ListAgentToolsResponseExamplesSingleIntegrationCatalog:
-                                    $ref: "#/components/examples/ListAgentToolsResponseExamplesSingleIntegrationCatalog"
-                                ListAgentToolsResponseExamplesPaginatedCatalog:
-                                    $ref: "#/components/examples/ListAgentToolsResponseExamplesPaginatedCatalog"
-                "400":
-                    description: Invalid pagination params, non-string <code>serverId</code>, or blank <code>serverId</code>
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RestApiJsonError"
+                                McpToolsResponseExamplesAllIntegrations:
+                                    $ref: "#/components/examples/McpToolsResponseExamplesAllIntegrations"
+                                McpToolsResponseExamplesSingleIntegration:
+                                    $ref: "#/components/examples/McpToolsResponseExamplesSingleIntegration"
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -343923,30 +345674,101 @@ paths:
                   required: false
                   schema:
                     type: string
-                  description: "Strict source filter: <code>cribl_leader</code> for Default-only, an MCP Integration id for that Integration only, or omit for Default + all enabled Integrations. Blank or whitespace-only values are rejected."
-                - name: offset
+                  description: Id of one MCP Integration. Omit for every enabled Integration.
+    /ai/tools/rest:
+        get:
+            operationId: getAiToolsRest
+            tags:
+                - AI
+            x-cribl-internal: false
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - leader
+                - single
+            summary: Look up Cribl REST API operations
+            description: "Returns the Cribl REST API as this Leader answers it, read from the OpenAPI document the Leader ships. Every path comes back callable: below <code>/api/v1</code>, with its mount applied, so a Search operation reads <code>/m/default_search/search/jobs</code> rather than <code>/search/jobs</code>. One lookup per call: with no parameter, the tags and how many operations each holds; with <code>query</code>, the operations matching it; with <code>path</code>, one operation and everything it takes."
+            responses:
+                "200":
+                    description: The requested RestLookupResponse object.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestLookupResponse"
+                            examples:
+                                RestApiLookupResponseExamplesTags:
+                                    $ref: "#/components/examples/RestApiLookupResponseExamplesTags"
+                                RestApiLookupResponseExamplesMatches:
+                                    $ref: "#/components/examples/RestApiLookupResponseExamplesMatches"
+                                RestApiLookupResponseExamplesOperation:
+                                    $ref: "#/components/examples/RestApiLookupResponseExamplesOperation"
+                "400":
+                    description: <code>method</code> is not one of the five, or several operations answer <code>path</code> and no <code>method</code> picks one
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: Not authorized or licensed to perform this action.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "404":
+                    description: No operation answers <code>path</code>; the message suggests the paths that come closest
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: This Leader ships no OpenAPI document
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            parameters:
+                - name: query
                   in: query
                   required: false
                   schema:
-                    type: integer
-                  description: Pagination offset (0-based). Required with <code>limit</code> on API v1.
+                    type: string
+                  description: Words to match, separated by spaces or commas. An operation matches when its path, summary or tags hold every word, case-insensitively; use <code>method</code> to match a method. Ignored when <code>path</code> is set.
+                - name: path
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: "One operation's path, callable (<code>/m/default/system/inputs</code> or <code>/m/{groupId}/system/inputs</code>) or as the OpenAPI document spells it (<code>/system/inputs</code>). A leading <code>/api/v1</code> is accepted. Where a literal route and a templated one both fit, the literal one is described: <code>/system/keys/download</code>, not <code>/system/keys/{id}</code>."
+                - name: method
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                  description: "Restricts the lookup to one HTTP method: <code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>PATCH</code> or <code>DELETE</code>. Required with <code>path</code> when several methods answer it."
                 - name: limit
                   in: query
                   required: false
                   schema:
                     type: integer
-                  description: Maximum number of tools to return from the offset.
-            x-speakeasy-pagination:
-                type: offsetLimit
-                inputs:
-                    - name: offset
-                      in: parameters
-                      type: offset
-                    - name: limit
-                      in: parameters
-                      type: limit
-                outputs:
-                    results: $.items
+                  description: Maximum operations to return for a <code>query</code>, from 1 to 50. Defaults to 20. Ignored for the other lookups.
     /ai/settings/dataset-intelligence/{datasetId}:
         post:
             operationId: createAiSettingsDatasetIntelligenceByDatasetId
