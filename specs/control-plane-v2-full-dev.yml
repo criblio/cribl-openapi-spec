@@ -15,7 +15,7 @@ info:
         - Host (Worker or Edge Node) context: /api/v2/w/{nodeId}
 
         - Search context: /api/v2/m/default_search
-    version: 4.22.0-alpha.1795734628467-bc90122b
+    version: 4.22.0-alpha.1795821135714-a880435a
     contact:
         name: Support
         url: https://portal.support.cribl.io
@@ -105195,9 +105195,12 @@ components:
         CloudChangeEnrichmentLoadStatus:
             type: object
             properties:
+                capacityEstimatedAt:
+                    type: number
+                    description: When the capacity estimate was last measured, in epoch milliseconds; older while tasks are idle.
                 capacityEventsPerSecond:
                     type: number
-                    description: "Estimated events per second the effective maximum task count could handle: the reporting tasks' rate divided by their utilization (tasks below 10 % utilization are left out), times the maximum. The last estimate is kept while tasks are idle; absent before one. This is not a guaranteed limit."
+                    description: "Estimated events per second the effective maximum task count could handle: over the last 15 minutes, the events tasks received while at least 20 % utilized divided by their busy time (utilization × time), times the maximum. Needs a minute of busy task time over 3 minutes; the last estimate is kept for up to 6 hours while tasks are idle. This is not a guaranteed limit."
                 causeUnit:
                     type: string
                     enum:
@@ -105447,6 +105450,9 @@ components:
                     items:
                         $ref: "#/components/schemas/CloudAccountGroupingColumn"
                     description: Columns defined for a custom category grouping.
+                displayOwner:
+                    type: string
+                    description: Name of that owner from the Workspace members, when they are a member.
                 id:
                     type: string
                     description: Unique identifier for the account grouping.
@@ -105464,7 +105470,7 @@ components:
                     description: Organizational unit depth for an OU-level grouping, starting at one.
                 owner:
                     type: string
-                    description: Owner of a custom grouping, when present.
+                    description: User id of the owner of a custom grouping, when present.
                 unavailableReason:
                     type: string
                     description: Reason the grouping cannot be selected, when unavailable.
@@ -105652,15 +105658,15 @@ components:
                 discoveryStates:
                     $ref: "#/components/schemas/CloudAccountDiscoveryStateCounts"
                     description: Account counts by source discovery state.
-                freshInventoryCount:
-                    type: number
-                    description: Number of accounts with fresh inventory data, when available.
                 id:
                     type: string
                     description: Unique identifier for the grouping column or organizational unit.
                 inScopeCount:
                     type: number
                     description: Number of accounts included in their Cloud Connection's scope.
+                inventoriedCount:
+                    type: number
+                    description: Number of accounts with a completed inventory scan into the current engine, when available.
                 inventoryStates:
                     $ref: "#/components/schemas/CloudAccountInventoryStateCounts"
                     description: Account counts by inventory scan state, when available.
@@ -105991,6 +105997,9 @@ components:
                 deploymentId:
                     type: string
                     description: The deployment being handed off, when the operation is a hand-off deployment.
+                displayStartedBy:
+                    type: string
+                    description: Name of the person who started the job, from the Workspace members when it is served. Absent when the job records no one, or when its user is not a current member.
                 groupId:
                     type: string
                     description: Worker Group that owns this operation; absent for Workspace operations.
@@ -106188,7 +106197,6 @@ components:
                 - coverageCause
                 - lastInventoryScanAt
                 - inventoryState
-                - inventoryFreshness
             title: CloudAccountIndexField
             x-speakeasy-unknown-values: allow
         CloudAccountSortOrder:
@@ -106264,6 +106272,16 @@ components:
             required:
                 - selection
             title: CloudAccountBulkActionRequest
+        CloudAccountTrustEvidence:
+            type: string
+            enum:
+                - verification
+                - accessCheck
+                - dataScan
+                - inventoryScan
+                - enrichment
+            title: CloudAccountTrustEvidence
+            x-speakeasy-unknown-values: allow
         CloudAccountIndexRow:
             type: object
             properties:
@@ -106316,14 +106334,6 @@ components:
                             items:
                                 type: string
                             description: Issue causes of the account's latest completed inventory scan. Absent when that scan had no actionable issue.
-                        freshness:
-                            type: string
-                            enum:
-                                - fresh
-                                - stale
-                                - unknown
-                            description: Freshness of the latest inventory data.
-                            x-speakeasy-unknown-values: allow
                         lastScanAt:
                             type: number
                             description: Time of the latest inventory scan, in epoch milliseconds.
@@ -106351,6 +106361,12 @@ components:
                 trustCheckedAt:
                     type: number
                     description: When the account's access was last checked, in epoch milliseconds; absent when never checked.
+                trustEvidence:
+                    $ref: "#/components/schemas/CloudAccountTrustEvidence"
+                    description: What the trust state is based on; absent while it is unknown.
+                trustEvidenceAt:
+                    type: number
+                    description: When that evidence was recorded, in epoch milliseconds.
                 trustState:
                     $ref: "#/components/schemas/CloudAccountTrustState"
                     description: "Whether Cribl can use its role in the account: connected, failed, or unknown until checked."
@@ -106396,15 +106412,15 @@ components:
                 discoveryUnknown:
                     type: number
                     description: Trust-connected accounts without sources whose Data Source Discovery result is unknown.
+                hasInventory:
+                    type: number
+                    description: Trust-connected accounts with a completed initial inventory scan, when inventory data is available. Change events keep that inventory current; an account needs no further scan unless events were missed.
                 haveSources:
                     type: number
                     description: Trust-connected accounts with at least one discovered or collected source.
                 inScope:
                     type: number
                     description: Distinct matching accounts in a Cloud Connection's scope.
-                scannedInLast24Hours:
-                    type: number
-                    description: Trust-connected accounts scanned in the last 24 hours, when inventory data is available.
                 trustConnected:
                     type: number
                     description: In-scope accounts Cribl can use its role in.
@@ -106419,23 +106435,19 @@ components:
                 - trustConnected
                 - trustFailed
             title: CloudAccountIndexFunnel
-        CloudAccountInventoryFreshnessCounts:
+        CloudAccountInventoryCoverageCounts:
             type: object
             properties:
-                fresh:
+                inventoried:
                     type: integer
-                    description: Accounts with a successful inventory scan within the last 24 hours.
-                neverScanned:
+                    description: Accounts with a completed scan into the current inventory engine.
+                notScanned:
                     type: integer
-                    description: Accounts without a successful scan into the current inventory store.
-                outdated:
-                    type: integer
-                    description: Accounts whose latest successful inventory scan is more than 24 hours old.
+                    description: Accounts without a completed scan into the current inventory engine.
             required:
-                - fresh
-                - neverScanned
-                - outdated
-            title: CloudAccountInventoryFreshnessCounts
+                - inventoried
+                - notScanned
+            title: CloudAccountInventoryCoverageCounts
         CloudAccountAttentionCause:
             type: object
             properties:
@@ -106488,9 +106500,9 @@ components:
                 inScope:
                     type: number
                     description: Number of matching accounts included in a Cloud Connection's scope.
-                inventoryFreshness:
-                    $ref: "#/components/schemas/CloudAccountInventoryFreshnessCounts"
-                    description: Freshness of each distinct account's latest successful inventory scan, when the inventory provider is available.
+                inventoryCoverage:
+                    $ref: "#/components/schemas/CloudAccountInventoryCoverageCounts"
+                    description: Distinct accounts with and without a completed inventory scan, when the inventory provider is available.
                 needsAttention:
                     type: array
                     items:
@@ -106502,9 +106514,6 @@ components:
                 rows:
                     type: number
                     description: Number of matching connection and account rows (an account listed by several connections counts once per connection).
-                scannedInLast24Hours:
-                    type: number
-                    description: Number of accounts scanned in the last 24 hours, when inventory data is available.
                 total:
                     type: number
                     description: Number of distinct matching accounts.
@@ -107613,6 +107622,11 @@ components:
                 id:
                     type: string
                     description: The id of the third-party bucket.
+                kmsKeyArns:
+                    type: array
+                    items:
+                        type: string
+                    description: The KMS keys the reader role may decrypt with. Absent when none were given.
                 prefix:
                     type: string
                     description: Only objects under this key prefix are collected.
@@ -107683,6 +107697,12 @@ components:
                 groupId:
                     type: string
                     description: The Worker Group the Stream Source is created in.
+                kmsKeyArns:
+                    type: array
+                    items:
+                        type: string
+                    description: ARNs of the KMS keys that encrypt the bucket's objects (SSE-KMS), at most 10, each once. The template lets the reader role decrypt with exactly these keys; a key of another account must also allow the role. Each is a key ARN, not an alias, with no wildcard. Omit for a bucket without KMS encryption.
+                    maxItems: 10
                 prefix:
                     type: string
                     description: Only objects under this key prefix are collected.
@@ -108561,6 +108581,9 @@ components:
                     items:
                         $ref: "#/components/schemas/CloudInventoryScanAccount"
                     description: "Accounts the scan reads: the connected account, or the organization's management and member accounts."
+                campaignId:
+                    type: string
+                    description: ID of the inventory scan campaign that started the scan; absent for a scan started on its own.
                 cancelledBy:
                     type: string
                     description: User who cancelled the scan.
@@ -110276,6 +110299,9 @@ components:
                 deploymentId:
                     type: string
                     description: Deployment associated with the operation, when applicable.
+                displayStartedBy:
+                    type: string
+                    description: Name of that person from the Workspace members, added when the job is served; absent when they are not a member.
                 groupId:
                     type: string
                     description: Worker Group that owns the operation; absent for Workspace operations.
@@ -110301,7 +110327,7 @@ components:
                     description: Onboarding rule associated with the operation, when applicable.
                 startedBy:
                     type: string
-                    description: Username of the person who started the operation; absent for scheduled operations and when not recorded.
+                    description: User id of the person who started the operation; absent for scheduled operations and when not recorded.
                 state:
                     $ref: "#/components/schemas/CloudConnectionJobState"
                 steps:
@@ -111680,10 +111706,10 @@ components:
             properties:
                 connectedAt:
                     type: string
-                    description: Time the executor connected, as an ISO 8601 timestamp.
+                    description: Time the executor connected, as an ISO 8601 timestamp. Absent while the executor is <code>disconnected</code>.
                 currentAllocations:
                     type: number
-                    description: Number of search jobs currently running on this executor.
+                    description: Number of search jobs currently running on this executor. Always <code>0</code> while the executor is <code>disconnected</code>.
                 hostname:
                     type: string
                     description: Hostname reported by the executor node.
@@ -111701,10 +111727,10 @@ components:
                     description: Time of the most recent heartbeat from the executor, as an ISO 8601 timestamp. Absent if no heartbeat has been received yet.
                 maxAllocations:
                     type: number
-                    description: Maximum number of concurrent search jobs this executor can handle.
+                    description: Maximum number of concurrent search jobs this executor can handle. Absent while the executor is <code>disconnected</code>.
                 numCpus:
                     type: number
-                    description: Number of CPU cores available on the executor node.
+                    description: Number of CPU cores available on the executor node. Absent while the executor is <code>disconnected</code>.
                 poolId:
                     type:
                         - "null"
@@ -111719,11 +111745,12 @@ components:
                 status:
                     type: string
                     enum:
+                        - disconnected
                         - paused
                         - ready
                         - unassigned
                         - unhealthy
-                    description: Current executor state.
+                    description: Current executor state. <code>disconnected</code> means the executor still has a pool assignment but is no longer connected to the Leader.
                     x-speakeasy-unknown-values: allow
                 supervisorVersion:
                     type: string
@@ -111732,11 +111759,8 @@ components:
                     type: string
                     description: Version reported by the executor.
             required:
-                - connectedAt
                 - currentAllocations
                 - id
-                - maxAllocations
-                - numCpus
                 - poolId
                 - status
             title: ExecutorView
@@ -267982,6 +268006,8 @@ components:
                     bucket: vendor-logs
                     prefix: in/
                     format: json
+                    kmsKeyArns:
+                        - arn:aws:kms:us-west-2:222233334444:key/1234abcd-12ab-34cd-56ef-1234567890ab
                     deploymentId: 5f0c1e52-3a77-4c1b-9d0e-2c7a6f8b4e10
                     stackName: cribl-third-party-vendor-logs-1a2b3c4d
                     sourceState: waiting
@@ -268006,6 +268032,17 @@ components:
                 region: us-west-2
                 prefix: in/
                 format: json
+        CloudConnectionThirdPartyBucketCreateExamplesEncryptedBucket:
+            summary: Add a bucket encrypted with a KMS key
+            description: Collects from a vendor bucket in the `default` Worker Group whose objects are encrypted with a customer-managed KMS key.
+            value:
+                groupId: default
+                connectionId: 9b2e4d16-0f07-4a3f-8f2c-4b8f0d4c9a71
+                accountId: "222233334444"
+                bucket: vendor-logs
+                region: us-west-2
+                kmsKeyArns:
+                    - arn:aws:kms:us-west-2:222233334444:key/1234abcd-12ab-34cd-56ef-1234567890ab
         CloudConnectionThirdPartyBucketListExamplesCollectingBucket:
             summary: List the third-party buckets of a Worker Group
             description: The stack reported healthy and the Source exists in the Worker Group.
@@ -268019,6 +268056,8 @@ components:
                       bucket: vendor-logs
                       prefix: in/
                       format: json
+                      kmsKeyArns:
+                        - arn:aws:kms:us-west-2:222233334444:key/1234abcd-12ab-34cd-56ef-1234567890ab
                       deploymentId: 5f0c1e52-3a77-4c1b-9d0e-2c7a6f8b4e10
                       stackName: cribl-third-party-vendor-logs-1a2b3c4d
                       stackHealth: healthy
@@ -270162,7 +270201,12 @@ components:
                       numCpus: 8
                       currentAllocations: 0
                       maxAllocations: 2
-                count: 2
+                    - id: ffeeddcc-9876-5432-10fe-dcba98765432
+                      poolId: us-east-analytics
+                      status: disconnected
+                      lastHeartbeatAt: 2023-11-13T09:45:00.000Z
+                      currentAllocations: 0
+                count: 3
         ReplaceExecutorTokenResponseExamplesReplaced:
             summary: Replace the executor provisioning token
             description: Example response after replacing the provisioning token on an executor.
@@ -320838,7 +320882,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Create a Dataset View (Cribl.Cloud only)
-            description: Create a new Dataset View (Cribl.Cloud only).<br/><br/>Supply the <code>id</code> in the request body. A query references the Dataset View by that <code>id</code>, and the <code>id</code> is fixed once the Dataset View exists.
+            description: Create a new Dataset View (Cribl.Cloud only). Supply the <code>id</code> in the request body; the <code>id</code> is fixed once created.
             responses:
                 "201":
                     description: The created Dataset View.
@@ -320856,7 +320900,7 @@ paths:
                             schema:
                                 type: string
                 "400":
-                    description: The request is invalid — the <code>id</code> ends in the reserved <code>_view</code> suffix, or the <code>query</code> is not one a Dataset View can run. The response message names the rule the definition broke.
+                    description: Invalid request — reserved <code>_view</code> suffix or invalid <code>query</code>.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -320877,7 +320921,7 @@ paths:
                             schema:
                                 type: string
                 "409":
-                    description: Request conflicts with current resource state — the <code>id</code> is already in use by another Dataset View or by a Dataset.
+                    description: The <code>id</code> is already in use.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -320907,7 +320951,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: List all Dataset Views (Cribl.Cloud only)
-            description: Get a list of all Dataset Views (Cribl.Cloud only).
+            description: List all Dataset Views (Cribl.Cloud only). Returns an empty <code>query</code> when the caller lacks update permission.
             responses:
                 "200":
                     description: Dataset Views.
@@ -320985,7 +321029,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Delete a Dataset View (Cribl.Cloud only)
-            description: Delete the specified Dataset View (Cribl.Cloud only). Queries that reference the Dataset View stop returning data.
+            description: Delete the specified Dataset View (Cribl.Cloud only). Queries that reference the Dataset View stop returning data. Returns an empty <code>query</code> when the caller lacks update permission.
             responses:
                 "204":
                     description: No Content
@@ -321032,7 +321076,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Get a Dataset View (Cribl.Cloud only)
-            description: Get the specified Dataset View (Cribl.Cloud only).
+            description: Get the specified Dataset View (Cribl.Cloud only). Returns an empty <code>query</code> when the caller lacks update permission.
             responses:
                 "200":
                     description: The requested Dataset View.
@@ -321063,7 +321107,7 @@ paths:
                             schema:
                                 type: string
                 "404":
-                    description: The requested resource does not exist — Dataset View not found.
+                    description: Dataset View not found.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -321088,7 +321132,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Update a Dataset View (Cribl.Cloud only)
-            description: "Update the specified Dataset View (Cribl.Cloud only). The <code>id</code> is immutable — Cribl takes it from the path and ignores any other value in the request body.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
+            description: "Update the specified Dataset View (Cribl.Cloud only). Provide a complete representation — omitted fields are removed. The <code>id</code> is immutable and taken from the path.<br/><br/>Supports partial updates: omitted fields are left unchanged, and nested objects are merged recursively.<br/><br/>Set a field to <code>null</code> to remove it from the stored configuration."
             responses:
                 "200":
                     description: The updated Dataset View.
@@ -321100,7 +321144,7 @@ paths:
                                 DatasetViewUpdateResponseExamplesUpdated:
                                     $ref: "#/components/examples/DatasetViewUpdateResponseExamplesUpdated"
                 "400":
-                    description: The request is invalid — the <code>query</code> is not one a Dataset View can run. The response message names the rule the definition broke.
+                    description: Invalid <code>query</code>.
                 "401":
                     description: Authentication failed (missing or invalid credentials or Bearer token).
                     content:
@@ -321121,7 +321165,7 @@ paths:
                             schema:
                                 type: string
                 "404":
-                    description: The requested resource does not exist — Dataset View not found.
+                    description: Dataset View not found.
                 "500":
                     description: Unexpected server error.
                     content:
@@ -351582,6 +351626,8 @@ paths:
                         examples:
                             CloudConnectionThirdPartyBucketCreateExamplesVendorBucket:
                                 $ref: "#/components/examples/CloudConnectionThirdPartyBucketCreateExamplesVendorBucket"
+                            CloudConnectionThirdPartyBucketCreateExamplesEncryptedBucket:
+                                $ref: "#/components/examples/CloudConnectionThirdPartyBucketCreateExamplesEncryptedBucket"
         get:
             operationId: getSystemCloudConnectionsThirdPartyBuckets
             tags:
@@ -359982,6 +360028,84 @@ paths:
                     type: string
                   description: The <code>id</code> of the executor pool to update.
     /search/executors/{id}:
+        delete:
+            operationId: deleteSearchExecutorsById
+            tags:
+                - search-executor-pools
+            x-speakeasy-group: search.executorPools
+            x-speakeasy-name-override: deleteExecutor
+            x-cribl-internal: true
+            x-cribl-availability: both
+            x-cribl-api-context:
+                - searchGroup
+            summary: Delete a disconnected executor
+            description: Remove the pool assignment and stored credentials of a Hybrid Search executor that is no longer connected to the Leader. Only executors with a <code>disconnected</code> status can be deleted.
+            responses:
+                "204":
+                    description: The executor was deleted, or no longer exists. No response body.
+                "401":
+                    description: Authentication failed (missing or invalid credentials or Bearer token).
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            examples:
+                                authenticationFailed:
+                                    summary: Reject a request with invalid credentials
+                                    description: Example response for rejecting an API request with missing or invalid credentials.
+                                    value:
+                                        status: error
+                                        message: Authentication failed (missing or invalid credentials or Bearer token).
+                "403":
+                    description: The authenticated caller lacks permission to delete executors.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "404":
+                    description: The requested resource does not exist — Hybrid Search is not enabled.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: Request conflicts with current resource state — the executor is still connected.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "429":
+                    description: Too many concurrent executor pool updates — retry the request.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                    headers:
+                        retry-after:
+                            description: Number of seconds the client should wait before retrying the request
+                            schema:
+                                type: integer
+                                examples:
+                                    - 60
+                "500":
+                    description: Unexpected server error.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                "503":
+                    description: Service unavailable — BYO executor backend is not initialized.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The <code>id</code> of the executor to delete.
         get:
             operationId: getSearchExecutorsById
             tags:
@@ -360162,7 +360286,7 @@ paths:
             x-cribl-api-context:
                 - searchGroup
             summary: Replace executor provisioning token
-            description: Replace the provisioning token assigned to the specified executor. The leader pushes the new token to the executor automatically. If the executor is offline, manual reconfiguration is required on reconnect.
+            description: Replace the provisioning token assigned to the specified executor. The leader pushes the new token to the executor automatically. A disconnected executor cannot have its token replaced; reconnect it first.
             responses:
                 "200":
                     description: The created ExecutorView object.
@@ -360200,6 +360324,12 @@ paths:
                                 $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: The requested resource does not exist — Hybrid Search is not enabled, the executor was not found, or the provisioning token does not exist.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: Request conflicts with current resource state — the executor is disconnected and its token cannot be replaced.
                     content:
                         application/json:
                             schema:
@@ -360291,6 +360421,12 @@ paths:
                                 $ref: "#/components/schemas/RestApiJsonError"
                 "404":
                     description: The requested resource does not exist — Hybrid Search is not enabled, or the executor was not found.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/RestApiJsonError"
+                "409":
+                    description: Request conflicts with current resource state — the executor is disconnected and cannot be moved.
                     content:
                         application/json:
                             schema:
